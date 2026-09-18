@@ -29,6 +29,8 @@ describe("bia anh trong app.css", () => {
     }
     expect(khai(CSS, ".bia")).toContain("position: relative");
     expect(khai(CSS, ".book__cover")).toContain("position: relative");
+    expect(khai(CSS, ".cuon__bia")).toContain("position: relative");
+    expect(khai(CSS, ".tranh-dan__bia")).toContain("position: relative");
     expect(khai(CSS, ".swatch")).toContain("position: relative");
   });
 

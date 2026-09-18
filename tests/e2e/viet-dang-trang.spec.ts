@@ -92,7 +92,11 @@ test("go them sau khi hop xac nhan da mo khong duoc nhan; dang ra dung noi dung 
 
   // Lop 1: tu luc hop mo, vung soan thao phai bi khoa - thu go them khong duoc nhan.
   await expect(giay).toHaveAttribute("contenteditable", "false");
-  await giay.click();
+  // Hop xac nhan nam trong thanh tren dinh o dinh man va che nua tren cua to giay; bam vao phan to giay con thay
+  // (sat mep duoi), dung cho nguoi dung that co the bam.
+  const hop = await giay.boundingBox();
+  if (!hop) throw new Error("khong do duoc to giay");
+  await giay.click({ position: { x: hop.width / 2, y: hop.height - 24 } });
   await a.keyboard.type(" Thêm chữ sau khi mở hộp.");
   await expect(giay).toHaveText("Đoạn văn đầu tiên.");
 

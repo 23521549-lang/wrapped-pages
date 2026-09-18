@@ -16,9 +16,9 @@ test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi h
   await dangToThang(id, "Tờ một", "Tờ hai", "Tờ ba");
 
   await b.goto("/ke-sach");
-  const the = b.locator(".book", { hasText: "Chuyện chưa kể" });
-  await expect(the.locator(".chip--key")).toHaveText("3 trang mới");
-  await expect(the.locator(".new")).toHaveCount(1);
+  const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
+  await expect(the.locator(".dh--moi")).toHaveText("3 trang mới");
+  await expect(the.locator(".cham")).toHaveCount(1);
   const ganNhat = b.getByRole("article", { name: "Trang gần nhất" });
   await expect(ganNhat).toContainText("Chuyện chưa kể");
   await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveCount(0);
@@ -44,8 +44,8 @@ test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi h
   // Quay lai ngay, khi moc con dang hen: Reader gui moc luc roi man roi lam moi ke.
   await b.goBack();
   await expect(b).toHaveURL(new RegExp("/ke-sach$"));
-  await expect(the.locator(".chip--key")).toHaveCount(0);
-  await expect(the.locator(".new")).toHaveCount(0);
+  await expect(the.locator(".dh--moi")).toHaveCount(0);
+  await expect(the.locator(".cham")).toHaveCount(0);
 });
 
 test("chu sach: Viet tiep va Sua sach, mo dung ?trang, man hep mot trang, giam chuyen dong van lat", async ({ browser }) => {

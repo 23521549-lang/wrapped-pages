@@ -32,15 +32,13 @@ test.afterEach(async () => {
  * Mien tru vung bam (moi mien tru co ten va ly do). Moi mien tru van do: phan tu duoc thay
  * bang vung bam that cua no, va vung do phai du 44px.
  *
- * - .book__ten: chu ten sach tren the trong luoi "Sach tren ke" (BookCard.tsx). `.book__t a::after`
- *   (src/styles/app.css) phu `inset:0` len het the `.book` (`.book{ position: relative; ...}`), nen bam
- *   bat ky dau tren the cung mo sach. Hop cua rieng `<a>` khong tinh hit-area mo rong qua pseudo-element.
+ * Cuon sach tren ke khong can mien tru: ca cuon (bia, ten, dong phu, dau hieu) nam trong chinh lien ket
+ * `.cuon__lien` (ShelfBook.tsx), nen hop cua <a> la vung bam that va duoc do thang.
  * - .the-chon input: nut radio 20px trong the chon (BookForm.tsx "Ai doc duoc", SealPicker.tsx). Radio
  *   nam TRONG `<label class="the-chon">`, nen bam bat ky dau tren nhan cung chon radio (kich hoat nhan
  *   goc cua HTML; `.the-chon{ cursor: pointer; padding: var(--space-md) }` ve ca nhan thanh mot the bam).
  */
 const MIEN_TRU_VUNG_BAM: MienTru[] = [
-  { phanTu: ".book__ten", vungBam: ".book" },
   { phanTu: ".the-chon input", vungBam: "label.the-chon" },
 ];
 

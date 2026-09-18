@@ -76,10 +76,11 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   // Da mo sach ma to khoa van la trang moi: markRead khong cho moc vuot to khoa. Doan trich la dong he lo.
   await daGuiMoc;
   await b.goto("/ke-sach");
-  const the = b.locator(".book", { hasText: "Chuyện chưa kể" });
-  await expect(the.locator(".chip--key")).toHaveText("1 trang mới");
-  await expect(the.locator(".book__f .chip", { hasText: "trang khóa" })).toHaveText("1 trang khóa");
-  await expect(the.locator(".book__x")).toHaveText(HE_LO);
+  const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
+  const ganNhat = b.getByRole("article", { name: "Trang gần nhất" });
+  await expect(the.locator(".dh--moi")).toHaveText("1 trang mới");
+  await expect(the.locator(".dh--khoa")).toHaveText("1 trang khóa");
+  await expect(ganNhat.locator(".he-lo")).toHaveText(HE_LO);
   await khongLo(b, BI_MAT, DAI, "quan may", GOI_Y_1, GOI_Y_2);
 
   // mo= gia khi con khoa: van la to khoa, khong nghi thuc, khong lo chu.
@@ -135,9 +136,10 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
 
   // Ke sach sau khi mo: het chip khoa, doan trich la chu that. newCount khong kiem: no phu thuoc moc gui tre 600ms.
   await b.goto("/ke-sach");
-  await expect(b.locator(".head__sub")).toHaveText("1 cuốn");
-  await expect(the.locator(".book__f")).not.toContainText("trang khóa");
-  await expect(the.locator(".book__x")).toContainText(BI_MAT);
+  await expect(b.locator(".ke-dau__phu")).toHaveText(new RegExp("^1 cuốn(, [0-9]+ trang mới)?$"));
+  await expect(the.locator(".dh--khoa")).toHaveCount(0);
+  await expect(ganNhat.locator(".trang-khoa")).toHaveCount(0);
+  await expect(ganNhat.locator(".vua-viet__chu")).toContainText(BI_MAT);
 
   // Chu sach mo dung URL co mo: khong nghi thuc (ritual chi cua nguoi kia tu mo).
   await a.goto(`/sach/${id}?trang=1&mo=${s.id}`);

@@ -95,6 +95,12 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await expect(cuon(a).getByRole("link", { name: "Bạn đăng 1 trang mới trong Thư gửi năm ba mươi" }))
     .toHaveAttribute("href", `/sach/${rieng}?trang=1`);
   await expect(cuon(a).getByRole("listitem")).toHaveCount(2);
+  // Cuon rieng tu cua chinh chu sach la trang gan nhat: doan trich lam mo, an voi trinh doc man hinh, nhan Rieng tu de len.
+  const ganNhat = a.getByRole("article", { name: "Trang gần nhất" });
+  await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveAttribute("aria-hidden", "true");
+  await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveText(HOP_THOI_GIAN);
+  await expect(ganNhat.locator(".trang-che--giua")).toHaveText("Riêng tưMở sách để đọc");
+  await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${rieng}/viet`);
 
   await b.goto("/ke-sach");
   await expect(cuon(b).getByRole("listitem")).toHaveCount(1);
@@ -171,20 +177,32 @@ test("doi mat khau: nguoi bi doi van dang nhap va thay dong dam khong lien ket; 
   await khongLo(a, matKhau, LOI_NHAN_MOI);
 });
 
-test("khung cuon: cao toi da 340px, an thanh cuon, cuon bang phim, tieu de ngay dinh, co vet mo, khong tran ngang", async ({ browser }) => {
+test("khung cuon: man rong cao dung bang cuon sach mo, man hep toi da 340px, an thanh cuon, cuon bang phim, tieu de ngay dinh, co vet mo, khong tran ngang", async ({ browser }) => {
   test.setTimeout(240_000);
   const { a } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
-  await dangQuaMayChu(id, 12);
+  await dangQuaMayChu(id, 20);
 
   await a.setViewportSize({ width: 1280, height: 900 });
   await a.goto("/ke-sach");
   const vung = cuon(a);
-  await expect(vung.getByRole("listitem")).toHaveCount(12);
+  await expect(vung.getByRole("listitem")).toHaveCount(20);
 
-  const khungDo = await khung(a).evaluate((el) => ({ cao: el.getBoundingClientRect().height, maxHeight: getComputedStyle(el).maxHeight }));
-  expect(khungDo.maxHeight).toBe("340px");
-  expect(khungDo.cao).toBeLessThanOrEqual(340);
+  /** Chieu cao cua khung Hoat dong va cua cuon sach mo, cung max-height tinh ra cua khung. */
+  const doCao = () => a.evaluate(() => {
+    const hd = document.querySelector("section.hoat-dong");
+    const sach = document.querySelector(".sach-mo");
+    return {
+      khung: hd?.getBoundingClientRect().height ?? Number.NaN,
+      sach: sach?.getBoundingClientRect().height ?? Number.NaN,
+      maxHeight: hd ? getComputedStyle(hd).maxHeight : "",
+    };
+  });
+  // Man rong: dung bang cuon sach mo ben canh (lech toi da 1px do lam tron), khong dai hon du co 20 dong.
+  const rongDo = await doCao();
+  expect(rongDo.maxHeight).toBe("none");
+  expect(rongDo.sach).toBeGreaterThan(340);
+  expect(Math.abs(rongDo.khung - rongDo.sach)).toBeLessThanOrEqual(1);
   expect(await vung.evaluate((el) => {
     const s = getComputedStyle(el);
     const mo = getComputedStyle(el, "::after");
@@ -205,16 +223,17 @@ test("khung cuon: cao toi da 340px, an thanh cuon, cuon bang phim, tieu de ngay 
     ngay: "sticky",
   });
 
-  // Man rong: the trang gan nhat va khung Hoat dong cung mot hang.
-  const hop = () => a.evaluate(() => Object.fromEntries(["recent", "hoat-dong", "grid"].map((c) => {
+  // Man rong: cuon sach mo va khung Hoat dong cung mot hang, mep tren va mep duoi trung nhau.
+  const hop = () => a.evaluate(() => Object.fromEntries(["vua-viet", "hoat-dong", "ngan"].map((c) => {
     const r = document.querySelector(`.${c}`)?.getBoundingClientRect();
     return [c, { tren: r?.top ?? Number.NaN, duoi: r?.bottom ?? Number.NaN }];
   })));
   const rong = await hop();
-  expect(Math.abs(rong.recent.tren - rong["hoat-dong"].tren)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rong["vua-viet"].tren - rong["hoat-dong"].tren)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rong["vua-viet"].duoi - rong["hoat-dong"].duoi)).toBeLessThanOrEqual(1);
 
-  // Ban phim: Tab tu nut cuoi cua the trang gan nhat vao vung cuon; mui ten va PageDown cuon vung.
-  await a.getByRole("link", { name: "Đọc tiếp" }).focus();
+  // Ban phim: Tab tu nut duy nhat cua cuon sach mo (cuon cua chinh minh nen la Viet tiep) vao vung cuon; mui ten va PageDown cuon vung.
+  await a.getByRole("article", { name: "Trang gần nhất" }).getByRole("link", { name: "Viết tiếp" }).focus();
   await a.keyboard.press("Tab");
   await expect(vung).toBeFocused();
   const cuonToi = () => vung.evaluate((el) => el.scrollTop);
@@ -243,11 +262,15 @@ test("khung cuon: cao toi da 340px, an thanh cuon, cuon bang phim, tieu de ngay 
     expect(await tranNgang(a), `tran ngang o ${width}px`).toEqual([]);
   }
 
-  // Man hep: the trang gan nhat, roi khung Hoat dong, roi ke; dong du 44px de cham.
+  // Man hep: cuon sach mo, roi khung Hoat dong cao toi da 340px, roi ke; dong du 44px de cham.
   await a.setViewportSize({ width: 375, height: 812 });
   await expect.poll(async () => {
     const h = await hop();
-    return h.recent.duoi <= h["hoat-dong"].tren && h["hoat-dong"].duoi <= h.grid.tren;
+    return h["vua-viet"].duoi <= h["hoat-dong"].tren && h["hoat-dong"].duoi <= h.ngan.tren;
   }).toBe(true);
+  const hepDo = await doCao();
+  expect(hepDo.maxHeight).toBe("340px");
+  expect(hepDo.khung).toBeLessThanOrEqual(340);
+  expect(await vung.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   expect(await vung.locator(".hoat-dong__dong").first().evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 });

@@ -67,4 +67,27 @@
   /* Nghi thuc mo: moi ky tu, va chu ky con tro nhap nhay. JS doc qua msTuCss. */
   --dur-go: 18ms;
   --dur-nhay: 1000ms;
+
+  /* Nut: mot ban kinh cho ca ba cap nut (nen, vien, chu). */
+  --radius-nut: 8px;
+
+  /* Ke sach: mep ke xam am rat nhat 1px va bong mem ngay duoi, goc gay sach, vet gay moi bia. */
+  --ke-mep: oklch(91.5% 0.012 75);
+  --ke-mep-bong: oklch(96.5% 0.007 75);
+  --radius-sach: 2px 5px 5px 2px;
+  --gay-sach-pha: 90%;
+  --gay-sach-sang: oklch(99.4% 0.005 235 / .45);
+  --bong-rut-sach: 0 14px 18px -12px oklch(24% 0.012 250 / .3);
+
+  /* Sach mo tren ke: cung chat lieu to giay man doc, bong nhieu lop rat mong, nep gay giua hai trang. */
+  --radius-sach-mo: 6px;
+  --bong-giay: 0 0 0 1px oklch(24% 0.012 250 / .06), 0 1px 2px oklch(24% 0.012 250 / .04),
+               0 6px 14px -6px oklch(24% 0.012 250 / .08), 0 24px 40px -30px oklch(24% 0.012 250 / .20);
+  --nep-bong: oklch(24% 0.012 250 / .04);
+  --nep-bong-hep: oklch(24% 0.012 250 / .045);
+  --nep-vach: oklch(24% 0.012 250 / .08);
+  /* Tranh dan (bia in tren to giay rieng dan vao trang trai). */
+  --radius-tranh: 2px;
+  --bong-tranh: 0 0 0 1px oklch(24% 0.012 250 / .07), 0 1px 2px oklch(24% 0.012 250 / .06), 0 10px 18px -12px oklch(24% 0.012 250 / .28);
+  --tranh-nghieng: -1.8deg;
 }

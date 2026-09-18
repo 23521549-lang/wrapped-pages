@@ -46,22 +46,22 @@ test("ten trong thi bao loi ngay o o ten va khong gui form", async ({ browser })
 });
 
 test("sach rieng tu chi chu thay; chi chu sua duoc; Trang moi mo cuon vua sua", async ({ browser }) => {
-  const { a, b } = await haiNguoiDaVao(browser);
+  const { a, b, tenCuaA } = await haiNguoiDaVao(browser);
   const chung = await taoSach(a, "Chuyện chưa kể", "chia-se");
   const rieng = await taoSach(a, "Cuốn không đặt tên", "rieng-tu");
 
   await a.goto("/ke-sach");
-  await expect(a.getByText("2 cuốn")).toBeVisible();
-  await expect(a.locator(".book", { hasText: "Cuốn không đặt tên" }).locator(".chip", { hasText: "Riêng tư" })).toBeVisible();
-  await expect(a.locator(".book", { hasText: "Chuyện chưa kể" })).toContainText("0 trang");
+  await expect(a.locator(".ke-dau__phu")).toHaveText("2 cuốn");
+  await expect(a.locator(".cuon", { hasText: "Cuốn không đặt tên" }).locator(".dh--rieng")).toHaveText("Riêng tư");
+  await expect(a.locator(".cuon", { hasText: "Chuyện chưa kể" }).locator(".cuon__phu")).toContainText("Chưa có trang");
   for (const width of [375, 1280]) {
     await a.setViewportSize({ width, height: 900 });
     expect(await tranNgang(a), `tran ngang o ${width}px`).toEqual([]);
   }
 
   await b.goto("/ke-sach");
-  await expect(b.getByText("1 cuốn")).toBeVisible();
-  await expect(b.locator(".grid")).toContainText("Chuyện chưa kể");
+  await expect(b.locator(".ke-dau__phu")).toHaveText("1 cuốn");
+  await expect(b.getByRole("region", { name: `Kệ của ${tenCuaA}` })).toContainText("Chuyện chưa kể");
   await expect(b.locator("main")).not.toContainText("Cuốn không đặt tên");
   expect((await b.goto(`/sach/${chung}/sua`))?.status()).toBe(404);
   expect((await b.goto(`/sach/${rieng}/sua`))?.status()).toBe(404);
@@ -74,7 +74,7 @@ test("sach rieng tu chi chu thay; chi chu sua duoc; Trang moi mo cuon vua sua", 
   await expect(a).toHaveURL(new RegExp(`/sach/${chung}$`));
 
   await b.goto("/ke-sach");
-  await expect(b.locator(".grid")).toContainText("Mưa đầu tháng chín");
+  await expect(b.getByRole("region", { name: `Kệ của ${tenCuaA}` })).toContainText("Mưa đầu tháng chín");
 
   // Chua co ban nhap nao, nen /viet chon cuon co hoat dong gan nhat: cuon vua sua.
   await a.goto("/viet");

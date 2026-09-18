@@ -13,7 +13,7 @@ test.afterEach(async () => {
 const DA_LUU = new RegExp("^Đã lưu lúc [0-9]{2}:[0-9]{2}$");
 
 /** The cua mot cuon tren ke dang mo. */
-const theSach = (page: Page, ten: string) => page.locator(".book", { hasText: ten });
+const theSach = (page: Page, ten: string) => page.locator(".cuon", { hasText: ten });
 
 test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau; rieng tu va nhap khong lo", async ({ browser }) => {
   test.setTimeout(180_000);
@@ -29,18 +29,18 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     await expect(a.locator(".doc__dem")).toContainText(`/ ${soTo}`);
   });
 
-  await test.step("B thay cuon do tren ke, co cham xanh va the so trang moi", async () => {
+  await test.step("B thay cuon do tren ke, co cham xanh va dong so trang moi", async () => {
     await b.goto("/ke-sach");
-    await expect(theSach(b, "Chuyện chưa kể").locator(".new")).toHaveCount(1);
-    await expect(theSach(b, "Chuyện chưa kể").locator(".chip--key")).toHaveText(`${soTo} trang mới`);
-    await expect(b.getByRole("article", { name: "Trang gần nhất" })).toContainText(`${tenCuaA} ·`);
+    await expect(theSach(b, "Chuyện chưa kể").locator(".cham")).toHaveCount(1);
+    await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo} trang mới`);
+    await expect(b.getByRole("article", { name: "Trang gần nhất" })).toContainText(`${tenCuaA} vừa viết`);
   });
 
   await test.step("B mo sach o to 1, chua lat da quay lai: con dung so to chua thay", async () => {
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
     await expect(b.locator(".doc__dem")).toHaveText(`Trang 1 / ${soTo}`);
     await b.goBack();
-    await expect(theSach(b, "Chuyện chưa kể").locator(".chip--key")).toHaveText(`${soTo - 1} trang mới`);
+    await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo - 1} trang mới`);
   });
 
   await test.step("B mo lai thi bat dau o to dau chua doc, lat toi to cuoi, quay lai ke thi het dau", async () => {
@@ -56,8 +56,8 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     await expect(b.locator(".doc__dem")).toContainText(`${soTo} / ${soTo}`);
     await b.goBack();
     await expect(b).toHaveURL(new RegExp("/ke-sach$"));
-    await expect(theSach(b, "Chuyện chưa kể").locator(".chip--key")).toHaveCount(0);
-    await expect(theSach(b, "Chuyện chưa kể").locator(".new")).toHaveCount(0);
+    await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveCount(0);
+    await expect(theSach(b, "Chuyện chưa kể").locator(".cham")).toHaveCount(0);
   });
 
   await test.step("sach rieng tu va ban nhap cua A khong lo o dau voi B", async () => {

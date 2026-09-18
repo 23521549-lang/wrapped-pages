@@ -127,22 +127,21 @@ export async function vungBamNho(page: Page, mienTru: MienTru[] = []): Promise<s
  * tranNgang) tren tung man, khang dinh rong ngay tai do voi thong diep neu ten man. Dung de ca hai
  * phep do 11.3 va 11.4 chay tren cung mot buoc duyet.
  *
- * Lay duong toi man doc/man viet tu href THAT cua lien ket "Doc tiep"/"Viet tiep" tren the "Trang gan
- * nhat" (doc tu src/app/ke-sach/page.tsx: lien ket mine moi co "Viet tiep", lien ket "Doc tiep" luon
- * co khi co cuon nao da co trang) thay vi doan ma sach, nen khong phu thuoc cuon nao dang mo. Can it
- * nhat mot cuon co trang da dang (dangToThang) de the nay xuat hien - mot cong chay tren ke rong la
- * mot cong luon xanh.
+ * Lay duong toi man doc/man viet tu href THAT tren ke thay vi doan ma sach, nen khong phu thuoc cuon nao
+ * dang mo: man doc lay tu lien ket cua cuon dau tien tren ke (moi cuon tren ke la mot lien ket toi man doc,
+ * src/components/book/ShelfBook.tsx), man viet lay tu nut "Viet tiep" cua cuon sach mo (src/app/ke-sach/page.tsx:
+ * nut do chi co khi trang gan nhat la cuon cua chinh nguoi xem). Can it nhat mot cuon co trang da dang
+ * (dangToThang) cua nguoi dang xem de cuon sach mo xuat hien - mot cong chay tren ke rong la mot cong luon xanh.
  */
 export async function doMoiManChinh(page: Page, phepDo: (p: Page) => Promise<string[]>): Promise<void> {
   await page.goto("/ke-sach");
   expect(await phepDo(page), "ke sach").toEqual([]);
 
-  // Lay ca hai href TRUOC khi roi khoi /ke-sach: sau khi dieu huong di, the "Trang gan nhat" khong
-  // con tren trang nua.
-  const docHref = await page.getByRole("link", { name: "Đọc tiếp" }).getAttribute("href");
-  const vietHref = await page.getByRole("link", { name: "Viết tiếp" }).getAttribute("href");
+  // Lay ca hai href TRUOC khi roi khoi /ke-sach: sau khi dieu huong di, ke sach khong con tren trang nua.
+  const docHref = await page.locator(".cuon__lien").first().getAttribute("href");
+  const vietHref = await page.getByRole("article", { name: "Trang gần nhất" }).getByRole("link", { name: "Viết tiếp" }).getAttribute("href");
   if (!docHref) {
-    throw new Error("doMoiManChinh: khong tim thay lien ket 'Doc tiep' tren ke sach - can it nhat mot cuon co trang da dang");
+    throw new Error("doMoiManChinh: khong tim thay cuon nao tren ke sach - can it nhat mot cuon");
   }
   if (!vietHref) {
     throw new Error("doMoiManChinh: khong tim thay lien ket 'Viet tiep' tren ke sach - can cuon do la cua chinh nguoi dang xem");

@@ -19,7 +19,7 @@ function su(sua: Partial<FeedItem> = {}): FeedItem {
   };
 }
 
-const ve = (items: FeedItem[]) => render(<ActivityPanel items={items} now={NOW} myName="Mạnh" partnerName="Linh" />);
+const ve = (items: FeedItem[]) => render(<ActivityPanel items={items} now={NOW} partnerName="Linh" />);
 
 afterEach(() => {
   cleanup();
@@ -81,13 +81,22 @@ describe("ActivityPanel: co su kien", () => {
     expect(time?.textContent).toBe("07:41");
   });
 
-  it("o tron an voi trinh doc man hinh: chu cai dau cua nguoi lam, dong ho khi hen gio tu mo", () => {
-    const { container } = ve([su({ by: "me" }), su(), su({ kind: "mo-hen-gio", sealKind: "hen-gio" })]);
-    const av = Array.from(container.querySelectorAll(".av"));
-    expect(av.map((a) => [a.className, a.getAttribute("aria-hidden"), a.textContent])).toEqual([
-      ["av", "true", "M"], ["av", "true", "L"], ["av av--he", "true", ""],
+  it("khong co o tron: ten nguoi lam in dam o dau cau; dong hen gio tu mo khong co ten; cau mat khau giu nguyen", () => {
+    const { container } = ve([
+      su({ by: "me" }),
+      su(),
+      su({ kind: "mo-hen-gio", sealKind: "hen-gio" }),
+      su({ ...MAT_KHAU, by: "me" }),
     ]);
-    expect(av[2].querySelector("svg")).not.toBeNull();
+    expect(container.querySelector(".av")).toBeNull();
+    const [cuaToi, cuaKia, henGio, matKhau] = Array.from(container.querySelectorAll(".hoat-dong__chu"));
+    expect([cuaToi.querySelector("strong.hoat-dong__ai")?.textContent, cuaToi.textContent])
+      .toEqual(["Bạn", "Bạn đăng 2 trang mới trong Chuyện chưa kể"]);
+    expect([cuaKia.querySelector("strong.hoat-dong__ai")?.textContent, cuaKia.textContent])
+      .toEqual(["Linh", "Linh đăng 2 trang mới trong Chuyện chưa kể"]);
+    expect(henGio.querySelector("strong")).toBeNull();
+    expect([matKhau.querySelector("strong.hoat-dong__ai")?.textContent, matKhau.querySelector("b"), matKhau.textContent])
+      .toEqual(["Bạn", null, "Bạn đổi mật khẩu của Linh"]);
   });
 
   it("chip o dong phu; loi nhan tang chia khoa co tien to cho trinh doc man hinh", () => {

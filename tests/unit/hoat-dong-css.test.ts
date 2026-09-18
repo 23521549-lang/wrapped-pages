@@ -22,8 +22,17 @@ function media(css: string, dieuKien: string): string {
 }
 
 describe("khung Hoat dong trong app.css", () => {
-  it("ca khung cao toi da 340px", () => {
-    expect(khai(CSS, ".hoat-dong")).toContain("max-height: 340px");
+  it("man rong: khung cao dung bang cuon sach mo ben canh, khong tu keo dai hang; man hep: cao toi da 340px", () => {
+    // grid keo gian ca hang theo cuon sach mo; height 0 de khung khong gop vao chieu cao hang, min-height 100% de lap day hang.
+    expect(khai(CSS, ".dau-ke")).toContain("align-items: stretch");
+    const rong = khai(CSS, ".hoat-dong");
+    for (const d of ["height: 0;", "min-height: 100%;"]) expect(rong).toContain(d);
+    expect(rong).not.toContain("max-height");
+    const hep = khai(media(CSS, "(max-width: 900px)"), ".hoat-dong");
+    for (const d of ["height: auto;", "min-height: 0;", "max-height: 340px;"]) expect(hep).toContain(d);
+    // Ke chua co cuon nao co trang: khong co cuon sach mo de lay chieu cao, khung tu cao va toi da 340px.
+    const mot = khai(CSS, ".dau-ke > .hoat-dong:only-child");
+    for (const d of ["height: auto;", "min-height: 0;", "max-height: 340px;"]) expect(mot).toContain(d);
   });
 
   it("vung cuon chi cuon doc va an thanh cuon ca hai kieu", () => {

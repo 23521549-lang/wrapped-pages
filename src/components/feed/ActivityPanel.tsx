@@ -2,7 +2,6 @@ import Link from "next/link";
 import { feedDays } from "@/lib/feed/days";
 import { feedLine, type FeedNames } from "@/lib/feed/line";
 import type { FeedItem } from "@/lib/feed/types";
-import { initialOf } from "@/lib/initial";
 import { timeLabel } from "@/lib/when";
 
 export type ActivityPanelProps = {
@@ -10,31 +9,31 @@ export type ActivityPanelProps = {
   items: readonly FeedItem[];
   /** Cung now voi luc doc, de nhan Hom nay va Hom qua khop dung lan doc do. */
   now: Date;
-  /** Biet danh nguoi xem, cho o tron cua dong "Bạn ...". */
-  myName: string;
   partnerName: string;
 };
 
-/** Dong ho cua dong hen gio tu mo. */
-const DONG_HO = (
-  <svg viewBox="0 0 16 16">
-    <circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M8 5v3.2l2 1.3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+/**
+ * Ten nguoi lam o dau cau ("Bạn" hoac biet danh nguoi kia) in dam, thay cho o tron chu cai dau truoc day. Dong
+ * hen gio tu mo khong co ai lam nen khong co ten; cau ma ca cau da dam (mat khau bi doi) giu nguyen.
+ */
+function TenDau({ before, ai }: { before: string; ai: string | null }) {
+  if (ai === null || !before.startsWith(`${ai} `)) return before;
+  return (
+    <>
+      <strong className="hoat-dong__ai">{ai}</strong>
+      {before.slice(ai.length)}
+    </>
+  );
+}
 
 /** Mot dong: dong co sach la mot lien ket phu ca dong, dong khong gan sach la khoi thuong. */
-function Dong({ item, names, myName }: { item: FeedItem; names: FeedNames; myName: string }) {
+function Dong({ item, names }: { item: FeedItem; names: FeedNames }) {
   const line = feedLine(item, names);
+  const ai = line.avatar === "hen-gio" ? null : line.avatar === "me" ? "Bạn" : names.partner;
   const noiDung = (
     <>
-      {line.avatar === "hen-gio" ? (
-        <span className="av av--he" aria-hidden="true">{DONG_HO}</span>
-      ) : (
-        <span className="av" aria-hidden="true">{initialOf(line.avatar === "me" ? myName : names.partner)}</span>
-      )}
       <p className="hoat-dong__chu">
-        {line.sentence.before}
+        <TenDau before={line.sentence.before} ai={ai} />
         {line.sentence.strong !== "" && <b>{line.sentence.strong}</b>}
         {line.sentence.after}
       </p>
@@ -62,11 +61,11 @@ function Dong({ item, names, myName }: { item: FeedItem; names: FeedNames; myNam
  * Co dong thi co vung cuon an thanh cuon: vung nhan focus (tabIndex 0) de cuon bang phim, moi ngay mot nhom co
  * tieu de dinh mep tren. Chua co dong nao thi chi co o trong, khong vung cuon, khong vet mo.
  */
-export function ActivityPanel({ items, now, myName, partnerName }: ActivityPanelProps) {
+export function ActivityPanel({ items, now, partnerName }: ActivityPanelProps) {
   const names: FeedNames = { partner: partnerName };
   return (
     <section className="hoat-dong">
-      <div className="hoat-dong__dau"><h2 className="d">Hoạt động</h2></div>
+      <div className="hoat-dong__dau"><h2>Hoạt động</h2></div>
       {items.length === 0 ? (
         <div className="hoat-dong__trong">
           <b>Chưa có gì mới</b>
@@ -81,7 +80,7 @@ export function ActivityPanel({ items, now, myName, partnerName }: ActivityPanel
               <h3 className="hoat-dong__ngay">{day.label}</h3>
               <ol className="hoat-dong__ds">
                 {day.items.map((item) => (
-                  <li key={item.id}><Dong item={item} names={names} myName={myName} /></li>
+                  <li key={item.id}><Dong item={item} names={names} /></li>
                 ))}
               </ol>
             </div>

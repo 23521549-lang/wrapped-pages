@@ -22,6 +22,29 @@ function vach(doan: readonly number[], lech: number): Doan[] {
   }));
 }
 
+/** Cac vach nhoe trang tri, khong chua chu nao: an voi trinh doc man hinh. */
+function VachNhoe({ doan }: { doan: Doan[] }) {
+  return (
+    <div className="nhoe" aria-hidden="true">
+      {doan.map((d) => (
+        <span key={d.key} className="nhoe__doan">
+          {d.dong.map((x) => (
+            <span key={x.key} className="nhoe__dong" style={{ "--dai": x.dai } as CSSProperties} />
+          ))}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Mot doan vach nhoe ngan, cung kieu to khoa man doc, dung o trang phai cua cuon sach mo tren ke khi to cuoi
+ * dang khoa. Chi la vach trang tri: chu that cua to khoa khong bao gio toi trinh duyet.
+ */
+export function LockedBars({ lines = 4 }: { lines?: number }) {
+  return <VachNhoe doan={vach([lines], 0)} />;
+}
+
 /** Dau niem phong nho o goc tren cua to. */
 export function SealMark({ label }: { label: string }) {
   return (
@@ -47,15 +70,7 @@ export function LockedSheet({ teaser, index }: { teaser: string | null; index: n
       <SealMark label="Đang niêm phong" />
       <div className="giay-noi-dung">
         {teaser && <p>{teaser}</p>}
-        <div className="nhoe" aria-hidden="true">
-          {doan.map((d) => (
-            <span key={d.key} className="nhoe__doan">
-              {d.dong.map((x) => (
-                <span key={x.key} className="nhoe__dong" style={{ "--dai": x.dai } as CSSProperties} />
-              ))}
-            </span>
-          ))}
-        </div>
+        <VachNhoe doan={doan} />
         <p className="sr-only">{teaser ? "Phần còn lại của trang đang niêm phong." : "Trang đang niêm phong."}</p>
       </div>
     </>

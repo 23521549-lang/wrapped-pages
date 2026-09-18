@@ -250,7 +250,6 @@ const MIEN_TRU: MienTru[] = [
     fgToken: "--color-rule",
     selector: [
       // Card/panel noi dung tinh: vien chi de tach vung, khong phai bien cua dieu khien.
-      ".recent",
       ".hoat-dong",
       ".book",
       ".nhap-ds",
@@ -265,8 +264,6 @@ const MIEN_TRU: MienTru[] = [
       ".nav",
       ".viet-tren",
       ".foot",
-      ".hoat-dong__ngay",
-      ".hoat-dong__ds > li + li",
       ".nhap + .nhap",
       ".go-cua__dong + .go-cua__dong",
       // Cung mot vai tro nhung vien la mot vong box-shadow 0/0/0 (vd inset 0 0 0 1px), khong phai border.
@@ -326,16 +323,6 @@ const MIEN_TRU: MienTru[] = [
       "khoi (rieng no da qua nguong 3.0 tren ca ba be mat, xem mien tru khac khong can cho no). Vong " +
       "box-shadow 3px --blue-1 chi la hieu ung phu (hao quang mem quanh o), khong phai dau hieu DUY NHAT " +
       "cua trang thai, nen WCAG 1.4.11 da duoc dieu vien no dap ung du vong sang nay khong tu no dat 3:1.",
-  },
-  {
-    ten: "so-lon-trang-tri",
-    loai: "color",
-    fgToken: "--blue-mark",
-    selector: ".recent__n",
-    lyDo:
-      "So trang gan nhat hien co chu clamp(3.5rem,7vw,5.25rem), toi thieu 56px: la van ban co theo WCAG nen " +
-      "chi can dat 3:1, va ca ba ty le do duoc (3.11 den 3.44) deu vuot muc do. Cong nay khong suy duoc co " +
-      "chu tu CSS nen luon doi 4.5 (nghiem hon ca hai nguong WCAG), tao do gia co chu dich o dung truong hop nay.",
   },
 ];
 

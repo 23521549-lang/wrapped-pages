@@ -23,37 +23,48 @@ test("nguoi kia thay dung so trang khoa, doan trich la dong he lo, khong thay ch
   await dangKemNiemPhong(a, [HE_LO, BI_MAT], { kind: "cau-do", question: "Quán tên gì?", answers: ["Quán Mây"], hints: [] });
 
   await b.goto("/ke-sach");
-  const the = b.locator(".book", { hasText: "Chuyện chưa kể" });
-  await expect(the.locator(".book__f .chip", { hasText: "trang khóa" })).toHaveText("1 trang khóa");
-  await expect(the.locator(".chip--key")).toHaveText("2 trang mới");
-  await expect(the.locator(".book__x")).toHaveText(HE_LO);
-  await expect(b.locator(".head__sub")).toHaveText("1 cuốn · 1 trang đang khóa");
-  await expect(b.getByRole("article", { name: "Trang gần nhất" }).locator(".recent__x")).toHaveText(HE_LO);
+  const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
+  await expect(the.locator(".dh--khoa")).toHaveText("1 trang khóa");
+  await expect(the.locator(".dh--moi")).toHaveText("2 trang mới");
+  await expect(b.locator(".ke-dau__phu")).toHaveText("1 cuốn, 2 trang mới");
+  // To cuoi dang khoa: trang phai cua cuon sach mo chi co dong he lo, vach nhoe khong chu va nhan khoa.
+  const ganNhat = b.getByRole("article", { name: "Trang gần nhất" });
+  const khoa = ganNhat.locator(".trang-khoa");
+  await expect(khoa.locator(".he-lo")).toHaveText(HE_LO);
+  await expect(khoa.locator(".nhoe")).toHaveAttribute("aria-hidden", "true");
+  expect(await khoa.locator(".nhoe").evaluate((el) => el.textContent)).toBe("");
+  await expect(khoa.locator(".trang-che--duoi")).toHaveText("Trang khóa, vượt thử thách để đọc");
+  await expect(ganNhat.locator(".vua-viet__chu")).toHaveCount(0);
+  await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", `/sach/${id}`);
   await expect(b.getByRole("list", { name: "Chú giải" }).getByRole("listitem")).toHaveText([
-    "Trang mới chưa đọc", "Trang khóaCần vượt thử thách", "Riêng tưChỉ mình bạn thấy",
+    "Trang mới chưa đọc", "Trang khóa cần vượt thử thách", "Riêng tư chỉ mình bạn thấy",
   ]);
   await khongLo(b, BI_MAT, "quan may", "Quán Mây");
 
   // Chu sach khong bi cau do cua minh khoa: khong dem, doan trich la chu that.
   await a.goto("/ke-sach");
-  const theA = a.locator(".book", { hasText: "Chuyện chưa kể" });
-  await expect(theA.locator(".book__f")).not.toContainText("trang khóa");
-  await expect(a.locator(".head__sub")).toHaveText("1 cuốn");
-  await expect(theA.locator(".book__x")).toContainText(BI_MAT);
+  const theA = a.locator(".cuon", { hasText: "Chuyện chưa kể" });
+  await expect(theA.locator(".dau-hieu")).toHaveCount(0);
+  await expect(a.locator(".ke-dau__phu")).toHaveText("1 cuốn");
+  const ganNhatA = a.getByRole("article", { name: "Trang gần nhất" });
+  await expect(ganNhatA.locator(".trang-khoa")).toHaveCount(0);
+  await expect(ganNhatA.locator(".vua-viet__chu")).toContainText(BI_MAT);
 
-  // Hen gio khoa ca chu sach, ke ca tren sach rieng tu.
+  // Hen gio khoa ca chu sach, ke ca tren sach rieng tu. To cuoi khoa thang the rieng tu: chi dong he lo, khong lam mo chu that.
   const rieng = await taoSach(a, "Thư gửi năm ba mươi", "rieng-tu");
   await dangKemNiemPhong(a, [HOP_THOI_GIAN, BI_MAT], { kind: "hen-gio", opensAt: await gioSau(a, 86_400_000) });
   await a.goto("/ke-sach");
-  await expect(a.locator(".head__sub")).toHaveText("2 cuốn · 1 trang đang khóa");
-  const theRieng = a.locator(".book", { hasText: "Thư gửi năm ba mươi" });
-  await expect(theRieng.locator(".book__f .chip", { hasText: "trang khóa" })).toHaveText("1 trang khóa");
-  await expect(theRieng.locator(".book__x")).toHaveText(HOP_THOI_GIAN);
-  await expect(a.getByRole("article", { name: "Trang gần nhất" }).locator(".recent__x")).toHaveText(HOP_THOI_GIAN);
+  await expect(a.locator(".ke-dau__phu")).toHaveText("2 cuốn");
+  const theRieng = a.locator(".cuon", { hasText: "Thư gửi năm ba mươi" });
+  await expect(theRieng.locator(".dh--khoa")).toHaveText("1 trang khóa");
+  await expect(theRieng.locator(".dh--rieng")).toHaveText("Riêng tư");
+  await expect(ganNhatA.locator(".trang-khoa .he-lo")).toHaveText(HOP_THOI_GIAN);
+  await expect(ganNhatA.locator(".vua-viet__chu")).toHaveCount(0);
+  await khongLo(a, BI_MAT);
 
   // Sach rieng tu cua nguoi kia khong co o bat ky dau trong trang, ke ca thuoc tinh va du lieu RSC.
   await b.goto("/ke-sach");
-  await expect(b.locator(".head__sub")).toHaveText("1 cuốn · 1 trang đang khóa");
+  await expect(b.locator(".ke-dau__phu")).toHaveText("1 cuốn, 2 trang mới");
   await khongLo(b, "Thư gửi năm ba mươi", HOP_THOI_GIAN);
 
   // Duong doc to niem phong va duong tra loi cua sach rieng tu: 404 giong het mot cuon khong ton tai.
@@ -66,7 +77,7 @@ test("nguoi kia thay dung so trang khoa, doan trich la dong he lo, khong thay ch
     expect((await b.goto(d))?.status(), d).toBe(404);
   }
 
-  // The co toi bon chip va dong phu dai hon khong lam tran ngang o man hep.
+  // Cuon co toi ba dau hieu va dong phu dai hon khong lam tran ngang o man hep.
   for (const p of [a, b]) {
     await p.goto("/ke-sach");
     for (const width of [320, 375]) {

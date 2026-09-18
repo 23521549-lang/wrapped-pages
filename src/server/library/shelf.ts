@@ -20,6 +20,8 @@ export type ShelfBook = {
   /** So to nam trong niem phong con khoa voi nguoi xem. */
   lockedCount: number;
   lastPosition: number;
+  /** To cuoi dang nam trong niem phong con khoa voi nguoi xem: excerpt khi do chi la dong he lo (hoac null). */
+  lastLocked: boolean;
   lastPublishedAt: Date | null;
   excerpt: string | null;
   createdAt: Date;
@@ -84,6 +86,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
           newCount: mine ? 0 : Math.max(0, last - (markOf.get(b.id) ?? 0)),
           lockedCount: locked.reduce((n, r) => n + r.lastPosition - r.firstPosition + 1, 0),
           lastPosition: last,
+          lastLocked: lastLocked !== undefined,
           lastPublishedAt: s?.at ?? null,
           excerpt: lastLocked ? lastLocked.teaser || null : content ? docExcerpt(content) : null,
           createdAt: b.createdAt,

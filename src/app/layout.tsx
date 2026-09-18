@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
+import { InkDefs } from "@/components/book/CoverArt";
 import { lopPhong } from "./phong";
 
 export const metadata: Metadata = { title: "Món Quà Của Em" };
@@ -17,7 +18,11 @@ export const dynamic = "force-dynamic";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi" className={lopPhong}>
-      <body>{children}</body>
+      <body>
+        {/* Bo loc muc cua moi bia khai mot lan o day; CoverArt chi tro toi no bang id. */}
+        <InkDefs />
+        {children}
+      </body>
     </html>
   );
 }

@@ -40,16 +40,16 @@ test("bia tu tai len: chon anh, cat bang phim, dung anh nay, luu; the sach ve an
   await a.waitForURL(new RegExp("/sach/[0-9a-f-]{36}/viet$"));
 
   await a.goto("/ke-sach");
-  const the = a.locator(".book", { hasText: "Những bữa sáng" });
+  const the = a.locator(".cuon", { hasText: "Những bữa sáng" });
   const anhBia = the.locator("img.bia__anh");
   await expect(anhBia).toHaveAttribute("src", biaSrc ?? "");
   await expect(anhBia).toBeVisible();
 
   // Anh hong (kho tat, media da bi don, mat mang): img an di, tranh ve cua bia lo ra, khung giu nguyen.
-  // Khung bia la .book__cover (BookCard.tsx), khong phai .bia: lop "bia--<khoa>" chi la mot modifier tren no.
+  // Khung bia tren ke la .cuon__bia (ShelfBook.tsx), khong phai .bia: lop "bia--<khoa>" chi la mot modifier tren no.
   await a.route("**/m/*", (route) => route.abort());
   await a.reload();
-  await expect(the.locator(".book__cover svg")).toBeVisible();
+  await expect(the.locator(".cuon__bia svg")).toBeVisible();
   await expect(the.locator("img.bia__anh")).toBeHidden();
-  expect(await a.locator(".book .book__cover").first().evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(0);
+  expect(await a.locator(".cuon .cuon__bia").first().evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(0);
 });
