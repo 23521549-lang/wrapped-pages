@@ -2,34 +2,24 @@ import { mkdir, open, rm, writeFile, type FileHandle } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { assertStoreKey, type ByteRange, type MediaStore } from "./store";
 
-/** Moi lan doc tu dia toi da chung nay byte. */
-const CHUNK_BYTES = 64 * 1024;
-
 function isMissing(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
-/** Stream doc khoang [start, end] qua file handle theo tung khuc; dong handle khi het, khi loi hoac khi bi huy. */
-function fileStream(handle: FileHandle, range: ByteRange): ReadableStream<Uint8Array> {
-  let position = range.start;
+/**
+ * Doc tron khoang [start, end] roi dong handle ngay, tra ve stream tu bo nho. Khong giu handle song theo stream: stream
+ * co the khong bao gio duoc doc het hay huy (yeu cau HEAD, nguoi dung dong trang giua chung), luc do handle chi duoc
+ * dong khi bi thu gom rac va Node canh bao DEP0137. Moi tep media toi da vai MB (MEDIA_MAX_BYTES) nen doc mot lan la vua.
+ */
+async function docKhoang(handle: FileHandle, range: ByteRange): Promise<ReadableStream<Uint8Array>> {
+  const length = Math.max(range.end + 1 - range.start, 0);
+  const { bytesRead, buffer } = await handle.read(new Uint8Array(length), 0, length, range.start);
+  const bytes = buffer.subarray(0, bytesRead);
   return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
-        const length = Math.min(CHUNK_BYTES, range.end + 1 - position);
-        const { bytesRead, buffer } = await handle.read(new Uint8Array(Math.max(length, 0)), 0, Math.max(length, 0), position);
-        if (bytesRead === 0) {
-          await handle.close();
-          controller.close();
-          return;
-        }
-        position += bytesRead;
-        controller.enqueue(buffer.subarray(0, bytesRead));
-      } catch (error) {
-        await handle.close();
-        throw error;
-      }
+    start(controller) {
+      if (bytes.length > 0) controller.enqueue(bytes);
+      controller.close();
     },
-    cancel: () => handle.close(),
   });
 }
 
@@ -65,10 +55,9 @@ export class LocalDiskStore implements MediaStore {
     if (!handle) return null;
     try {
       const { size } = await handle.stat();
-      return fileStream(handle, range ?? { start: 0, end: size - 1 });
-    } catch (error) {
+      return await docKhoang(handle, range ?? { start: 0, end: size - 1 });
+    } finally {
       await handle.close();
-      throw error;
     }
   }
 
