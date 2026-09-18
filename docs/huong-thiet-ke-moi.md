@@ -41,6 +41,7 @@ Cả ba cấp dùng chung: chữ Be Vietnam Pro 600, cỡ `--text-sm`, bán kín
 - Không có nền viên thuốc cho mục nào. Mục đang ở là chữ màu mực, đậm 600, kèm một gạch 2px màu mực đè lên vạch dưới của thanh. Các mục khác là chữ `--color-ink-2`.
 - Người đang vào hiện bằng chữ: "Đang vào: **tên**". Không có ô tròn chữ cái. Từ 600px trở xuống dòng này ẩn đi.
 - "Trang mới" là nút cấp chữ.
+- Logo "sách thắt nơ" (`src/components/Logo.tsx`) đứng trước tên web, cao 30px, màu `--blue-ink`, dùng bộ lọc mực nhẹ `#muc-logo`. Biểu tượng tab (`src/app/icon.svg`) là cùng hình với nét dày hơn và không có bộ lọc để vẫn rõ ở 16px.
 - Từ 700px trở xuống, ba liên kết xuống hàng riêng dưới tên web, mỗi liên kết cao 44px.
 - Giữ nguyên: `aria-current="page"` cho màn đang ở, `"true"` cho màn con; thanh dính đầu trang trừ khi `sticky={false}` (màn viết, màn đọc có nhạc: thanh không bao giờ đè lên trình phát YouTube).
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MUC_LOGO } from "@/components/Logo";
 import { COVERS, type CoverKey } from "@/lib/book";
 
 /** Id cua bo loc muc loang, khai mot lan trong InkDefs (layout goc), moi bia tro toi no. */
@@ -88,6 +89,12 @@ export function InkDefs() {
           <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves={2} seed={4} result="hat" />
           <feColorMatrix in="hat" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.3 1.45" result="hatA" />
           <feComposite in="nhoe" in2="hatA" operator="in" />
+        </filter>
+        {/* Logo: net nho nen chi xo dich nhe va nhoe rat it, khong co lop muc tham. */}
+        <filter id={MUC_LOGO} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves={3} seed={7} result="song" />
+          <feDisplacementMap in="SourceGraphic" in2="song" scale={3.2} xChannelSelector="R" yChannelSelector="G" result="xo" />
+          <feGaussianBlur in="xo" stdDeviation={0.35} />
         </filter>
       </defs>
     </svg>

@@ -304,16 +304,6 @@ const MIEN_TRU: MienTru[] = [
       "color-mix(in oklch, var(--color-paper) 70%, transparent) nen fgToken ghi la --color-paper.",
   },
   {
-    ten: "cham-tron-an-khoi-a11y",
-    loai: "vien",
-    fgToken: "--blue-1",
-    selector: ".wordmark:hover .bead",
-    lyDo:
-      "Chinh la <span className=\"bead\" aria-hidden=\"true\"> (AppNav.tsx:29, cham trang tri canh wordmark): " +
-      "an hoan toan khoi cay truy cap. Trang thai nghi (.wordmark .bead, khong :hover) dung cung nen " +
-      "--blue-mark va tu no da dat 3.07 nen khong can mien tru; day chi la bien the phong to luc di chuot.",
-  },
-  {
     ten: "vong-sang-da-chon-la-phu-swatch",
     loai: "vien",
     fgToken: "--blue-1",

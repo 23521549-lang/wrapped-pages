@@ -49,8 +49,8 @@
 .nav--tinh{ position: relative; }
 .nav__in{ display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-xl); }
 .wordmark{ display: inline-flex; align-items: center; gap: .5rem; min-height: 60px; font-size: var(--text-md); white-space: nowrap; }
-.wordmark .bead{ width: 11px; height: 11px; border-radius: var(--radius-pill); flex: none; background: var(--blue-mark); box-shadow: 0 0 0 4px var(--blue-1); transition: box-shadow var(--dur-short) var(--ease-out); }
-.wordmark:hover .bead{ box-shadow: 0 0 0 7px var(--blue-1); }
+/* logo sach that no (src/components/Logo.tsx): net muc mau --blue-ink, dung ngang chieu cao chu hoa cua ten web */
+.wordmark__logo{ width: 30px; height: 30px; flex: none; color: var(--blue-ink); }
 .nav__links{ display: flex; gap: var(--space-lg); margin-right: auto; }
 .nav__link{ position: relative; display: inline-flex; align-items: center; min-height: 60px; white-space: nowrap; font-size: var(--text-sm); font-weight: 450; color: var(--color-ink-2); transition: color var(--dur-micro) var(--ease-out); }
 .nav__link:hover{ color: var(--color-ink); }

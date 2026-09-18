@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Me } from "@/server/web/guard";
+import { Logo } from "./Logo";
 
 export type NavSection = "ke-sach" | "ban-nhap" | "cai-dat";
 
@@ -26,7 +27,7 @@ export function AppNav({ me, current, subpage = false, sticky = true }: {
     <nav className={sticky ? "nav" : "nav nav--tinh"} aria-label="Điều hướng chính">
       <div className="nav__in shell">
         <Link className="wordmark d" href="/ke-sach">
-          <span className="bead" aria-hidden="true" />Món Quà Của Em
+          <Logo className="wordmark__logo" />Món Quà Của Em
         </Link>
         <div className="nav__links">
           {LINKS.map((l) => (
