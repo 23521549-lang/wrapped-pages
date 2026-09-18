@@ -38,6 +38,7 @@ Cả ba cấp dùng chung: chữ Be Vietnam Pro 600, cỡ `--text-sm`, bán kín
 
 ## 3. Thanh điều hướng
 
+- Nền thanh là `--nav-nen` (`oklch(95.5% 0.024 236)`), một màu xanh nước nhạt đặc, không trong suốt, sát mép trên của trang.
 - Không có nền viên thuốc cho mục nào. Mục đang ở là chữ màu mực, đậm 600, kèm một gạch 2px màu mực đè lên vạch dưới của thanh. Các mục khác là chữ `--color-ink-2`.
 - Người đang vào hiện bằng chữ: "Đang vào: **tên**". Không có ô tròn chữ cái. Từ 600px trở xuống dòng này ẩn đi.
 - "Trang mới" là nút cấp chữ.

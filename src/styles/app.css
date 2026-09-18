@@ -45,7 +45,11 @@
 .av{ width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--blue-1); color: var(--blue-ink); display: grid; place-items: center; font-size: var(--text-xs); font-weight: 600; flex: none; }
 
 /* nav: khong nen vien thuoc; muc dang o la chu dam mau muc kem gach 2px de len vach duoi cua thanh */
-.nav{ position: sticky; top: 0; z-index: var(--z-sticky); background: color-mix(in oklch, var(--color-paper) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--color-rule); }
+/* SVG chua bo loc muc (InkDefs, dau body): an han khoi bo cuc. De inline thi no van chiem mot dong chu du rong 0px,
+   day ca thanh dieu huong xuong mot khoang trong o dinh trang. */
+.muc-dinh{ position: absolute; width: 0; height: 0; overflow: hidden; }
+/* nen thanh dieu huong: xanh nuoc nhat, dac (khong trong suot) de mau luon dung du phia sau la gi */
+.nav{ position: sticky; top: 0; z-index: var(--z-sticky); background: var(--nav-nen); border-bottom: 1px solid var(--color-rule); }
 .nav--tinh{ position: relative; }
 .nav__in{ display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-xl); }
 .wordmark{ display: inline-flex; align-items: center; gap: .5rem; min-height: 60px; font-size: var(--text-md); white-space: nowrap; }

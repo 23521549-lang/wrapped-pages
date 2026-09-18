@@ -17,6 +17,8 @@
   --color-ink-3: oklch(50% 0.012 248);
 
   --color-rule:    oklch(92% 0.010 235);
+  /* nen thanh dieu huong: xanh nuoc nhat, cung tong voi --blue-1 nhung nhat hon mot chut de chu --color-ink-2 van ro */
+  --nav-nen:       oklch(95.5% 0.024 236);
   /* 63% (khong phai 64%): khi vien nay dung ma khong khai nen (vd .btn--line), cong tuong phan doi no dat 3.0
      tren ca ba be mat giay, va 64% chi dat 2.91 tren --color-paper-3 (tests/unit/tuong-phan.test.ts). */
   --color-rule-ui: oklch(63% 0.016 240);
