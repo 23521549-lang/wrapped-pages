@@ -1,0 +1,60 @@
+import { describe, it, expect } from "vitest";
+import { flipPlan, lastVisible, pageLabel, viewCount, viewOf, viewSheets, type FlipMode } from "@/lib/flip";
+
+describe("khung nhin", () => {
+  it("so khung nhin theo so to", () => {
+    expect([0, 1, 2, 3, 4, 5].map((n) => viewCount("mot", n))).toEqual([1, 1, 2, 3, 4, 5]);
+    expect([0, 1, 2, 3, 4, 5].map((n) => viewCount("doi", n))).toEqual([1, 1, 2, 2, 3, 3]);
+  });
+
+  it("to trong tung khung o che do hai trang", () => {
+    expect(viewSheets("doi", 0, 5)).toEqual([null, 0]);
+    expect(viewSheets("doi", 1, 5)).toEqual([1, 2]);
+    expect(viewSheets("doi", 2, 5)).toEqual([3, 4]);
+    expect(viewSheets("doi", 2, 4)).toEqual([3, null]);
+    expect(viewSheets("mot", 2, 5)).toEqual([2]);
+  });
+
+  it("viewOf tim dung khung chua to", () => {
+    for (const mode of ["mot", "doi"] as FlipMode[]) {
+      for (let i = 0; i < 7; i++) expect(viewSheets(mode, viewOf(mode, i), 7)).toContain(i);
+    }
+  });
+
+  it("to xa nhat dang hien, de day moc da doc", () => {
+    expect(lastVisible("doi", 1, 12)).toBe(2);
+    expect(lastVisible("doi", 0, 12)).toBe(0);
+    expect(lastVisible("mot", 4, 12)).toBe(4);
+    expect(lastVisible("mot", 0, 0)).toBe(-1);
+  });
+
+  it("nhan so trang", () => {
+    expect(pageLabel("mot", 2, 12)).toBe("Trang 3 / 12");
+    expect(pageLabel("doi", 1, 12)).toBe("Trang 2-3 / 12");
+    expect(pageLabel("doi", 0, 12)).toBe("Trang 1 / 12");
+  });
+});
+
+describe("la dang lat", () => {
+  it("lat toi o che do hai trang: la mang to phai, mat sau la to trai cua khung ke", () => {
+    expect(flipPlan("doi", 0, 1, 5)).toEqual({ front: 0, back: 1, left: null, right: 2, fromDeg: 0, toDeg: -180 });
+    expect(flipPlan("doi", 1, 1, 5)).toEqual({ front: 2, back: 3, left: 1, right: 4, fromDeg: 0, toDeg: -180 });
+  });
+
+  it("lat lui o che do hai trang: cung la giay do, xoay nguoc lai", () => {
+    expect(flipPlan("doi", 2, -1, 5)).toEqual({ front: 2, back: 3, left: 1, right: 4, fromDeg: -180, toDeg: 0 });
+    expect(flipPlan("doi", 1, -1, 5)).toEqual({ front: 0, back: 1, left: null, right: 2, fromDeg: -180, toDeg: 0 });
+  });
+
+  it("che do mot trang: mat sau la giay tron", () => {
+    expect(flipPlan("mot", 0, 1, 3)).toEqual({ front: 0, back: null, left: null, right: 1, fromDeg: 0, toDeg: -180 });
+    expect(flipPlan("mot", 2, -1, 3)).toEqual({ front: 1, back: null, left: null, right: 2, fromDeg: -180, toDeg: 0 });
+  });
+
+  it("khong lat ra ngoai dau hay cuoi sach", () => {
+    expect(flipPlan("mot", 0, -1, 3)).toBeNull();
+    expect(flipPlan("mot", 2, 1, 3)).toBeNull();
+    expect(flipPlan("doi", 2, 1, 5)).toBeNull();
+    expect(flipPlan("doi", 0, 1, 1)).toBeNull();
+  });
+});

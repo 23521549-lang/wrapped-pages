@@ -1,0 +1,261 @@
+"use client";
+
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
+import { actionUploadMedia } from "@/app/actions/media";
+import { IconAnh } from "@/components/media/icons";
+import { UploadFailure, UploadProgress } from "@/components/media/UploadLine";
+import { COVERS, type CoverKey } from "@/lib/book";
+import type { CropRect, ImageSize } from "@/lib/media/crop";
+import { IMAGE_ERRORS, IMAGE_UNREADABLE_HINT, type ImageFailure } from "@/lib/media/image";
+import { COVER_LABEL, COVER_NAME, CoverArt } from "./CoverArt";
+import { CoverCrop } from "./CoverCrop";
+import { CoverImage } from "./CoverImage";
+import { encodeCover, readSourceImage, releaseSourceImage, type SourceImage } from "./coverFile";
+
+/** Chu cua dong tai bia, dung cho ca dong hien va vung doc. */
+const TAI_BIA = "Đang tải ảnh bìa lên";
+
+/**
+ * Bia cua form sach. cover la tranh ve, luon co va la nen du phong. photo la bia tu tai len dang co (cua
+ * cuon, hoac vua tai trong phien nay); photoChosen la dang dung photo lam bia.
+ */
+export type CoverValue = { cover: CoverKey; photo: string | null; photoChosen: boolean };
+
+/** Id bia tu tai len ma form gui len trong truong coverMedia; null la dung tranh ve. */
+export function chosenCoverMedia(value: CoverValue): string | null {
+  return value.photoChosen ? value.photo : null;
+}
+
+/** Viec dang lam cua o bia anh. Anh goc cua buoc cat nam trong ref, vi phai giai phong dung luc. */
+type Step =
+  | { kind: "nghi" }
+  | { kind: "cat"; size: ImageSize; previewUrl: string }
+  | { kind: "tai" }
+  | { kind: "loi"; message: string; hint: string | null; retry: Blob | null };
+
+export type CoverPickerProps = {
+  value: CoverValue;
+  /** Nhan ham cap nhat, vi ket qua tai len ve sau khi nguoi dung co the da doi tranh. */
+  onChange: (update: (value: CoverValue) => CoverValue) => void;
+  /** Cuon dang sua; null la sach moi, bia cho gan toi khi tao sach. */
+  bookId: string | null;
+  /** Kho media dang bat. Tat thi khong tai len bia moi duoc; bia anh cu van hien va van duoc gui lai nguyen. */
+  mediaEnabled: boolean;
+  disabled: boolean;
+  /** Dang cat hay dang tai bia: form khoa nut gui de khong luu thieu bia vua chon. */
+  onBusyChange: (busy: boolean) => void;
+};
+
+/**
+ * Bang bia cua form sach: bon tranh ve va o thu nam "Anh cua ban".
+ * - Chua co anh: o thu nam la input file phu kin o, dung chung luat focus va bam cua .swatch.
+ * - Chon tep: doc anh (readSourceImage), mo buoc cat ngay duoi bang bia; Dung anh nay thi cat, ma hoa va tai len qua
+ *   actionUploadMedia loai bia. Xong thi o thu nam thanh radio dang chon ve chinh anh do, kem Doi anh.
+ * - Radio anh cung name "cover" voi bon tranh va mang value la tranh du phong, nen truong cover cua form luon la mot tranh
+ *   ve; id anh di trong truong an coverMedia.
+ * Moi viec bat dong bo mang mot so luot (run): Huy, chon lai hay go component lam ket qua ve sau bi bo qua.
+ */
+export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, onBusyChange }: CoverPickerProps) {
+  const id = useId();
+  const [step, setStep] = useState<Step>({ kind: "nghi" });
+  const fileRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const changeRef = useRef<HTMLButtonElement>(null);
+  const source = useRef<SourceImage | null>(null);
+  const run = useRef(0);
+  const focusNext = useRef<"photo" | "pick" | null>(null);
+
+  // Bia anh dang co thi luon hien, ke ca khi kho tat: truong an coverMedia van gui lai id do de sua ten khong
+  // lam mat bia, nen o thu nam phai hien dung cai dang duoc gui - khong duoc de mot tranh ve hien la "dang chon"
+  // trong khi anh moi la bia that su. Kho tat thi chi mat duong tai len bia MOI (o chon tep va nut Doi anh).
+  const showPhoto = value.photo !== null;
+  const photoChosen = showPhoto && value.photoChosen;
+  const uploading = step.kind === "tai";
+
+  // Focus sau khi DOM da doi: ve radio anh khi tai xong, ve cho chon tep khi huy.
+  // useLayoutEffect, khong phai useEffect: layout effect chay ngay trong lan commit da doi DOM. Passive effect cua mot
+  // lan commit truoc (vd luc vua sang "tai", do await dat) co the con treo khi nguoi dung bam Huy; React chay no truoc
+  // lan render moi, no an mat yeu cau focus vua dat trong khi o chon tep van disabled, va focus roi mat.
+  useLayoutEffect(() => {
+    const target = focusNext.current;
+    if (!target) return;
+    focusNext.current = null;
+    (target === "photo" ? photoRef : value.photo !== null ? changeRef : fileRef).current?.focus();
+  });
+
+  useEffect(() => {
+    const held = source;
+    const runs = run;
+    return () => {
+      runs.current += 1;
+      if (held.current) releaseSourceImage(held.current);
+    };
+  }, []);
+
+  /** Chuyen viec: moi ket qua dang doi tro thanh cu, va form biet co dang ban khong. */
+  function go(next: Step) {
+    run.current += 1;
+    setStep(next);
+    onBusyChange(next.kind === "cat" || next.kind === "tai");
+  }
+
+  function dropSource() {
+    if (source.current) releaseSourceImage(source.current);
+    source.current = null;
+  }
+
+  function fail(reason: ImageFailure) {
+    go({ kind: "loi", message: IMAGE_ERRORS[reason], hint: reason === "unreadable" ? IMAGE_UNREADABLE_HINT : null, retry: null });
+  }
+
+  // Cung mot cong: nut Doi anh (disabled tren chinh no), nut Chon anh khac o buoc cat va o dong loi (hai nut
+  // ay khong o trong file nay nen khong gan disabled truc tiep len chung duoc) deu goi ham nay.
+  function pick() {
+    if (disabled || uploading) return;
+    fileRef.current?.click();
+  }
+
+  async function open(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.currentTarget.files?.[0];
+    // Xoa gia tri de chon lai dung tep do van bao change.
+    e.currentTarget.value = "";
+    if (!file) return;
+    const mine = ++run.current;
+    // Giai ma (toi 25 MB) va ve lai anh xem truoc co the mat vai giay tren dien thoai: khoa nut gui ngay tu day,
+    // truoc khi buoc cat kip hien, de khong tao sach thieu bia nguoi viet vua chon. go() se tu cap nhat lai
+    // trang thai ban khi buoc cat hien hoac khi doc that bai.
+    onBusyChange(true);
+    const read = await readSourceImage(file);
+    if (run.current !== mine) {
+      if (typeof read !== "string") releaseSourceImage(read);
+      return;
+    }
+    dropSource();
+    if (typeof read === "string") return fail(read);
+    source.current = read;
+    go({ kind: "cat", size: read.size, previewUrl: read.previewUrl });
+  }
+
+  async function use(rect: CropRect) {
+    const held = source.current;
+    if (!held) return;
+    const mine = ++run.current;
+    const encoded = await encodeCover(held, rect);
+    if (run.current !== mine) return;
+    dropSource();
+    if (typeof encoded === "string") return fail(encoded);
+    await upload(encoded);
+  }
+
+  async function upload(blob: Blob) {
+    go({ kind: "tai" });
+    const mine = run.current;
+    const fd = new FormData();
+    fd.set("kind", "bia");
+    fd.set("book", bookId ?? "");
+    fd.set("file", blob, "bia");
+    const result = await actionUploadMedia(fd).catch(() => null);
+    if (run.current !== mine) return;
+    if (result === null) return go({ kind: "loi", message: IMAGE_ERRORS.upload, hint: null, retry: blob });
+    if ("error" in result) return go({ kind: "loi", message: result.error, hint: null, retry: null });
+    focusNext.current = "photo";
+    go({ kind: "nghi" });
+    onChange((v) => ({ ...v, photo: result.id, photoChosen: true }));
+  }
+
+  function back() {
+    dropSource();
+    focusNext.current = "pick";
+    go({ kind: "nghi" });
+  }
+
+  const retry = step.kind === "loi" ? step.retry : null;
+  const status = step.kind === "tai" ? TAI_BIA : step.kind === "loi" ? step.message : "";
+
+  return (
+    <fieldset className="chon" aria-describedby={photoChosen ? `${id}-du-phong` : undefined}>
+      <legend>Bìa</legend>
+      <div className="picker">
+        {COVERS.map((c) => (
+          <label key={c} className={`swatch bia--${c}`}>
+            <input
+              type="radio"
+              name="cover"
+              value={c}
+              checked={!photoChosen && value.cover === c}
+              disabled={disabled}
+              onChange={() => onChange((v) => ({ ...v, cover: c, photoChosen: false }))}
+              aria-label={COVER_LABEL[c]}
+            />
+            <CoverArt cover={c} />
+          </label>
+        ))}
+        {showPhoto ? (
+          <label className={`swatch bia--${value.cover}`}>
+            <input
+              ref={photoRef}
+              type="radio"
+              name="cover"
+              value={value.cover}
+              checked={photoChosen}
+              disabled={disabled}
+              onChange={() => onChange((v) => ({ ...v, photoChosen: true }))}
+              aria-label="Ảnh của bạn"
+            />
+            <CoverArt cover={value.cover} />
+            <CoverImage mediaId={value.photo} />
+          </label>
+        ) : (
+          mediaEnabled && (
+            <label className="swatch swatch--anh">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                disabled={disabled || uploading}
+                onChange={open}
+                aria-label="Ảnh của bạn, chọn ảnh làm bìa"
+              />
+              <IconAnh />
+              <span aria-hidden="true">Ảnh của bạn</span>
+            </label>
+          )
+        )}
+      </div>
+      {(showPhoto && mediaEnabled) || photoChosen ? (
+        <div className="bia-anh">
+          {showPhoto && mediaEnabled && (
+            <>
+              <button ref={changeRef} className="btn btn--line btn--sm" type="button" disabled={disabled || uploading} onClick={pick}>
+                Đổi ảnh
+              </button>
+              <input
+                ref={fileRef}
+                className="sr-only"
+                type="file"
+                accept="image/*"
+                tabIndex={-1}
+                aria-hidden="true"
+                disabled={disabled || uploading}
+                onChange={open}
+              />
+            </>
+          )}
+          {photoChosen && (
+            <p className="field__help" id={`${id}-du-phong`}>{`Ảnh chưa tải được thì bìa hiện tranh ${COVER_NAME[value.cover]}.`}</p>
+          )}
+        </div>
+      ) : null}
+      {step.kind === "cat" && (
+        <CoverCrop key={step.previewUrl} size={step.size} previewUrl={step.previewUrl} onUse={use} onPickAgain={pick} onCancel={back} />
+      )}
+      {step.kind === "tai" && <UploadProgress label={TAI_BIA} cancelLabel="Hủy tải ảnh bìa" preview={null} onCancel={back} />}
+      {step.kind === "loi" && (
+        <UploadFailure message={step.message} hint={step.hint} preview={null} onRetry={retry ? () => upload(retry) : null} onPick={pick} onClose={back} />
+      )}
+      {/* Mot vung doc giu nguyen qua moi trang thai, nen trinh doc man hinh doc duoc cau tai va cau loi moi. */}
+      <output className="sr-only">{status}</output>
+      <input type="hidden" name="coverMedia" value={chosenCoverMedia(value) ?? ""} />
+    </fieldset>
+  );
+}

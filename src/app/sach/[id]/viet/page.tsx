@@ -1,0 +1,34 @@
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { db } from "@/server/db";
+import { findOwnBook } from "@/server/library/books";
+import { readDraft } from "@/server/library/drafts";
+import { getMediaStore } from "@/server/media/get-store";
+import { requireMe } from "@/server/web/guard";
+import { AppNav } from "@/components/AppNav";
+import { Editor } from "@/components/editor/Editor";
+import type { DocJson } from "@/lib/doc/types";
+
+const TRANG_TRONG: DocJson = { type: "doc", content: [{ type: "paragraph" }] };
+
+export default async function VietSach({ params }: { params: Promise<{ id: string }> }) {
+  await connection();
+  const [me, { id }] = await Promise.all([requireMe(), params]);
+  const book = await findOwnBook(db, me.accountId, id);
+  if (!book) notFound();
+  const draft = await readDraft(db, me.accountId, book.id);
+  return (
+    <>
+      <AppNav me={me} current="ke-sach" subpage sticky={false} />
+      <Editor
+        bookId={book.id}
+        bookTitle={book.title}
+        partnerNickname={book.mode === "chia-se" ? me.partnerNickname : null}
+        initialDoc={draft?.content ?? TRANG_TRONG}
+        initialSavedAt={draft ? draft.updatedAt.toISOString() : null}
+        author={me.nickname}
+        mediaEnabled={getMediaStore() !== null}
+      />
+    </>
+  );
+}

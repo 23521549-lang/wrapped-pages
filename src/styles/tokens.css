@@ -1,0 +1,70 @@
+:root{
+  --color-paper:   oklch(98.5% 0.005 235);
+  --color-paper-2: oklch(97%   0.011 235);
+  --color-paper-3: oklch(95%   0.018 235);
+
+  --blue-1: oklch(94.5% 0.028 238);
+  --blue-2: oklch(91%   0.040 238);
+  --blue-3: oklch(86%   0.058 238);
+  --blue-ink:  oklch(38% 0.075 245);
+  --blue-mark: oklch(62% 0.105 240);
+  /* 59% (khong phai 62% nhu ban dau): vien nut .btn dat len chinh nen --blue-2 cua no, va 62% do ra 2.76 duoi
+     nguong 3.0 cua cong tuong phan (tests/unit/tuong-phan.test.ts) khi do dung cap dang dung. */
+  --blue-line: oklch(59% 0.085 238);
+
+  --color-ink:   oklch(24% 0.012 250);
+  --color-ink-2: oklch(44% 0.013 248);
+  --color-ink-3: oklch(50% 0.012 248);
+
+  --color-rule:    oklch(92% 0.010 235);
+  /* 63% (khong phai 64%): khi vien nay dung ma khong khai nen (vd .btn--line), cong tuong phan doi no dat 3.0
+     tren ca ba be mat giay, va 64% chi dat 2.91 tren --color-paper-3 (tests/unit/tuong-phan.test.ts). */
+  --color-rule-ui: oklch(63% 0.016 240);
+  --color-focus:   oklch(52% 0.17  250);
+
+  --font-body:    var(--f-body, "Be Vietnam Pro"), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--f-display, "Lexend"), var(--font-body);
+  --dtrack: -0.02em;
+  --dwght: 600;
+
+  --text-xs:.72rem; --text-sm:.875rem; --text-base:1rem;
+  --text-md:1.25rem; --text-lg:1.5625rem; --text-xl:1.95rem; --text-2xl:2.44rem;
+
+  --space-2xs:.25rem; --space-xs:.5rem; --space-sm:.75rem; --space-md:1rem;
+  --space-lg:1.5rem;  --space-xl:2.5rem; --space-2xl:4rem; --space-3xl:6rem;
+
+  --radius-card:18px; --radius-sm:12px; --radius-pill:999px;
+
+  --dur-micro:120ms; --dur-short:220ms; --dur-long:420ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* To giay: phai khop src/lib/sheet.ts (co test). */
+  --giay-w: 360px;
+  --giay-h: 540px;
+  --giay-pt: 36px;
+  --giay-pr: 28px;
+  --giay-pb: 44px;
+  --giay-pl: 28px;
+  --giay-khe: 28px;
+  /* Khoi ghi am trong vung chu: phai khop VOICE_BLOCK_HEIGHT cua src/lib/sheet.ts (co test). */
+  --khoi-ghi-am-h: 72px;
+
+  /* Giay, bia, bong va lop chong. */
+  --color-giay: oklch(99.4% 0.005 235);
+  --bia-nui-tren:   oklch(97%   0.014 232); --bia-nui-duoi:   oklch(93%   0.030 228);
+  --bia-truc-tren:  oklch(97.5% 0.012 150); --bia-truc-duoi:  oklch(94%   0.026 152);
+  --bia-trang-tren: oklch(96.5% 0.016 268); --bia-trang-duoi: oklch(92.5% 0.034 272);
+  --bia-chim-tren:  oklch(97%   0.014 84);  --bia-chim-duoi:  oklch(93.5% 0.028 78);
+  --radius-giay: 8px;
+  --shadow-rest: 0 1px 2px oklch(24% 0.012 250 / .045), 0 18px 38px -32px oklch(24% 0.012 250 / .4);
+  --shadow-lift: 0 2px 4px oklch(24% 0.012 250 / .055), 0 28px 52px -30px oklch(24% 0.012 250 / .45);
+  --z-raised: 10;
+  --z-sticky: 200;
+
+  /* Vach nhoe tren mat giay: nhat, chi du thay nhip dong. */
+  --color-vach: oklch(92.5% 0.014 240);
+  /* Nghi thuc mo: moi ky tu, va chu ky con tro nhap nhay. JS doc qua msTuCss. */
+  --dur-go: 18ms;
+  --dur-nhay: 1000ms;
+}

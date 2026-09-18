@@ -1,0 +1,49 @@
+{
+  "name": "mon-qua-cua-em",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --global-timeout=1800000",
+    "lint": "oxlint .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:backup": "node scripts/sao-luu.mjs sao-luu",
+    "db:restore": "node scripts/sao-luu.mjs khoi-phuc"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.1",
+    "@tiptap/core": "3.31.3",
+    "@tiptap/extension-list": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
+    "drizzle-orm": "^0.45.2",
+    "next": "^16.3.4",
+    "postgres": "^3.4.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "drizzle-kit": "^0.31.10",
+    "jsdom": "^29.1.1",
+    "oxlint": "1.82.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}

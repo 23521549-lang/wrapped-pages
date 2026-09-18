@@ -1,0 +1,30 @@
+@import "./tokens.css";
+@import "./app.css";
+@import "./giay.css";
+@import "./viet.css";
+@import "./seal.css";
+
+html, body { overflow-x: clip; }
+body{
+  margin:0; background: var(--color-paper); color: var(--color-ink);
+  font-family: var(--font-body); font-size: var(--text-base); line-height:1.65;
+  -webkit-font-smoothing: antialiased;
+}
+*, *::before, *::after { box-sizing: border-box; }
+h1,h2,h3,h4,p,figure,ol,ul { margin:0; }
+ol, ul { padding:0; list-style:none; }
+a { color:inherit; text-decoration:none; }
+[hidden] { display:none !important; }
+:focus-visible{ outline:2.5px solid var(--color-focus); outline-offset:3px; }
+/*
+ * Giam chuyen dong: chi rut ngan hieu ung mo va doi mau san co ve 150ms (mo chong 150ms, khong xoay).
+ * Phai gioi han transition-property: mac dinh no la `all`, nen chi ep transition-duration se TAO transition cho moi
+ * thay doi width, height, visibility cua moi phan tu, tuc co chuyen dong dung luc nguoi dung xin tat.
+ */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation:none !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow, outline-color !important;
+    transition-duration:150ms !important;
+  }
+}

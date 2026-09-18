@@ -1,0 +1,72 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "import", "jsx-a11y", "nextjs"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {
+    // react-hooks/exhaustive-deps la nguon that duy nhat cho "thieu bien phu thuoc trong hook":
+    // no hieu dung refs la gia tri on dinh (khong bao gio bao thieu vi mot ref trong deps), va
+    // da kiem chung khong bao false positive tren toan bo src/ (xem task-lint-report.md).
+    "react/exhaustive-deps": "error",
+    "react/rules-of-hooks": "error",
+
+    // TAT: du an dung tsconfig "jsx": "react-jsx" (JSX transform tu dong cua React 17+), nen
+    // KHONG can import React de dung JSX. Rule nay gia dinh transform cu ("react") va bao loi
+    // tren toan bo 356 vi tri JSX trong du an - sai hoan toan voi cau hinh build that su.
+    "react/react-in-jsx-scope": "off",
+
+    // TAT: rule rieng cua oxlint (khac react-hooks/exhaustive-deps o tren), KHONG loai tru
+    // refs (useRef) khoi phan tich phu thuoc nhu rule chuan. Kiem chung tren
+    // src/components/editor/Editor.tsx: bao "thieu phu thuoc" tren 2 effect va 4
+    // useMemo/useCallback ma deps da day du (chi dung *Ref.current, la gia tri on dinh) -
+    // toan bo la false positive. react/exhaustive-deps o tren da la nguon that cho loai loi
+    // nay va khong co false positive nao duoc thay.
+    "react/exhaustive-effect-dependencies": "off",
+    "react/memo-dependencies": "off",
+
+    // BAT: rule that, nham dung anti-pattern doc `.current` luc dang render (vo khi React
+    // chay che do dong thoi). Mot false positive duy nhat da kiem chung (Editor.tsx, xem
+    // comment oxlint-disable-next-line ngay tai cho) duoc suppress dung mot dong, KHONG tat
+    // ca du an - de rule van bat loi that o moi cho khac trong tuong lai.
+    "react/refs": "error",
+
+    // BAT: rule that, nham dung setState dong bo trong effect gay cascading renders. Ba vi
+    // tri da kiem chung deu la dong bo voi he thong ngoai (BookForm.tsx, RenameForm.tsx,
+    // Editor.tsx - xem tung comment oxlint-disable-next-line rieng tai cho) duoc suppress
+    // dung tung dong, KHONG tat ca du an - de rule van bat loi that o moi cho khac ve sau.
+    "react/set-state-in-effect": "error",
+
+    // TAT: bao moi import chi chay tac dung phu (khong gan bien) la loi, nhung "import
+    // 'server-only'" (chan module chay o client) va "import '@/styles/globals.css'" la hai
+    // mau chuan cua chinh Next.js, khong the "gan vao bien". Ca 4 vi tri tim duoc deu la hai
+    // mau nay.
+    "import/no-unassigned-import": "off"
+  },
+  "overrides": [
+    {
+      // TAT trong tests/**: ba rule "perf/style cho code chay lai nhieu lan" khong hop voi code
+      // kiem thu chay dung mot lan. Kiem chung ca 3 rule tren toan bo tests/ (59 canh bao, xem
+      // task-lint-report.md):
+      // - no-await-in-loop (39): moi vi tri hoac la buoc Playwright phai chay tuan tu (go phim,
+      //   bam nut - khong the Promise.all mot trinh duyet), hoac la vong lap tao N su kien that
+      //   bai lien tiep de kiem tra gioi han dang nhap - chinh thu tu/so lan do la thu dang kiem.
+      // - unicorn/no-array-sort (13): toan bo la .sort() tren mang vua tao (tu .map()/literal) chi
+      //   de so sanh thu tu trong expect(...).toEqual(...), khong ai giu tham chieu mang do sau.
+      // - unicorn/consistent-function-scoping (4): ham dung mot lan trong dung mot it() lam factory
+      //   du lieu gia; giu tai cho de doc test de hieu quan trong hon "khong tao lai moi lan goi"
+      //   (rule nay vi hieu suat, ma test chi chay mot lan).
+      "files": ["tests/**"],
+      "rules": {
+        "no-await-in-loop": "off",
+        "unicorn/no-array-sort": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    }
+  ],
+  "env": {
+    "builtin": true
+  }
+}

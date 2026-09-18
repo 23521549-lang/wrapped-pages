@@ -1,0 +1,102 @@
+import { test, expect } from "@playwright/test";
+import { resetDb } from "./db";
+import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+
+test.beforeEach(async () => {
+  await resetDb();
+});
+
+test.afterEach(async () => {
+  await dongContextCu();
+});
+
+test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi het dau trang moi", async ({ browser }) => {
+  const { a, b, tenCuaA } = await haiNguoiDaVao(browser);
+  const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
+  await dangToThang(id, "Tờ một", "Tờ hai", "Tờ ba");
+
+  await b.goto("/ke-sach");
+  const the = b.locator(".book", { hasText: "Chuyện chưa kể" });
+  await expect(the.locator(".chip--key")).toHaveText("3 trang mới");
+  await expect(the.locator(".new")).toHaveCount(1);
+  const ganNhat = b.getByRole("article", { name: "Trang gần nhất" });
+  await expect(ganNhat).toContainText("Chuyện chưa kể");
+  await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveCount(0);
+  await ganNhat.getByRole("link", { name: "Đọc tiếp" }).click();
+
+  await expect(b).toHaveURL(new RegExp(`/sach/${id}$`));
+  await expect(b.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 3 trang`);
+  await expect(b.getByRole("link", { name: "Sửa sách" })).toHaveCount(0);
+  const dem = b.locator(".doc__dem");
+  await expect(dem).toHaveText("Trang 1 / 3");
+  await expect(b.getByRole("button", { name: "Trang trước" })).toHaveAttribute("aria-disabled", "true");
+  expect(await tranNgang(b)).toEqual([]);
+
+  await b.keyboard.press("ArrowRight");
+  await expect(dem).toHaveText("Trang 2-3 / 3");
+  await expect(b.locator(".sach")).toContainText("Tờ ba");
+  await expect(b.getByRole("button", { name: "Trang sau" })).toHaveAttribute("aria-disabled", "true");
+  await b.keyboard.press("ArrowLeft");
+  await expect(dem).toHaveText("Trang 1 / 3");
+  await b.keyboard.press("ArrowRight");
+  await expect(dem).toHaveText("Trang 2-3 / 3");
+
+  // Quay lai ngay, khi moc con dang hen: Reader gui moc luc roi man roi lam moi ke.
+  await b.goBack();
+  await expect(b).toHaveURL(new RegExp("/ke-sach$"));
+  await expect(the.locator(".chip--key")).toHaveCount(0);
+  await expect(the.locator(".new")).toHaveCount(0);
+});
+
+test("chu sach: Viet tiep va Sua sach, mo dung ?trang, man hep mot trang, giam chuyen dong van lat", async ({ browser }) => {
+  const { a, tenCuaA, tenCuaB } = await haiNguoiDaVao(browser);
+  const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
+  await dangToThang(id, "Tờ một", "Tờ hai", "Tờ ba");
+  await a.setViewportSize({ width: 375, height: 800 });
+  await a.emulateMedia({ reducedMotion: "reduce" });
+
+  await a.goto(`/sach/${id}?trang=2`);
+  await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 3 trang · ${tenCuaB} đọc được`);
+  await expect(a.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${id}/viet`);
+  await expect(a.getByRole("link", { name: "Sửa sách" })).toHaveAttribute("href", `/sach/${id}/sua`);
+  const dem = a.locator(".doc__dem");
+  await expect(dem).toHaveText("Trang 2 / 3");
+  expect(await tranNgang(a)).toEqual([]);
+
+  // Gan mot MutationObserver de phan biet lat that (mot ".la" duoc chen) voi mo chong khong lat.
+  await a.evaluate(() => {
+    const w = window as unknown as { coLa: boolean };
+    w.coLa = false;
+    new MutationObserver(() => {
+      if (document.querySelector(".la")) w.coLa = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
+  await a.getByRole("button", { name: "Trang sau" }).click();
+  await expect(dem).toHaveText("Trang 3 / 3");
+  // Bam hai lan lien: lan hai duoc hen va chay ngay sau lan dau.
+  const truoc = a.getByRole("button", { name: "Trang trước" });
+  await truoc.click();
+  await truoc.click();
+  await expect(dem).toHaveText("Trang 1 / 3");
+  // Giam chuyen dong phai mo chong, khong duoc lat 3D nhu binh thuong.
+  expect(await a.evaluate(() => (window as unknown as { coLa: boolean }).coLa)).toBe(false);
+});
+
+test("sach rieng tu cua nguoi kia va ma rac la 404; cuon chua co to thi hien loi nhan trong", async ({ browser }) => {
+  const { a, b, tenCuaA } = await haiNguoiDaVao(browser);
+  const rieng = await taoSach(a, "Cuốn không đặt tên", "rieng-tu");
+  const chung = await taoSach(a, "Chuyện chưa kể", "chia-se");
+
+  expect((await b.goto(`/sach/${rieng}`))?.status()).toBe(404);
+  expect((await b.goto("/sach/khong-phai-ma-sach"))?.status()).toBe(404);
+
+  await b.goto(`/sach/${chung}`);
+  await expect(b.getByRole("heading", { name: "Chưa có trang nào." })).toBeVisible();
+  await expect(b.getByText(`${tenCuaA} chưa đăng trang nào trong cuốn này.`)).toBeVisible();
+  await expect(b.getByRole("link", { name: "Viết trang đầu" })).toHaveCount(0);
+
+  await a.goto(`/sach/${rieng}`);
+  await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 0 trang · Chỉ mình bạn đọc`);
+  await expect(a.getByRole("link", { name: "Viết trang đầu" })).toHaveAttribute("href", `/sach/${rieng}/viet`);
+});

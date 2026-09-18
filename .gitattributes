@@ -1,0 +1,4 @@
+# Migration phai co cung noi dung tren moi may: drizzle tinh hash tu nguyen van tep .sql,
+# nen de git doi LF/CRLF thi cung migration ra hai hash khac nhau.
+drizzle/*.sql text eol=lf
+drizzle/meta/*.json text eol=lf

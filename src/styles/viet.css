@@ -1,0 +1,170 @@
+/* Man viet. Mau, chu va khoang cach chi qua token (src/styles/tokens.css). */
+.viet{ min-height: 100dvh; background: var(--color-paper-2); padding-bottom: var(--space-3xl); }
+.viet-tren{
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  background: color-mix(in oklch, var(--color-paper) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-rule);
+}
+.viet-dau{
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-lg) var(--space-xs);
+}
+.viet-dau__ten{
+  flex: 1 1 10rem; min-width: 0; font-size: var(--text-md); line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.viet-dau__phai{ display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.luu{ display: inline-flex; align-items: center; gap: .5rem; font-size: var(--text-sm); color: var(--color-ink-3); }
+.luu--loi{ color: var(--blue-ink); font-weight: 500; }
+/* Bo dem ky tu: gan tran la so nhat nhu trang thai luu, vuot tran la canh bao dam thay cho trang thai luu. */
+.dem-chu{ font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dem-chu--tran{ color: var(--color-ink); font-weight: 600; white-space: normal; }
+
+.thanh-dinh-dang{
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2xs);
+  padding: 0 var(--space-lg) var(--space-sm);
+}
+.nut-dinh-dang{
+  min-width: 36px; min-height: 36px; padding: 0 .6rem;
+  display: inline-grid; place-items: center;
+  border: 1px solid transparent; border-radius: var(--radius-pill);
+  background: transparent; color: var(--color-ink-2);
+  font: inherit; font-size: var(--text-base); cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+}
+.nut-dinh-dang:hover{ background: var(--color-paper-3); color: var(--color-ink); }
+.nut-dinh-dang[aria-pressed="true"]{ background: var(--blue-1); color: var(--blue-ink); border-color: var(--blue-line); }
+.nut-dinh-dang:active{ transform: translateY(1px); }
+.nut-dinh-dang:disabled{ opacity: .5; cursor: not-allowed; }
+/* Vung bam toi thieu 44px chi ap cho man cam ung, khong ap cho con tro chuot (khuon mau app.css). */
+@media (pointer: coarse), (max-width: 820px){
+  .nut-dinh-dang{ min-width: 44px; min-height: 44px; }
+}
+
+/*
+ * Nhom Them anh, Ghi am tren thanh cong cu; hang phu duoi thanh (dinh cung .viet-tren) cho
+ * dong tai anh va hop ghi am. Tai anh va ghi am co the cung luc: dong tai nam tren, hop ghi nam duoi.
+ */
+.thanh-dinh-dang__nhom{ display: inline-flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2xs); }
+.nut-dinh-dang--co-hinh{ display: inline-flex; align-items: center; gap: .4rem; padding: 0 .8rem 0 .65rem; font-size: var(--text-sm); font-weight: 500; }
+.nut-dinh-dang--co-hinh svg{ width: 18px; height: 18px; flex: none; }
+.nut-dinh-dang[aria-expanded="true"]{ background: var(--blue-1); color: var(--blue-ink); border-color: var(--blue-line); }
+.nut-dinh-dang[aria-disabled="true"]{ opacity: .5; cursor: not-allowed; }
+.nut-dinh-dang[aria-disabled="true"]:hover{ background: transparent; color: var(--color-ink-2); }
+.nut-dinh-dang[aria-disabled="true"]:active{ transform: none; }
+.thanh-dinh-dang__ghi{ flex: 1 1 100%; text-align: center; font-size: var(--text-xs); line-height: 1.5; color: var(--color-ink-3); }
+
+.viet-phu{ display: grid; justify-items: center; gap: var(--space-xs); padding: 0 var(--space-lg) var(--space-sm); }
+
+.tai-anh{
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--space-xs) var(--space-sm);
+  width: min(30rem, 100%); min-width: 0; padding: var(--space-xs);
+  border: 1px solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper);
+}
+.tai-anh--gon{ width: auto; grid-template-columns: 40px auto; padding-right: var(--space-md); }
+.tai-anh__hinh{ width: 40px; height: 40px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: var(--color-paper-3); color: var(--color-ink-3); }
+.tai-anh__hinh img{ display: block; width: 100%; height: 100%; object-fit: cover; }
+.tai-anh__hinh--dau svg{ width: 20px; height: 20px; }
+.tai-anh__than{ display: grid; gap: .3rem; min-width: 0; }
+.tai-anh__chu{ display: flex; align-items: center; justify-content: space-between; gap: .45rem; min-width: 0; font-size: var(--text-sm); line-height: 1.4; color: var(--color-ink-2); }
+.tai-anh__chu--xong{ justify-content: flex-start; color: var(--color-ink); }
+.tai-anh__chu--xong svg{ width: 14px; height: 14px; flex: none; color: var(--blue-ink); }
+.tai-anh__chu--loi{ justify-content: flex-start; color: var(--color-ink); font-weight: 600; }
+.tai-anh__phu{ font-size: var(--text-xs); line-height: 1.5; color: var(--color-ink-3); }
+.tai-anh__nut{ display: flex; align-items: center; gap: var(--space-2xs); }
+.tai-anh__dong{ width: 36px; padding: 0; }
+.tai-anh__dong svg{ width: 14px; height: 14px; }
+/* tien do khong xac dinh: server action khong bao so byte da gui, nen thanh chi nhip mo sang bang opacity */
+.tien-do{ appearance: none; -webkit-appearance: none; display: block; width: 100%; height: 6px; border: 0; border-radius: var(--radius-pill); background: var(--blue-2); overflow: hidden; animation: tien-do 1.2s var(--ease-in-out) infinite alternate; }
+.tien-do::-webkit-progress-bar{ background: var(--blue-2); border-radius: var(--radius-pill); }
+@keyframes tien-do{ to{ opacity: .45; } }
+
+.ghi-am-hop{
+  display: grid; gap: var(--space-sm); width: min(30rem, 100%); min-width: 0; padding: var(--space-md);
+  border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); box-shadow: var(--shadow-rest);
+}
+.ghi-am-hop__dau{ display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2xs) var(--space-sm); }
+.ghi-am-hop__t{ font-size: var(--text-base); line-height: 1.3; }
+.ghi-am-hop__trang-thai{ display: inline-flex; align-items: center; gap: .5rem; font-size: var(--text-sm); line-height: 1.4; color: var(--color-ink-2); }
+.ghi-am-hop__trang-thai--dam{ color: var(--color-ink); font-weight: 600; }
+.cham-ghi{ width: 8px; height: 8px; flex: none; border-radius: var(--radius-pill); background: var(--blue-mark); box-shadow: 0 0 0 4px var(--blue-1); animation: cham-ghi 1.2s var(--ease-in-out) infinite alternate; }
+@keyframes cham-ghi{ to{ opacity: .35; } }
+.ghi-am-hop__do{ display: flex; align-items: center; gap: var(--space-md); min-width: 0; }
+.ghi-am-hop__gio{ font-family: var(--font-display); font-weight: var(--dwght); letter-spacing: var(--dtrack); font-size: var(--text-lg); line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ghi-am-hop__tran{ font-family: var(--font-body); font-weight: 450; letter-spacing: normal; font-size: var(--text-sm); color: var(--color-ink-3); }
+.muc-am{ display: block; flex: 1 1 auto; min-width: 0; height: 36px; }
+.muc-am rect{ fill: var(--blue-line); }
+.ghi-am-hop__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.ghi-am-hop .btn svg{ width: 16px; height: 16px; flex: none; }
+.ghi-am-hop .khoi-ghi-am{ margin: 0; }
+
+@media (pointer: coarse), (max-width: 820px){
+  .tai-anh__dong{ width: 44px; }
+}
+@media (max-width: 480px){
+  .tai-anh{ grid-template-columns: 40px minmax(0, 1fr); }
+  .tai-anh > .tai-anh__nut, .tai-anh > .btn{ grid-column: 2; justify-self: start; }
+}
+
+.viet-mat{ position: relative; display: flex; justify-content: center; padding: var(--space-lg) var(--space-md) 0; }
+.viet-chong{ position: relative; }
+.viet-chong__trong{ position: absolute; top: 0; left: 0; width: var(--giay-w); transform-origin: top left; }
+.viet-to{ position: absolute; left: 0; }
+.viet-chu .ProseMirror{
+  position: relative; min-height: var(--giay-h);
+  padding: var(--giay-pt) var(--giay-pr) var(--giay-pb) var(--giay-pl);
+  outline-offset: 4px;
+}
+.ngat-trang{ display: block; pointer-events: none; user-select: none; }
+.ban-sao{
+  position: absolute; top: 0; left: -10000px;
+  width: calc(var(--giay-w) - var(--giay-pl) - var(--giay-pr));
+  visibility: hidden; pointer-events: none;
+}
+
+/*
+ * Khoi media dang chon. ProseMirror them ProseMirror-selectednode vao node view khi khoi duoc chon
+ * bang chuot hay phim mui ten. Vong mau focus vi day dung la cho ban phim dang dung. Nut Bo chi hien khi dang chon, nen
+ * khong them diem Tab thua cho moi khoi; khoi khong doi hinh hoc khi chon.
+ */
+.ProseMirror-selectednode .khoi-anh, .ProseMirror-selectednode .khoi-ghi-am{ outline: 2.5px solid var(--color-focus); outline-offset: 3px; }
+.khoi-bo{ display: none; gap: .35rem; background: color-mix(in oklch, var(--color-paper) 94%, transparent); }
+.khoi-bo svg{ width: 14px; height: 14px; flex: none; }
+.ProseMirror-selectednode .khoi-bo{ display: inline-flex; }
+.khoi-anh .khoi-bo{ position: absolute; top: var(--space-xs); right: var(--space-xs); z-index: 1; }
+.khoi-ghi-am .khoi-bo{ position: absolute; top: 50%; right: var(--space-xs); margin-top: -18px; z-index: 1; }
+@media (pointer: coarse), (max-width: 820px){
+  /* man viet thu to toi 0.8 o 320px: 56px logic van con 44.8px that */
+  .khoi-bo{ min-height: 56px; }
+  .khoi-ghi-am .khoi-bo{ margin-top: -28px; }
+}
+
+/* Che do tap trung: moi doan tru doan dang go mo xuong. Chi doi opacity, khong doi bo cuc. */
+.tap-trung .viet-chu p{ opacity: .38; transition: opacity var(--dur-short) var(--ease-out); }
+.tap-trung .viet-chu p.dang-viet{ opacity: 1; }
+.nut-dinh-dang--chu{ padding: 0 .9rem; font-size: var(--text-sm); font-weight: 500; }
+
+.dang, .dang-hoi{ display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.dang-hoi{ padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); background: var(--blue-1); }
+.dang-hoi__chu{ font-size: var(--text-sm); color: var(--color-ink); }
+.dang-hoi__nut{ display: flex; gap: var(--space-xs); }
+
+/*
+ * Hop xac nhan dang co them nhom Niem phong (SealPicker). Hop dai nen chiem
+ * tron mot hang cua thanh tren, va tu cuon trong chinh no: .viet-tren luon dinh o dinh man,
+ * nen khong duoc de hop cao qua man hinh o bat ky be rong nao.
+ */
+.viet-dau__phai:has(.dang-hoi--niem){ flex: 1 1 100%; }
+.dang-hoi--niem{
+  flex: 1 1 100%; display: grid; gap: var(--space-md); padding: var(--space-md);
+  border: 1px solid var(--blue-line);
+  max-height: calc(100dvh - 9rem); overflow-y: auto; overscroll-behavior: contain;
+}
+.chon-niem .chon__ds{ grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr)); }
+.chon-niem .the-chon{ padding: var(--space-sm) var(--space-md); }
+.niem-o{ display: grid; gap: var(--space-md); padding: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-rule); background: var(--color-paper); min-width: 0; }
+.ds-nhap{ display: grid; gap: var(--space-xs); }
+.dong-nhap{ display: flex; gap: var(--space-xs); align-items: center; min-width: 0; }
+.dong-nhap .field__o{ flex: 1 1 auto; min-width: 0; }
+.them{ justify-self: start; }

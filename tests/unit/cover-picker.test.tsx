@@ -1,0 +1,420 @@
+// @vitest-environment jsdom
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { AnchorHTMLAttributes } from "react";
+import { BookForm, type BookFormProps } from "@/components/book/BookForm";
+import { IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
+import { MEDIA_MAX_BYTES } from "@/lib/media/kinds";
+
+/*
+ * O bia "Anh cua ban" cua form sach tren DOM that: chon tep, buoc cat 5:3 (phim, keo, thu phong),
+ * cat bang canvas roi tai len qua actionUploadMedia, bia du phong la tranh ve, kho tat. Canvas,
+ * createImageBitmap va blob URL la gia: jsdom khong giai ma hay ve anh.
+ */
+
+type KetQuaTai = { error: string } | { id: string; w: number; h: number };
+
+const { actionCreateBook, actionUpdateBook, actionUploadMedia } = vi.hoisted(() => ({
+  actionCreateBook: vi.fn(async (_fd: FormData) => ({ error: "Chưa tạo được." })),
+  actionUpdateBook: vi.fn(async (_bookId: string, _fd: FormData) => ({ error: "Chưa lưu được." })),
+  actionUploadMedia: vi.fn(async (_fd: FormData): Promise<KetQuaTai> => ({ error: "chua dat" })),
+}));
+vi.mock("@/app/actions/library", () => ({ actionCreateBook, actionUpdateBook }));
+vi.mock("@/app/actions/media", () => ({ actionUploadMedia }));
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...rest}>{children}</a>,
+}));
+
+const BIA = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
+const CU = "7a2e4c6b-8d0f-4a1c-9e3b-5d7f9b1d3f5a";
+const SACH: NonNullable<BookFormProps["book"]> = {
+  id: "b1", title: "Những bữa sáng", mode: "chia-se", cover: "chim-bay", youtubeId: null, coverMediaId: CU,
+};
+
+/** Anh nguon 2000x1500 da xoay theo EXIF. */
+const bitmap = { width: 2000, height: 1500, close: vi.fn() };
+const giaiMa = vi.fn(async (_file: Blob, _options?: ImageBitmapOptions): Promise<typeof bitmap> => bitmap);
+/** Moi lan drawImage: toa do nguon va dich, kem kich thuoc canvas. */
+let ve: number[][] = [];
+let khongWebp = false;
+let byteBlob = 2048;
+let soUrl = 0;
+
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, "setPointerCapture", { value: vi.fn(), configurable: true });
+});
+
+beforeEach(() => {
+  ve = [];
+  khongWebp = false;
+  byteBlob = 2048;
+  soUrl = 0;
+  bitmap.close.mockClear();
+  giaiMa.mockClear();
+  vi.stubGlobal("createImageBitmap", giaiMa);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (this: HTMLCanvasElement) {
+    return {
+      imageSmoothingQuality: "low",
+      drawImage: (_nguon: unknown, ...so: number[]) => ve.push([...so, this.width, this.height]),
+    } as never;
+  });
+  vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((cb: BlobCallback, type?: string) => {
+    // Safari cu tra PNG khi khong ma hoa duoc WebP.
+    cb(new Blob([new Uint8Array(byteBlob)], { type: type === "image/webp" && khongWebp ? "image/png" : type }));
+  });
+  vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:xem-${++soUrl}`);
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  actionUploadMedia.mockImplementation(async () => ({ id: BIA, w: 1200, h: 720 }));
+});
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  for (const f of [actionCreateBook, actionUpdateBook, actionUploadMedia]) f.mockClear();
+});
+
+function formMoi(props: Partial<BookFormProps> = {}) {
+  render(<BookForm book={null} nickname="Linh" partnerNickname="Manh" mediaEnabled {...props} />);
+  fireEvent.change(screen.getByLabelText("Tên sách"), { target: { value: "Chuyện chưa kể" } });
+}
+
+const formSua = (mediaEnabled = true) =>
+  render(<BookForm book={SACH} nickname="Manh" partnerNickname="Linh" mediaEnabled={mediaEnabled} />);
+
+const oTep = () => screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa") as HTMLInputElement;
+const oTen = () => screen.getByLabelText("Tên sách") as HTMLInputElement;
+const oAnh = () => screen.getByRole("radio", { name: "Ảnh của bạn" }) as HTMLInputElement;
+const tranh = (ten: string) => screen.getByRole("radio", { name: ten }) as HTMLInputElement;
+const nut = (ten: string) => screen.getByRole("button", { name: ten }) as HTMLButtonElement;
+/** Moi radio cua bang bia. */
+const COVER_RADIOS = () => [...document.querySelectorAll<HTMLInputElement>('input[type="radio"][name="cover"]')];
+const xemTruoc = () => screen.getByRole("complementary", { name: "Xem trước trên kệ" });
+const loa = () => screen.getByRole("status").textContent;
+const san = () => screen.getByRole("group", { name: "Khung cắt ảnh bìa" });
+/** x, y, rong, cao cua khung cat, diem anh nguon. */
+const soKhung = () => ["x", "y", "width", "height"].map((a) => Number(document.querySelector(".cat-bia__vien")?.getAttribute(a)));
+
+function tepAnh(bytes = 3_000_000): File {
+  const tep = new File([new Uint8Array(8)], "IMG_2041.jpg", { type: "image/jpeg" });
+  Object.defineProperty(tep, "size", { value: bytes });
+  return tep;
+}
+
+async function chon(input: HTMLInputElement, tep = tepAnh()) {
+  fireEvent.change(input, { target: { files: [tep] } });
+  return screen.findByRole("group", { name: "Khung cắt ảnh bìa" });
+}
+
+/** Mot lan tai len chua tra ve, test tu ket thuc. */
+function taiTreo() {
+  let xong!: (ket: KetQuaTai) => void;
+  actionUploadMedia.mockImplementationOnce(() => new Promise<KetQuaTai>((r) => { xong = r; }));
+  return (ket: KetQuaTai) => act(async () => xong(ket));
+}
+
+describe("BookForm bia tu tai len: buoc cat", () => {
+  it("chon anh: giai ma xoay theo EXIF, mo buoc cat duoi bang bia, focus vao san, khung 5:3 lon nhat o giua", async () => {
+    formMoi();
+    const tep = tepAnh();
+    const cat = await chon(oTep(), tep);
+    expect(giaiMa).toHaveBeenCalledWith(tep, { imageOrientation: "from-image" });
+    expect(document.activeElement).toBe(cat);
+    expect(cat.closest("fieldset")?.querySelector("legend")?.textContent).toBe("Bìa");
+    expect(screen.getByRole("heading", { name: "Cắt ảnh bìa" })).toBeTruthy();
+    expect(cat.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 2000 1500");
+    expect(cat.querySelector("image")?.getAttribute("href")).toBe("blob:xem-1");
+    expect(ve).toEqual([[0, 0, 1600, 1200, 1600, 1200]]);
+    expect(soKhung()).toEqual([0, 150, 2000, 1200]);
+    const zoom = screen.getByLabelText("Thu phóng");
+    expect(["min", "max", "step", "value"].map((a) => zoom.getAttribute(a))).toEqual(["100", "250", "5", "100"]);
+    expect(nut("Tạo sách").disabled).toBe(true);
+    expect(actionUploadMedia).not.toHaveBeenCalled();
+  });
+
+  it("dang giai ma va ve lai anh xem truoc da khoa nut gui, truoc khi buoc cat kip hien", async () => {
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepAnh()] } });
+    expect(nut("Tạo sách").disabled).toBe(true);
+    expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    await screen.findByRole("group", { name: "Khung cắt ảnh bìa" });
+  });
+
+  it("mui ten doi khung, Shift doi xa hon, phim khac khong bi chan; thu phong thu khung quanh tam", async () => {
+    formMoi();
+    const cat = await chon(oTep());
+    expect(fireEvent.keyDown(cat, { key: "ArrowDown" })).toBe(false);
+    expect(soKhung()).toEqual([0, 190, 2000, 1200]);
+    fireEvent.keyDown(cat, { key: "ArrowUp", shiftKey: true });
+    expect(soKhung()).toEqual([0, 0, 2000, 1200]);
+    fireEvent.change(screen.getByLabelText("Thu phóng"), { target: { value: "200" } });
+    expect(soKhung()).toEqual([500, 300, 1000, 600]);
+    fireEvent.keyDown(cat, { key: "ArrowRight", shiftKey: true });
+    expect(soKhung()).toEqual([700, 300, 1000, 600]);
+    expect(fireEvent.keyDown(cat, { key: "Enter" })).toBe(true);
+    expect(soKhung()).toEqual([700, 300, 1000, 600]);
+  });
+
+  it("keo bang con tro: khung doi theo ti le hien cua san, chi theo con tro dang keo", async () => {
+    formMoi();
+    const cat = await chon(oTep());
+    fireEvent.change(screen.getByLabelText("Thu phóng"), { target: { value: "200" } });
+    vi.spyOn(cat, "getBoundingClientRect").mockReturnValue({ width: 500, height: 375 } as DOMRect);
+    fireEvent.pointerDown(cat, { pointerId: 3, button: 0, clientX: 100, clientY: 100 });
+    expect(HTMLElement.prototype.setPointerCapture).toHaveBeenCalledWith(3);
+    fireEvent.pointerMove(cat, { pointerId: 3, clientX: 150, clientY: 75 });
+    expect(soKhung()).toEqual([700, 350, 1000, 600]);
+    fireEvent.pointerMove(cat, { pointerId: 9, clientX: 400, clientY: 400 });
+    fireEvent.pointerUp(cat, { pointerId: 3 });
+    fireEvent.pointerMove(cat, { pointerId: 3, clientX: 0, clientY: 0 });
+    expect(soKhung()).toEqual([700, 350, 1000, 600]);
+  });
+
+  it("Huy dong buoc cat, giai phong anh, khong tai gi, focus ve o chon tep", async () => {
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Hủy"));
+    expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:xem-1");
+    expect(document.activeElement).toBe(oTep());
+    expect(nut("Tạo sách").disabled).toBe(false);
+    expect(actionUploadMedia).not.toHaveBeenCalled();
+  });
+
+  it("Chon anh khac trong buoc cat mo lai chon tep; anh moi thay anh cu va giai phong anh cu", async () => {
+    formMoi();
+    await chon(oTep());
+    const bam = vi.spyOn(oTep(), "click");
+    fireEvent.click(nut("Chọn ảnh khác"));
+    expect(bam).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      fireEvent.change(oTep(), { target: { files: [tepAnh()] } });
+    });
+    await waitFor(() => expect(san().querySelector("image")?.getAttribute("href")).toBe("blob:xem-2"));
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:xem-1");
+  });
+});
+
+describe("BookForm bia tu tai len: tai len", () => {
+  it("Dung anh nay: cat dung khung ve 1200x720 WebP, tai len loai bia; xong thi Anh cua ban dang chon, xem truoc doi theo, form gui coverMedia", async () => {
+    const xong = taiTreo();
+    formMoi();
+    const cat = await chon(oTep());
+    fireEvent.keyDown(cat, { key: "ArrowDown" });
+    fireEvent.click(nut("Dùng ảnh này"));
+    expect(await screen.findByRole("progressbar", { name: "Đang tải ảnh bìa lên" })).toBeTruthy();
+    expect(loa()).toBe("Đang tải ảnh bìa lên");
+    expect(ve.at(-1)).toEqual([0, 190, 2000, 1200, 0, 0, 1200, 720, 1200, 720]);
+    const fd = actionUploadMedia.mock.calls[0][0];
+    const tep = fd.get("file") as File;
+    expect([fd.get("kind"), fd.get("book"), tep.type, tep.size]).toEqual(["bia", "", "image/webp", 2048]);
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:xem-1");
+    expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    expect(nut("Tạo sách").disabled).toBe(true);
+
+    await xong({ id: BIA, w: 1200, h: 720 });
+    expect([oAnh().checked, document.activeElement === oAnh()]).toEqual([true, true]);
+    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([oAnh()]);
+    expect(screen.queryByLabelText("Ảnh của bạn, chọn ảnh làm bìa")).toBeNull();
+    expect(oAnh().closest(".swatch")?.querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${BIA}`);
+    expect(xemTruoc().querySelector(".book__cover.bia--nui-xa img.bia__anh")?.getAttribute("src")).toBe(`/m/${BIA}`);
+    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Núi xa.")).toBeTruthy();
+    expect(nut("Đổi ảnh")).toBeTruthy();
+    expect([screen.queryByRole("progressbar"), loa()]).toEqual([null, ""]);
+
+    fireEvent.click(nut("Tạo sách"));
+    await waitFor(() => expect(actionCreateBook).toHaveBeenCalledTimes(1));
+    const gui = actionCreateBook.mock.calls[0][0];
+    expect([gui.getAll("cover"), gui.get("coverMedia")]).toEqual([["nui-xa"], BIA]);
+  });
+
+  it("trinh duyet khong ma hoa duoc WebP (tra PNG): gui JPEG", async () => {
+    khongWebp = true;
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(1));
+    expect((actionUploadMedia.mock.calls[0][0].get("file") as File).type).toBe("image/jpeg");
+  });
+
+  it("anh da cat van qua tran may chu: bao Anh lon qua, khong tai len; Chon anh khac mo lai chon tep, Dong an dong loi", async () => {
+    byteBlob = MEDIA_MAX_BYTES.bia + 1;
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(loa()).toBe("Ảnh lớn quá, chọn ảnh khác."));
+    expect(document.querySelector(".tai-anh__chu--loi")?.textContent).toBe("!Ảnh lớn quá, chọn ảnh khác.");
+    expect(actionUploadMedia).not.toHaveBeenCalled();
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
+    const bam = vi.spyOn(oTep(), "click");
+    fireEvent.click(nut("Chọn ảnh khác"));
+    expect(bam).toHaveBeenCalledTimes(1);
+    fireEvent.click(nut("Đóng"));
+    expect([document.querySelector(".tai-anh"), loa()]).toEqual([null, ""]);
+  });
+
+  it("tep goc qua 25 MB: bao Anh lon qua ma khong giai ma; dung tran thi van mo buoc cat", async () => {
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepAnh(IMAGE_SOURCE_MAX_BYTES + 1)] } });
+    await waitFor(() => expect(loa()).toBe("Ảnh lớn quá, chọn ảnh khác."));
+    expect(giaiMa).not.toHaveBeenCalled();
+    await chon(oTep(), tepAnh(IMAGE_SOURCE_MAX_BYTES));
+    expect(document.querySelector(".tai-anh")).toBeNull();
+  });
+
+  it("trinh duyet khong giai ma duoc (HEIC tren Windows): bao khong doc duoc kem dong goi y", async () => {
+    giaiMa.mockRejectedValueOnce(new DOMException("Khong giai ma duoc", "InvalidStateError"));
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepAnh()] } });
+    await waitFor(() => expect(loa()).toBe("Ảnh này không đọc được."));
+    expect(screen.getByText("Chọn ảnh JPG, PNG hoặc WebP.")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    expect(nut("Tạo sách").disabled).toBe(false);
+  });
+
+  it("mat mang khi tai: bao Chua tai duoc; Thu lai gui lai anh da cat, khong giai ma hay cat lai", async () => {
+    actionUploadMedia.mockRejectedValueOnce(new Error("mat mang"));
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(loa()).toBe("Chưa tải được, thử lại."));
+    expect(screen.queryByRole("button", { name: "Chọn ảnh khác" })).toBeNull();
+    // Bia loi khong dong nghia mat chu nguoi viet da go vao o khac cua form.
+    expect(oTen().value).toBe("Chuyện chưa kể");
+    fireEvent.click(nut("Thử lại"));
+    await waitFor(() => expect(oAnh().checked).toBe(true));
+    expect(actionUploadMedia).toHaveBeenCalledTimes(2);
+    expect((actionUploadMedia.mock.calls[1][0].get("file") as File).size).toBe(2048);
+    expect([giaiMa.mock.calls.length, ve.filter((v) => v.length === 10).length]).toEqual([1, 1]);
+  });
+
+  it("may chu tu choi: hien dung cau cua may chu, co Chon anh khac, khong co Thu lai", async () => {
+    actionUploadMedia.mockResolvedValueOnce({ error: "Chưa bật kho lưu ảnh và ghi âm." });
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(loa()).toBe("Chưa bật kho lưu ảnh và ghi âm."));
+    expect(nut("Chọn ảnh khác")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Thử lại" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Ảnh của bạn" })).toBeNull();
+    // May chu tu choi bia khong lam mat chu nguoi viet da go vao o khac cua form.
+    expect(oTen().value).toBe("Chuyện chưa kể");
+  });
+
+  it("doi tranh ve trong luc dang tai: tai xong anh la bia, tranh vua doi la du phong", async () => {
+    const xong = taiTreo();
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await screen.findByRole("progressbar", { name: "Đang tải ảnh bìa lên" });
+    fireEvent.click(tranh("Bìa trăng trên nước"));
+    await xong({ id: BIA, w: 1200, h: 720 });
+    expect(oAnh().checked).toBe(true);
+    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Trăng trên nước.")).toBeTruthy();
+  });
+
+  it("Huy khi dang tai: bo ket qua ve sau, bia giu nhu cu, gui form duoc ngay", async () => {
+    const xong = taiTreo();
+    formMoi();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await screen.findByRole("progressbar", { name: "Đang tải ảnh bìa lên" });
+    fireEvent.click(nut("Hủy tải ảnh bìa"));
+    expect([screen.queryByRole("progressbar"), nut("Tạo sách").disabled, document.activeElement === oTep()]).toEqual([null, false, true]);
+    await xong({ id: BIA, w: 1200, h: 720 });
+    expect(screen.queryByRole("radio", { name: "Ảnh của bạn" })).toBeNull();
+    expect(tranh("Bìa núi xa").checked).toBe(true);
+  });
+});
+
+describe("BookForm bia tu tai len: sua sach", () => {
+  it("bia anh dang dung: o Anh cua ban dang chon; chon tranh ve thi bo anh, chon lai anh thi gui lai id, tranh chon sau cung la du phong", async () => {
+    formSua();
+    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([oAnh()]);
+    expect(oAnh().closest(".swatch")?.className).toBe("swatch bia--chim-bay");
+    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Chim bay qua bờ nước.")).toBeTruthy();
+
+    fireEvent.click(tranh("Bìa trăng trên nước"));
+    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([tranh("Bìa trăng trên nước")]);
+    expect(screen.queryByText(/Ảnh chưa tải được/)).toBeNull();
+    expect(xemTruoc().querySelector("img")).toBeNull();
+    expect(xemTruoc().querySelector(".book__cover")?.className).toContain("bia--trang-nuoc");
+    expect(nut("Đổi ảnh")).toBeTruthy();
+
+    fireEvent.click(oAnh());
+    expect(oAnh().closest(".swatch")?.className).toBe("swatch bia--trang-nuoc");
+    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Trăng trên nước.")).toBeTruthy();
+    expect(xemTruoc().querySelector(".book__cover.bia--trang-nuoc img")?.getAttribute("src")).toBe(`/m/${CU}`);
+    fireEvent.click(nut("Lưu"));
+    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
+    expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["trang-nuoc"], CU]);
+
+    fireEvent.click(tranh("Bìa núi xa"));
+    fireEvent.click(nut("Lưu"));
+    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(2));
+    expect([actionUpdateBook.mock.calls[1][1].getAll("cover"), actionUpdateBook.mock.calls[1][1].get("coverMedia")]).toEqual([["nui-xa"], ""]);
+  });
+
+  it("Doi anh mo chon tep va buoc cat; Huy tra focus ve Doi anh; tai anh moi thi gui book la id cuon va thay bia", async () => {
+    formSua();
+    const oAn = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const bam = vi.spyOn(oAn, "click");
+    fireEvent.click(nut("Đổi ảnh"));
+    expect(bam).toHaveBeenCalledTimes(1);
+    await chon(oAn);
+    fireEvent.click(nut("Hủy"));
+    expect(document.activeElement).toBe(nut("Đổi ảnh"));
+
+    await chon(oAn);
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(oAnh().closest(".swatch")?.querySelector("img")?.getAttribute("src")).toBe(`/m/${BIA}`));
+    expect(actionUploadMedia.mock.calls[0][0].get("book")).toBe("b1");
+    // Focus dat trong layout effect, cung lan commit dua anh vao DOM: thay anh la focus da toi, khong con cuoc dua.
+    expect(document.activeElement).toBe(oAnh());
+  });
+
+  it("kho chua bat: khong tai duoc bia moi, nhung bia anh cu van hien dang chon va van duoc gui lai de khong mat khi sua ten", async () => {
+    formSua(false);
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    expect(screen.queryByRole("button", { name: "Đổi ảnh" })).toBeNull();
+    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([oAnh()]);
+    expect(tranh("Bìa chim bay qua bờ nước").checked).toBe(false);
+    expect(oAnh().closest(".swatch")?.querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${CU}`);
+    expect(xemTruoc().querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${CU}`);
+    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Chim bay qua bờ nước.")).toBeTruthy();
+    fireEvent.click(nut("Lưu"));
+    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
+    expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["chim-bay"], CU]);
+  });
+
+  /*
+   * Kho tat ma cuon da co bia anh: truoc khi sua, o thu nam bien mat nen mot
+   * TRANH VE hien la dang chon, trong khi truong an coverMedia van gui id anh cu len - cai nguoi dung nhin thay va cai
+   * form gui di la hai thu khac nhau. Giu bia anh la dung (sua ten khong duoc lam mat bia), nen cach sua la hien
+   * dung no. Test nay do o dong dau tien truoc khi sua.
+   */
+  it("kho chua bat: cai dang hien la dang chon va cai form gui len luon la mot", () => {
+    formSua(false);
+    expect(COVER_RADIOS().filter((r) => r.checked).map((r) => r.getAttribute("aria-label"))).toEqual(["Ảnh của bạn"]);
+    expect(document.querySelector<HTMLInputElement>('input[name="coverMedia"]')?.value).toBe(CU);
+  });
+
+  it("kho chua bat: chon mot tranh ve khac moi bo bia anh cu (khong doi gi thi bia anh con nguyen o test truoc)", async () => {
+    formSua(false);
+    fireEvent.click(tranh("Bìa trăng trên nước"));
+    fireEvent.click(nut("Lưu"));
+    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
+    expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["trang-nuoc"], ""]);
+  });
+
+  it("sach moi khi kho chua bat: chi bon tranh, gui coverMedia rong", async () => {
+    formMoi({ mediaEnabled: false });
+    expect(COVER_RADIOS().map((r) => r.value)).toEqual(["nui-xa", "khom-truc", "trang-nuoc", "chim-bay"]);
+    fireEvent.click(nut("Tạo sách"));
+    await waitFor(() => expect(actionCreateBook).toHaveBeenCalledTimes(1));
+    expect([actionCreateBook.mock.calls[0][0].getAll("cover"), actionCreateBook.mock.calls[0][0].get("coverMedia")]).toEqual([["nui-xa"], ""]);
+  });
+});
