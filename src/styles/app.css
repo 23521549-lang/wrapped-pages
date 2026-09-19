@@ -194,16 +194,13 @@ a.hoat-dong__dong:hover .hoat-dong__chu{ text-decoration-color: currentColor; }
 .cuon__lien::before{ content: ''; order: 1; height: 5px; margin-inline: calc(-1 * var(--hang-khe) / 2); background: linear-gradient(var(--ke-mep) 0 1px, var(--ke-mep-bong) 1px, transparent 5px); }
 .cuon:last-child .cuon__lien::before{ margin-right: -100vw; }
 .cuon__bia{
-  --gay: color-mix(in oklch, var(--bia-nui-duoi) var(--gay-sach-pha), var(--color-ink));
+  --gay: color-mix(in oklch, var(--bia-duoi) var(--gay-sach-pha), var(--color-ink));
   position: relative; display: block; aspect-ratio: 5 / 3; overflow: hidden; border-radius: var(--radius-sach); color: var(--blue-ink);
   transform-origin: 0 100%;
   transition: transform var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
 }
 /* gay sach: lop phu rieng tren cung (ca tren anh bia tu tai len), mau nen duoi cua chinh bia pha 10% muc */
 .cuon__bia::after{ content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; box-shadow: inset 6px 0 0 var(--gay), inset 7px 0 0 var(--gay-sach-sang); }
-.cuon__bia.bia--khom-truc{ --gay: color-mix(in oklch, var(--bia-truc-duoi) var(--gay-sach-pha), var(--color-ink)); }
-.cuon__bia.bia--trang-nuoc{ --gay: color-mix(in oklch, var(--bia-trang-duoi) var(--gay-sach-pha), var(--color-ink)); }
-.cuon__bia.bia--chim-bay{ --gay: color-mix(in oklch, var(--bia-chim-duoi) var(--gay-sach-pha), var(--color-ink)); }
 .cuon__bia svg, .tranh-dan__bia svg{ display: block; width: 100%; height: 100%; }
 .cuon__chu{ order: 2; display: grid; gap: .1rem; padding-top: var(--space-2xs); min-width: 0; }
 .cuon__ten{ font-size: var(--text-base); line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -254,10 +251,27 @@ a.hoat-dong__dong:hover .hoat-dong__chu{ text-decoration-color: currentColor; }
 /* bia: nen qua token, net ve la currentColor */
 .bia{ position: relative; color: var(--blue-ink); overflow: hidden; flex: none; }
 .bia svg, .book__cover svg, .swatch svg{ display: block; width: 100%; height: 100%; }
-.bia--nui-xa{ background: linear-gradient(var(--bia-nui-tren), var(--bia-nui-duoi)); }
-.bia--khom-truc{ background: linear-gradient(var(--bia-truc-tren), var(--bia-truc-duoi)); }
-.bia--trang-nuoc{ background: linear-gradient(var(--bia-trang-tren), var(--bia-trang-duoi)); }
-.bia--chim-bay{ background: linear-gradient(var(--bia-chim-tren), var(--bia-chim-duoi)); }
+.bia--nui-xa{       --bia-tren: var(--bia-nui-tren); --bia-duoi: var(--bia-nui-duoi); }
+.bia--khom-truc{    --bia-tren: var(--bia-truc-tren); --bia-duoi: var(--bia-truc-duoi); }
+.bia--trang-nuoc{   --bia-tren: var(--bia-trang-tren); --bia-duoi: var(--bia-trang-duoi); }
+.bia--chim-bay{     --bia-tren: var(--bia-chim-tren); --bia-duoi: var(--bia-chim-duoi); }
+.bia--hoa-dao{      --bia-tren: var(--bia-dao-tren); --bia-duoi: var(--bia-dao-duoi); }
+.bia--doi-chim{     --bia-tren: var(--bia-se-tren); --bia-duoi: var(--bia-se-duoi); }
+.bia--thuyen-trang{ --bia-tren: var(--bia-thuyen-tren); --bia-duoi: var(--bia-thuyen-duoi); }
+.bia--cau-go{       --bia-tren: var(--bia-cau-tren); --bia-duoi: var(--bia-cau-duoi); }
+.bia--doi-thong{    --bia-tren: var(--bia-thong-tren); --bia-duoi: var(--bia-thong-duoi); }
+.bia--meo-mai{      --bia-tren: var(--bia-meo-tren); --bia-duoi: var(--bia-meo-duoi); }
+/* mot nen chung cho moi bia: gay sach (.cuon__bia) cung doc --bia-duoi nen moi bia chi khai o mot dong tren */
+.bia--nui-xa,
+.bia--khom-truc,
+.bia--trang-nuoc,
+.bia--chim-bay,
+.bia--hoa-dao,
+.bia--doi-chim,
+.bia--thuyen-trang,
+.bia--cau-go,
+.bia--doi-thong,
+.bia--meo-mai{ background: linear-gradient(var(--bia-tren), var(--bia-duoi)); }
 
 /* bia tu tai len: anh phu kin tranh ve cua cung khung; anh hong thi img an, tranh ve lo ra, bo cuc khong doi */
 .bia__anh{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }

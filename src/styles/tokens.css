@@ -58,6 +58,12 @@
   --bia-truc-tren:  oklch(97.5% 0.012 150); --bia-truc-duoi:  oklch(94%   0.026 152);
   --bia-trang-tren: oklch(96.5% 0.016 268); --bia-trang-duoi: oklch(92.5% 0.034 272);
   --bia-chim-tren:  oklch(97%   0.014 84);  --bia-chim-duoi:  oklch(93.5% 0.028 78);
+  --bia-dao-tren:    oklch(97.5% 0.012 12);  --bia-dao-duoi:    oklch(94%   0.026 10);
+  --bia-se-tren:     oklch(97.5% 0.014 48);  --bia-se-duoi:     oklch(94%   0.028 45);
+  --bia-thuyen-tren: oklch(96.5% 0.016 250); --bia-thuyen-duoi: oklch(92.5% 0.032 254);
+  --bia-cau-tren:    oklch(97.5% 0.014 112); --bia-cau-duoi:    oklch(94%   0.030 115);
+  --bia-thong-tren:  oklch(97%   0.010 190); --bia-thong-duoi:  oklch(93.5% 0.022 192);
+  --bia-meo-tren:    oklch(97%   0.012 318); --bia-meo-duoi:    oklch(93%   0.026 316);
   --radius-giay: 8px;
   --shadow-rest: 0 1px 2px oklch(24% 0.012 250 / .045), 0 18px 38px -32px oklch(24% 0.012 250 / .4);
   --shadow-lift: 0 2px 4px oklch(24% 0.012 250 / .055), 0 28px 52px -30px oklch(24% 0.012 250 / .45);
