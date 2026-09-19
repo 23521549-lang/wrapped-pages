@@ -50,6 +50,40 @@ export function pageEditKey(bookId: string, position: number): string {
 }
 
 /**
+ * Ban tam cua to khac cung cuon song lau nhat chung nay: mo man sua mot to thi ban tam cu hon cua cac to kia bi xoa.
+ * Du dai cho mot buoi sua do dang, du ngan de sessionStorage cua mot the mo nhieu ngay khong phinh ra.
+ */
+export const PAGE_EDIT_TEMP_MAX_MS = 24 * 60 * 60_000;
+
+/** Chuoi ban tam { version, doc, at } de ghi vao sessionStorage; at la luc ghi (ms), de don ban tam cu. */
+export function pageEditTemp(version: string, doc: JSONContent, at: number): string {
+  return JSON.stringify({ version, doc, at });
+}
+
+/**
+ * Khoa ban tam can xoa khi mo man sua to position cua cuon bookId: ban tam cua to khac cung cuon ma cu hon
+ * PAGE_EDIT_TEMP_MAX_MS, hay khong doc duoc luc ghi. Ban tam cua chinh to nay do readPageEditTemp xet (theo version),
+ * khoa cua cuon khac va khoa khong phai ban tam khong bao gio bi dung toi. Thuan: nhan san cac cap [khoa, gia tri].
+ */
+export function staleTempKeys(entries: Iterable<[string, string | null]>, bookId: string, position: number, now: number): string[] {
+  const dau = `${PAGE_EDIT_PREFIX}${bookId}-`;
+  const out: string[] = [];
+  for (const [key, raw] of entries) {
+    if (!key.startsWith(dau)) continue;
+    const so = key.slice(dau.length);
+    if (!/^[1-9][0-9]*$/.test(so) || Number(so) === position) continue;
+    let at: unknown;
+    try {
+      at = (JSON.parse(raw ?? "") as { at?: unknown } | null)?.at;
+    } catch {
+      at = undefined;
+    }
+    if (typeof at !== "number" || !Number.isFinite(at) || now - at > PAGE_EDIT_TEMP_MAX_MS) out.push(key);
+  }
+  return out;
+}
+
+/**
  * Doc ban tam { version, doc }. Chi tra tai lieu khi doc duoc, cung moc phien ban voi to hien tai (ban tam cu khong bao
  * gio de len noi dung vua duoc sua o noi khac) va tai lieu qua duoc phep kiem cua may chu.
  */

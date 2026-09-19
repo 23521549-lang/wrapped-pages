@@ -19,21 +19,32 @@ export const MAX_SHEETS_PER_PUBLISH = 40;
  * mang id cua nguoi kia, cua cuon khac, sai loai hay da nam trong to da dang thi khong ghi gi, ban nhap dang co giu
  * nguyen. Nhap luu thuoc tinh media lay tu bang media. Tra thoi diem luu; "not-found" khi khong phai cuon cua ownerId,
  * "invalid-media" khi co khoi media khong gan duoc.
+ * Chay trong giao dich va khoa dong sach (FOR UPDATE) nhu editPage va publishDraft: bindMedia cua ba ham doc cac to da
+ * dang va ban nhap roi moi ghi, nen phai xep hang tren cung mot khoa. Khong thi mot anh vua tai len co the cung luc lot
+ * vao nhap (the nay) va vao to dang sua (the kia), va lan dang nhap sau bi tu choi mai.
  */
 export async function saveDraft(
   db: AnyDb, ownerId: string, bookId: string, content: DocJson, sheetCount: number,
 ): Promise<Date | "not-found" | "invalid-media"> {
-  const book = await findOwnBook(db, ownerId, bookId);
-  if (!book) return "not-found";
-  const bound = await bindMedia(db, ownerId, book.id, content);
-  if (!bound) return "invalid-media";
-  const n = Number.isInteger(sheetCount) && sheetCount >= 1 ? Math.min(sheetCount, 999) : 1;
-  const now = new Date();
-  await db
-    .insert(drafts)
-    .values({ bookId: book.id, content: bound, sheetCount: n, updatedAt: now })
-    .onConflictDoUpdate({ target: drafts.bookId, set: { content: bound, sheetCount: n, updatedAt: now } });
-  return now;
+  if (!isUuid(bookId)) return "not-found";
+  return db.transaction(async (tx) => {
+    const [book] = await tx
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)))
+      .for("update");
+    // Hai duong tra ve som deu nam truoc lenh ghi duy nhat (insert o cuoi), truoc do chi co lenh doc.
+    if (!book) return "not-found";
+    const bound = await bindMedia(tx, ownerId, book.id, content);
+    if (!bound) return "invalid-media";
+    const n = Number.isInteger(sheetCount) && sheetCount >= 1 ? Math.min(sheetCount, 999) : 1;
+    const now = new Date();
+    await tx
+      .insert(drafts)
+      .values({ bookId: book.id, content: bound, sheetCount: n, updatedAt: now })
+      .onConflictDoUpdate({ target: drafts.bookId, set: { content: bound, sheetCount: n, updatedAt: now } });
+    return now;
+  });
 }
 
 /** Ban nhap cua mot cuon. Voi nguoi khong phai chu, no nhu khong ton tai. */

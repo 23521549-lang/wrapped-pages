@@ -59,9 +59,13 @@ export async function readPageForEdit(db: AnyDb, ownerId: string, bookId: string
  *   Date chi giu toi do, con timestamptz giu micro giay;
  * - media qua bindMedia voi keep la id dang co tren chinh to;
  * - so noi dung bang phep bang cua jsonb (khong giu thu tu khoa), nen gui lai y nguyen la "unchanged", edited_at giu.
+ * edited_at tinh ngay trong cau UPDATE: now (mac dinh gio cua database, test truyen moc co dinh) nhung khong som hon
+ * published_at, va sau moc phien ban cu it nhat 1 ms. Nho vay CHECK pages_edited_at khong bao gio vo vi dong ho may
+ * ung dung lech voi database (published_at cua dong cu lay tu now() cua database), va moc phien ban luon tang sau moi
+ * lan luu, ke ca khi hai lan cung bi day len published_at: tab giu moc cu van nhan "stale", khong ghi de im lang.
  */
 export async function editPage(
-  db: AnyDb, ownerId: string, bookId: string, position: number, content: DocJson, base: Date, now: Date = new Date(),
+  db: AnyDb, ownerId: string, bookId: string, position: number, content: DocJson, base: Date, now?: Date,
 ): Promise<EditResult> {
   if (!isUuid(bookId) || !isPosition(position)) return "not-found";
   return db.transaction(async (tx) => {
@@ -89,7 +93,10 @@ export async function editPage(
     if (!bound) return "invalid-media";
     const changed = await tx
       .update(pages)
-      .set({ content: bound, editedAt: now })
+      .set({
+        content: bound,
+        editedAt: sql`greatest(${now ? sql`${now.toISOString()}::timestamptz` : sql`now()`}, ${pages.publishedAt}, coalesce(${pages.editedAt}, ${pages.publishedAt}) + interval '1 millisecond')`,
+      })
       .where(and(at, sql`${pages.content} is distinct from ${JSON.stringify(bound)}::jsonb`))
       .returning({ position: pages.position });
     return changed.length > 0 ? "saved" : "unchanged";

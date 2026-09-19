@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import type { AnchorHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { Editor as TiptapEditor } from "@tiptap/core";
+import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core";
 import { PageEditor, type PageEditorProps } from "@/components/editor/PageEditor";
-import { pageEditKey } from "@/components/editor/pageEdit";
+import { PAGE_EDIT_TEMP_MAX_MS, pageEditKey } from "@/components/editor/pageEdit";
 import type { OneSheet } from "@/components/editor/useOneSheet";
 import type { DocJson, ListItemNode } from "@/lib/doc/types";
 
@@ -13,7 +14,8 @@ import type { DocJson, ListItemNode } from "@/lib/doc/types";
  * that da co bai rieng (one-sheet.test.ts) va la dung ham cua trang tra loi.
  */
 
-const { actionEditPage, push, refresh, fit, measureOneSheet } = vi.hoisted(() => ({
+const { actionEditPage, push, refresh, fit, measureOneSheet, processImage } = vi.hoisted(() => ({
+  processImage: vi.fn(),
   actionEditPage: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
@@ -22,6 +24,7 @@ const { actionEditPage, push, refresh, fit, measureOneSheet } = vi.hoisted(() =>
 }));
 vi.mock("@/app/actions/library", () => ({ actionEditPage }));
 vi.mock("@/app/actions/media", () => ({ actionUploadMedia: vi.fn() }));
+vi.mock("@/components/editor/processImage", () => ({ processImage }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }), unstable_rethrow: () => {} }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...rest}>{children}</a>,
@@ -97,7 +100,7 @@ beforeEach(() => {
   fit.value = { overflow: false, contentHeight: 120 };
   measureOneSheet.mockReset();
   measureOneSheet.mockReturnValue({ overflow: false, contentHeight: 120 });
-  for (const f of [actionEditPage, push, refresh]) f.mockReset();
+  for (const f of [actionEditPage, push, refresh, processImage]) f.mockReset();
 });
 
 afterEach(() => {
@@ -253,6 +256,126 @@ describe("PageEditor", () => {
       soanThao().commands.undo();
     });
     expect(screen.queryByText(bao)).toBeNull();
+  });
+
+  it("Enter o cuoi muc noi tiep: muc moi khong mang dau noi tiep, van co dau cham", async () => {
+    await ve();
+    await act(async () => {
+      const ed = soanThao();
+      let cuoi = -1;
+      ed.state.doc.descendants((node, pos) => {
+        if (cuoi < 0 && node.type.name === "paragraph" && node.textContent === "tiếp") cuoi = pos + 1 + node.content.size;
+      });
+      ed.chain().focus().setTextSelection(cuoi).splitListItem("listItem").run();
+    });
+    const ds = soanThao().getJSON().content?.[0];
+    expect((ds?.content as JSONContent[] | undefined)?.map((m) => m.attrs?.noiTiep ?? null)).toEqual([true, null, null]);
+    expect(document.querySelectorAll(".ProseMirror li.noi-tiep")).toHaveLength(1);
+  });
+
+  it("vung bao sua-ghi co mat tu lan ve dau khi con rong, va CSS khong an no khoi cay truy cap", async () => {
+    await ve();
+    const vung = document.querySelector(".sua-ghi");
+    expect(vung?.getAttribute("aria-live")).toBe("polite");
+    expect(vung?.childElementCount).toBe(0);
+    await go(" thêm");
+    // Cung mot nut DOM ton tai truoc khi chu duoc chen vao: trinh doc man hinh moi doc thay doi cua no.
+    expect(document.querySelector(".sua-ghi")).toBe(vung);
+    const css = readFileSync("src/styles/viet.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const quyTac = [...css.matchAll(/([^{}]*\.sua-ghi(?![\w-])[^{}]*)\{([^}]*)\}/g)].map((m) => `${m[1].trim()}{${m[2]}}`);
+    expect(quyTac.length).toBeGreaterThan(0);
+    for (const q of quyTac) expect(q).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+  });
+
+  it("da doi, bam Ve sach: hoi nhu Huy, khong roi man; Esc tra focus ve lien ket; Bo thay doi xoa ban tam roi ve", async () => {
+    await ve();
+    await go(" thêm");
+    const lienKet = screen.getByRole("link", { name: "Về sách" });
+    const e = new MouseEvent("click", { bubbles: true, cancelable: true });
+    act(() => {
+      lienKet.dispatchEvent(e);
+    });
+    expect(e.defaultPrevented).toBe(true);
+    const hop = screen.getByRole("group", { name: "Bỏ các thay đổi trên trang này?" });
+    expect(document.activeElement).toBe(within(hop).getByRole("button", { name: "Sửa tiếp" }));
+    fireEvent.keyDown(hop, { key: "Escape" });
+    expect(document.activeElement).toBe(lienKet);
+    act(() => {
+      lienKet.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    fireEvent.click(nut("Bỏ thay đổi"));
+    expect(sessionStorage.getItem(KHOA)).toBeNull();
+    expect(push).toHaveBeenLastCalledWith(VE_SACH);
+  });
+
+  it("dang luu: hai nut Them anh va Ghi am bi khoa", async () => {
+    await ve();
+    await go(" thêm");
+    actionEditPage.mockImplementation(() => new Promise(() => {}));
+    await act(async () => {
+      fireEvent.click(nut("Lưu thay đổi"));
+    });
+    expect((nut("Thêm ảnh") as HTMLButtonElement).disabled).toBe(true);
+    expect((nut("Ghi âm") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("dang xu ly anh: nut Luu thay doi bi khoa, anh khong the roi vao giua luc luu", async () => {
+    await ve();
+    await go(" thêm");
+    processImage.mockImplementation(() => new Promise(() => {}));
+    const chon = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(chon, { target: { files: [new File([new Uint8Array([1])], "a.png", { type: "image/png" })] } });
+    });
+    expect(processImage).toHaveBeenCalledTimes(1);
+    expect((nut("Lưu thay đổi") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("luu thanh cong: ban tam cua to bi xoa", async () => {
+    await ve();
+    await go(" thêm");
+    expect(sessionStorage.getItem(KHOA)).not.toBeNull();
+    actionEditPage.mockResolvedValue(undefined);
+    await act(async () => {
+      fireEvent.click(nut("Lưu thay đổi"));
+    });
+    await xong();
+    expect(sessionStorage.getItem(KHOA)).toBeNull();
+  });
+
+  it("ban tam trung y ban da dang: xoa luon, khong bao khoi phuc", async () => {
+    await ve();
+    await go(" thêm");
+    await act(async () => {
+      soanThao().commands.undo();
+    });
+    // Ghi lai mot ban tam giong het ban da dang, nhu khi tab dong giua hai lan ghi.
+    sessionStorage.setItem(KHOA, JSON.stringify({ version: MOC, doc: soanThao().getJSON(), at: Date.now() }));
+    cleanup();
+    await ve();
+    expect(sessionStorage.getItem(KHOA)).toBeNull();
+    expect(screen.queryByText("Đã khôi phục chữ đang sửa dở.")).toBeNull();
+  });
+
+  it("vao man: xoa ban tam khac version cua to nay va ban tam cu cua to khac cung cuon", async () => {
+    const bay = Date.now();
+    const cu = bay - PAGE_EDIT_TEMP_MAX_MS - 60_000;
+    const moi = bay - 60_000;
+    const KHAC = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+    const tam = (at?: number) => JSON.stringify({ version: MOC, doc: { type: "doc", content: [doan("x")] }, ...(at === undefined ? {} : { at }) });
+    sessionStorage.setItem(KHOA, JSON.stringify({ version: "2026-09-19T01:00:00.000Z", doc: { type: "doc", content: [doan("cũ")] }, at: moi }));
+    sessionStorage.setItem(pageEditKey(SACH, 2), tam(cu));
+    sessionStorage.setItem(pageEditKey(SACH, 3), tam());
+    sessionStorage.setItem(pageEditKey(SACH, 4), tam(moi));
+    sessionStorage.setItem(pageEditKey(KHAC, 2), tam(cu));
+    sessionStorage.setItem("khoa-khac", "giu");
+    await ve();
+    expect(sessionStorage.getItem(KHOA)).toBeNull();
+    expect(sessionStorage.getItem(pageEditKey(SACH, 2))).toBeNull();
+    expect(sessionStorage.getItem(pageEditKey(SACH, 3))).toBeNull();
+    expect(sessionStorage.getItem(pageEditKey(SACH, 4))).not.toBeNull();
+    expect(sessionStorage.getItem(pageEditKey(KHAC, 2))).not.toBeNull();
+    expect(sessionStorage.getItem("khoa-khac")).toBe("giu");
   });
 
   it("co nhom Them vao trang, khong co nut Tap trung", async () => {

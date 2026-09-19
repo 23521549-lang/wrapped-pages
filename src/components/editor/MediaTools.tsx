@@ -20,13 +20,17 @@ export type MediaToolsProps = {
   announce: (message: string) => void;
   /** Nut them vao thanh cong cu, sau o chon tep va truoc dong ghi chu kho tat (vd "Tap trung" cua man viet). */
   extra?: ReactNode;
+  /** Khoa hai nut them media (vd dang luu): khoi media moi khong duoc roi vao giua luc luu. */
+  locked?: boolean;
+  /** Bao khi co anh dang xu ly, dang tai len hay hop ghi am dang mo, tuc con mot khoi media chua chen xong. */
+  onBusyChange?: (busy: boolean) => void;
 };
 
 /**
  * Thanh cong cu dinh dang kem nhom "Them anh", "Ghi am", roi dong tai anh va hop ghi am ngay duoi. Dung chung cho man viet
  * va man sua mot to. Kho media tat thi hai nut mo di, van Tab toi duoc, kem mot cau ghi chu.
  */
-export function MediaTools({ editor, bookId, author, mediaEnabled, announce, extra }: MediaToolsProps) {
+export function MediaTools({ editor, bookId, author, mediaEnabled, announce, extra, locked = false, onBusyChange }: MediaToolsProps) {
   // Chen khoi bang editor moi nhat, khong bang closure cu cua lan render luc bat dau tai anh hay ghi am.
   const editorRef = useRef<TiptapEditor | null>(null);
   const [ghiMo, setGhiMo] = useState(false);
@@ -45,6 +49,11 @@ export function MediaTools({ editor, bookId, author, mediaEnabled, announce, ext
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
+
+  const ban = anh.busy || ghiMo;
+  useEffect(() => {
+    onBusyChange?.(ban);
+  }, [ban, onBusyChange]);
 
   useEffect(() => {
     if (!editor) return;
@@ -69,7 +78,7 @@ export function MediaTools({ editor, bookId, author, mediaEnabled, announce, ext
             className="nut-dinh-dang nut-dinh-dang--co-hinh"
             aria-disabled={!mediaEnabled || anh.busy || undefined}
             aria-describedby={mediaEnabled ? undefined : ghiChuId}
-            disabled={!editor}
+            disabled={!editor || locked}
             onClick={() => {
               if (mediaEnabled && !anh.busy) chonAnhRef.current?.click();
             }}
@@ -84,7 +93,7 @@ export function MediaTools({ editor, bookId, author, mediaEnabled, announce, ext
             aria-expanded={mediaEnabled ? ghiMo : undefined}
             aria-controls={ghiMo ? hopGhiId : undefined}
             aria-describedby={mediaEnabled ? undefined : ghiChuId}
-            disabled={!editor}
+            disabled={!editor || locked}
             onClick={() => {
               if (!mediaEnabled) return;
               // Hop dang mo thi chi dua focus ve hop, khong dong, de khong mat ban ghi.

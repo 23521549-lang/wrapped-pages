@@ -30,6 +30,8 @@ const MucNoiTiep = MucMotDoan.extend({
       ...this.parent?.(),
       noiTiep: {
         default: null,
+        // Enter o muc noi tiep sinh muc moi binh thuong, co dau cham; mac dinh TipTap chep thuoc tinh sang muc moi.
+        keepOnSplit: false,
         parseHTML: (el: HTMLElement) => (el.classList.contains("noi-tiep") ? true : null),
         renderHTML: (a: { noiTiep?: true | null }) => (a.noiTiep ? { class: "noi-tiep" } : {}),
       },

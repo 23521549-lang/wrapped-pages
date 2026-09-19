@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { randomUUID } from "node:crypto";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "@/server/db/schema";
 import { activity, drafts, media, pages, readMarks, seals } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
-import { publishDraft, saveDraft } from "@/server/library/drafts";
+import { publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { editPage, readPageForEdit } from "@/server/library/edit-page";
 import { readBook } from "@/server/library/pages";
 import { canViewMedia, type UploadRecord } from "@/server/media/access";
@@ -310,5 +310,62 @@ describe("readBook editedAt", () => {
     expect(cuaNguoiKia?.sheets[1]).toMatchObject({ locked: true, editedAt: null });
     const cuaChu = await readBook(s.db, s.seat1.id, s.chung, T);
     expect(cuaChu?.sheets[1]).toMatchObject({ locked: false, editedAt: T });
+  });
+});
+
+describe("edited_at theo gio database, khong bao gio som hon published_at", () => {
+  /** Dat published_at cua to 2 som hon gio may ung dung mot khoang: gia lap dong ho database chay truoc. */
+  async function dangTuongLai(s: Bo, truoc: number): Promise<Date> {
+    const moc = new Date(Date.now() + truoc);
+    await s.db.update(pages).set({ publishedAt: moc }).where(and(eq(pages.bookId, s.chung), eq(pages.position, 2)));
+    return moc;
+  }
+
+  it("khong truyen now: edited_at la gio database", async () => {
+    const s = await baTo();
+    const truoc = Date.now();
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Hai mới"), await phienBan(s, 2))).toBe("saved");
+    const editedAt = (await cacTo(s.db, s.chung))[1].editedAt!;
+    expect(editedAt.getTime()).toBeGreaterThanOrEqual(truoc - 1_000);
+    expect(editedAt.getTime()).toBeLessThanOrEqual(Date.now() + 1_000);
+  });
+
+  it.each<[string, Date | undefined]>([
+    ["khong truyen now", undefined],
+    ["now cua ung dung som hon published_at", new Date(Date.now() + GIO)],
+  ])("published_at sau gio ung dung (%s): van luu, edited_at sau published_at", async (_ten, now) => {
+    const s = await baTo();
+    const moc = await dangTuongLai(s, 2 * GIO);
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Hai mới"), moc, now)).toBe("saved");
+    const sau = (await cacTo(s.db, s.chung))[1];
+    expect(sau.content).toEqual(to("Hai mới"));
+    expect(sau.editedAt!.getTime()).toBeGreaterThan(moc.getTime());
+  });
+
+  it("hai lan sua deu bi day len sau published_at: moc van tang, tab giu moc cu thi stale", async () => {
+    const s = await baTo();
+    const moc = await dangTuongLai(s, 2 * GIO);
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Lần một"), moc, T)).toBe("saved");
+    const mot = await phienBan(s, 2);
+    expect(mot.getTime()).toBeGreaterThan(moc.getTime());
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Chèn"), moc, T)).toBe("stale");
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Lần hai"), mot, T)).toBe("saved");
+    expect((await phienBan(s, 2)).getTime()).toBeGreaterThan(mot.getTime());
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Chèn"), mot, T)).toBe("stale");
+  });
+});
+
+describe("saveDraft xep hang voi editPage", () => {
+  it("khoa dong sach FOR UPDATE truoc khi ghi nhap, trong mot giao dich", async () => {
+    const s = await haiCuon();
+    const log: string[] = [];
+    const client = (s.db as unknown as { $client: PGlite }).$client;
+    const theoDoi = drizzle(client, { schema, logger: { logQuery: (q) => log.push(q) } });
+    expect(await saveDraft(theoDoi, s.seat1.id, s.chung, to("Nháp"), 1)).toBeInstanceOf(Date);
+    const khoa = log.findIndex((q) => /from "books"[^;]*for update/i.test(q));
+    const ghi = log.findIndex((q) => /insert into "drafts"/i.test(q));
+    expect(khoa).toBeGreaterThanOrEqual(0);
+    expect(ghi).toBeGreaterThan(khoa);
+    expect((await readDraft(s.db, s.seat1.id, s.chung))?.content).toEqual(to("Nháp"));
   });
 });

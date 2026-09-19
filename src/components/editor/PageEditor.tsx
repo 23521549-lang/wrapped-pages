@@ -19,7 +19,7 @@ import { pageEditExtensions } from "./extensions";
 import { MediaTools } from "./MediaTools";
 import { NONCE_TAI_LIEU } from "./nonce";
 import { PagedSurface } from "./PagedSurface";
-import { droppedMedia, fromEditorDoc, pageEditKey, readPageEditTemp, toEditorDoc } from "./pageEdit";
+import { droppedMedia, fromEditorDoc, pageEditKey, pageEditTemp, readPageEditTemp, staleTempKeys, toEditorDoc } from "./pageEdit";
 import { measureOneSheet, useOneSheet } from "./useOneSheet";
 
 export type PageEditorProps = {
@@ -40,8 +40,11 @@ export type PageEditorProps = {
   mediaEnabled: boolean;
 };
 
-/** Hop xac nhan dang mo: bo thay doi de roi man, hay bo thay doi de tai ban moi sau khi to vua duoc sua noi khac. */
-type Hoi = "huy" | "tai-lai";
+/**
+ * Hop xac nhan dang mo: bo thay doi de roi man (tu nut "Huy", hay tu lien ket "Ve sach"), hay bo thay doi de tai ban moi
+ * sau khi to vua duoc sua noi khac. Moi loai tra focus ve dung cho da mo hop.
+ */
+type Hoi = "huy" | "ve-sach" | "tai-lai";
 
 const CAU_HOI = "Bỏ các thay đổi trên trang này?";
 const LOI = {
@@ -55,7 +58,7 @@ const LOI = {
 
 function luuTam(khoa: string, version: string, doc: JSONContent): void {
   try {
-    sessionStorage.setItem(khoa, JSON.stringify({ version, doc }));
+    sessionStorage.setItem(khoa, pageEditTemp(version, doc, Date.now()));
   } catch {
     // Trinh duyet chan luu tru: chi mat lop chong mat chu nay, van sua va luu duoc.
   }
@@ -66,6 +69,20 @@ function xoaTam(khoa: string): void {
     sessionStorage.removeItem(khoa);
   } catch {
     // Khong xoa duoc thi thoi: ban tam chi khoi phuc khi moc phien ban con trung.
+  }
+}
+
+/** Xoa ban tam cu cua cac to khac cung cuon (xem staleTempKeys). */
+function donTamCu(bookId: string, position: number): void {
+  try {
+    const cap: [string, string | null][] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k !== null) cap.push([k, sessionStorage.getItem(k)]);
+    }
+    for (const k of staleTempKeys(cap, bookId, position, Date.now())) sessionStorage.removeItem(k);
+  } catch {
+    // Trinh duyet chan luu tru: khong co gi de don.
   }
 }
 
@@ -86,12 +103,15 @@ export function PageEditor({
   const [boMedia, setBoMedia] = useState(false);
   const [loiDoc, setLoiDoc] = useState("");
   const [pending, startTransition] = useTransition();
+  // Anh dang xu ly, tai len hay hop ghi am dang mo: chua chen xong, nen chua cho luu (khoi media khong roi vao giua luc luu).
+  const [mediaBan, setMediaBan] = useState(false);
   const mirrorRef = useRef<HTMLDivElement>(null);
   // Mot "chua doi gi": JSON cua trinh soan thao ngay sau khi tao, truoc khi khoi phuc ban tam.
   const gocRef = useRef<string | null>(null);
   // Da gui action: roi trang luc nay (redirect) khong phai mat chu.
   const daGuiRef = useRef(false);
   const nutHuyRef = useRef<HTMLButtonElement>(null);
+  const veSachRef = useRef<HTMLAnchorElement>(null);
   const nutTaiLaiRef = useRef<HTMLButtonElement>(null);
   const suaTiepRef = useRef<HTMLButtonElement>(null);
 
@@ -114,11 +134,17 @@ export function PageEditor({
       } catch {
         // Trinh duyet chan luu tru: bat dau tu ban da dang.
       }
+      donTamCu(bookId, position);
       const tam = readPageEditTemp(raw, version);
       if (tam) {
         // Khoi phuc ngoai lich su hoan tac: Ctrl+Z ngay sau do khong duoc xoa chu vua khoi phuc.
         ed.chain().setMeta("addToHistory", false).setContent(tam).run();
-        setKhoiPhuc(JSON.stringify(ed.getJSON()) !== gocRef.current);
+        const khac = JSON.stringify(ed.getJSON()) !== gocRef.current;
+        setKhoiPhuc(khac);
+        if (!khac) xoaTam(khoa);
+      } else if (raw !== null) {
+        // Ban tam cua phien ban cu (to vua duoc sua o noi khac) hay hong: khong bao gio dung toi nua.
+        xoaTam(khoa);
       }
       ed.commands.focus("end");
     },
@@ -169,6 +195,7 @@ export function PageEditor({
     // Khoa TRUOC khi kiem: cai duoc gui chac chan la cai dang hien tren to (nhu PublishBar).
     ed.setEditable(false, false);
     if (!daDoi(ed)) {
+      xoaTam(khoa);
       router.push(veSach);
       return;
     }
@@ -208,7 +235,7 @@ export function PageEditor({
 
   /** Dong hop xac nhan, tra focus ve dung nut da mo no. */
   function dongHoi() {
-    const moTu = hoi === "tai-lai" ? nutTaiLaiRef : nutHuyRef;
+    const moTu = hoi === "tai-lai" ? nutTaiLaiRef : hoi === "ve-sach" ? veSachRef : nutHuyRef;
     flushSync(() => setHoi(null));
     moTu.current?.focus();
   }
@@ -240,7 +267,22 @@ export function PageEditor({
     <div className="viet">
       <div className="viet-tren">
         <header className="viet-dau">
-          <Link className="nav__link" href={veSach}>Về sách</Link>
+          <Link
+            ref={veSachRef}
+            className="nav__link"
+            href={veSach}
+            onClick={(e) => {
+              // Nhu nut "Huy": dang luu thi dung yen (luu xong tu ve sach), da doi thi hoi truoc. Lien ket noi bo cua Next
+              // khong phat beforeunload, nen khong co lop chan nao khac.
+              if (pending) e.preventDefault();
+              else if (editor && daDoi(editor)) {
+                e.preventDefault();
+                setHoi("ve-sach");
+              }
+            }}
+          >
+            Về sách
+          </Link>
           <h1 className="viet-dau__ten d">Sửa trang {position}</h1>
           <p className="meta">{phu}</p>
           <div className="viet-dau__phai">
@@ -277,7 +319,7 @@ export function PageEditor({
               </div>
             ) : (
               <div className="dang">
-                <button type="button" className="btn" disabled={fit.overflow || pending} aria-busy={pending || undefined} onClick={luu}>
+                <button type="button" className="btn" disabled={fit.overflow || pending || mediaBan} aria-busy={pending || undefined} onClick={luu}>
                   Lưu thay đổi
                 </button>
                 <button ref={nutHuyRef} type="button" className="btn btn--line" disabled={pending} onClick={huy}>Hủy</button>
@@ -289,7 +331,15 @@ export function PageEditor({
             )}
           </div>
         </header>
-        <MediaTools editor={editor} bookId={bookId} author={author} mediaEnabled={mediaEnabled} announce={setLoiDoc} />
+        <MediaTools
+          editor={editor}
+          bookId={bookId}
+          author={author}
+          mediaEnabled={mediaEnabled}
+          announce={setLoiDoc}
+          locked={pending}
+          onBusyChange={setMediaBan}
+        />
       </div>
 
       <div className="sua-ghi" aria-live="polite">

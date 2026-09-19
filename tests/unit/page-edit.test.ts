@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { JSONContent } from "@tiptap/core";
-import { droppedMedia, fromEditorDoc, pageEditKey, readPageEditTemp, toEditorDoc } from "@/components/editor/pageEdit";
+import {
+  droppedMedia, fromEditorDoc, PAGE_EDIT_TEMP_MAX_MS, pageEditKey, pageEditTemp, readPageEditTemp, staleTempKeys, toEditorDoc,
+} from "@/components/editor/pageEdit";
 import { normalizeContinuation } from "@/lib/doc/continuation";
 import { cleanDoc } from "@/lib/doc/validate";
 import type { DocJson, ListItemNode } from "@/lib/doc/types";
@@ -163,5 +165,30 @@ describe("ban tam cua man sua", () => {
   it("trung version va tai lieu hop le: tra tai lieu", () => {
     const doc = toEditorDoc(GIUA_DANH_SACH);
     expect(readPageEditTemp(tam({ version: MOC, doc }), MOC)).toEqual(doc);
+  });
+
+  it("pageEditTemp ghi version, tai lieu va luc ghi; doc lai duoc", () => {
+    const doc = toEditorDoc(CHU);
+    const raw = pageEditTemp(MOC, doc, 1_000);
+    expect(JSON.parse(raw)).toEqual({ version: MOC, doc, at: 1_000 });
+    expect(readPageEditTemp(raw, MOC)).toEqual(doc);
+  });
+
+  it("staleTempKeys: chi ban tam cu hay khong doc duoc moc cua to khac cung cuon", () => {
+    const KHAC = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+    const bay = 10 * PAGE_EDIT_TEMP_MAX_MS;
+    const cu = pageEditTemp(MOC, toEditorDoc(CHU), bay - PAGE_EDIT_TEMP_MAX_MS - 1);
+    const moi = pageEditTemp(MOC, toEditorDoc(CHU), bay - 1);
+    const cap: [string, string | null][] = [
+      [pageEditKey(SACH, 5), cu],
+      [pageEditKey(SACH, 1), cu],
+      [pageEditKey(SACH, 2), moi],
+      [pageEditKey(SACH, 3), tam({ version: MOC, doc: toEditorDoc(CHU) })],
+      [pageEditKey(SACH, 4), "{"],
+      [pageEditKey(SACH, 12), cu],
+      [pageEditKey(KHAC, 1), cu],
+      ["khoa-khac", cu],
+    ];
+    expect(staleTempKeys(cap, SACH, 5, bay)).toEqual([pageEditKey(SACH, 1), pageEditKey(SACH, 3), pageEditKey(SACH, 4), pageEditKey(SACH, 12)]);
   });
 });
