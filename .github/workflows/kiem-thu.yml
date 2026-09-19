@@ -1,0 +1,78 @@
+# Kiem thu tu dong: lint, kieu, don vi va dau cuoi. Chay cho moi PR vao main, moi lan push nhanh khac main,
+# va duoc workflow trien khai goi lai truoc khi deploy (workflow_call), nen khong co duong deploy nao bo qua kiem.
+name: Kiem thu
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kiem-thu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kiem:
+    name: Lint, kieu, don vi
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npx vitest run
+
+  dau-cuoi:
+    name: Dau cuoi (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      # Postgres rieng cua lan chay: bo e2e tu tao database mqce_e2e tren may chu nay, khong cham database that.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Cai trinh duyet Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Tao .env.local tam cho lan chay
+        # tests/e2e/env.ts doc DATABASE_URL tu .env.local roi doi ten database thanh mqce_e2e.
+        # SERVER_KEY sinh ngau nhien moi lan chay, chi song trong runner nay.
+        run: |
+          {
+            echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app"
+            echo "SERVER_KEY=$(openssl rand -hex 32)"
+          } > .env.local
+      - run: npm run test:e2e
+      - name: Tai bao cao khi hong
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bao-cao-dau-cuoi
+          path: test-results/
+          retention-days: 7

@@ -21,11 +21,63 @@ Làm đúng thứ tự như sau:
 4. Chỉ sau khi Bước 3 chạy xong mới cho web nhận lượt truy cập thật đầu tiên (bấm Deploy, hoặc mở domain
    công khai).
 
-**Chưa chắc:** cách chạy Bước 3 trên đúng Vercel - ví dụ dùng một lệnh build tùy chỉnh hay chạy từ máy mình
-trỏ sang `DATABASE_URL` của production - phụ thuộc vào cách bạn đang cấu hình dự án trên đó, tài liệu
-này không đoán đường đi cụ thể. Điều chắc chắn là: `npm run db:migrate` phải chạy xong, trỏ đúng database,
-trước lượt truy cập đầu tiên; chạy từ máy cá nhân với `DATABASE_URL` trỏ sang database thật cũng đạt yêu
-cầu đó.
+Từ khi có mục "Tự động deploy" bên dưới, Bước 3 và Bước 4 do GitHub Actions làm theo đúng thứ tự này mỗi
+lần deploy. Bạn chỉ cần làm Bước 1, Bước 2 và phần cài đặt một lần của mục đó.
+
+## Tự động deploy
+
+Repo có hai quy trình tự động trên GitHub Actions (thư mục `.github/workflows`):
+
+- **Kiểm thử** (`kiem-thu.yml`): chạy mỗi khi bạn push một nhánh khác `main` hoặc mở pull request vào `main`.
+  Nó chạy lint, kiểm kiểu, test đơn vị và toàn bộ test đầu cuối trên một database Postgres tạm của riêng lần
+  chạy đó, không chạm database thật.
+- **Triển khai** (`trien-khai.yml`): chạy khi có commit mới vào `main`, hoặc khi bạn bấm nút thủ công. Thứ tự
+  luôn là: kiểm thử xanh, sao lưu database (mã hóa), migrate database, rồi mới build và deploy lên Vercel.
+  Kiểm thử đỏ thì không bước nào sau đó chạy.
+
+Vercel tự deploy mỗi khi có push nếu repo nối với Vercel, và làm vậy trước bước migrate. Vì thế
+`vercel.json` đã tắt việc tự deploy qua git: chỉ quy trình Triển khai mới deploy.
+
+### Cài đặt một lần
+
+1. **Tạo dự án trên Vercel.** Vào vercel.com, "Add New Project", chọn repo `wrapped-pages`. Framework là
+   Next.js, để nguyên các lệnh build mặc định. Trong Settings của dự án, mục Node.js Version chọn 22.
+2. **Đặt biến môi trường của web trên Vercel** (Settings, Environment Variables, môi trường Production):
+   `DATABASE_URL` (chuỗi kết nối `neondb`, đuôi phải là `/neondb`), `SERVER_KEY` (đúng giá trị bạn đã cất,
+   không tạo mới), và năm biến `MEDIA_S3_*` nếu đã có kho tệp (`docs/huong-dan-kho-tep.md`).
+3. **Lấy mã tổ chức và mã dự án.** Trên máy, trong thư mục dự án, chạy `npx vercel link` và chọn đúng dự án
+   vừa tạo. Lệnh tạo tệp `.vercel/project.json` chứa `orgId` và `projectId` (thư mục `.vercel` không được
+   commit).
+4. **Tạo token Vercel.** vercel.com, Account Settings, Tokens, tạo một token chỉ cho dự án này, đặt hạn dùng.
+5. **Tạo environment `production` trên GitHub.** Repo, Settings, Environments, "New environment", đặt tên
+   `production`. Nếu muốn mỗi lần deploy phải bấm duyệt, bật "Required reviewers" và chọn chính bạn.
+6. **Đặt năm secrets cho environment đó.** Chạy từng lệnh dưới đây trong thư mục dự án; mỗi lệnh sẽ hỏi giá
+   trị và không in giá trị ra màn hình. **Không dán các giá trị này vào chat hay bất kỳ đâu khác.**
+
+   ```
+   gh secret set VERCEL_TOKEN --env production
+   gh secret set VERCEL_ORG_ID --env production
+   gh secret set VERCEL_PROJECT_ID --env production
+   gh secret set PROD_DATABASE_URL --env production
+   gh secret set BACKUP_PASSPHRASE --env production
+   ```
+
+   `PROD_DATABASE_URL` là cùng chuỗi `DATABASE_URL` của `neondb`, dùng để migrate và sao lưu trước khi
+   deploy. `BACKUP_PASSPHRASE` là một cụm mật khẩu dài bạn tự đặt để mã hóa bản sao lưu; cất nó cùng chỗ với
+   `SERVER_KEY`, mất nó thì không mở được các bản sao lưu tự động.
+
+### Deploy
+
+- **Tự động:** merge hoặc push vào `main`. Xem tiến trình ở tab Actions của repo.
+- **Thủ công:** tab Actions, chọn "Trien khai", bấm "Run workflow", chọn nhánh `main`.
+- Chưa đặt đủ secrets thì quy trình dừng ngay ở bước đầu và nêu tên secret còn thiếu; không có gì bị thay đổi.
+
+### Bản sao lưu tự động
+
+Mỗi lần deploy tạo một bản sao lưu database trước khi migrate, mã hóa bằng `BACKUP_PASSPHRASE` và giữ 7 ngày
+trong mục Artifacts của lần chạy đó. Muốn dùng: tải tệp `.gpg` về, giải mã bằng
+`gpg --decrypt tep.json.gpg > tep.json` (nhập cụm mật khẩu), rồi khôi phục theo `docs/huong-dan-sao-luu.md`.
+Bản sao lưu tự động không thay cho thói quen tự sao lưu định kỳ: nó chỉ giữ 7 ngày.
 
 ## `SERVER_KEY`: đặt một lần, giữ nguyên vĩnh viễn
 
