@@ -86,14 +86,15 @@ export const books = pgTable("books", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   modeValue: check("books_mode", sql`${t.mode} in ('chia-se', 'rieng-tu')`),
-  coverValue: check("books_cover", sql`${t.cover} in ('nui-xa', 'khom-truc', 'trang-nuoc', 'chim-bay')`),
+  coverValue: check("books_cover", sql`${t.cover} in ('nui-xa', 'khom-truc', 'trang-nuoc', 'chim-bay', 'hoa-dao', 'doi-chim', 'thuyen-trang', 'cau-go', 'doi-thong', 'meo-mai')`),
   youtubeIdValue: check("books_youtube_id", sql`${t.youtubeId} is null or ${t.youtubeId} ~ '^[A-Za-z0-9_-]{11}$'`),
   byOwner: index("books_owner_idx").on(t.ownerId),
 }));
 
 /**
- * Mot to giay da dang. Noi dung dong bang tu luc dang, nhu sach in, nen may nao cung thay cung cho ngat trang.
- * Vi tri lien nhau tu 1 trong moi cuon (publishDraft noi tiep sau to cuoi).
+ * Mot to giay da dang. Ngat trang dong bang tu luc dang: moi dong luon la dung mot to, vi tri khong bao gio doi,
+ * nen may nao cung thay cung cho ngat trang. Chu sach sua duoc noi dung trong khuon mot to qua editPage, tru to
+ * nam trong niem phong. Vi tri lien nhau tu 1 trong moi cuon (publishDraft noi tiep sau to cuoi).
  */
 export const pages = pgTable("pages", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -101,9 +102,12 @@ export const pages = pgTable("pages", {
   position: integer("position").notNull(),
   content: jsonb("content").$type<DocJson>().notNull(),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Lan sua gan nhat cua chu sach; null la chua sua lan nao. Khong bao gio som hon publishedAt. */
+  editedAt: timestamp("edited_at", { withTimezone: true }),
 }, (t) => ({
   byBookPosition: uniqueIndex("pages_book_position_idx").on(t.bookId, t.position),
   positionFromOne: check("pages_position", sql`${t.position} >= 1`),
+  editedAfterPublish: check("pages_edited_at", sql`${t.editedAt} is null or ${t.editedAt} >= ${t.publishedAt}`),
 }));
 
 /** Moi cuon co toi da mot ban nhap, cua chinh chu sach. Nguoi kia khong bao gio thay. */

@@ -11,13 +11,19 @@ export const COVER_NAME: Record<CoverKey, string> = {
   "khom-truc": "Khóm trúc",
   "trang-nuoc": "Trăng trên nước",
   "chim-bay": "Chim bay qua bờ nước",
+  "hoa-dao": "Cành hoa đào",
+  "doi-chim": "Đôi chim sẻ trên cành",
+  "thuyen-trang": "Thuyền nhỏ dưới trăng",
+  "cau-go": "Cầu gỗ qua suối",
+  "doi-thong": "Đồi thông trong sương",
+  "meo-mai": "Mèo ngủ trên mái ngói",
 };
 
 /** Nhan cho nguoi dung trinh doc man hinh, dung o bo chon bia: chu Bia kem ten tranh viet thuong. */
 export const COVER_LABEL = Object.fromEntries(COVERS.map((c) => [c, `Bìa ${COVER_NAME[c].toLowerCase()}`])) as Record<CoverKey, string>;
 
 /**
- * Net ve cua bon bia, ve tay co tinh khong deu. Moi bia boc trong mot <g> dung bo loc muc loang (#muc-loang) khai
+ * Net ve cua tung bia, ve tay co tinh khong deu. Moi bia boc trong mot <g> dung bo loc muc loang (#muc-loang) khai
  * mot lan trong layout goc (InkDefs), nen mep net xo nhe va loang vao giay nhu muc tau.
  */
 const VE: Record<CoverKey, ReactNode> = {
@@ -62,6 +68,12 @@ const VE: Record<CoverKey, ReactNode> = {
       </g>
     </g>
   ),
+  "hoa-dao": <g filter={`url(#${MUC_LOANG})`} />,
+  "doi-chim": <g filter={`url(#${MUC_LOANG})`} />,
+  "thuyen-trang": <g filter={`url(#${MUC_LOANG})`} />,
+  "cau-go": <g filter={`url(#${MUC_LOANG})`} />,
+  "doi-thong": <g filter={`url(#${MUC_LOANG})`} />,
+  "meo-mai": <g filter={`url(#${MUC_LOANG})`} />,
 };
 
 /** Net ve cua mot bia, mau la currentColor; nen gradient do class .bia--<khoa> tren phan tu cha ve. */

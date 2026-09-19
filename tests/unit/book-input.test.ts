@@ -31,8 +31,10 @@ describe("parseBookInput", () => {
     expect(parseBookInput(form({ title: "A" }))).toEqual({ error: "Chọn một chế độ cho cuốn sách." });
   });
 
-  it("danh sach dung bon bia va hai che do da dinh", () => {
-    expect(COVERS).toEqual(["nui-xa", "khom-truc", "trang-nuoc", "chim-bay"]);
+  it("danh sach dung muoi bia va hai che do da dinh", () => {
+    expect(COVERS).toEqual([
+      "nui-xa", "khom-truc", "trang-nuoc", "chim-bay", "hoa-dao", "doi-chim", "thuyen-trang", "cau-go", "doi-thong", "meo-mai",
+    ]);
     expect(MODES).toEqual(["chia-se", "rieng-tu"]);
   });
 

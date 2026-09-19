@@ -57,6 +57,13 @@
       "when": 1789739907420,
       "tag": "0007_trinh-duyet-tin-cay",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789821118865,
+      "tag": "0008_sua-trang-va-bia-moi",
+      "breakpoints": true
     }
   ]
 }

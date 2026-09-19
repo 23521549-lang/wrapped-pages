@@ -391,7 +391,7 @@ describe("BookForm bia tu tai len: sua sach", () => {
   });
 
   /*
-   * Kho tat ma cuon da co bia anh: truoc khi sua, o thu nam bien mat nen mot
+   * Kho tat ma cuon da co bia anh: truoc khi sua, o anh bien mat nen mot
    * TRANH VE hien la dang chon, trong khi truong an coverMedia van gui id anh cu len - cai nguoi dung nhin thay va cai
    * form gui di la hai thu khac nhau. Giu bia anh la dung (sua ten khong duoc lam mat bia), nen cach sua la hien
    * dung no. Test nay do o dong dau tien truoc khi sua.
@@ -410,9 +410,11 @@ describe("BookForm bia tu tai len: sua sach", () => {
     expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["trang-nuoc"], ""]);
   });
 
-  it("sach moi khi kho chua bat: chi bon tranh, gui coverMedia rong", async () => {
+  it("sach moi khi kho chua bat: chi tranh ve san, gui coverMedia rong", async () => {
     formMoi({ mediaEnabled: false });
-    expect(COVER_RADIOS().map((r) => r.value)).toEqual(["nui-xa", "khom-truc", "trang-nuoc", "chim-bay"]);
+    expect(COVER_RADIOS().map((r) => r.value)).toEqual([
+      "nui-xa", "khom-truc", "trang-nuoc", "chim-bay", "hoa-dao", "doi-chim", "thuyen-trang", "cau-go", "doi-thong", "meo-mai",
+    ]);
     fireEvent.click(nut("Tạo sách"));
     await waitFor(() => expect(actionCreateBook).toHaveBeenCalledTimes(1));
     expect([actionCreateBook.mock.calls[0][0].getAll("cover"), actionCreateBook.mock.calls[0][0].get("coverMedia")]).toEqual([["nui-xa"], ""]);

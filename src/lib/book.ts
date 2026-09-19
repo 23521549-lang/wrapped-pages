@@ -2,7 +2,9 @@ import { isStorable } from "@/lib/storable";
 import { isUuid } from "@/lib/uuid";
 import { parseYoutubeLink } from "@/lib/youtube";
 
-export const COVERS = ["nui-xa", "khom-truc", "trang-nuoc", "chim-bay"] as const;
+export const COVERS = [
+  "nui-xa", "khom-truc", "trang-nuoc", "chim-bay", "hoa-dao", "doi-chim", "thuyen-trang", "cau-go", "doi-thong", "meo-mai",
+] as const;
 export type CoverKey = (typeof COVERS)[number];
 
 export const MODES = ["chia-se", "rieng-tu"] as const;

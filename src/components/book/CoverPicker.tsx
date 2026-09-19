@@ -47,11 +47,11 @@ export type CoverPickerProps = {
 };
 
 /**
- * Bang bia cua form sach: bon tranh ve va o thu nam "Anh cua ban".
- * - Chua co anh: o thu nam la input file phu kin o, dung chung luat focus va bam cua .swatch.
+ * Bang bia cua form sach: cac tranh ve san va o cuoi "Anh cua ban".
+ * - Chua co anh: o cuoi la input file phu kin o, dung chung luat focus va bam cua .swatch.
  * - Chon tep: doc anh (readSourceImage), mo buoc cat ngay duoi bang bia; Dung anh nay thi cat, ma hoa va tai len qua
- *   actionUploadMedia loai bia. Xong thi o thu nam thanh radio dang chon ve chinh anh do, kem Doi anh.
- * - Radio anh cung name "cover" voi bon tranh va mang value la tranh du phong, nen truong cover cua form luon la mot tranh
+ *   actionUploadMedia loai bia. Xong thi o cuoi thanh radio dang chon ve chinh anh do, kem Doi anh.
+ * - Radio anh cung name "cover" voi cac tranh va mang value la tranh du phong, nen truong cover cua form luon la mot tranh
  *   ve; id anh di trong truong an coverMedia.
  * Moi viec bat dong bo mang mot so luot (run): Huy, chon lai hay go component lam ket qua ve sau bi bo qua.
  */
@@ -66,7 +66,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   const focusNext = useRef<"photo" | "pick" | null>(null);
 
   // Bia anh dang co thi luon hien, ke ca khi kho tat: truong an coverMedia van gui lai id do de sua ten khong
-  // lam mat bia, nen o thu nam phai hien dung cai dang duoc gui - khong duoc de mot tranh ve hien la "dang chon"
+  // lam mat bia, nen o cuoi phai hien dung cai dang duoc gui - khong duoc de mot tranh ve hien la "dang chon"
   // trong khi anh moi la bia that su. Kho tat thi chi mat duong tai len bia MOI (o chon tep va nut Doi anh).
   const showPhoto = value.photo !== null;
   const photoChosen = showPhoto && value.photoChosen;

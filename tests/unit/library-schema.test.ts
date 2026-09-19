@@ -36,11 +36,30 @@ describe("bang sach, to, ban nhap va moc doc", () => {
     ).rejects.toThrow();
   });
 
-  it("tu choi bia ngoai bon mau ve san", async () => {
+  it("tu choi bia ngoai danh sach ve san", async () => {
     const { db, seat1 } = await seedHai();
     await expect(
       db.insert(books).values({ ownerId: seat1.id, title: "X", mode: "chia-se", cover: "anh-tai-len" as never }),
     ).rejects.toThrow();
+  });
+
+  it("CHECK books_cover chua dung cac gia tri cua COVERS, cung thu tu, khong thua khong thieu", async () => {
+    const { db } = await seedHai();
+    const res = await db.execute(sql`select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'books_cover'`);
+    const def = (res.rows as { def: string }[])[0].def;
+    expect([...def.matchAll(/'([^']+)'/g)].map((m) => m[1])).toEqual([...COVERS]);
+  });
+
+  it("edited_at nhan null va moc sau published_at, tu choi moc truoc (pages_edited_at)", async () => {
+    const { db, book } = await motCuon();
+    const T = new Date("2026-09-19T07:05:00.000Z");
+    await db.insert(pages).values({ bookId: book.id, position: 1, content: DOC, publishedAt: T });
+    const cuaTo = eq(pages.bookId, book.id);
+    await db.update(pages).set({ editedAt: null }).where(cuaTo);
+    await db.update(pages).set({ editedAt: T }).where(cuaTo);
+    await db.update(pages).set({ editedAt: new Date(T.getTime() + 60_000) }).where(cuaTo);
+    expect((await db.select({ editedAt: pages.editedAt }).from(pages))[0].editedAt).toEqual(new Date(T.getTime() + 60_000));
+    await viPham(db.update(pages).set({ editedAt: new Date(T.getTime() - 1) }).where(cuaTo), "pages_edited_at");
   });
 
   it("nhac nen: nhan null va ma 11 ky tu, tu choi ma sai dang ngay o database", async () => {
