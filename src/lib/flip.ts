@@ -1,20 +1,23 @@
-/** "mot": man hep, moi khung mot to. "doi": man rong, sach mo hai trang, to dau nam mot minh ben phai. */
+/**
+ * "mot": man hep, moi khung mot to. "doi": man rong, sach mo hai trang ghep (1,2), (3,4)...: to dau nam ngay ben
+ * trai, khong de trang trai dau trong; so to le thi trang phai cua khung cuoi trong.
+ */
 export type FlipMode = "mot" | "doi";
 
 export function viewCount(mode: FlipMode, n: number): number {
   if (n <= 0) return 1;
-  return mode === "mot" ? n : Math.floor(n / 2) + 1;
+  return mode === "mot" ? n : Math.ceil(n / 2);
 }
 
-/** Cac to trong khung v, trai sang phai. null la cho trong (vi du ben trai cua khung dau). */
+/** Cac to trong khung v, trai sang phai. null la cho trong (vi du ben phai cua khung cuoi khi so to le). */
 export function viewSheets(mode: FlipMode, v: number, n: number): (number | null)[] {
   const at = (i: number) => (i >= 0 && i < n ? i : null);
-  return mode === "mot" ? [at(v)] : [at(2 * v - 1), at(2 * v)];
+  return mode === "mot" ? [at(v)] : [at(2 * v), at(2 * v + 1)];
 }
 
 /** Khung nhin chua to i. */
 export function viewOf(mode: FlipMode, i: number): number {
-  return mode === "mot" ? i : Math.floor((i + 1) / 2);
+  return mode === "mot" ? i : Math.floor(i / 2);
 }
 
 /** Chi so to xa nhat dang hien trong khung v, -1 neu khung trong. */
@@ -52,6 +55,6 @@ export function flipPlan(mode: FlipMode, v: number, dir: 1 | -1, n: number): Fli
       : { front: at(v - 1), back: null, left: null, right: at(v), fromDeg: -180, toDeg: 0 };
   }
   return dir === 1
-    ? { front: at(2 * v), back: at(2 * v + 1), left: at(2 * v - 1), right: at(2 * v + 2), fromDeg: 0, toDeg: -180 }
-    : { front: at(2 * v - 2), back: at(2 * v - 1), left: at(2 * v - 3), right: at(2 * v), fromDeg: -180, toDeg: 0 };
+    ? { front: at(2 * v + 1), back: at(2 * v + 2), left: at(2 * v), right: at(2 * v + 3), fromDeg: 0, toDeg: -180 }
+    : { front: at(2 * v - 1), back: at(2 * v), left: at(2 * v - 2), right: at(2 * v + 1), fromDeg: -180, toDeg: 0 };
 }

@@ -36,17 +36,21 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     await expect(b.getByRole("article", { name: "Trang gần nhất" })).toContainText(`${tenCuaA} vừa viết`);
   });
 
-  await test.step("B mo sach o to 1, chua lat da quay lai: con dung so to chua thay", async () => {
+  await test.step("B mo sach o khung dau, chua lat da quay lai: con dung so to chua thay", async () => {
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
-    await expect(b.locator(".doc__dem")).toHaveText(`Trang 1 / ${soTo}`);
+    // Che do hai trang ghep (1,2), (3,4) (src/lib/flip.ts): khung dau da cho thay ca to 1 lan to 2.
+    await expect(b.locator(".doc__dem")).toHaveText(`Trang 1-2 / ${soTo}`);
     await b.goBack();
-    await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo - 1} trang mới`);
+    if (soTo > 2) await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo - 2} trang mới`);
+    else await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveCount(0);
   });
 
   await test.step("B mo lai thi bat dau o to dau chua doc, lat toi to cuoi, quay lai ke thi het dau", async () => {
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
-    // To 2 la to dau chua doc; o che do hai trang no nam ben trai cua khung thu hai (src/lib/flip.ts).
-    await expect(b.locator(".doc__dem")).toHaveText(soTo >= 3 ? `Trang 2-3 / ${soTo}` : `Trang 2 / ${soTo}`);
+    // To 3 la to dau chua doc; o che do hai trang no nam ben trai cua khung thu hai (src/lib/flip.ts).
+    // Sach chi co hai to thi da doc het o lan truoc, khung dau van la khung cuoi.
+    const moDau = soTo >= 4 ? `Trang 3-4 / ${soTo}` : soTo === 3 ? `Trang 3 / ${soTo}` : `Trang 1-2 / ${soTo}`;
+    await expect(b.locator(".doc__dem")).toHaveText(moDau);
     const sau = b.getByRole("button", { name: "Trang sau" });
     while ((await sau.getAttribute("aria-disabled")) !== "true") {
       const nhan = await b.locator(".doc__dem").innerText();

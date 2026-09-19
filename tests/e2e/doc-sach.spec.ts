@@ -28,18 +28,21 @@ test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi h
   await expect(b.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 3 trang`);
   await expect(b.getByRole("link", { name: "Sửa sách" })).toHaveCount(0);
   const dem = b.locator(".doc__dem");
-  await expect(dem).toHaveText("Trang 1 / 3");
+  // Sach mo hai trang ghep (1,2), (3,4): to mot nam ngay trang trai, khong de trang trai dau trong.
+  await expect(dem).toHaveText("Trang 1-2 / 3");
+  await expect(b.locator(".sach .to-giay--trai")).toContainText("Tờ một");
+  await expect(b.locator(".sach .to-giay--phai")).toContainText("Tờ hai");
   await expect(b.getByRole("button", { name: "Trang trước" })).toHaveAttribute("aria-disabled", "true");
   expect(await tranNgang(b)).toEqual([]);
 
   await b.keyboard.press("ArrowRight");
-  await expect(dem).toHaveText("Trang 2-3 / 3");
+  await expect(dem).toHaveText("Trang 3 / 3");
   await expect(b.locator(".sach")).toContainText("Tờ ba");
   await expect(b.getByRole("button", { name: "Trang sau" })).toHaveAttribute("aria-disabled", "true");
   await b.keyboard.press("ArrowLeft");
-  await expect(dem).toHaveText("Trang 1 / 3");
+  await expect(dem).toHaveText("Trang 1-2 / 3");
   await b.keyboard.press("ArrowRight");
-  await expect(dem).toHaveText("Trang 2-3 / 3");
+  await expect(dem).toHaveText("Trang 3 / 3");
 
   // Quay lai ngay, khi moc con dang hen: Reader gui moc luc roi man roi lam moi ke.
   await b.goBack();
