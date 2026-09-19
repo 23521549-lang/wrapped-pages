@@ -7,7 +7,7 @@ import { sep } from "node:path";
  * file kem ly do. File moi can style noi tuyen phai them vao day kem ly do cua no.
  */
 const CHO_PHEP: Record<string, string> = {
-  "src/components/editor/PagedSurface.tsx": "be rong, chieu cao va vi tri tung to giay nhan he so thu phong do luc chay",
+  "src/components/editor/PagedSurface.tsx": "be rong, chieu cao, vi tri tung to giay va do dich ngang khi lat to, nhan he so thu phong do luc chay",
   "src/components/reader/LockedSheet.tsx": "bien CSS --dai: do dai tung vach nhoe sinh luc chay",
   "src/components/reader/Flipbook.tsx": "bien CSS --so-to, --k cua khung sach va goc xoay rotateY cua to dang lat, tinh luc chay",
   "src/components/seal/SealPanel.tsx": "bien CSS --k: he so thu phong cua to trong khung thu thach, do luc chay",

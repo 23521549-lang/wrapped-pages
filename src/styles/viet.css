@@ -145,26 +145,132 @@
 .tap-trung .viet-chu p.dang-viet{ opacity: 1; }
 .nut-dinh-dang--chu{ padding: 0 .9rem; font-size: var(--text-sm); font-weight: 500; }
 
-.dang, .dang-hoi{ display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
-.dang-hoi{ padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); background: var(--blue-1); }
-.dang-hoi__chu{ font-size: var(--text-sm); color: var(--color-ink); }
-.dang-hoi__nut{ display: flex; gap: var(--space-xs); }
+.dang{ display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
 
 /*
- * Hop xac nhan dang co them nhom Niem phong (SealPicker). Hop dai nen chiem
- * tron mot hang cua thanh tren, va tu cuon trong chinh no: .viet-tren luon dinh o dinh man,
- * nen khong duoc de hop cao qua man hinh o bat ky be rong nao.
+ * Buoc dang trang kem niem phong. Man rong: ba cot vua dung phan man con lai duoi thanh tren (khong cuon trang):
+ * cot chon loai (doc, nhu muc luc), cot cac o cua loai da chon, cot to giay dang viet. Chon Khong thi cot giua
+ * mat, to giay lay cho. Vung soan thao van sua duoc; chi cach nhin cac to doi (PagedSurface, lat).
  */
-.viet-dau__phai:has(.dang-hoi--niem){ flex: 1 1 100%; }
-.dang-hoi--niem{
-  flex: 1 1 100%; display: grid; gap: var(--space-md); padding: var(--space-md);
-  border: 1px solid var(--blue-line);
-  max-height: calc(100dvh - 9rem); overflow-y: auto; overscroll-behavior: contain;
+.viet--dang .viet-than{ display: grid; grid-template-columns: auto minmax(0, 1fr); }
+.niem{
+  --niem-cot-chon: 14rem; --niem-cot-form: 20rem;
+  display: grid; grid-template-columns: var(--niem-cot-chon) var(--niem-cot-form); min-height: 0; background: var(--color-paper);
 }
-.chon-niem .chon__ds{ grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr)); }
-.chon-niem .the-chon{ padding: var(--space-sm) var(--space-md); }
-.niem-o{ display: grid; gap: var(--space-md); padding: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-rule); background: var(--color-paper); min-width: 0; }
+.niem--khong{ grid-template-columns: var(--niem-cot-chon); }
+.niem__chon{
+  display: flex; flex-direction: column; gap: var(--space-md); min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--space-lg) var(--space-md) var(--space-lg) var(--space-lg); border-right: 1px solid var(--color-rule);
+}
+.loai-niem-ds{ border: 0; margin: 0; padding: 0; min-width: 0; }
+.loai-niem-ds__t{ padding: 0; margin-bottom: var(--space-2xs); font-size: var(--text-md); line-height: 1.3; }
+.loai-niem-ds__ghi{ font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); margin-bottom: var(--space-sm); }
+.loai-niem-ds__hang{ display: grid; gap: 2px; }
+.loai-niem{
+  position: relative; display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: .1rem .6rem; align-items: start;
+  min-height: 44px; padding: .6rem .75rem .6rem .6rem; border-radius: var(--radius-nut); cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+.loai-niem:hover{ background: var(--color-paper-2); }
+.loai-niem input{
+  appearance: none; -webkit-appearance: none; grid-row: span 2; width: 18px; height: 18px; margin: .2rem 0 0;
+  border-radius: var(--radius-pill); border: 1.5px solid var(--color-rule-ui); background: var(--color-paper);
+  display: grid; place-items: center; cursor: pointer;
+}
+.loai-niem input::after{ content: ''; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--blue-ink); transform: scale(0); transition: transform var(--dur-micro) var(--ease-out); }
+.loai-niem input:checked{ border-color: var(--blue-ink); }
+.loai-niem input:checked::after{ transform: scale(1); }
+.loai-niem input:focus-visible{ outline: 2.5px solid var(--color-focus); outline-offset: 3px; }
+.loai-niem:has(input:checked){ background: var(--blue-1); }
+/* vach mong ben trai cua dong dang chon, nhu dau trang trong muc luc */
+.loai-niem:has(input:checked)::before{ content: ''; position: absolute; left: 0; top: .55rem; bottom: .55rem; width: 3px; border-radius: 2px; background: var(--blue-line); }
+.loai-niem:has(input:disabled){ opacity: .55; cursor: not-allowed; }
+.loai-niem__t{ font-weight: 600; line-height: 1.35; }
+.loai-niem:has(input:checked) .loai-niem__t{ color: var(--blue-ink); }
+.loai-niem__x{ grid-column: 2; font-size: var(--text-sm); line-height: 1.4; color: var(--color-ink-2); }
+
+.niem__cuoi{ margin-top: auto; display: grid; gap: var(--space-sm); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); }
+.dang-hoi__chu{ font-size: var(--text-sm); line-height: 1.55; color: var(--color-ink-2); }
+.dang-hoi__chu b{ color: var(--color-ink); font-weight: 600; }
+.dang-hoi__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+
+/* cot giua: cac o cua loai dang chon; truot vao nhe moi lan doi loai (chi transform, opacity) */
+.niem__form{
+  display: grid; align-content: start; gap: var(--space-lg); min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--space-lg); border-right: 1px solid var(--color-rule);
+  animation: niem-vao var(--dur-short) var(--ease-out);
+}
+@keyframes niem-vao{ from{ opacity: 0; transform: translateX(-8px); } }
+.niem__dau{ display: grid; gap: .2rem; }
+.niem__ten{ font-size: var(--text-base); line-height: 1.35; }
+.niem__ghi{ font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); }
+.niem-o{ display: grid; gap: var(--space-lg); min-width: 0; }
 .ds-nhap{ display: grid; gap: var(--space-xs); }
 .dong-nhap{ display: flex; gap: var(--space-xs); align-items: center; min-width: 0; }
 .dong-nhap .field__o{ flex: 1 1 auto; min-width: 0; }
 .them{ justify-self: start; }
+
+/* cot phai: to giay dang viet, thu phong ca khung cho vua o; nhieu to hon so dang hien thi co nut lat */
+.viet-o{ display: contents; }
+.viet-mat--lat{
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; justify-items: center; gap: var(--space-sm);
+  min-width: 0; min-height: 0; padding: var(--space-lg);
+}
+/* ban sao do nam ngoai man va cao bang ca tai lieu: o che do lat no khong duoc keo dai trang (fixed khong tinh vao vung cuon); be rong, chu giu nguyen nen so do khong doi */
+.viet-mat--lat .ban-sao{ position: fixed; }
+/* tap trung chi lam mo khi dang go trong trang; luc doc lai de chon niem phong thi chu ro het */
+.viet--dang.tap-trung .viet-chu .ProseMirror:not(:focus) p{ opacity: 1; }
+.viet-mat__dau{ font-size: var(--text-sm); color: var(--color-ink-2); text-align: center; }
+.viet-mat--lat .viet-o{ display: grid; place-items: center; justify-self: stretch; min-width: 0; min-height: 0; }
+/* overflow: clip chu khong hidden: khong thanh vung cuon, nen ProseMirror khong the tu cuon ngang khung de dua con tro vao */
+.viet-mat--lat .viet-chong{ overflow: clip; background: var(--color-giay); border-radius: var(--radius-giay); box-shadow: var(--bong-giay); }
+.viet-mat--lat .viet-to{ box-shadow: none; border-radius: 0; }
+/*
+ * Moi cot cao dung mot buoc to (to + khe), rong dung mot to: cot k bat dau dung o toa do k * buoc cua chong doc,
+ * nen chu cua to k nam o cot k. Cot chi cat giua khoi dem ngat trang (con 72px du tru), khong bao gio giua mot dong.
+ */
+.viet-mat--lat .viet-chu{
+  width: var(--giay-w); height: calc(var(--giay-h) + var(--giay-khe));
+  column-count: 1; column-gap: 0; column-fill: auto; orphans: 1; widows: 1;
+}
+/* khung cat mep, nen vong focus cua vung chu ve vao trong to */
+.viet-mat--lat .viet-chu .ProseMirror{ outline-offset: -4px; }
+/* gay sach giua hai to (hai trang ghep), hoac bong mep trai khi chi mot to */
+.viet-chong--doi::after, .viet-chong--mot::after{ content: ''; position: absolute; top: 0; bottom: 0; pointer-events: none; }
+.viet-chong--doi::after{
+  left: calc(50% - 22px); width: 44px;
+  background:
+    linear-gradient(to bottom, transparent, var(--nep-vach) 20%, var(--nep-vach) 80%, transparent) center / 1px 88% no-repeat,
+    linear-gradient(to right, transparent, var(--nep-bong) 50%, transparent);
+}
+.viet-chong--mot::after{ left: 0; width: 14px; background: linear-gradient(to right, var(--nep-bong-hep), transparent); }
+.viet-lat{ display: flex; align-items: center; justify-content: center; gap: var(--space-md); }
+.viet-lat__dem{ font-size: var(--text-sm); font-weight: 500; color: var(--color-ink-2); font-variant-numeric: tabular-nums; min-width: 9ch; text-align: center; white-space: nowrap; }
+
+@media (min-width: 901px){
+  .viet--dang{ height: 100dvh; display: flex; flex-direction: column; padding-bottom: 0; }
+  .viet--dang .viet-tren{ flex: none; }
+  .viet--dang .viet-than{ flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  /* o chua to khong lay kich thuoc tu noi dung: ti le thu phong tinh tu o, khong vong nguoc tu to */
+  .viet-mat--lat .viet-o{ contain: size; }
+}
+@media (min-width: 901px) and (max-width: 1180px){
+  .niem{ --niem-cot-chon: 13rem; --niem-cot-form: 17.5rem; }
+  .niem__chon{ padding-inline: var(--space-md); }
+  .niem__form{ padding-inline: var(--space-md) var(--space-lg); }
+}
+/* man hep: xep doc. Cac loai thanh luoi 2 x 2, roi cau xac nhan va hai nut, roi cac o, roi to giay */
+@media (max-width: 900px){
+  .viet--dang .viet-than, .niem, .niem--khong{ grid-template-columns: minmax(0, 1fr); }
+  .niem__chon, .niem__form{ overflow: visible; border-right: 0; border-bottom: 1px solid var(--color-rule); }
+  .niem__chon{ padding: var(--space-lg); }
+  .loai-niem-ds__hang{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xs); }
+  .niem__cuoi{ margin-top: 0; }
+  .viet-mat--lat{ padding: var(--space-lg) var(--space-md); }
+}
+@media (max-width: 420px){
+  .niem__chon, .niem__form{ padding-inline: var(--space-md); }
+}
+@media (prefers-reduced-motion: reduce){
+  .niem__form{ animation: none; }
+}

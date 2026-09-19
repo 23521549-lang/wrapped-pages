@@ -24,18 +24,17 @@ test("cau do: cau xac nhan doi theo loai, dap an toi da 5, focus khi them xoa, k
   await a.getByRole("button", { name: "Đăng trang" }).click();
   const hoi = a.getByRole("group", { name: "Xác nhận đăng trang" });
 
-  await expect(hoi.locator(".dang-hoi__chu")).toHaveText(`Đăng 1 trang vào Chuyện chưa kể? ${tenCuaB} sẽ đọc được.`);
+  await expect(hoi.locator(".dang-hoi__chu")).toHaveText(`Đăng 1 trang vào Chuyện chưa kể, ${tenCuaB} đọc được ngay.`);
   await expect(hoi.getByRole("radio")).toHaveCount(4);
   await hoi.getByRole("radio", { name: "Hẹn giờ" }).check();
-  await expect(hoi.locator(".dang-hoi__chu")).toHaveText("Đăng 1 trang vào Chuyện chưa kể, hẹn giờ mở? Tới giờ đó cả hai mới đọc được.");
+  await expect(hoi.locator(".dang-hoi__chu")).toHaveText("Đăng 1 trang vào Chuyện chưa kể, hẹn giờ mở.");
+  await expect(hoi.locator(".niem__ghi")).toHaveText("Tới giờ đó cả hai mới đọc được.");
   await hoi.getByRole("radio", { name: "Trao đổi" }).check();
-  await expect(hoi.locator(".dang-hoi__chu")).toHaveText(
-    `Đăng 1 trang vào Chuyện chưa kể, đóng bằng trao đổi? ${tenCuaB} cần viết một trang trả lời mới đọc được.`,
-  );
+  await expect(hoi.locator(".dang-hoi__chu")).toHaveText(`Đăng 1 trang vào Chuyện chưa kể, mở khi ${tenCuaB} viết trang trả lời.`);
+  await expect(hoi.locator(".niem__ghi")).toHaveText(`${tenCuaB} cần viết một trang trả lời mới đọc được.`);
   await hoi.getByRole("radio", { name: "Câu đố" }).check();
-  await expect(hoi.locator(".dang-hoi__chu")).toHaveText(
-    `Đăng 1 trang vào Chuyện chưa kể, đóng bằng câu đố? ${tenCuaB} cần trả lời đúng mới đọc được.`,
-  );
+  await expect(hoi.locator(".dang-hoi__chu")).toHaveText("Đăng 1 trang vào Chuyện chưa kể, khóa bằng câu đố.");
+  await expect(hoi.locator(".niem__ghi")).toHaveText(`${tenCuaB} cần trả lời đúng mới đọc được.`);
 
   await hoi.getByLabel("Câu hỏi", { exact: true }).fill("Mình gặp nhau ở đâu?");
   await hoi.getByLabel("Đáp án 1", { exact: true }).fill("Bến xe Miền Đông");
@@ -44,7 +43,7 @@ test("cau do: cau xac nhan doi theo loai, dap an toi da 5, focus khi them xoa, k
   await expect(hoi.getByLabel("Đáp án 5", { exact: true })).toBeFocused();
   await expect(them).toBeDisabled();
 
-  // Hop dai nhat cua man viet (5 dap an) khong duoc lam tran ngang o 320 va 375.
+  // Khung dai nhat cua man viet (5 dap an) khong duoc lam tran ngang o 320 va 375.
   for (const width of [320, 375]) {
     await a.setViewportSize({ width, height: 640 });
     expect(await tranNgang(a), `tran ngang o ${width}px`).toEqual([]);
@@ -81,7 +80,8 @@ test("trao doi tren sach chia se, hen gio tren sach rieng tu chi con hai lua cho
   await expect(hoi.getByRole("radio")).toHaveCount(2);
   await expect(hoi.getByRole("radio", { name: "Câu đố" })).toHaveCount(0);
   await hoi.getByRole("radio", { name: "Hẹn giờ" }).check();
-  await expect(hoi.locator(".dang-hoi__chu")).toHaveText("Đăng 1 trang vào Cuốn không đặt tên, hẹn giờ mở? Tới giờ đó bạn mới đọc lại được.");
+  await expect(hoi.locator(".dang-hoi__chu")).toHaveText("Đăng 1 trang vào Cuốn không đặt tên, hẹn giờ mở.");
+  await expect(hoi.locator(".niem__ghi")).toHaveText("Tới giờ đó bạn mới đọc lại được.");
 
   // Mui gio ghim la UTC+7 (khong co gio mua he); ten mui gio co the la Asia/Ho_Chi_Minh hoac ban danh Asia/Saigon tuy ICU.
   expect(await a.evaluate(() => new Date("2026-09-20T00:00:00.000Z").getTimezoneOffset())).toBe(-420);
@@ -122,7 +122,8 @@ test("niem phong sai thi bao ngay trong hop, chua dang gi; sua xong thi dang duo
   await expect(hoi.getByText("Đáp án cần có chữ, chỉ dấu câu thì không ai đoán được.")).toBeVisible();
   await expect(hoi.getByRole("alert")).toHaveCount(0);
   await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet$`));
-  await expect(a.locator(".viet-chu .ProseMirror")).toHaveAttribute("contenteditable", "false");
+  // Niem phong sai chua cham toi trang: vung soan thao van sua duoc (chi khoa tu luc thuc su gui).
+  await expect(a.locator(".viet-chu .ProseMirror")).toHaveAttribute("contenteditable", "true");
   expect(await niemPhongCua(id)).toEqual([]);
 
   await dong.fill("Bến xe");

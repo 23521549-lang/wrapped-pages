@@ -259,13 +259,19 @@ const MIEN_TRU: MienTru[] = [
       ".goi-y",
       ".tai-anh",
       ".ghi-am-hop",
-      ".niem-o",
       // Gach chia/duong ke duoi thanh dieu huong: cung mot vai tro, khac hinh dang.
       ".nav",
       ".viet-tren",
       ".foot",
       ".nhap + .nhap",
       ".go-cua__dong + .go-cua__dong",
+      // Vach chia giua cac cot cua khung dang trang (PublishBar.tsx PublishPanel): tach cot chon loai, cot cac o va
+      // cot to giay, va tach cau xac nhan khoi danh sach loai. Moi dieu khien ben trong (radio, o nhap, nut) co
+      // vien/trang thai rieng dat nguong.
+      ".niem__chon",
+      ".niem__form",
+      ".niem__cuoi",
+      ".niem__chon, .niem__form",
       // Cung mot vai tro nhung vien la mot vong box-shadow 0/0/0 (vd inset 0 0 0 1px), khong phai border.
       ".to-giay", // to giay: khung trang giay trong sach/man viet (PagedSurface.tsx, SealPanel.tsx, Flipbook.tsx)
       ".khoi-ghi-am", // khoi ghi am nhung trong bai (figure, mediaNodes.tsx): khung chua, khong phai nut ben trong

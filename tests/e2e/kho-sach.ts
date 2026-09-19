@@ -82,6 +82,10 @@ export async function haiNguoiDaVao(browser: Browser): Promise<{ a: Page; b: Pag
  * Ngay sau khi doi kich thuoc cua so, man viet va man doc con dang thu phong lai (useFitScale do qua ResizeObserver
  * roi React ve lai), nen do ngay co the thay bo cuc cu. Vi vay do lap lai toi khi het tran; tran that thi
  * van con sau choToiMs va danh sach duoc tra ve de test do.
+ *
+ * Phan nam trong mot to tien `overflow-x: clip` bi cat o mep phai cua to tien do, khong ve ra ngoai va khong
+ * tao vung cuon (vd cac to dang khuat cua man viet luc chon niem phong, xep canh nhau trong khung cat). Chi
+ * tinh phan con thay; chinh to tien do van duoc do nhu moi phan tu khac, nen khung cat tran van bi bat.
  */
 export async function tranNgang(page: Page, choToiMs = 2_000): Promise<string[]> {
   const hetHan = Date.now() + choToiMs;
@@ -91,7 +95,12 @@ export async function tranNgang(page: Page, choToiMs = 2_000): Promise<string[]>
       return Array.from(document.querySelectorAll<HTMLElement>("body *"))
         .filter((el) => {
           const r = el.getBoundingClientRect();
-          return r.width > 0 && r.right > w + 1 && getComputedStyle(el).visibility !== "hidden";
+          if (!(r.width > 0) || getComputedStyle(el).visibility === "hidden") return false;
+          let phai = r.right;
+          for (let cha = el.parentElement; cha && cha !== document.body; cha = cha.parentElement) {
+            if (getComputedStyle(cha).overflowX === "clip") phai = Math.min(phai, cha.getBoundingClientRect().right);
+          }
+          return phai > w + 1;
         })
         .map((el) => `${el.tagName.toLowerCase()}.${el.getAttribute("class") ?? ""}`);
     });

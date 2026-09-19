@@ -25,7 +25,7 @@ test("dang trang: hoi xac nhan dung so trang va nguoi doc, roi mo man doc o to d
 
   await a.getByRole("button", { name: "Đăng trang" }).click();
   const hoi = a.getByRole("group", { name: "Xác nhận đăng trang" });
-  await expect(hoi).toContainText(`Đăng ${soTo} trang vào Chuyện chưa kể? ${tenCuaB} sẽ đọc được.`);
+  await expect(hoi).toContainText(`Đăng ${soTo} trang vào Chuyện chưa kể, ${tenCuaB} đọc được ngay.`);
   await hoi.getByRole("button", { name: "Đăng" }).click();
 
   await expect(a).toHaveURL(new RegExp(`/sach/${id}\\?trang=1$`));
@@ -72,14 +72,13 @@ test("dang xong roi quay lai man viet cua dung cuon: ban nhap khong song lai", a
 });
 
 /*
- * Hai lop bao ve: tu luc hop xac nhan mo, vung soan thao phai bi khoa ngay (lop 1)
- * nen nguoi dung khong the go them duoc nua - cai ho thay trong hop chac chan la cai se duoc dang. Lop 2
- * (publish() chay lai prepare() sau beforePublish() va dang chinh ket qua moi, khong dung "ask" da chup
- * tu luc mo hop) la dan an toan, dung ke ca khi lop 1 bi go. Truoc khi sua, kich ban gom go chu, mo hop
- * xac nhan, go them, roi dang: doan go them van duoc autosave luu thanh ban nhap, dang xong ban nhap bi
- * xoa nen doan do mat vinh vien - mat chu da viet la loi nang nhat co the xay ra.
+ * Vung soan thao van sua duoc trong luc chon niem phong: chu go them sau khi mo khung PHAI duoc dang, va so
+ * trang trong cau xac nhan theo kip. Lop an toan (publish() chay lai prepare() sau beforePublish(), va
+ * beforePublish khoa vung soan thao ngay truoc khi luu nhap lan cuoi) bao dam cai duoc dang la dung chu co tren
+ * trang luc bam Dang. Truoc day khung khoa trang tu luc mo; kich ban hong cu (go them bi luu vao nhap roi mat
+ * khi dang xong) nay thanh kich ban dung: doan go them nam trong trang da dang, khong mat chu nao.
  */
-test("go them sau khi hop xac nhan da mo khong duoc nhan; dang ra dung noi dung da go tu truoc", async ({ browser }) => {
+test("go them trong luc chon niem phong van duoc nhan; so trang theo kip va dang ra ca doan go them", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Nhật ký một dòng", "rieng-tu");
   const giay = a.locator(".viet-chu .ProseMirror");
@@ -89,21 +88,28 @@ test("go them sau khi hop xac nhan da mo khong duoc nhan; dang ra dung noi dung 
   await a.getByRole("button", { name: "Đăng trang" }).click();
   const hoi = a.getByRole("group", { name: "Xác nhận đăng trang" });
   await expect(hoi).toBeVisible();
+  const cau = hoi.locator(".dang-hoi__chu");
+  await expect(cau).toHaveText("Đăng 1 trang vào Nhật ký một dòng, chỉ mình bạn đọc được.");
 
-  // Lop 1: tu luc hop mo, vung soan thao phai bi khoa - thu go them khong duoc nhan.
-  await expect(giay).toHaveAttribute("contenteditable", "false");
-  // Hop xac nhan nam trong thanh tren dinh o dinh man va che nua tren cua to giay; bam vao phan to giay con thay
-  // (sat mep duoi), dung cho nguoi dung that co the bam.
-  const hop = await giay.boundingBox();
-  if (!hop) throw new Error("khong do duoc to giay");
-  await giay.click({ position: { x: hop.width / 2, y: hop.height - 24 } });
+  // Khung mo khong khoa trang: go them ngay tren to dang hien.
+  await expect(giay).toHaveAttribute("contenteditable", "true");
+  await giay.click();
+  await a.keyboard.press("Control+End");
   await a.keyboard.type(" Thêm chữ sau khi mở hộp.");
-  await expect(giay).toHaveText("Đoạn văn đầu tiên.");
+  await expect(giay).toHaveText("Đoạn văn đầu tiên. Thêm chữ sau khi mở hộp.");
+
+  // Go tran sang to thu hai: so trang trong cau xac nhan tang theo.
+  for (let i = 0; i < 10; i++) {
+    await a.keyboard.press("Enter");
+    await a.keyboard.insertText(DOAN.repeat(2).trim());
+  }
+  await expect(cau).toHaveText(/^Đăng [2-9] trang vào Nhật ký một dòng, chỉ mình bạn đọc được[.]$/);
+  const so = Number(/Đăng ([0-9]+) trang/.exec(await cau.innerText())?.[1]);
 
   await hoi.getByRole("button", { name: "Đăng", exact: true }).click();
   await expect(a).toHaveURL(new RegExp(`/sach/${id}\\?trang=1$`));
-  await expect(a.locator(".sach")).toContainText("Đoạn văn đầu tiên.");
-  await expect(a.locator(".sach")).not.toContainText("Thêm chữ sau khi mở hộp.");
+  await expect(a.locator(".doc__dem")).toContainText(`/ ${so}`);
+  await expect(a.locator(".sach")).toContainText("Đoạn văn đầu tiên. Thêm chữ sau khi mở hộp.");
 });
 
 test("che do tap trung lam mo doan khong co con tro, tat duoc", async ({ browser }) => {

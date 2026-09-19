@@ -37,9 +37,13 @@ test.afterEach(async () => {
  * - .the-chon input: nut radio 20px trong the chon (BookForm.tsx "Ai doc duoc", SealPicker.tsx). Radio
  *   nam TRONG `<label class="the-chon">`, nen bam bat ky dau tren nhan cung chon radio (kich hoat nhan
  *   goc cua HTML; `.the-chon{ cursor: pointer; padding: var(--space-md) }` ve ca nhan thanh mot the bam).
+ * - .loai-niem input: nut radio 18px trong dong chon loai niem phong o man viet (SealPicker.tsx SealKinds). Cung co
+ *   che: radio nam TRONG `<label class="loai-niem">`, va `.loai-niem{ min-height: 44px; cursor: pointer }` ve ca
+ *   dong (ten va mo ta) thanh vung bam.
  */
 const MIEN_TRU_VUNG_BAM: MienTru[] = [
   { phanTu: ".the-chon input", vungBam: "label.the-chon" },
+  { phanTu: ".loai-niem input", vungBam: "label.loai-niem" },
 ];
 
 const HE_LO = "Em tới sớm hơn giờ hẹn bốn mươi phút.";
@@ -69,6 +73,18 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
   for (const width of BE_RONG) {
     await a.setViewportSize({ width, height: 900 });
     await doMoiManChinh(a, (p) => tranNgang(p));
+  }
+
+  // Man viet dang mo khung niem phong, loai cau do (nhieu o nhat): khung khong co duong rieng nen di tay o day.
+  for (const width of BE_RONG) {
+    await a.setViewportSize({ width, height: 900 });
+    await a.goto(`/sach/${id}/viet`);
+    await a.getByRole("button", { name: "Đăng trang" }).click();
+    const hoi = a.getByRole("group", { name: "Xác nhận đăng trang" });
+    await hoi.getByRole("radio", { name: "Câu đố" }).check();
+    await hoi.getByRole("button", { name: "Thêm gợi ý" }).click();
+    if (width === BE_RONG_CHAM) expect(await vungBamNho(a, MIEN_TRU_VUNG_BAM), "khung niem phong: vung bam").toEqual([]);
+    expect(await tranNgang(a), `khung niem phong o ${width}px: tran ngang`).toEqual([]);
   }
 
   const manCuaA: Man[] = [

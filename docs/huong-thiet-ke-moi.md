@@ -121,6 +121,32 @@ Với `prefers-reduced-motion: reduce`: sách không rút ra (chỉ còn bóng �
 - Tiêu đề tĩnh viết thẳng trong mã tối đa 20 ký tự. Không in nghiêng trong tiêu đề.
 - Nhấn mạnh bằng chữ đậm trên nền nhạt, không bằng mảng màu đậm.
 
-## 11. Việc còn lại
+## 11. Đăng trang và niêm phong (màn viết)
+
+Bấm "Đăng trang" không còn mở hộp trong thanh trên. Nút đó ẩn đi, đầu màn viết được kéo lên đỉnh cửa sổ, và phần dưới thanh trên (tên sách, thanh công cụ vẫn giữ nguyên) chia thành ba cột vừa đúng một màn, không cuộn trang:
+
+| Cột | Nội dung |
+|---|---|
+| Trái (`14rem`) | "Niêm phong" là `legend` của nhóm chọn, một câu mô tả, rồi danh sách dọc các loại: Không, Câu đố, Hẹn giờ, Trao đổi (sách riêng tư chỉ còn Không và Hẹn giờ). Mỗi dòng là radio, tên đậm và một dòng mô tả; dòng đang chọn nền `--blue-1` với vạch mỏng 3px `--blue-line` bên trái, như dấu trang trong mục lục. Chân cột: câu xác nhận "Đăng **N trang** vào **Tên sách**, khóa bằng câu đố.", lỗi chung (`role="alert"`) nếu có, rồi nút chính "Đăng" và nút viền "Để sau". |
+| Giữa (`20rem`) | Tên loại (h2, ≤ 20 ký tự), câu nói ai đọc được khi nào, rồi các ô của loại đó: câu hỏi, đáp án, gợi ý, ngày giờ mở. Chọn Không thì cột này không có, tờ giấy lấy chỗ. |
+| Phải (phần còn lại) | "Đọc lại và sửa ngay trên trang", các tờ đang viết thu phóng vừa ô (cả bề ngang lẫn chiều cao), và nút lật "Tờ 1-2 / 3" (44px) khi số tờ nhiều hơn số tờ đang hiện. |
+
+Bề rộng:
+
+- Trên 1180px: hai tờ cạnh nhau như màn đọc, ghép (1, 2), (3, 4) theo `src/lib/flip.ts`; số tờ lẻ thì trang phải của khung cuối để trống. Gáy là vạch 1px `--nep-vach` cùng bóng `--nep-bong` 22px mỗi bên.
+- 901 đến 1180px: một tờ, cột trái `13rem`, cột giữa `17.5rem`. Bóng mép trái `--nep-bong-hep` 14px.
+- Từ 900px trở xuống: xếp dọc. Các loại thành lưới 2 x 2, rồi câu xác nhận và hai nút, rồi các ô, rồi một tờ (chỉ thu theo bề ngang, không lớn hơn cỡ thật), trang được cuộn như thường.
+
+Luật sửa và đăng:
+
+- Vùng soạn thảo vẫn sửa được trong lúc chọn niêm phong. Số trang trong câu xác nhận tính lại sau mỗi lần xếp trang. Chỉ từ lúc bấm "Đăng" vùng soạn thảo mới khóa, nháp được lưu lần cuối, và bộ cắt trang chạy lại một lần nữa: thứ được đăng là đúng chữ có trên trang lúc đó.
+- Tờ được xem cạnh nhau bằng cột CSS (multi-column) của chính vùng soạn thảo, mỗi cột cao đúng một bước tờ (540 + 28px), rộng đúng một tờ. Không đổi cỡ chữ, không đổi bề rộng, không đụng bộ xếp trang: cột chỉ cắt giữa khối đệm ngắt trang, nên mỗi tờ vẫn bắt đầu đúng chỗ màn đọc bắt đầu. Khung ngoài dùng `overflow: clip` (không thành vùng cuộn), lật bằng `transform`, thu phóng cả khung bằng `transform`.
+- Con trỏ chạy sang tờ đang khuất (gõ tràn, phím mũi tên) thì khung tự lật tới tờ đó; bấm nút lật thì không bị kéo ngược.
+- Focus: mở khung thì focus vào loại đang chọn; thứ tự Tab trái, giữa, phải; "Để sau" trả focus về nút "Đăng trang"; đáp án chỉ có dấu câu thì focus vào đúng dòng lỗi như trước.
+- Chế độ Tập trung chỉ làm mờ đoạn khi con trỏ đang ở trong trang; lúc đọc lại để chọn niêm phong thì chữ rõ hết.
+
+Chuyển động: mỗi lần đổi loại, cột giữa trượt vào 8px và hiện dần, 220ms, `--ease-out`, chỉ `transform` và `opacity`. Với `prefers-reduced-motion: reduce` cột giữa hiện thẳng. Lật tờ trong khung không có hoạt ảnh.
+
+## 12. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của form tạo và sửa sách. Khi màn form được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.

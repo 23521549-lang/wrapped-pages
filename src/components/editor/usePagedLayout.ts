@@ -13,10 +13,12 @@ import { useMeasure } from "./useMeasure";
  * gio trong luc bo go dang ghep chu, nuot loi ban sao lech so doan) nam o useMeasure, dung chung voi
  * useOneSheet cua trang tra loi, de rao ghep chu chi co mot ban. Cung luot do dem luon so ky tu cua ca tai lieu
  * cho bo dem o dau man viet: khong them hen gio nao, va khong bao gio dem giua luc dang ghep chu.
+ * afterMeasure (tuy chon) chay cuoi moi lan do, vi du de tinh lai so to se dang khi khung niem phong dang mo.
  */
 export function usePagedLayout(
   editor: Editor | null,
   mirror: RefObject<HTMLDivElement | null>,
+  afterMeasure?: () => void,
 ): { sheetCount: number; chars: number } {
   const [sheetCount, setSheetCount] = useState(1);
   const [chars, setChars] = useState(0);
@@ -35,6 +37,7 @@ export function usePagedLayout(
     }
     setSheetCount(sheets.length);
     setChars(editorCharCount(ed.state.doc));
+    afterMeasure?.();
   });
 
   return { sheetCount, chars };

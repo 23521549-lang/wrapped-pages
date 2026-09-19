@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
@@ -23,7 +24,7 @@ import { DA_CHEN_GHI_AM, mediaAnnouncement } from "./mediaAnnounce";
 import { NONCE_TAI_LIEU } from "./nonce";
 import { PageBreaks } from "./pageBreaks";
 import { PagedSurface } from "./PagedSurface";
-import { PublishBar } from "./PublishBar";
+import { PublishButton, PublishPanel, usePublish } from "./PublishBar";
 import { RecorderBox } from "./RecorderBox";
 import { SaveBadge } from "./SaveBadge";
 import { splitDoc } from "./split";
@@ -83,7 +84,54 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
     editorProps: { attributes: { class: "giay-noi-dung", "aria-label": "Trang đang viết" } },
     onUpdate: () => autosave.changed(),
   });
-  const { sheetCount, chars } = usePagedLayout(editor, mirrorRef);
+  const prepare = useCallback((): { sheets: DocJson[] } | { error: string } => {
+    const ed = editorRef.current;
+    if (!ed || !mirrorRef.current) return { error: "Trang chưa sẵn sàng. Thử lại sau một giây." };
+    const doc = ed.state.doc;
+    let parts: DocJson[];
+    try {
+      // measureUnits (nhu splitDoc ben duoi) co the nem khi ban sao do lech so doan voi tai lieu - ca
+      // hai deu phai nam trong cung khoi try nay, khong de mot cu nem thoat thang vao onClick.
+      const units = measureUnits(mirrorRef.current, doc);
+      const sheets = paginate(units, CONTENT_HEIGHT);
+      parts = splitDoc(doc, sheets.slice(1).map((s) => units[s.from].pos));
+    } catch {
+      return { error: "Chưa cắt được trang. Thử sửa một chút rồi đăng lại." };
+    }
+    const kept = trimTrailingBlank(parts);
+    return kept.length > 0 ? { sheets: kept } : { error: "Trang còn trống, chưa có gì để đăng." };
+  }, []);
+
+  const beforePublish = useCallback(async () => {
+    // Van sua duoc trong luc chon niem phong; chi khoa tu luc bam Dang, de ban nhap luu lan cuoi va cai
+    // prepare() doc lai ngay sau day la mot, va khong co chu nao go trong luc dang gui bi mat.
+    editorRef.current?.setEditable(false);
+    await autosave.flush();
+    // Tat, KHONG chi dispose(): cleanup luc redirect thoat component se goi flush() mot lan nua, va
+    // neu bo tu luu con song thi lan flush do ghi lai ban nhap vua dang len database. Dang thanh cong
+    // thi afterFail khong bao gio duoc goi, nen khong co resume() nao lam song lai duong nay; dang
+    // hong thi afterFail se resume() vi luc do tu luu tiep la dieu dung phai lam.
+    autosave.stop();
+  }, [autosave]);
+
+  const dang = usePublish({
+    bookId,
+    partnerNickname,
+    prepare,
+    beforePublish,
+    afterFail: () => {
+      // Dang hong: nguoi dung con o lai trang nen tu luu phai chay lai that su, khong chi
+      // bao dirty suong - mo khoa vung soan thao, mo lai bo tu luu, roi bao co thay doi
+      // chua luu de hen gio duoc dat ngay, khong phai cho den phim go tiep theo.
+      editorRef.current?.setEditable(true);
+      autosave.resume();
+      autosave.changed();
+    },
+  });
+  const nutDangRef = useRef<HTMLButtonElement>(null);
+
+  // Xep trang xong ma khung niem phong dang mo (van sua duoc trang): tinh lai so to se dang.
+  const { sheetCount, chars } = usePagedLayout(editor, mirrorRef, () => dang.refresh());
   const dem = charCountLabel(chars);
   // Vung doc chung cua man viet: chon, bo, chen khoi media va tien trinh tai anh.
   const [loiDoc, setLoiDoc] = useState("");
@@ -155,47 +203,8 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
     });
   }
 
-  const prepare = useCallback((): { sheets: DocJson[] } | { error: string } => {
-    const ed = editorRef.current;
-    if (!ed || !mirrorRef.current) return { error: "Trang chưa sẵn sàng. Thử lại sau một giây." };
-    const doc = ed.state.doc;
-    let parts: DocJson[];
-    try {
-      // measureUnits (nhu splitDoc ben duoi) co the nem khi ban sao do lech so doan voi tai lieu - ca
-      // hai deu phai nam trong cung khoi try nay, khong de mot cu nem thoat thang vao onClick.
-      const units = measureUnits(mirrorRef.current, doc);
-      const sheets = paginate(units, CONTENT_HEIGHT);
-      parts = splitDoc(doc, sheets.slice(1).map((s) => units[s.from].pos));
-    } catch {
-      return { error: "Chưa cắt được trang. Thử sửa một chút rồi đăng lại." };
-    }
-    const kept = trimTrailingBlank(parts);
-    return kept.length > 0 ? { sheets: kept } : { error: "Trang còn trống, chưa có gì để đăng." };
-  }, []);
-
-  // Khoa vung soan thao ngay khi PublishBar mo hop xac nhan, khong phai khi bam "Dang": tu luc do
-  // nguoi dung khong the go them nua, nen cai ho thay trong hop chac chan la cai se duoc dang.
-  const lockEditor = useCallback(() => {
-    editorRef.current?.setEditable(false);
-  }, []);
-
-  // Huy xac nhan (hoac prepare() dau tien that bai nen hop khong mo duoc): tra lai sua duoc.
-  const unlockEditor = useCallback(() => {
-    editorRef.current?.setEditable(true);
-  }, []);
-
-  const beforePublish = useCallback(async () => {
-    // Vung soan thao da bi khoa tu luc mo hop xac nhan (lockEditor); o day chi con luu lan cuoi.
-    await autosave.flush();
-    // Tat, KHONG chi dispose(): cleanup luc redirect thoat component se goi flush() mot lan nua, va
-    // neu bo tu luu con song thi lan flush do ghi lai ban nhap vua dang len database. Dang thanh cong
-    // thi afterFail khong bao gio duoc goi, nen khong co resume() nao lam song lai duong nay; dang
-    // hong thi afterFail se resume() vi luc do tu luu tiep la dieu dung phai lam.
-    autosave.stop();
-  }, [autosave]);
-
   return (
-    <div className={focus ? "viet tap-trung" : "viet"}>
+    <div className={["viet", focus && "tap-trung", dang.open && "viet--dang"].filter(Boolean).join(" ")}>
       <div className="viet-tren">
         <header className="viet-dau">
           <Link className="nav__link" href={`/sach/${bookId}`}>Về sách</Link>
@@ -208,23 +217,7 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
               warning={dem.kind === "tran" ? dem.text : null}
               onRetry={() => void autosave.flush()}
             />
-            <PublishBar
-              bookId={bookId}
-              bookTitle={bookTitle}
-              partnerNickname={partnerNickname}
-              prepare={prepare}
-              lock={lockEditor}
-              unlock={unlockEditor}
-              beforePublish={beforePublish}
-              afterFail={() => {
-                // Dang hong: nguoi dung con o lai trang nen tu luu phai chay lai that su, khong chi
-                // bao dirty suong - mo khoa vung soan thao, mo lai bo tu luu, roi bao co thay doi
-                // chua luu de hen gio duoc dat ngay, khong phai cho den phim go tiep theo.
-                editorRef.current?.setEditable(true);
-                autosave.resume();
-                autosave.changed();
-              }}
-            />
+            <PublishButton flow={dang} ref={nutDangRef} />
           </div>
         </header>
         <Toolbar editor={editor}>
@@ -300,7 +293,20 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
           </div>
         )}
       </div>
-      <PagedSurface editor={editor} sheetCount={sheetCount} mirrorRef={mirrorRef} />
+      <div className="viet-than">
+        {dang.open && (
+          <PublishPanel
+            flow={dang}
+            bookTitle={bookTitle}
+            partnerNickname={partnerNickname}
+            onCancel={() => {
+              flushSync(() => dang.cancel());
+              nutDangRef.current?.focus();
+            }}
+          />
+        )}
+        <PagedSurface editor={editor} sheetCount={sheetCount} mirrorRef={mirrorRef} lat={dang.open} />
+      </div>
       <p className="sr-only" aria-live="polite">{loiDoc}</p>
     </div>
   );
