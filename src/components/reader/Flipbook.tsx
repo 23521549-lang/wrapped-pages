@@ -96,6 +96,11 @@ export type FlipbookProps = {
   renderSheet?: (i: number) => ReactNode;
   /** Goi moi khi khung dung yen, voi vi tri (tu 1) cua to dau va to cuoi dang hien. */
   onShow?: (first: number, last: number) => void;
+  /**
+   * Ve dai ghi chu ngay duoi khung sach, moi cot thang voi mot to. Nhan chi so cac to cua khung dang dung yen (null la mat
+   * giay tron cua khung cuoi); trong luc lat van la khung cu. Tra null thi khong ve gi.
+   */
+  renderFoot?: (shown: readonly (number | null)[]) => ReactNode;
 };
 
 /**
@@ -103,7 +108,7 @@ export type FlipbookProps = {
  * cu dau tren trang, vuot ngang tren man cam ung. Moi chi so lay tu src/lib/flip.ts; o day chi ve va chay
  * chuyen dong (chi transform va opacity).
  */
-export function Flipbook({ title, sheets, author, start, onReach, renderSheet, onShow }: FlipbookProps) {
+export function Flipbook({ title, sheets, author, start, onReach, renderSheet, onShow, renderFoot }: FlipbookProps) {
   const n = sheets.length;
   const [mode, setMode] = useState<FlipMode | null>(null);
   // To dau cua khung dang hien. Giu to chu khong giu khung, nen doi che do van mo dung cho dang doc.
@@ -261,6 +266,8 @@ export function Flipbook({ title, sheets, author, start, onReach, renderSheet, o
     );
   };
   const khung = { "--so-to": m === "doi" ? 2 : 1, "--k": k, visibility: mode === null ? "hidden" : undefined } as CSSProperties;
+  // v chi doi o settle, nen trong luc lat dai van giu khung cu.
+  const chan = renderFoot?.(viewSheets(m, v, n));
 
   return (
     <section ref={boxRef} className="doc" aria-label={`${title}, sách đang mở`}>
@@ -321,6 +328,11 @@ export function Flipbook({ title, sheets, author, start, onReach, renderSheet, o
           )}
         </div>
       </div>
+
+      {chan != null && (
+        // Cung --so-to va --k voi khung sach: cot cua dai thang voi to trai va to phai.
+        <div className="doc__chan" style={khung}>{chan}</div>
+      )}
 
       <div className="doc__dk">
         <button

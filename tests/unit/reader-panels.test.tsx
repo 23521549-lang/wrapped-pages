@@ -53,6 +53,9 @@ const ve = (start: number) => (
     revealAt={null}
     mark={0}
     trackRead={false}
+    mine={false}
+    editedAt={[null, null, null]}
+    editable={[false, false, false]}
   />
 );
 

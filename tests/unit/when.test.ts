@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dayKey, dayLabel, haiChuSo, momentLabel, openLabel, savedLabel, timeAgo, timeLabel } from "@/lib/when";
+import { dateLabel, dayKey, dayLabel, editedLabel, haiChuSo, momentLabel, openLabel, savedLabel, timeAgo, timeLabel } from "@/lib/when";
 
 const luc = (iso: string) => new Date(iso);
 const NOW = luc("2026-09-11T14:04:00+07:00");
@@ -117,5 +117,32 @@ describe("haiChuSo", () => {
     expect(haiChuSo(4)).toBe("04");
     expect(haiChuSo(12)).toBe("12");
     expect(haiChuSo(3653)).toBe("3653");
+  });
+});
+
+describe("editedLabel", () => {
+  // 09:00 ngay 20.09 gio Viet Nam.
+  const BAY_GIO = luc("2026-09-20T02:00:00Z");
+
+  it("cung ngay thi chi co gio", () => {
+    expect(editedLabel(luc("2026-09-20T00:30:00Z"), BAY_GIO)).toBe("Đã sửa lúc 07:30");
+  });
+
+  it("ngay tinh theo gio Viet Nam, qua nua dem la ngay moi", () => {
+    expect(editedLabel(luc("2026-09-19T17:30:00Z"), BAY_GIO)).toBe("Đã sửa lúc 00:30");
+    expect(editedLabel(luc("2026-09-19T16:30:00Z"), BAY_GIO)).toBe("Đã sửa lúc 23:30 hôm qua");
+  });
+
+  it("cung nam thi them ngay thang, khac nam thi them ca nam", () => {
+    expect(editedLabel(luc("2026-09-18T07:05:00Z"), BAY_GIO)).toBe("Đã sửa lúc 14:05, 18.09");
+    expect(editedLabel(luc("2025-09-20T07:05:00Z"), BAY_GIO)).toBe("Đã sửa lúc 14:05, 20.09.2025");
+  });
+});
+
+describe("dateLabel", () => {
+  it("ngay thang, khac nam thi them nam", () => {
+    const bayGio = luc("2026-09-20T02:00:00Z");
+    expect(dateLabel(luc("2026-09-18T07:05:00Z"), bayGio)).toBe("18.09");
+    expect(dateLabel(luc("2025-09-20T07:05:00Z"), bayGio)).toBe("20.09.2025");
   });
 });

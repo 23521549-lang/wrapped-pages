@@ -43,6 +43,8 @@ export type ReaderSheet = {
   sealId: string | null;
   /** Dong he lo, chi co tren to dau cua mot niem phong con khoa. */
   teaser: string | null;
+  /** Lan sua gan nhat; luon null voi to dang khoa voi nguoi xem. */
+  editedAt: Date | null;
 };
 
 export type KnockEntry = { guess: string; correct: boolean; at: Date };

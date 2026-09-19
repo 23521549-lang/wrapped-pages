@@ -8,6 +8,7 @@ import { activity, drafts, media, pages, readMarks, seals } from "@/server/db/sc
 import { createBook } from "@/server/library/books";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
 import { editPage, readPageForEdit } from "@/server/library/edit-page";
+import { readBook } from "@/server/library/pages";
 import { canViewMedia, type UploadRecord } from "@/server/media/access";
 import { MemoryStore } from "@/server/media/memory";
 import { saveUpload } from "@/server/media/save-upload";
@@ -288,5 +289,26 @@ describe("readPageForEdit", () => {
     const s = await baTo();
     const [ai, sach, viTri] = lay(s);
     expect(await readPageForEdit(s.db, ai, sach, viTri)).toBeNull();
+  });
+});
+
+describe("readBook editedAt", () => {
+  it("to vua sua tra editedAt cho ca chu sach lan nguoi kia, to khac null", async () => {
+    const s = await baTo();
+    expect(await editPage(s.db, s.seat1.id, s.chung, 2, to("Hai đã sửa"), await phienBan(s, 2), T)).toBe("saved");
+    for (const ai of [s.seat1.id, s.seat2.id]) {
+      const v = await readBook(s.db, ai, s.chung, T);
+      expect(v?.sheets.map((sh) => sh.editedAt)).toEqual([null, T, null]);
+    }
+  });
+
+  it("to dang khoa voi nguoi xem luon null, du cot co gia tri; chu sach (khong khoa) van thay", async () => {
+    const s = await coNiemPhong(CAU_DO);
+    // Dung tinh huong luat khong cho xay ra, de chung minh lop chan thu hai o readBook.
+    await s.db.update(pages).set({ editedAt: T }).where(eq(pages.position, 2));
+    const cuaNguoiKia = await readBook(s.db, s.seat2.id, s.chung, T);
+    expect(cuaNguoiKia?.sheets[1]).toMatchObject({ locked: true, editedAt: null });
+    const cuaChu = await readBook(s.db, s.seat1.id, s.chung, T);
+    expect(cuaChu?.sheets[1]).toMatchObject({ locked: false, editedAt: T });
   });
 });

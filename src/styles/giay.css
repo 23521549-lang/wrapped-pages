@@ -97,6 +97,14 @@
 .la > .la__sau{ transform: rotateY(180deg); }
 .la__bong{ position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; background: color-mix(in oklch, var(--color-ink) 20%, transparent); }
 
+/* Dai ghi chu duoi cuon sach: cung be rong va cung so cot voi khung sach, nen moi cot thang voi mot to. */
+.doc__chan{ margin: var(--space-sm) auto 0; width: calc(var(--so-to, 1) * var(--giay-w) * var(--k, 1)); max-width: 100%; }
+.trang-ghi{ display: grid; grid-template-columns: repeat(var(--so-to, 1), minmax(0, 1fr)); gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
+.trang-ghi > li{ display: grid; justify-items: center; align-content: start; gap: var(--space-2xs); min-width: 0; text-align: center; }
+.trang-ghi__sua{ margin: 0; font-size: var(--text-xs); color: var(--color-ink-3); }
+.trang-ghi__khoa{ display: inline-flex; align-items: center; gap: .35rem; margin: 0; min-height: 44px; font-size: var(--text-sm); color: var(--color-ink-2); }
+.trang-ghi__khoa svg{ width: 12px; height: 12px; flex: none; }
+
 /* dieu khien */
 .doc__dk{ display: flex; align-items: center; justify-content: center; gap: var(--space-md); margin-top: var(--space-lg); }
 .doc__dem{ font-size: var(--text-sm); font-weight: 500; color: var(--color-ink-2); font-variant-numeric: tabular-nums; min-width: 10ch; text-align: center; white-space: nowrap; }

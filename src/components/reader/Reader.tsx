@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { actionMarkRead } from "@/app/actions/library";
+import { GlyphKhoa } from "@/components/book/ShelfBook";
 import { SealPanel } from "@/components/seal/SealPanel";
 import { TypeReveal } from "@/components/seal/TypeReveal";
 import { ClockSkew, useClockSkew } from "@/components/seal/useTimeLeft";
 import type { DocJson } from "@/lib/doc/types";
 import { pageRangeTitle, ritualKey, sealsInView, type RevealTarget, type SheetLook } from "@/lib/seal/reader";
 import type { ReaderSeal } from "@/lib/seal/types";
+import { editedLabel } from "@/lib/when";
 import { Flipbook, SheetText } from "./Flipbook";
 import { LockedSheet, SealMark } from "./LockedSheet";
 
@@ -36,6 +39,12 @@ export type ReaderProps = {
   mark: number;
   /** Chi sach cua nguoi kia moi day moc (chu sach khong co moc). */
   trackRead: boolean;
+  /** Nguoi xem la chu sach: to niem phong co dong "khong sua duoc" thay cho nut sua. */
+  mine: boolean;
+  /** Lan sua gan nhat cua tung to, cung thu tu voi sheets. */
+  editedAt: readonly (Date | null)[];
+  /** To nao chu sach sua duoc, cung thu tu voi sheets. Nguoi kia toan false nen ma ve nut khong chay. */
+  editable: readonly boolean[];
 };
 
 /** Nghi thuc mo cua man doc nay: niem phong nao, va chu con dang hien dan tren to dau cua no khong. */
@@ -43,7 +52,7 @@ type NghiThuc = { sealId: string; dangGo: boolean };
 
 /** Man doc phia trinh duyet: sach lat duoc, to niem phong, nghi thuc mo, khung thu thach, day moc da doc cua nguoi kia. */
 export function Reader({
-  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, mark, trackRead,
+  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, mark, trackRead, mine, editedAt, editable,
 }: ReaderProps) {
   const router = useRouter();
   const moId = useId();
@@ -140,12 +149,42 @@ export function Reader({
     [looks, sheets, ownerName, dangGo, moIndex, stopReveal],
   );
 
+  // Dai duoi cuon sach: "Da sua luc ..." cho ca hai nguoi, nut sua hay dong niem phong chi cho chu sach. Khong co gi
+  // de hien thi khong ve dai. Vi tri to la chi so cong mot vi vi tri lien nhau tu 1.
+  const renderFoot = useCallback(
+    (dangHien: readonly (number | null)[]): ReactNode => {
+      const coGi = dangHien.some((i) => i !== null && (editedAt[i] !== null || mine));
+      if (!coGi) return null;
+      return (
+        <ul className="trang-ghi" aria-label="Ghi chú trang đang mở">
+          {dangHien.map((i, k) => {
+            const sua = i === null ? null : editedAt[i];
+            return (
+              <li key={i ?? `trong-${k}`}>
+                {sua && (
+                  <p className="trang-ghi__sua"><time dateTime={sua.toISOString()}>{editedLabel(sua, now)}</time></p>
+                )}
+                {i !== null && mine && editable[i] && (
+                  <Link className="btn btn--chu" href={`/sach/${bookId}/sua-trang/${i + 1}`}>Sửa trang {i + 1}</Link>
+                )}
+                {i !== null && mine && !editable[i] && (
+                  <p className="trang-ghi__khoa"><GlyphKhoa />Trang niêm phong không sửa được</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      );
+    },
+    [bookId, editedAt, editable, mine, now],
+  );
+
   const moSeal = nghiThuc === null ? undefined : seals.find((s) => s.id === nghiThuc.sealId);
   const moRange = moSeal ? pageRangeTitle(moSeal.firstPosition, moSeal.lastPosition) : "";
 
   return (
     <>
-      <Flipbook title={title} sheets={sheets} author={ownerName} start={start} onReach={onReach} renderSheet={renderSheet} onShow={onShow} />
+      <Flipbook title={title} sheets={sheets} author={ownerName} start={start} onReach={onReach} renderSheet={renderSheet} onShow={onShow} renderFoot={renderFoot} />
       {/* Vung live co mat tu lan ve dau, nen khung chen vao sau hydrate duoc trinh doc man hinh doc len. */}
       <div aria-live="polite">
         {moSeal && (

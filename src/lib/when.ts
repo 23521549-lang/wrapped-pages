@@ -38,6 +38,11 @@ export function haiChuSo(x: number): string {
   return String(x).padStart(2, "0");
 }
 
+/** Ngay thang theo gio Viet Nam: 18.09 cung nam, 20.09.2025 khac nam. */
+export function dateLabel(at: Date, now: Date): string {
+  return ngayThang(at, now);
+}
+
 function ngayThang(at: Date, now: Date): string {
   const a = ngayCua(at);
   const dm = `${haiChuSo(a.d)}.${haiChuSo(a.m)}`;
@@ -61,6 +66,15 @@ export function savedLabel(at: Date, now: Date): string {
   if (lech <= 0) return `Lưu lúc ${timeLabel(at)}`;
   if (lech === 1) return `Lưu hôm qua, ${timeLabel(at)}`;
   return `Lưu ngày ${ngayThang(at, now)}`;
+}
+
+/** Cho dai duoi cuon sach: Da sua luc 14:05 / Da sua luc 14:05 hom qua / Da sua luc 14:05, 18.09 / ..., 20.09.2025. */
+export function editedLabel(at: Date, now: Date): string {
+  const lech = soNgayLech(at, now);
+  const gio = `Đã sửa lúc ${timeLabel(at)}`;
+  if (lech <= 0) return gio;
+  if (lech === 1) return `${gio} hôm qua`;
+  return `${gio}, ${ngayThang(at, now)}`;
 }
 
 const THU = ["chủ nhật", "thứ hai", "thứ ba", "thứ tư", "thứ năm", "thứ sáu", "thứ bảy"];

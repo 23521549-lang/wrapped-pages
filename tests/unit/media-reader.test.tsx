@@ -223,6 +223,9 @@ describe("Reader: to khoa", () => {
         revealAt={null}
         mark={0}
         trackRead={false}
+        mine={false}
+        editedAt={[null]}
+        editable={[false]}
       />,
     );
     expect(container.querySelector(".to-giay")).not.toBeNull();

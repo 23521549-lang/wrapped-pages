@@ -30,7 +30,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const mine = book.ownerId === viewerId;
     const [rows, marks, sealRows] = await Promise.all([
       tx
-        .select({ position: pages.position, content: pages.content, publishedAt: pages.publishedAt })
+        .select({ position: pages.position, content: pages.content, publishedAt: pages.publishedAt, editedAt: pages.editedAt })
         .from(pages)
         .where(eq(pages.bookId, book.id))
         .orderBy(asc(pages.position)),
@@ -45,10 +45,15 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const sheets = rows.map((r): ReaderSheet => {
       const s = sealAt(sealRows, r.position);
       if (!s || !lockedIds.has(s.id)) {
-        return { position: r.position, publishedAt: r.publishedAt, content: r.content, locked: false, sealId: s?.id ?? null, teaser: null };
+        return {
+          position: r.position, publishedAt: r.publishedAt, content: r.content, locked: false, sealId: s?.id ?? null, teaser: null,
+          editedAt: r.editedAt,
+        };
       }
       const teaser = r.position === s.firstPosition ? s.teaser || null : null;
-      return { position: r.position, publishedAt: r.publishedAt, content: teaserDoc(teaser), locked: true, sealId: s.id, teaser };
+      // To niem phong khong bao gio sua duoc nen ve nguyen tac khong co edited_at; van tra null o day de mot thay doi
+      // luat ve sau khong vo tinh ro sieu du lieu cua to dang khoa.
+      return { position: r.position, publishedAt: r.publishedAt, content: teaserDoc(teaser), locked: true, sealId: s.id, teaser, editedAt: null };
     });
     return { book, mine, sheets, seals, mark: marks[0]?.position ?? 0 };
   });

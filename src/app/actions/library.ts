@@ -9,6 +9,7 @@ import { markRead } from "@/server/library/pages";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
 import { parseBookInput } from "@/lib/book";
+import { normalizeContinuation } from "@/lib/doc/continuation";
 import { docCharCount, isBlankDoc } from "@/lib/doc/text";
 import { checkDraftInput, checkPublishInput, DOC_LIMITS, EDIT_SHEET_MAX_CHARS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 import { parseSealInput } from "@/lib/seal/input";
@@ -132,7 +133,8 @@ export async function actionPublish(bookId: string, sheets: unknown, seal: unkno
  * truoc khi cham database. Quyen nam trong giao dich cua editPage: nguoi kia goi thang voi dung bookId va vi tri cua
  * mot sach chia se nhan cung cau voi sach la, vi tri la, va khong co gi duoc ghi. CSRF do server action cua Next lo
  * (chi nhan POST mang Next-Action, so Origin voi Host, cookie phien SameSite=Lax), khong them allowedOrigins.
- * Luu xong hen don rac media, vi media bi bo khoi to thanh rac; khong doi gi thi chi ve lai man doc.
+ * Dau noi tiep cua danh sach chi giu o muc dau cua khoi dau (normalizeContinuation), nhu splitDoc dat no. Luu xong hen don rac
+ * media, vi media bi bo khoi to thanh rac; khong doi gi thi chi ve lai man doc.
  */
 export async function actionEditPage(bookId: string, position: unknown, doc: unknown, base: unknown) {
   const me = await readMe();
@@ -143,7 +145,7 @@ export async function actionEditPage(bookId: string, position: unknown, doc: unk
   if (!checked.ok) return { error: checked.reason === "too-long" ? TRANG_DAI : "Trang có nội dung không đọc được." };
   if (docCharCount(checked.doc) > EDIT_SHEET_MAX_CHARS) return { error: TRANG_DAI };
   if (isBlankDoc(checked.doc)) return { error: "Trang không được để trống." };
-  const r = await editPage(db, me.accountId, bookId, position, checked.doc, new Date(base));
+  const r = await editPage(db, me.accountId, bookId, position, normalizeContinuation(checked.doc), new Date(base));
   if (r !== "saved" && r !== "unchanged") return { error: LOI_SUA[r] };
   if (r === "saved") sweepMediaAfterResponse();
   redirect(`/sach/${bookId}?trang=${position}`);

@@ -76,6 +76,9 @@ export default async function DocSach({ params, searchParams }: {
           revealAt={revealTarget(sheets, seals, query.mo)}
           mark={mark}
           trackRead={!mine}
+          mine={mine}
+          editedAt={sheets.map((s) => s.editedAt)}
+          editable={sheets.map((s) => mine && s.sealId === null)}
         />
       )}
     </>

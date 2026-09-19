@@ -216,4 +216,15 @@ describe("actionEditPage", () => {
     expect([dbGoi, ai, sach, viTri, doc]).toEqual([{ la: "db-gia" }, ME.accountId, BOOK, 2, TO]);
     expect((moc as Date).getTime()).toBe(new Date(BASE).getTime());
   });
+
+  it("chi giu dau noi tiep o muc dau cua danh sach dau truoc khi toi editPage", async () => {
+    readMe.mockResolvedValue(ME);
+    editPage.mockResolvedValue("saved");
+    const muc = (text: string, noiTiep: boolean) => ({
+      type: "listItem", ...(noiTiep ? { noiTiep: true } : {}), content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    });
+    const guiLen = { type: "doc", content: [{ type: "bulletList", content: [muc("một", true), muc("hai", true)] }] };
+    await goi(() => actionEditPage(BOOK, 2, guiLen, BASE));
+    expect(editPage.mock.calls[0][4]).toEqual({ type: "doc", content: [{ type: "bulletList", content: [muc("một", true), muc("hai", false)] }] });
+  });
 });
