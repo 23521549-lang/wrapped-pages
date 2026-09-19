@@ -328,8 +328,9 @@ a.hoat-dong__dong:hover .hoat-dong__chu{ text-decoration-color: currentColor; }
 .the-chon:has(input:checked) .the-chon__t{ color: var(--blue-ink); }
 .the-chon__x{ grid-column: 2; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); }
 
-/* chon bia: moi o la mot nhan boc radio that, radio phu kin o va trong suot */
-.picker{ display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr)); }
+/* chon bia: moi o la mot nhan boc radio that, radio phu kin o va trong suot. O toi thieu 120px: cot form o 320px chi
+   con khoang 272px, 130px se roi ve mot cot va muoi mot o thanh mot dai rat dai; 120px giu hai cot, o van tren 44px. */
+.picker{ display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); }
 /* .swatch la nhan boc mot input radio that (khong phai khung noi dung tinh): vien phai qua duoc nguong
    tuong phan cua dieu khien (--color-rule-ui), giong .swatch--anh da lam, khong dung --color-rule trang tri. */
 .swatch{ position: relative; display: block; border: 1px solid var(--color-rule-ui); border-radius: 14px; overflow: hidden; cursor: pointer; aspect-ratio: 5 / 3; color: var(--blue-ink); transition: transform var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out); }
