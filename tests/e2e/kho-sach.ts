@@ -247,3 +247,28 @@ export async function toDaDang(
     await sql.end();
   }
 }
+
+/**
+ * Doi con tro trong state cua ProseMirror (khong phai vung chon DOM) toi cuoi tai lieu cua editor dang co focus.
+ * Ctrl+End chi doi vung chon DOM; ProseMirror doc lai khi selectionchange toi, con Enter di qua keymap va tach doan
+ * o con tro trong state. Bam Enter truoc luc do thi doan bi tach o cho vua bam chuot. Tiptap gan editor vao
+ * phan tu .ProseMirror, nen doc thang state o do.
+ */
+export async function choConTroCuoi(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const el = document.querySelector(".ProseMirror-focused") as (Element & { editor?: { state: { selection: { head: number }; doc: { content: { size: number } } } } }) | null;
+        const state = el?.editor?.state;
+        return state ? state.doc.content.size - 1 - state.selection.head : null;
+      }),
+      { message: "con tro trong state ProseMirror o cuoi doan cuoi" },
+    )
+    .toBe(0);
+}
+
+/** Dua con tro cua editor dang co focus ve cuoi tai lieu, doi state ProseMirror theo kip roi moi tra ve. */
+export async function veCuoiTaiLieu(page: Page): Promise<void> {
+  await page.keyboard.press("ControlOrMeta+End");
+  await choConTroCuoi(page);
+}

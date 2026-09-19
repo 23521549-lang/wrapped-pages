@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { ListItemNode, ParagraphNode } from "@/lib/doc/types";
 import { resetDb } from "./db";
-import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, toDaDang } from "./kho-sach";
+import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, toDaDang, veCuoiTaiLieu } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -95,7 +95,7 @@ test("tran qua mot to thi khoa Luu thay doi; gon lai thi luu, man doc ngat trang
   const luu = a.getByRole("button", { name: "Lưu thay đổi" });
   const giay = a.locator(".viet-chu .ProseMirror");
   await giay.click();
-  await a.keyboard.press("ControlOrMeta+End");
+  await veCuoiTaiLieu(a);
   for (let i = 0; i < 30 && !(await trangThai.innerText()).includes(TRAN); i++) {
     await a.keyboard.press("Enter");
     await a.keyboard.insertText(DOAN);

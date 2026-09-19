@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
+import { dongContextCu, haiNguoiDaVao, taoSach, veCuoiTaiLieu } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -94,7 +94,7 @@ test("go them trong luc chon niem phong van duoc nhan; so trang theo kip va dang
   // Khung mo khong khoa trang: go them ngay tren to dang hien.
   await expect(giay).toHaveAttribute("contenteditable", "true");
   await giay.click();
-  await a.keyboard.press("Control+End");
+  await veCuoiTaiLieu(a);
   await a.keyboard.type(" Thêm chữ sau khi mở hộp.");
   await expect(giay).toHaveText("Đoạn văn đầu tiên. Thêm chữ sau khi mở hộp.");
 

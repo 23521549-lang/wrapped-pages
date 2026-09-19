@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang, veCuoiTaiLieu } from "./kho-sach";
 
 /*
  * Khung dang trang kem niem phong o man viet: ba cot tren man rong, cac to dang viet xem canh nhau (hai to tren
@@ -91,11 +91,7 @@ test("hai to canh nhau tren man rong, mot to o man vua; go tran thi so trang va 
   await a.setViewportSize({ width: 1024, height: 800 });
   await expect.poll(() => toDangThay(a)).toEqual([1]);
   await giay.click({ position: { x: 40, y: 60 } });
-  await a.keyboard.press("Control+End");
-  // Enter di qua keymap cua ProseMirror, tach doan o con tro trong state cua no. Ctrl+End chi doi vung chon DOM,
-  // ProseMirror doc lai khi selectionchange toi; bam Enter truoc luc do thi doan bi tach o cho vua bam chuot.
-  // Doan dang-viet (che do tap trung, ve tu state) la doan cuoi: state da theo con tro.
-  await expect(giay.locator(":scope > p").last()).toHaveClass(/dang-viet/);
+  await veCuoiTaiLieu(a);
   for (let i = 0; i < 8; i++) {
     await a.keyboard.press("Enter");
     await a.keyboard.insertText(DOAN.repeat(2).trim());
