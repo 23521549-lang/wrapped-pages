@@ -24,6 +24,15 @@ export const DOC_LIMITS = { maxChars: 20_000, maxDepth: 6, maxMedia: 60 } as con
  */
 export const PUBLISH_TOTAL_MAX_CHARS = 100_000;
 
+/**
+ * Tran chu cua MOT to khi chu sach sua mot to da dang (actionEditPage). Mot to 304 x 460px vung chu, chu 16px, dong
+ * 27.2px chua toi da khoang 17 dong; dong toan ky tu hep nhat ("i", "l") khoang 76 ky tu, nen tran that khoang 1 300.
+ * 3 000 hon gap doi tran do: khong bao gio chan chu that, nhung chan duoc viec nhet tai lieu 20 000 chu vao mot to
+ * bang loi goi tu dung. May chu khong do duoc bo cuc; phep do "vua mot to" la cua trinh duyet, nhu actionPublish
+ * tin cach cat to cua man viet.
+ */
+export const EDIT_SHEET_MAX_CHARS = 3_000;
+
 const MARKS = new Set<string>(["bold", "italic", "underline"] satisfies MarkType[]);
 
 type Obj = Record<string, unknown>;

@@ -1,5 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { media, pages } from "@/server/db/schema";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { drafts, media, pages } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { mediaStoreKey } from "@/lib/media/key";
@@ -35,11 +36,12 @@ export async function recordUpload(tx: AnyDb, record: UploadRecord): Promise<boo
 }
 
 /**
- * Dieu kien SQL: noi dung to co mot khoi cap cao nhat mang attrs.id la mot trong ids. Tim bang jsonpath tren
- * pages.content: media chi nam o cap cao nhat nen duong dan nong, va chu trong trang trung id khong khop.
+ * Dieu kien SQL: tai lieu trong cot (pages.content hay drafts.content) co mot khoi cap cao nhat mang attrs.id la
+ * mot trong ids. Tim bang jsonpath: media chi nam o cap cao nhat nen duong dan nong, va chu trong trang trung id
+ * khong khop.
  */
-function referencesAny(ids: readonly string[]) {
-  return sql`jsonb_path_exists(${pages.content}, '$.content[*] ? (@.attrs.id == $ids[*])', ${JSON.stringify({ ids })}::jsonb)`;
+function referencesAny(column: AnyPgColumn, ids: readonly string[]) {
+  return sql`jsonb_path_exists(${column}, '$.content[*] ? (@.attrs.id == $ids[*])', ${JSON.stringify({ ids })}::jsonb)`;
 }
 
 type BindRow = Pick<typeof media.$inferSelect, "id" | "kind" | "width" | "height" | "durationMs" | "peaks">;
@@ -63,22 +65,35 @@ function boundNode(type: MediaNodeType, row: BindRow): MediaNode | null {
  * tai van gan lai duoc o moi lan tu luu. Thuoc tinh trinh duyet gui len bi bo, thay bang kich thuoc, thoi luong va
  * song am tu bang. Sai mot id thi tra null cho ca tai lieu. Moi khoi khac giu nguyen, dung thu tu. Goi bang db hoac
  * giao dich cua noi luu nhap, dang trang, truoc khi chen to cua lan dang do.
+ *
+ * Khi sua mot to da dang (editPage), opts.keep la tap id dang nam tren chinh to do. Id trong keep khong xet luat
+ * "da nam tren to da dang": chung da nam tren to, giu lai khong lo gi moi, ke ca khi mot lan dang dan cung media
+ * len hai to lien nhau. Luat chu, cuon, loai van ap cho moi id. Id moi (ngoai keep) phai khong nam tren to da dang
+ * nao cua cuon va khong nam trong nhap hien tai cua cuon: neu cho qua, lan dang nhap sau se bi tu choi vi media do
+ * vua o nhap vua o to da dang. Khong truyen opts thi hanh vi y nhu tren (luu nhap, dang trang).
  */
 export async function bindMedia<B extends { type: string }>(
   db: AnyDb, ownerId: string, bookId: string, doc: { type: "doc"; content: readonly B[] },
+  opts?: { keep: ReadonlySet<string> },
 ): Promise<{ type: "doc"; content: (B | MediaNode)[] } | null> {
   const refs = doc.content.filter((block) => isMediaNodeType(block.type)).map(mediaNodeId);
   if (refs.length === 0) return { type: "doc", content: [...doc.content] };
   const ids = refs.filter((id): id is string => id !== null);
   if (ids.length !== refs.length || !isUuid(bookId)) return null;
-  const [rows, published] = await Promise.all([
+  const fresh = opts ? ids.filter((id) => !opts.keep.has(id)) : ids;
+  const [rows, published, drafted] = await Promise.all([
     db
       .select({ id: media.id, kind: media.kind, width: media.width, height: media.height, durationMs: media.durationMs, peaks: media.peaks })
       .from(media)
       .where(and(inArray(media.id, ids), eq(media.ownerId, ownerId), eq(media.bookId, bookId))),
-    db.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, bookId), referencesAny(ids))).limit(1),
+    fresh.length === 0
+      ? []
+      : db.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, bookId), referencesAny(pages.content, fresh))).limit(1),
+    !opts || fresh.length === 0
+      ? []
+      : db.select({ bookId: drafts.bookId }).from(drafts).where(and(eq(drafts.bookId, bookId), referencesAny(drafts.content, fresh))).limit(1),
   ]);
-  if (published.length > 0) return null;
+  if (published.length > 0 || drafted.length > 0) return null;
   const byId = new Map(rows.map((row) => [row.id, row]));
   const content: (B | MediaNode)[] = [];
   for (const block of doc.content) {
@@ -102,7 +117,7 @@ export async function bindMedia<B extends { type: string }>(
  */
 async function visibleOnPages(tx: AnyDb, bookId: string, mediaId: string, isOwner: boolean, now: Date): Promise<boolean> {
   const [rows, sealRows] = await Promise.all([
-    tx.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, bookId), referencesAny([mediaId]))),
+    tx.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, bookId), referencesAny(pages.content, [mediaId]))),
     sealsOfBook(tx, bookId),
   ]);
   if (rows.length === 0) return isOwner;

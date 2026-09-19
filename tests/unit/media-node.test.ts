@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { CONTENT_HEIGHT, CONTENT_WIDTH, VOICE_BLOCK_HEIGHT } from "@/lib/sheet";
 import { AUDIO_MAX_MS, IMAGE_MAX_HEIGHT_PX, IMAGE_MAX_WIDTH_PX, PEAK_COUNT } from "@/lib/media/kinds";
 import { imageBox, mediaBlockHeight } from "@/lib/media/layout";
-import { isMediaNodeType, mediaNodeId, mediaSrc, type MediaNode } from "@/lib/media/node";
+import { isMediaNodeType, mediaIdsOf, mediaNodeId, mediaSrc, type MediaNode } from "@/lib/media/node";
 
 const ID = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
 const anh = (w: number, h: number): MediaNode => ({ type: "anh", attrs: { id: ID, w, h } });
@@ -79,5 +79,22 @@ describe("khoi media trong tai lieu", () => {
       { type: "ghi-am", attrs: { id: "khong-phai-uuid" } },
     ];
     expect(hong.map(mediaNodeId)).toEqual(hong.map(() => null));
+  });
+
+  it("mediaIdsOf: id cua khoi media cap cao nhat theo thu tu, bo khoi chu, khoi khong id va id trung", () => {
+    const ID2 = "5d2a8c4e-1f3b-4a6d-8e0c-7b9a1c3e5f70";
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "paragraph", attrs: { id: ID } },
+        { type: "ghi-am", attrs: { id: ID2, ms: 1, peaks: [] } },
+        { type: "anh" },
+        { type: "anh", attrs: { id: "khong-phai-uuid" } },
+        anh(1, 1),
+        { type: "anh", attrs: { id: ID2, w: 1, h: 1 } },
+      ],
+    };
+    expect(mediaIdsOf(doc)).toEqual([ID2, ID]);
+    expect(mediaIdsOf({ content: [] })).toEqual([]);
   });
 });

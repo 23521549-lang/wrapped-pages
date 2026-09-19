@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { books, drafts, media, pages, sealReplies, seals } from "@/server/db/schema";
 import { createBook, updateBook } from "@/server/library/books";
 import { publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
-import { recordUpload, type UploadRecord } from "@/server/media/access";
+import { bindMedia, recordUpload, type UploadRecord } from "@/server/media/access";
 import { submitReply } from "@/server/seal/unlock";
 import type { DocJson, ParagraphNode } from "@/lib/doc/types";
 import { PEAK_COUNT } from "@/lib/media/kinds";
@@ -181,5 +181,95 @@ describe("trang tra loi cua trao doi", () => {
     expect(await submitReply(s.db, s.seat2.id, seal.id, tai(doan("Em nghĩ về anh"), khoiAnh(id)))).toBeNull();
     expect(await s.db.select({ openedAt: seals.openedAt }).from(seals)).toEqual([{ openedAt: null }]);
     expect(await s.db.select().from(sealReplies)).toEqual([]);
+  });
+});
+
+describe("bindMedia khi sua to (keep)", () => {
+  /** Dang mot to chi co anh id vao cuon chung; tra id. */
+  async function dangAnh(s: Bo, id: string) {
+    if (!(await publishDraft(s.db, s.seat1.id, s.chung, [tai(doan("Tờ ảnh"), khoiAnh(id))]))) throw new Error("khong dang duoc");
+    return id;
+  }
+
+  it("id dang nam tren chinh to (co trong keep): gan duoc, thuoc tinh lay tu bang", async () => {
+    const s = await haiCuon();
+    const id = await dangAnh(s, await taiAnh(s.db, s.seat1.id, s.chung));
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(doan("Mới"), khoiAnh(id)), { keep: new Set([id]) }))
+      .toEqual(tai(doan("Mới"), anhThat(id)));
+  });
+
+  it("cung id do khi khong truyen opts: null nhu truoc, keep moi la thu cho qua", async () => {
+    const s = await haiCuon();
+    const id = await dangAnh(s, await taiAnh(s.db, s.seat1.id, s.chung));
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoiAnh(id)))).toBeNull();
+  });
+
+  it("id vua tai, chua nam o dau, keep rong: gan duoc", async () => {
+    const s = await haiCuon();
+    const a = await taiAnh(s.db, s.seat1.id, s.chung);
+    const g = await taiGhiAm(s.db, s.seat1.id, s.chung);
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoiAnh(a), khoiGhiAm(g)), { keep: new Set() }))
+      .toEqual(tai(anhThat(a), ghiAmThat(g)));
+  });
+
+  it("id nam tren to khac cua cuon, khong trong keep: null", async () => {
+    const s = await haiCuon();
+    const id = await dangAnh(s, await taiAnh(s.db, s.seat1.id, s.chung));
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoiAnh(id)), { keep: new Set() })).toBeNull();
+  });
+
+  it("id nam tren to hen gio con khoa, khong trong keep: null", async () => {
+    const s = await haiCuon();
+    const id = await taiAnh(s.db, s.seat1.id, s.chung);
+    await publishDraft(s.db, s.seat1.id, s.chung, [tai(khoiAnh(id))], henGio(new Date(Date.now() + 3_600_000)));
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoiAnh(id)), { keep: new Set() })).toBeNull();
+  });
+
+  it("id dang nam trong ban nhap hien tai cua cuon, khong trong keep: null", async () => {
+    const s = await haiCuon();
+    const id = await taiAnh(s.db, s.seat1.id, s.chung);
+    expect(await saveDraft(s.db, s.seat1.id, s.chung, tai(doan("Nháp"), khoiAnh(id)), 1)).toBeInstanceOf(Date);
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoiAnh(id)), { keep: new Set() })).toBeNull();
+  });
+
+  it("id trong ban nhap cua cuon khac khong chan cuon nay", async () => {
+    const s = await haiCuon();
+    const id = await taiAnh(s.db, s.seat1.id, s.chung);
+    expect(await saveDraft(s.db, s.seat1.id, s.rieng, tai(doan("Nháp cuốn kia")), 1)).toBeInstanceOf(Date);
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoiAnh(id)), { keep: new Set() })).toEqual(tai(anhThat(id)));
+  });
+
+  it.each<[string, (s: Bo) => Promise<{ id: string; khoi: MediaNode }>]>([
+    ["cuon khac cung chu", async (s) => {
+      const id = await taiAnh(s.db, s.seat1.id, s.rieng);
+      return { id, khoi: khoiAnh(id) };
+    }],
+    ["cua nguoi kia", async (s) => {
+      const id = await taiAnh(s.db, s.seat2.id, await createBook(s.db, s.seat2.id, SACH));
+      return { id, khoi: khoiAnh(id) };
+    }],
+    ["sai loai: khoi ghi am mang id anh", async (s) => {
+      const id = await taiAnh(s.db, s.seat1.id, s.chung);
+      return { id, khoi: khoiGhiAm(id) };
+    }],
+    ["bia cua cuon", async (s) => {
+      const id = await taiBia(s.db, s.seat1.id, s.chung);
+      return { id, khoi: khoiAnh(id) };
+    }],
+  ])("id sai luat chu, cuon hay loai (%s): null ke ca khi co trong keep", async (_ten, lay) => {
+    const s = await haiCuon();
+    const { id, khoi } = await lay(s);
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(khoi), { keep: new Set([id]) })).toBeNull();
+  });
+
+  it("media dan o hai to lien nhau cua cung lan dang: sua to thu nhat voi keep chua no van gan duoc", async () => {
+    const s = await haiCuon();
+    const id = await taiAnh(s.db, s.seat1.id, s.chung);
+    await s.db.insert(pages).values([
+      { bookId: s.chung, position: 1, content: tai(anhThat(id)) },
+      { bookId: s.chung, position: 2, content: tai(anhThat(id), doan("Tiếp")) },
+    ]);
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(doan("Sửa"), khoiAnh(id)), { keep: new Set([id]) }))
+      .toEqual(tai(doan("Sửa"), anhThat(id)));
   });
 });

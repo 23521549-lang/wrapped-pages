@@ -33,3 +33,17 @@ export function mediaNodeId(block: object): string | null {
   if (!("attrs" in block) || typeof block.attrs !== "object" || block.attrs === null || !("id" in block.attrs)) return null;
   return isUuid(block.attrs.id) ? block.attrs.id : null;
 }
+
+/**
+ * Id cua moi khoi media cap cao nhat cua mot tai lieu, dung thu tu, khong trung. Khoi khong co id hop le bi bo:
+ * day la tap id dang nam tren mot to, khong phai phep kiem tai lieu.
+ */
+export function mediaIdsOf(doc: { content: readonly { type: string }[] }): string[] {
+  const ids = new Set<string>();
+  for (const block of doc.content) {
+    if (!isMediaNodeType(block.type)) continue;
+    const id = mediaNodeId(block);
+    if (id !== null) ids.add(id);
+  }
+  return [...ids];
+}
