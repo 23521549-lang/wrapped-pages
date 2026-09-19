@@ -223,3 +223,27 @@ export async function dangTrang(page: Page): Promise<number> {
   await page.waitForURL(new RegExp("/sach/[0-9a-f-]{36}[?]trang=[0-9]+$"));
   return Number(so[1]);
 }
+
+/**
+ * Doc mot to da dang trong database e2e, hoac null neu vi tri do chua co to. Chi doc de so truoc va sau: e2e sua
+ * trang dung no de chung minh mot loi goi bi tu choi khong ghi gi. Cung rao voi nhapCua.
+ */
+export async function toDaDang(
+  bookId: string,
+  position: number,
+): Promise<{ content: unknown; editedAt: Date | null; publishedAt: Date } | null> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1 });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    if (ten !== "mqce_e2e") throw new Error("toDaDang chi chay tren database mqce_e2e");
+    const rows = await sql<{ content: unknown; edited_at: Date | null; published_at: Date }[]>`
+      select content, edited_at, published_at from pages where book_id = ${bookId} and position = ${position}`;
+    return rows.length > 0 ? { content: rows[0].content, editedAt: rows[0].edited_at, publishedAt: rows[0].published_at } : null;
+  } catch (e) {
+    const { code, message } = e as { code?: string; message?: string };
+    // oxlint-disable-next-line eslint/preserve-caught-error -- co y KHONG gan cause: loi goc cua driver postgres co the chua chuoi ket noi (mat khau); rao ngay tren ham nay cam in no ra.
+    throw new Error(`toDaDang hong: ${code ?? "?"} ${message ?? ""}`);
+  } finally {
+    await sql.end();
+  }
+}

@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { COVER_LABEL } from "@/components/book/CoverArt";
+import { COVERS } from "@/lib/book";
 import { resetDb } from "./db";
 import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
 
@@ -79,4 +81,47 @@ test("sach rieng tu chi chu thay; chi chu sua duoc; Trang moi mo cuon vua sua", 
   // Chua co ban nhap nao, nen /viet chon cuon co hoat dong gan nhat: cuon vua sua.
   await a.goto("/viet");
   await expect(a).toHaveURL(new RegExp(`/sach/${chung}/viet$`));
+});
+
+test("bia moi: chon khi tao, doi khi sua, giu sau khi tai lai, ve tren ke; ca muoi o bia deu chon duoc", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  await a.goto("/sach/moi");
+  await a.getByLabel("Tên sách").fill("Mái nhà cũ");
+  await a.getByRole("radio", { name: "Chia sẻ", exact: true }).check();
+  await a.getByRole("radio", { name: "Bìa mèo ngủ trên mái ngói" }).check();
+  await a.getByRole("button", { name: "Tạo sách" }).click();
+  await expect(a).toHaveURL(new RegExp("/sach/[0-9a-f-]{36}/viet$"));
+  const id = new URL(a.url()).pathname.split("/")[2];
+
+  await a.goto("/ke-sach");
+  const cuon = a.locator(".cuon", { hasText: "Mái nhà cũ" });
+  await expect(cuon.locator(".cuon__bia.bia--meo-mai svg")).toHaveCount(1);
+
+  await a.goto(`/sach/${id}/sua`);
+  await expect(a.getByRole("radio", { name: "Bìa mèo ngủ trên mái ngói" })).toBeChecked();
+  await a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" }).check();
+  await a.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(a).toHaveURL(new RegExp(`/sach/${id}$`));
+  await a.goto(`/sach/${id}/sua`);
+  await expect(a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" })).toBeChecked();
+  await a.reload();
+  await expect(a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" })).toBeChecked();
+  await expect(a.locator(".swatch.bia--cau-go svg")).toHaveCount(1);
+  // Cuon chua co trang: man doc ve bia o khung trong.
+  await a.goto(`/sach/${id}`);
+  await expect(a.locator(".trong__hinh.bia--cau-go svg")).toHaveCount(1);
+  await a.goto("/ke-sach");
+  await expect(cuon.locator(".cuon__bia.bia--cau-go svg")).toHaveCount(1);
+  await expect(cuon.locator(".bia--meo-mai")).toHaveCount(0);
+
+  // Muoi o theo dung thu tu COVERS, o nao cung chon duoc va the xem truoc doi theo.
+  await a.goto("/sach/moi");
+  const xemTruoc = a.getByRole("complementary", { name: "Xem trước trên kệ" });
+  expect(COVERS).toHaveLength(10);
+  for (const c of COVERS) {
+    const o = a.getByRole("radio", { name: COVER_LABEL[c], exact: true });
+    await o.check();
+    await expect(o).toBeChecked();
+    await expect(xemTruoc.locator(".book__cover")).toHaveClass(new RegExp(`bia--${c}`));
+  }
 });

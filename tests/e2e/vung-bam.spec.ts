@@ -17,8 +17,8 @@ test.afterEach(async () => {
 /**
  * Cong dung chung cho vung bam 44px o be rong cam ung va khong tran ngang o bon
  * be rong tren moi man cua web. Bon man chinh (ke sach, man doc, man viet, cai dat)
- * di qua doMoiManChinh; cac man con lai di qua doMan: tao sach, sua sach, ban nhap, cho, trang 404, trang
- * tra loi, dang nhap (context moi, chua co phien), o test rieng tren web trong: khoi tao va man da xong o ca
+ * di qua doMoiManChinh; cac man con lai di qua doMan: tao sach, sua sach, ban nhap, cho, trang 404, sua trang (to thuong va
+ * to niem phong), trang tra loi, dang nhap (context moi, chua co phien), o test rieng tren web trong: khoi tao va man da xong o ca
  * hai luot, va o test rieng tren may chu co database khong toi duoc (may-hong.ts): trang loi. /viet khong co man rieng: no chi chuyen huong. Mot cuon co it nhat mot trang da dang
  * (dangToThang) de the "Trang gan nhat" xuat hien tren ke sach - khong co no thi doMoiManChinh khong
  * tim duoc duong toi man doc/man viet, va mot cong chay tren ke rong la mot cong luon xanh.
@@ -100,6 +100,19 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
       ten: "trang 404",
       duong: "/khong-co-trang-nay",
       daVe: (p) => expect(p.getByRole("heading", { level: 1, name: "Không thấy trang này" })).toBeVisible(),
+    },
+    {
+      ten: "sua trang",
+      duong: `/sach/${id}/sua-trang/2`,
+      daVe: async (p) => {
+        await expect(p.getByRole("heading", { level: 1, name: "Sửa trang 2" })).toBeVisible();
+        await expect(p.locator(".viet-chu .ProseMirror")).toBeVisible();
+      },
+    },
+    {
+      ten: "sua trang niem phong",
+      duong: `/sach/${idThu}/sua-trang/1`,
+      daVe: (p) => expect(p.getByRole("heading", { level: 1, name: "Không sửa được" })).toBeVisible(),
     },
   ];
   for (const man of manCuaA) await doMan(a, man, MIEN_TRU_VUNG_BAM);

@@ -87,13 +87,15 @@ Chú giải ở chân kệ dùng đúng ba ký hiệu này. Chân kệ không c�
 
 ## 7. Bìa và mực loang
 
-Bốn tranh bìa (núi xa, khóm trúc, trăng trên nước, chim bay qua bờ nước) được vẽ bằng nét cố tình không đều, và đi qua một bộ lọc SVG chung `#muc-loang`:
+Mười tranh bìa (núi xa, khóm trúc, trăng trên nước, chim bay qua bờ nước, và sáu tranh sau: cành hoa đào, đôi chim sẻ trên cành, thuyền nhỏ dưới trăng, cầu gỗ qua suối, đồi thông trong sương, mèo ngủ trên mái ngói) được vẽ bằng nét cố tình không đều, và đi qua một bộ lọc SVG chung `#muc-loang`:
 
 1. `feTurbulence` tần số thấp xô dịch nét vẽ vài pixel (`feDisplacementMap`, scale 9);
 2. `feGaussianBlur` rất nhẹ (0.9) cho mép nét ăn vào giấy;
 3. một lớp nhiễu tần số thấp thứ hai làm mực thấm không đều thành vệt loang lớn.
 
 Bộ lọc được khai **một lần** trong layout gốc (`InkDefs` trong `src/components/book/CoverArt.tsx`), mỗi bìa chỉ trỏ tới nó bằng id, nên không có id trùng. Bộ lọc SVG nội tuyến không cần thêm miền nào vào CSP. Ảnh bìa tự tải lên (`CoverImage`) không đi qua bộ lọc.
+
+Nền giấy của mỗi bìa là một cặp token trong `tokens.css` (`--bia-nui-tren`, `--bia-nui-duoi`, ...), cùng dải sáng để mực vẫn nhạt và không bìa nào thành mảng đậm. Trong `app.css` mỗi bìa chỉ có **một** quy tắc, đặt hai biến `--bia-tren` và `--bia-duoi` từ cặp token của nó. Một quy tắc chung vẽ nền `linear-gradient(var(--bia-tren), var(--bia-duoi))` cho cả mười bìa, và gáy sách trên kệ pha màu từ `--bia-duoi`. Nhờ vậy kệ, cuốn sách mở, ô chọn bìa, bản nháp, ô xem trước và khung trống đều đọc cùng hai biến; thêm một bìa là thêm một cặp token và một dòng CSS.
 
 ## 8. Cột Hoạt động
 
@@ -147,6 +149,20 @@ Luật sửa và đăng:
 
 Chuyển động: mỗi lần đổi loại, cột giữa trượt vào 8px và hiện dần, 220ms, `--ease-out`, chỉ `transform` và `opacity`. Với `prefers-reduced-motion: reduce` cột giữa hiện thẳng. Lật tờ trong khung không có hoạt ảnh.
 
-## 12. Việc còn lại
+## 12. Sửa trang đã đăng
+
+Chủ sách sửa được chữ, ảnh, ghi âm trên một tờ đã đăng của mình, trong khuôn đúng một tờ. Chi tiết luật ở `docs/superpowers/specs/2026-09-19-sua-trang-va-bia-moi.md`.
+
+**Dải dưới cuốn sách (màn đọc).** Ngay dưới khung sách có một dải `.trang-ghi`, mỗi tờ đang hiện một cột, cột thẳng với tờ trái và tờ phải vì dải dùng chung `--so-to` với khung sách. Dải nằm **ngoài** tờ giấy và không bị thu phóng theo `--k`: chữ không nhỏ đi ở màn hẹp, vùng bấm giữ đủ 44px, và hình học tờ giấy mà bộ xếp trang dựa vào không bị chạm tới. Trong mỗi cột, theo thứ tự:
+
+- "Đã sửa lúc 14:05" (thẻ `time` có `dateTime` đầy đủ), chữ `--text-xs` màu `--color-ink-3`, cho cả hai người;
+- "Sửa trang 3", nút cấp chữ (`.btn--chu`), chỉ có với chủ sách; người kia không có nút nào, kể cả trong DOM;
+- tờ trong niêm phong: dòng chữ "Trang niêm phong không sửa được" kèm ổ khóa 12px, là chữ chứ không phải nút bị khóa, nên không có điều khiển nào nhận Tab mà không dùng được.
+
+Không cột nào có gì để hiện thì không vẽ dải. Không nền, không viền, không hoạt ảnh.
+
+**Màn sửa một tờ** (`/sach/[id]/sua-trang/[so]`) theo khuôn trang trả lời trao đổi: một tờ giấy khổ thật, đo tràn bằng đúng bộ đo của trang trả lời. Đầu màn là tiêu đề "Sửa trang 5", dòng phụ "Tên sách, đăng 18.09", dòng trạng thái "Vừa một trang", nút chính "Lưu thay đổi" và nút viền "Hủy". Tràn thì dòng trạng thái đổi thành "Đã tràn khỏi trang, cần gọn lại", vạch "Hết trang" hiện ở đáy tờ và nút lưu bị khóa. Hủy khi đã đổi thì hiện hộp xác nhận nội tuyến như hộp đăng trang, focus ở "Sửa tiếp". Chữ đang sửa được giữ tạm trong phiên trình duyệt để rời trang lỡ tay không mất. Tờ niêm phong không có trình soạn thảo: chỉ tiêu đề "Không sửa được", một câu giải thích và nút "Về trang 5".
+
+## 13. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của form tạo và sửa sách. Khi màn form được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
