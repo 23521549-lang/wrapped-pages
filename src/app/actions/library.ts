@@ -13,7 +13,7 @@ import { normalizeContinuation } from "@/lib/doc/continuation";
 import { docCharCount, isBlankDoc } from "@/lib/doc/text";
 import { checkDraftInput, checkPublishInput, DOC_LIMITS, EDIT_SHEET_MAX_CHARS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 import { parseSealInput } from "@/lib/seal/input";
-import { CAN_DANG_NHAP, KHONG_THAY_SACH } from "./messages";
+import { CAN_DANG_NHAP, KHONG_THAY_SACH, TRANG_VUA_SUA_NOI_KHAC } from "./messages";
 
 const NHAP_KHONG_DOC_DUOC = "Bản nháp có nội dung không đọc được.";
 const BIA_KHONG_DUNG_DUOC = "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa.";
@@ -22,7 +22,7 @@ const TRANG_DAI = "Trang dài quá một trang.";
 const LOI_SUA: Record<Exclude<EditResult, "saved" | "unchanged">, string> = {
   "not-found": KHONG_THAY_TRANG,
   sealed: "Trang niêm phong không sửa được.",
-  stale: "Trang này vừa được sửa ở nơi khác. Tải lại để xem bản mới.",
+  stale: TRANG_VUA_SUA_NOI_KHAC,
   "invalid-media": "Có ảnh hoặc ghi âm không dùng được trên trang này.",
 };
 

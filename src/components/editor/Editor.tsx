@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
-import type { Transaction } from "@tiptap/pm/state";
 import { actionSaveDraft } from "@/app/actions/library";
-import { IconAnh, IconMic } from "@/components/media/icons";
 import { paginate } from "@/lib/paginate";
 import { CONTENT_HEIGHT } from "@/lib/sheet";
 import { charCountLabel } from "@/lib/doc/counter";
@@ -17,19 +15,14 @@ import type { DocJson } from "@/lib/doc/types";
 import { createAutosave, type SaveStatus } from "./autosave";
 import { editorExtensions } from "./extensions";
 import { FocusMode } from "./focusMode";
-import { ImageUploadLine } from "./ImageUploadLine";
-import { insertMediaBlock } from "./insertMedia";
 import { measureUnits } from "./measure";
-import { DA_CHEN_GHI_AM, mediaAnnouncement } from "./mediaAnnounce";
+import { MediaTools } from "./MediaTools";
 import { NONCE_TAI_LIEU } from "./nonce";
 import { PageBreaks } from "./pageBreaks";
 import { PagedSurface } from "./PagedSurface";
 import { PublishButton, PublishPanel, usePublish } from "./PublishBar";
-import { RecorderBox } from "./RecorderBox";
 import { SaveBadge } from "./SaveBadge";
 import { splitDoc } from "./split";
-import { Toolbar } from "./Toolbar";
-import { useImageUpload } from "./useImageUpload";
 import { usePagedLayout } from "./usePagedLayout";
 
 export type EditorProps = {
@@ -135,34 +128,9 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
   const dem = charCountLabel(chars);
   // Vung doc chung cua man viet: chon, bo, chen khoi media va tien trinh tai anh.
   const [loiDoc, setLoiDoc] = useState("");
-  const [ghiMo, setGhiMo] = useState(false);
-  const chonAnhRef = useRef<HTMLInputElement>(null);
-  const nutGhiRef = useRef<HTMLButtonElement>(null);
-  const hopGhiId = useId();
-  const ghiChuId = useId();
-  const anh = useImageUpload({
-    bookId,
-    announce: setLoiDoc,
-    onInsert: (attrs) => {
-      if (editorRef.current) insertMediaBlock(editorRef.current, { type: "anh", attrs });
-    },
-  });
 
   useEffect(() => {
     editorRef.current = editor;
-  }, [editor]);
-
-  useEffect(() => {
-    if (!editor) return;
-    const nghe = ({ transaction }: { transaction: Transaction }) => {
-      if (transaction.docChanged || transaction.selectionSet) {
-        setLoiDoc(mediaAnnouncement(transaction.before, transaction.doc, editor.state.selection));
-      }
-    };
-    editor.on("transaction", nghe);
-    return () => {
-      editor.off("transaction", nghe);
-    };
   }, [editor]);
 
   useEffect(() => {
@@ -220,78 +188,18 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
             <PublishButton flow={dang} ref={nutDangRef} />
           </div>
         </header>
-        <Toolbar editor={editor}>
-          {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- nhom nut trong thanh cong cu, khong phai o form; fieldset pha bo cuc flex cua thanh. */}
-          <span className="thanh-dinh-dang__nhom" role="group" aria-label="Thêm vào trang">
-            <button
-              type="button"
-              className="nut-dinh-dang nut-dinh-dang--co-hinh"
-              aria-disabled={!mediaEnabled || anh.busy || undefined}
-              aria-describedby={mediaEnabled ? undefined : ghiChuId}
-              disabled={!editor}
-              onClick={() => {
-                if (mediaEnabled && !anh.busy) chonAnhRef.current?.click();
-              }}
-            >
-              <IconAnh />Thêm ảnh
+        <MediaTools
+          editor={editor}
+          bookId={bookId}
+          author={author}
+          mediaEnabled={mediaEnabled}
+          announce={setLoiDoc}
+          extra={
+            <button type="button" className="nut-dinh-dang nut-dinh-dang--chu" aria-pressed={focus} onClick={doiTapTrung}>
+              Tập trung
             </button>
-            <button
-              ref={nutGhiRef}
-              type="button"
-              className="nut-dinh-dang nut-dinh-dang--co-hinh"
-              aria-disabled={!mediaEnabled || undefined}
-              aria-expanded={mediaEnabled ? ghiMo : undefined}
-              aria-controls={ghiMo ? hopGhiId : undefined}
-              aria-describedby={mediaEnabled ? undefined : ghiChuId}
-              disabled={!editor}
-              onClick={() => {
-                if (!mediaEnabled) return;
-                // Hop dang mo thi chi dua focus ve hop, khong dong, de khong mat ban ghi.
-                if (ghiMo) document.getElementById(hopGhiId)?.focus();
-                else setGhiMo(true);
-              }}
-            >
-              <IconMic />Ghi âm
-            </button>
-          </span>
-          <input
-            ref={chonAnhRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const tep = e.currentTarget.files?.[0];
-              // Xoa lua chon de chon lai dung tep do (vd sau loi tai len) van phat su kien change.
-              e.currentTarget.value = "";
-              if (tep) void anh.pick(tep);
-            }}
-          />
-          <button type="button" className="nut-dinh-dang nut-dinh-dang--chu" aria-pressed={focus} onClick={doiTapTrung}>
-            Tập trung
-          </button>
-          {!mediaEnabled && <p className="thanh-dinh-dang__ghi" id={ghiChuId}>Chưa bật kho lưu ảnh và ghi âm.</p>}
-        </Toolbar>
-        {(anh.state.kind !== "nghi" || ghiMo) && (
-          <div className="viet-phu">
-            <ImageUploadLine state={anh.state} onPick={() => chonAnhRef.current?.click()} onRetry={anh.retry} onClose={anh.close} />
-            {ghiMo && (
-              <RecorderBox
-                id={hopGhiId}
-                bookId={bookId}
-                author={author}
-                onInsert={(attrs) => {
-                  if (editorRef.current) insertMediaBlock(editorRef.current, { type: "ghi-am", attrs });
-                  setGhiMo(false);
-                  setLoiDoc(DA_CHEN_GHI_AM);
-                }}
-                onClose={() => {
-                  setGhiMo(false);
-                  nutGhiRef.current?.focus();
-                }}
-              />
-            )}
-          </div>
-        )}
+          }
+        />
       </div>
       <div className="viet-than">
         {dang.open && (

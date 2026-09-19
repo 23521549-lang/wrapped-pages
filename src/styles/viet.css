@@ -274,3 +274,8 @@
 @media (prefers-reduced-motion: reduce){
   .niem__form{ animation: none; }
 }
+
+/* Man sua mot to: dong khoi phuc ban tam va loi bao media se bi xoa, ngay tren to giay. Trong thi khong chiem cho. */
+.sua-ghi{ display: grid; justify-items: center; gap: var(--space-2xs); margin: var(--space-md) var(--space-lg) 0; text-align: center; }
+.sua-ghi:empty{ display: none; }
+.sua-ghi__dong{ display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-sm); margin: 0; font-size: var(--text-sm); color: var(--color-ink-2); }

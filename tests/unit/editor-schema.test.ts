@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { getSchema } from "@tiptap/core";
 import { Node as PMNode } from "@tiptap/pm/model";
-import { editorExtensions, TEXT_EXTENSIONS } from "@/components/editor/extensions";
+import { editorExtensions, pageEditExtensions, TEXT_EXTENSIONS } from "@/components/editor/extensions";
+import { toEditorDoc } from "@/components/editor/pageEdit";
 import { cleanDoc } from "@/lib/doc/validate";
 import type { DocJson } from "@/lib/doc/types";
 import { PEAK_COUNT } from "@/lib/media/kinds";
@@ -76,5 +77,42 @@ describe("so do cua trinh soan thao khop cleanDoc", () => {
     const text = getSchema(TEXT_EXTENSIONS);
     expect(Object.keys(text.nodes).sort()).toEqual(KHOI_CHU);
     expect(text.nodes.doc.spec.content).toBe("block+");
+  });
+});
+
+describe("so do man sua mot to", () => {
+  const sua = getSchema(pageEditExtensions("Mạnh"));
+
+  it("cung ten khoi va dinh dang voi man viet; khac duy nhat la muc danh sach co noiTiep mac dinh null", () => {
+    expect(Object.keys(sua.nodes).sort()).toEqual(Object.keys(schema.nodes).sort());
+    expect(Object.keys(sua.marks).sort()).toEqual(Object.keys(schema.marks).sort());
+    for (const ten of Object.keys(schema.nodes).filter((t) => t !== "listItem")) {
+      expect(Object.keys(sua.nodes[ten].spec.attrs ?? {}).sort(), ten).toEqual(Object.keys(schema.nodes[ten].spec.attrs ?? {}).sort());
+    }
+    expect(Object.keys(schema.nodes.listItem.spec.attrs ?? {})).toEqual([]);
+    expect(Object.keys(sua.nodes.listItem.spec.attrs ?? {})).toEqual(["noiTiep"]);
+    expect(sua.nodes.listItem.spec.attrs?.noiTiep.default).toBeNull();
+    expect(sua.nodes.listItem.spec.content).toBe("paragraph");
+  });
+
+  it("to bat dau giua danh sach: muc noi tiep ve ra li lop noi-tiep, muc sau thi khong", () => {
+    const to: DocJson = {
+      type: "doc",
+      content: [{
+        type: "bulletList",
+        content: [
+          { type: "listItem", noiTiep: true, content: [{ type: "paragraph", content: [{ type: "text", text: "tiếp" }] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "mới" }] }] },
+        ],
+      }],
+    };
+    const node = sua.nodeFromJSON(toEditorDoc(to));
+    expect(() => node.check()).not.toThrow();
+    // Cach DOMSerializer ve tung muc: the va thuoc tinh HTML (toDOM cua so do, cung ham TipTap dung de ve vung soan thao).
+    const cacMuc: PMNode[] = [];
+    node.descendants((n) => {
+      if (n.type.name === "listItem") cacMuc.push(n);
+    });
+    expect(cacMuc.map((n) => sua.nodes.listItem.spec.toDOM?.(n))).toEqual([["li", { class: "noi-tiep" }, 0], ["li", {}, 0]]);
   });
 });

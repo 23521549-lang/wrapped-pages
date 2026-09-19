@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { JSONContent } from "@tiptap/core";
-import { droppedMedia, fromEditorDoc, toEditorDoc } from "@/components/editor/pageEdit";
+import { droppedMedia, fromEditorDoc, pageEditKey, readPageEditTemp, toEditorDoc } from "@/components/editor/pageEdit";
 import { normalizeContinuation } from "@/lib/doc/continuation";
 import { cleanDoc } from "@/lib/doc/validate";
 import type { DocJson, ListItemNode } from "@/lib/doc/types";
@@ -135,5 +135,33 @@ describe("droppedMedia", () => {
 
   it("ban goc khong co media: luon false", () => {
     expect(droppedMedia(CHU, { type: "doc", content: [] })).toBe(false);
+  });
+});
+
+describe("ban tam cua man sua", () => {
+  const SACH = "5d1c7a9e-2b4f-4c6d-8e0a-1f3b5d7c9e2a";
+  const MOC = "2026-09-19T07:05:00.000Z";
+  const tam = (value: unknown) => JSON.stringify(value);
+
+  it("khoa theo sach va vi tri", () => {
+    expect(pageEditKey(SACH, 5)).toBe(`mqce-sua-trang-${SACH}-5`);
+  });
+
+  it.each<[string, string | null]>([
+    ["khong co", null],
+    ["chuoi rong", ""],
+    ["JSON hong", "{"],
+    ["khong phai doi tuong", tam([1])],
+    ["thieu version", tam({ doc: toEditorDoc(CHU) })],
+    ["version khac", tam({ version: "2026-09-19T07:06:00.000Z", doc: toEditorDoc(CHU) })],
+    ["tai lieu khong qua checkDraftInput", tam({ version: MOC, doc: { type: "doc", content: [{ type: "la" }] } })],
+    ["thieu tai lieu", tam({ version: MOC })],
+  ])("%s: null", (_ten, raw) => {
+    expect(readPageEditTemp(raw, MOC)).toBeNull();
+  });
+
+  it("trung version va tai lieu hop le: tra tai lieu", () => {
+    const doc = toEditorDoc(GIUA_DANH_SACH);
+    expect(readPageEditTemp(tam({ version: MOC, doc }), MOC)).toEqual(doc);
   });
 });
