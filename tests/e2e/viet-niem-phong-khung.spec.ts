@@ -92,6 +92,10 @@ test("hai to canh nhau tren man rong, mot to o man vua; go tran thi so trang va 
   await expect.poll(() => toDangThay(a)).toEqual([1]);
   await giay.click({ position: { x: 40, y: 60 } });
   await a.keyboard.press("Control+End");
+  // Enter di qua keymap cua ProseMirror, tach doan o con tro trong state cua no. Ctrl+End chi doi vung chon DOM,
+  // ProseMirror doc lai khi selectionchange toi; bam Enter truoc luc do thi doan bi tach o cho vua bam chuot.
+  // Doan dang-viet (che do tap trung, ve tu state) la doan cuoi: state da theo con tro.
+  await expect(giay.locator(":scope > p").last()).toHaveClass(/dang-viet/);
   for (let i = 0; i < 8; i++) {
     await a.keyboard.press("Enter");
     await a.keyboard.insertText(DOAN.repeat(2).trim());

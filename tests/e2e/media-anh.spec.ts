@@ -50,7 +50,9 @@ test("ban phim voi khoi anh: Tab toi nut Bo anh, Delete bo khoi dang chon", asyn
   await expect(khoi).toHaveCount(0);
 
   await themAnh(a, 400, 300);
-  await khoi.click();
+  // Bam lech khoi tam: anh moi nam dung cho anh cu, va ProseMirror coi hai lan bam cach nhau duoi 500ms, lech duoi
+  // 10px la bam dup (khong chon khoi). Lan bam Bo anh o giua khong tinh, vi nut chan su kien chuot cua editor.
+  await khoi.click({ position: { x: 24, y: 24 } });
   await expect(a.locator(".viet-chu .ProseMirror-selectednode")).toHaveCount(1);
   await a.keyboard.press("Delete");
   await expect(khoi).toHaveCount(0);
