@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Bieu tuong tab: cung hinh logo sach that no, net day hon va khong bo loc de van ro o 16px. Mau = --blue-ink. -->
+  <!-- Bieu tuong tab: cung hinh logo sach that no, net day hon va khong bo loc de van ro o 16px.
+       Mau lay tu token mau muc xanh cua web, viet thang vi tep nay nam ngoai CSS. -->
   <g fill="none" stroke="#1a4667" stroke-linecap="round" stroke-linejoin="round">
     <path d="M50 46 C40 39 25 38 12 42 L12 84 C25 80 40 81 50 88 C60 81 75 80 88 84 L88 42 C75 38 60 39 50 46 Z" stroke-width="7.5"/>
     <path d="M50 47 L50 86" stroke-width="6"/>
