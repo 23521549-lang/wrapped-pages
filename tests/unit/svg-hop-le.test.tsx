@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
-import { JSDOM } from "jsdom";
 
 /**
  * Moi tep .svg trong src phai doc duoc nhu XML. Trinh duyet doc bieu tuong tab bang bo phan tich XML nghiem ngat:
@@ -17,10 +16,9 @@ function svgTrongSrc(thuMuc = "src"): string[] {
   return ra;
 }
 
-/** Tra ve thong diep loi cua bo phan tich XML, hoac null khi tep doc duoc. */
+/** Tra ve thong diep loi cua bo phan tich XML, hoac null khi tep doc duoc. Chay o moi truong jsdom (duoi .tsx). */
 export function loiXml(noiDung: string): string | null {
-  const { window } = new JSDOM("");
-  const tai = new window.DOMParser().parseFromString(noiDung, "image/svg+xml");
+  const tai = new DOMParser().parseFromString(noiDung, "image/svg+xml");
   const loi = tai.querySelector("parsererror");
   if (loi) return loi.textContent?.trim() || "khong doc duoc";
   return tai.documentElement.nodeName === "svg" ? null : `the goc la ${tai.documentElement.nodeName}, khong phai svg`;
