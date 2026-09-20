@@ -75,6 +75,30 @@ Trên bản vừa deploy (hoặc chạy `npm run dev` ở máy):
 
 Nếu ảnh không hiện: mở lại Bước 4, soát từng tên biến, rồi xem log của Vercel. Web chỉ báo tên biến sai hoặc thiếu, không bao giờ in giá trị ra log.
 
+## Dùng Filebase khi không có thẻ
+
+R2 của Cloudflare đòi thêm thẻ để xác minh tài khoản, dù gói free vẫn miễn phí. Không có thẻ thì dùng
+[Filebase](https://filebase.com): 5 GB miễn phí, không cần thẻ, không tính phí tải về, và cũng nói chuẩn S3.
+
+1. Đăng ký rồi xác minh email.
+2. Mục **Buckets**, bấm **Create Bucket**: đặt tên, chọn network **Storj**, để bucket riêng tư.
+3. Mục **Access Keys**: copy Access Key và Secret Key.
+4. Điền năm biến, thay cho các giá trị của R2:
+
+   | Biến | Giá trị |
+   |---|---|
+   | `MEDIA_S3_ENDPOINT` | `https://s3.filebase.com` |
+   | `MEDIA_S3_REGION` | `us-east-1` |
+   | `MEDIA_S3_BUCKET` | tên bucket vừa tạo |
+   | `MEDIA_S3_ACCESS_KEY_ID` | Access Key |
+   | `MEDIA_S3_SECRET_ACCESS_KEY` | Secret Key |
+
+Ảnh tối đa 1 MB và ghi âm tối đa 2 MB mỗi tệp, nên 5 GB chứa được hàng nghìn tệp.
+
+**Backblaze B2** cũng là một lựa chọn cùng kiểu, 10 GB miễn phí, endpoint dạng
+`https://s3.us-west-004.backblazeb2.com` và region là phần giữa của endpoint. **Chưa chắc** B2 có đòi thẻ lúc
+đăng ký hay không: các nguồn nói khác nhau, cứ thử, đòi thẻ thì quay lại Filebase.
+
 ## Dùng Supabase thay cho R2
 
 Supabase Storage cũng có cổng S3, nên chỉ cần đổi hai biến:
