@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { db } from "@/server/db";
-import { findOwnBook } from "@/server/library/books";
 import { readDraft } from "@/server/library/drafts";
 import { getMediaStore } from "@/server/media/get-store";
+import { sachCuaToi } from "@/server/web/cong";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { Editor } from "@/components/editor/Editor";
@@ -14,9 +14,9 @@ const TRANG_TRONG: DocJson = { type: "doc", content: [{ type: "paragraph" }] };
 export default async function VietSach({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const [me, { id }] = await Promise.all([requireMe(), params]);
-  const book = await findOwnBook(db, me.accountId, id);
+  // readDraft tu kiem chu sach, nen doc song song voi cuon ma khong doc duoc nhap cua ai khac.
+  const [book, draft] = await Promise.all([sachCuaToi(me.accountId, id), readDraft(db, me.accountId, id)]);
   if (!book) notFound();
-  const draft = await readDraft(db, me.accountId, book.id);
   return (
     <>
       <AppNav me={me} current="ke-sach" subpage sticky={false} />

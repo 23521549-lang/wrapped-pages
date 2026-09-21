@@ -7,7 +7,7 @@ import * as schema from "@/server/db/schema";
 import { activity, drafts, media, pages, readMarks, seals } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
 import { publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
-import { editPage, readPageForEdit } from "@/server/library/edit-page";
+import { editPage, ownPageExists, readPageForEdit } from "@/server/library/edit-page";
 import { readBook } from "@/server/library/pages";
 import { canViewMedia, type UploadRecord } from "@/server/media/access";
 import { MemoryStore } from "@/server/media/memory";
@@ -231,6 +231,20 @@ describe("editPage", () => {
       { bookId: s.chung, position: 2, content: tai(anhThat(id), doan("Tiếp")) },
     ]);
     expect(await editPage(s.db, s.seat1.id, s.chung, 1, tai(doan("Thêm chữ"), khoiAnh(id)), await phienBan(s, 1), T)).toBe("saved");
+  });
+});
+
+describe("ownPageExists", () => {
+  it("chi dung voi to co that trong cuon cua chinh minh; to niem phong van la co, khong doc noi dung", async () => {
+    const s = await coNiemPhong(CAU_DO);
+    expect(await ownPageExists(s.db, s.seat1.id, s.chung, 1)).toBe(true);
+    expect(await ownPageExists(s.db, s.seat1.id, s.chung, 2)).toBe(true);
+    expect(await ownPageExists(s.db, s.seat1.id, s.chung, 3)).toBe(false);
+    // Nguoi kia doc duoc cuon chia se nhung khong sua duoc: nhu cuon khong ton tai.
+    expect(await ownPageExists(s.db, s.seat2.id, s.chung, 1)).toBe(false);
+    expect(await ownPageExists(s.db, s.seat1.id, randomUUID(), 1)).toBe(false);
+    expect(await ownPageExists(s.db, s.seat1.id, "khong-phai-ma", 1)).toBe(false);
+    expect(await ownPageExists(s.db, s.seat1.id, s.chung, 0)).toBe(false);
   });
 });
 

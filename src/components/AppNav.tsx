@@ -1,14 +1,9 @@
 import Link from "next/link";
 import type { Me } from "@/server/web/guard";
 import { Logo } from "./Logo";
+import { LINKS, type NavSection } from "./nav-links";
 
-export type NavSection = "ke-sach" | "ban-nhap" | "cai-dat";
-
-const LINKS: { key: NavSection; href: string; label: string }[] = [
-  { key: "ke-sach", href: "/ke-sach", label: "Kệ sách" },
-  { key: "ban-nhap", href: "/ban-nhap", label: "Bản nháp" },
-  { key: "cai-dat", href: "/cai-dat", label: "Cài đặt" },
-];
+export type { NavSection };
 
 /**
  * Thanh dieu huong chinh. Khong co nen vien thuoc: muc dang o la chu dam mau muc kem gach duoi 2px sat mep

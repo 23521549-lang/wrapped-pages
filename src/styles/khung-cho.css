@@ -1,0 +1,77 @@
+/*
+ * Khung giu cho luc chuyen man (src/components/KhungCho.tsx, cac loading.tsx). Mau chi qua token.
+ * Hinh dang bam theo bo cuc that de trang that thay vao khong xo lech: cung lop khung (.head, .dau-ke, .hang,
+ * .nhap, .tao, .cai-dat, .doc-head, .viet-tren) va cung kich thuoc to giay.
+ *
+ * Chuyen dong: khung hien dan sau 150ms, nen chuyen man nhanh thi khong nhap nhay khung; cho lau thi cac vach tho
+ * rat nhe (chi opacity). Giam chuyen dong: khung hien thang, vach dung yen.
+ */
+.khung-cho{ animation: khung-cho-hien var(--dur-short) var(--ease-out) 150ms both; }
+@keyframes khung-cho-hien{ from{ opacity: 0; } to{ opacity: 1; } }
+
+.vach-cho, .bia-cho, .sach-mo-cho, .giay-cho, .sach-cho{ display: block; }
+.vach-cho, .bia-cho{ animation: vach-cho-tho 1.6s var(--ease-in-out) 600ms infinite alternate; }
+@keyframes vach-cho-tho{ to{ opacity: .6; } }
+
+.vach-cho{ height: .8rem; border-radius: 3px; background: var(--color-paper-3); }
+.vach-cho--dong{ width: 100%; }
+.vach-cho--cuoi{ width: 62%; }
+.vach-cho--tieu-de{ height: 2.1rem; width: min(15rem, 70vw); border-radius: 4px; }
+.vach-cho--phu{ height: .95rem; width: min(12rem, 55vw); margin-top: .7rem; }
+.vach-cho--nut{ height: 44px; width: 7.5rem; border-radius: var(--radius-nut); }
+.vach-cho--ngan{ height: 1.2rem; width: min(9rem, 50%); }
+.vach-cho--nhan{ height: .85rem; width: 6rem; }
+.vach-cho--o{ height: 44px; width: 100%; border-radius: var(--radius-sm); }
+.vach-cho--the{ height: 4.5rem; width: 100%; border-radius: var(--radius-sm); }
+.vach-cho--ten{ height: 1.25rem; flex: 1 1 10rem; max-width: 16rem; }
+.vach-cho--cong-cu{ height: 36px; width: 36px; border-radius: var(--radius-nut); }
+
+.dong-cho{ display: grid; gap: .7rem; min-width: 0; }
+.khung-cho__dau{ min-width: 0; }
+
+/* ke sach: cuon sach mo, cot Hoat dong, mot hang bia */
+.sach-mo-cho{
+  aspect-ratio: 4 / 3; min-width: 0; border-radius: var(--radius-sach-mo); box-shadow: var(--bong-giay);
+  background: linear-gradient(to right, transparent calc(50% - 22px), var(--nep-bong) 50%, transparent calc(50% + 22px)), var(--color-giay);
+}
+.hoat-dong-cho{ display: block; min-width: 0; padding-top: var(--space-md); }
+.cuon-cho{ display: grid; gap: var(--space-sm); min-width: 0; }
+.bia-cho{ aspect-ratio: 5 / 3; min-width: 0; border-radius: var(--radius-sach); background: var(--color-paper-3); }
+
+/* ban nhap */
+.nhap-cho{ grid-template-columns: 104px minmax(0, 1fr); }
+.nhap-cho .nhap__bia{ grid-row: auto; }
+.nhap-cho__chu{ max-width: 28rem; }
+
+/* form sach, cai dat */
+.xem-truoc .bia-cho{ border-radius: 12px; }
+
+/* to giay: man doc hai to tren man rong nhu Flipbook (MAN_RONG 760px), man viet mot to; phong toi 1.25 nhu PHONG_TOI_DA */
+.sach-cho{
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(calc(2 * var(--giay-w) * 1.25), 100%); aspect-ratio: 4 / 3; margin-inline: auto;
+  border-radius: var(--radius-giay); background: var(--color-giay); box-shadow: var(--bong-giay);
+}
+.giay-cho{ min-width: 0; padding: var(--giay-pt) var(--giay-pr) var(--giay-pb) var(--giay-pl); }
+.giay-cho--phai{ background: linear-gradient(to right, var(--nep-bong), transparent 22px); }
+.giay-cho--don{
+  width: min(calc(var(--giay-w) * 1.25), 100%); aspect-ratio: 2 / 3;
+  border-radius: var(--radius-giay); background: var(--color-giay); box-shadow: var(--bong-giay);
+}
+.viet-dau .vach-cho--nut{ margin-left: auto; }
+.cong-cu-cho{ display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2xs); padding: 0 var(--space-lg) var(--space-sm); }
+
+@media (max-width: 759px){
+  .sach-cho{ grid-template-columns: minmax(0, 1fr); width: min(calc(var(--giay-w) * 1.25), 100%); aspect-ratio: 2 / 3; }
+  .giay-cho--phai{ display: none; }
+}
+@media (max-width: 640px){
+  .sach-mo-cho{ aspect-ratio: 2 / 3; background: linear-gradient(to right, var(--nep-bong-hep), transparent 14px), var(--color-giay); }
+}
+@media (max-width: 600px){
+  .nhap-cho{ grid-template-columns: 72px minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .khung-cho, .vach-cho, .bia-cho{ animation: none; }
+}

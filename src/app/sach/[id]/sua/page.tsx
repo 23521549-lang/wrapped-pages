@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { db } from "@/server/db";
-import { findOwnBook } from "@/server/library/books";
 import { getMediaStore } from "@/server/media/get-store";
+import { sachCuaToi } from "@/server/web/cong";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { BookForm } from "@/components/book/BookForm";
@@ -10,7 +9,7 @@ import { BookForm } from "@/components/book/BookForm";
 export default async function SuaSach({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const [me, { id }] = await Promise.all([requireMe(), params]);
-  const book = await findOwnBook(db, me.accountId, id);
+  const book = await sachCuaToi(me.accountId, id);
   if (!book) notFound();
   return (
     <>

@@ -24,6 +24,20 @@ function isPosition(position: number): boolean {
 }
 
 /**
+ * Co to o vi tri position trong cuon cua chinh ownerId khong. Chi doc vi tri, khong doc noi dung, nen dung duoc cho
+ * ca to niem phong. Dung lam cong truoc khung giu cho cua man sua: sai thi 404 ngay, dung ma tran nhu readPageForEdit.
+ */
+export async function ownPageExists(db: AnyDb, ownerId: string, bookId: string, position: number): Promise<boolean> {
+  if (!isUuid(bookId) || !isPosition(position)) return false;
+  const rows = await db
+    .select({ position: pages.position })
+    .from(pages)
+    .innerJoin(books, eq(books.id, pages.bookId))
+    .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId), eq(pages.position, position)));
+  return rows.length > 0;
+}
+
+/**
  * Doc mot to de chu sach sua. null khi bookId, vi tri sai dang, sach khong phai cua ownerId hay khong co to o vi tri
  * do: noi goi tra 404 nhu moi cho khac, khong lo su ton tai. Niem phong duoc xet truoc va cau doc noi dung chi chay
  * khi to khong niem phong, nen to hen gio chua toi gio khong bao gio lot noi dung ra, du chi vao bo nho may chu.

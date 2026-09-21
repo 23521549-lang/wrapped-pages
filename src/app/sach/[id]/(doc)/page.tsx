@@ -23,7 +23,8 @@ export default async function DocSach({ params, searchParams }: {
   const [me, { id }, query] = await Promise.all([requireMe(), params, searchParams]);
   // Mot moc gio cho ca truy van lan moi chu co thoi gian tren trang, de may chu va trinh duyet ve trung nhau.
   const now = new Date();
-  const view = await readBook(db, me.accountId, id, now);
+  // Lua chon tat nhac la cua chinh nguoi xem, khong phu thuoc cuon sach, nen doc song song; chi dung khi sach co nhac.
+  const [view, tatNhac] = await Promise.all([readBook(db, me.accountId, id, now), readMusicMuted(db, me.accountId)]);
   if (!view) notFound();
   const { book, mine, sheets, seals, mark } = view;
   const count = sheets.length;
@@ -33,8 +34,7 @@ export default async function DocSach({ params, searchParams }: {
   const phu = [`${owner} viết`, `${count} trang`];
   if (mine) phu.push(book.mode === "chia-se" ? `${me.partnerNickname} đọc được` : "Chỉ mình bạn đọc");
   if (locked > 0) phu.push(`${locked} trang đang khóa`);
-  // Lua chon tat nhac chi doc o sach co nhac.
-  const muted = book.youtubeId !== null && (await readMusicMuted(db, me.accountId));
+  const muted = book.youtubeId !== null && tatNhac;
 
   const noiDung = (
     <>
