@@ -37,38 +37,40 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
     );
     const by = (actorId: string): FeedActor => (actorId === viewerId ? "me" : "partner");
 
-    const khac = await tx
-      .select({
-        id: activity.id, kind: activity.kind, actorId: activity.actorId, at: activity.at,
-        bookId: activity.bookId, bookTitle: books.title,
-        firstPosition: activity.firstPosition, lastPosition: activity.lastPosition,
-        sealKind: seals.kind, giftNote: seals.giftNote,
-      })
-      .from(activity)
-      .leftJoin(books, eq(books.id, activity.bookId))
-      .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
-      .where(and(thay, ne(activity.kind, "thu-sai")))
-      .orderBy(desc(activity.at), desc(activity.id))
-      .limit(FEED_LIMIT);
-
     const lanDau = sql<string>`(array_agg(${activity.id} order by ${activity.at}, ${activity.id}))[1]`;
     const lanCuoi = sql<Date>`max(${activity.at})`.mapWith(activity.at);
-    const sai = await tx
-      .select({
-        id: lanDau, actorId: activity.actorId, at: lanCuoi, count: count(),
-        bookId: activity.bookId, bookTitle: books.title,
-        firstPosition: activity.firstPosition, lastPosition: activity.lastPosition, sealKind: seals.kind,
-      })
-      .from(activity)
-      .leftJoin(books, eq(books.id, activity.bookId))
-      .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
-      .where(and(thay, eq(activity.kind, "thu-sai")))
-      .groupBy(
-        activity.actorId, activity.sealId, activity.bookId, activity.firstPosition, activity.lastPosition, NGAY_VIET_NAM,
-        books.title, seals.kind,
-      )
-      .orderBy(desc(lanCuoi), desc(lanDau))
-      .limit(FEED_LIMIT);
+    // Hai cau doc doc lap tren cung anh chup: chay song song trong giao dich, khong doi du lieu doc ra.
+    const [khac, sai] = await Promise.all([
+      tx
+        .select({
+          id: activity.id, kind: activity.kind, actorId: activity.actorId, at: activity.at,
+          bookId: activity.bookId, bookTitle: books.title,
+          firstPosition: activity.firstPosition, lastPosition: activity.lastPosition,
+          sealKind: seals.kind, giftNote: seals.giftNote,
+        })
+        .from(activity)
+        .leftJoin(books, eq(books.id, activity.bookId))
+        .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
+        .where(and(thay, ne(activity.kind, "thu-sai")))
+        .orderBy(desc(activity.at), desc(activity.id))
+        .limit(FEED_LIMIT),
+      tx
+        .select({
+          id: lanDau, actorId: activity.actorId, at: lanCuoi, count: count(),
+          bookId: activity.bookId, bookTitle: books.title,
+          firstPosition: activity.firstPosition, lastPosition: activity.lastPosition, sealKind: seals.kind,
+        })
+        .from(activity)
+        .leftJoin(books, eq(books.id, activity.bookId))
+        .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
+        .where(and(thay, eq(activity.kind, "thu-sai")))
+        .groupBy(
+          activity.actorId, activity.sealId, activity.bookId, activity.firstPosition, activity.lastPosition, NGAY_VIET_NAM,
+          books.title, seals.kind,
+        )
+        .orderBy(desc(lanCuoi), desc(lanDau))
+        .limit(FEED_LIMIT),
+    ]);
 
     const items: FeedItem[] = [
       ...khac.map((r): FeedItem => ({
