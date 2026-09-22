@@ -109,6 +109,18 @@ export function cutAtWord(flat: string, max: number): string {
 }
 
 /**
+ * Moi ky tu ma lop khoang trang cua JavaScript nhan (trim, replace khoang trang cua docExcerpt dung lop nay). SQL chon to
+ * cho ke sach dung dung tap nay, nen mot to SQL coi la co chu thi docExcerpt cua no khong bao gio rong (co test).
+ */
+export const BLANK_CODE_POINTS: readonly number[] = [
+  9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287,
+  12288, 65279,
+];
+
+/** Lop ky tu "khong phai khoang trang" cho toan tu ~ cua Postgres; ky tu dat thang vao lop, khong qua chuoi thoat. */
+export const NOT_BLANK_PATTERN = `[^${String.fromCharCode(...BLANK_CODE_POINTS)}]`;
+
+/**
  * Doan trich ngan cho the sach: gop khoang trang, cat o ranh gioi tu, them dau ba cham. Tai lieu khong co chu ma co
  * media thi la nhan cua khoi media dau tien. sealTeaser khong dung ham nay, nen to khoa khong bao gio goi y co media.
  */

@@ -1,10 +1,11 @@
-import { and, count, desc, eq, inArray, max, or } from "drizzle-orm";
-import { accounts, books, pages, readMarks } from "@/server/db/schema";
+import { and, count, eq, gte, inArray, lte, max, notExists, or, sql } from "drizzle-orm";
+import { accounts, books, pages, readMarks, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode, CoverKey } from "@/lib/book";
-import { docExcerpt } from "@/lib/doc/text";
-import { groupBy, isLockedFor, sealsOfBooks } from "@/server/seal/seals";
+import { docExcerpt, NOT_BLANK_PATTERN } from "@/lib/doc/text";
+import { dayKey } from "@/lib/when";
+import { groupBy, isLockedFor, lockedForSql, sealsOfBooks } from "@/server/seal/seals";
 
 export type ShelfBook = {
   id: string;
@@ -19,20 +20,95 @@ export type ShelfBook = {
   newCount: number;
   /** So to nam trong niem phong con khoa voi nguoi xem. */
   lockedCount: number;
-  lastPosition: number;
-  /** To cuoi dang nam trong niem phong con khoa voi nguoi xem: excerpt khi do chi la dong he lo (hoac null). */
-  lastLocked: boolean;
+  /**
+   * To ke sach mo man doc: to co chu duoc chon cho hom nay (xem pickedSheets), khong co thi to doc duoc dau tien co chu;
+   * cuon khong co to doc duoc nao co chu thi la to doc duoc dau tien, va moi to deu khoa thi la to cuoi. 0 khi chua co to.
+   */
+  excerptPosition: number;
+  /** Khong co to doc duoc nao co chu va to cuoi dang nam trong niem phong con khoa voi nguoi xem: excerpt chi la dong he lo. */
+  excerptLocked: boolean;
   lastPublishedAt: Date | null;
+  /**
+   * Chu cua to excerptPosition khi to do co chu; khi excerptLocked thi chi la dong he lo (hoac null), khong bao gio la chu
+   * that; khong co to doc duoc nao co chu thi null (nhan media khong phai doan van).
+   */
   excerpt: string | null;
   createdAt: Date;
 };
+
+/** To co it nhat mot nut chu chua ky tu khong phai khoang trang (cung tap khoang trang voi docExcerpt). */
+const HAS_TEXT = sql`exists (select 1 from jsonb_path_query(${pages.content}, '$.** ? (@.type == "text").text') as chu(v) where (chu.v #>> '{}') ~ ${NOT_BLANK_PATTERN})`;
+
+/** Niem phong phu to dang xet (pages) va con khoa voi nguoi xem; dung trong truy van co join books. */
+function lockedSealOf(tx: AnyDb, viewerId: string, now: Date) {
+  return tx
+    .select({ id: seals.id })
+    .from(seals)
+    .where(and(
+      eq(seals.bookId, pages.bookId),
+      lte(seals.firstPosition, pages.position),
+      gte(seals.lastPosition, pages.position),
+      lockedForSql(sql`${books.ownerId} = ${viewerId}`, now),
+    ));
+}
+
+/**
+ * To cua doan trich hom nay, moi cuon mot dong. Ung vien la cac to co chu, khong nam trong niem phong con khoa voi nguoi
+ * xem, va voi cuon cua nguoi kia thi nguoi xem da doc toi (position <= dau doc, khong co dau doc la 0): ke sach khong lo
+ * to chua doc, va bam khung khong day dau doc vuot cac to chua doc (markRead chi tang). To duoc chon la ung vien thu k
+ * theo vi tri, k = md5("cuon:nguoi xem:ngay Viet Nam") lay 32 bit dau, du theo so ung vien. Chay tron trong SQL, khong
+ * tai moi to ve may chu ung dung. Cung ngay thi cung to, sang ngay thi doi; moi nguoi xem mot chuoi rieng. Cuon khong
+ * co ung vien nao thi khong co dong (xem firstReadableSheets).
+ */
+function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
+  const candidates = tx
+    .select({
+      bookId: pages.bookId,
+      position: pages.position,
+      content: pages.content,
+      k: sql<number>`row_number() over (partition by ${pages.bookId} order by ${pages.position}) - 1`.as("k"),
+      n: sql<number>`count(*) over (partition by ${pages.bookId})`.as("n"),
+    })
+    .from(pages)
+    .innerJoin(books, eq(books.id, pages.bookId))
+    .leftJoin(readMarks, and(eq(readMarks.bookId, pages.bookId), eq(readMarks.accountId, viewerId)))
+    .where(and(
+      inArray(pages.bookId, ids),
+      HAS_TEXT,
+      notExists(lockedSealOf(tx, viewerId, now)),
+      or(eq(books.ownerId, viewerId), lte(pages.position, sql`coalesce(${readMarks.position}, 0)`)),
+    ))
+    .as("ung_vien");
+  const seed = sql`${candidates.bookId}::text || ':' || ${viewerId}::text || ':' || ${dayKey(now)}::text`;
+  return tx
+    .select({ bookId: candidates.bookId, position: candidates.position, content: candidates.content })
+    .from(candidates)
+    .where(sql`${candidates.k} = mod(('x' || substr(md5(${seed}), 1, 8))::bit(32)::bigint, ${candidates.n})`);
+}
+
+/**
+ * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem), uu tien to co
+ * chu: du phong khi pickedSheets khong co ung vien. Voi nguoi chua doc gi, to co chu dau tien la to chua doc ke tiep can
+ * doc. Cuon khong co to doc duoc nao co chu thi dong nay la to doc duoc dau tien (hasText sai): man doc mo o day, khong
+ * vuot to chua doc nao. Moi to deu khoa thi khong co dong.
+ */
+function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
+  return tx
+    .selectDistinctOn([pages.bookId], {
+      bookId: pages.bookId, position: pages.position, content: pages.content, hasText: sql<boolean>`${HAS_TEXT}`,
+    })
+    .from(pages)
+    .innerJoin(books, eq(books.id, pages.bookId))
+    .where(and(inArray(pages.bookId, ids), notExists(lockedSealOf(tx, viewerId, now))))
+    .orderBy(pages.bookId, sql`not ${HAS_TEXT}`, pages.position);
+}
 
 /**
  * Ke sach cua viewer: moi cuon cua minh (ca rieng tu) va cac cuon chia se cua nguoi kia.
  * Cuon rieng tu cua nguoi kia khong bao gio xuat hien, ke ca ten.
  * Sap theo to dang gan nhat, cuon chua co to nao xep sau theo ngay tao.
- * Moi cau lenh doc chung mot anh chup: to cuoi, doan trich cua no va niem phong phu no luon den tu cung mot
- * trang thai, nen mot publishDraft commit giua chung khong the dua chu that cua to khoa vao doan trich.
+ * Moi cau lenh doc chung mot anh chup: to duoc chon, to cuoi, doan trich va niem phong phu chung luon den tu cung mot
+ * trang thai, nen mot publishDraft hay mot lan mo khoa commit giua chung khong the dua chu that cua to khoa vao doan trich.
  */
 export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Date()): Promise<ShelfBook[]> {
   return readSnapshot(db, async (tx) => {
@@ -47,7 +123,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     if (visible.length === 0) return [];
 
     const ids = visible.map((b) => b.id);
-    const [stats, marks, latest, ranges] = await Promise.all([
+    const [stats, marks, ranges, picked, firsts] = await Promise.all([
       tx
         .select({ bookId: pages.bookId, n: count(), last: max(pages.position), at: max(pages.publishedAt) })
         .from(pages)
@@ -57,27 +133,29 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
         .select({ bookId: readMarks.bookId, position: readMarks.position })
         .from(readMarks)
         .where(and(eq(readMarks.accountId, viewerId), inArray(readMarks.bookId, ids))),
-      tx
-        .selectDistinctOn([pages.bookId], { bookId: pages.bookId, content: pages.content })
-        .from(pages)
-        .where(inArray(pages.bookId, ids))
-        .orderBy(pages.bookId, desc(pages.position)),
       sealsOfBooks(tx, ids),
+      pickedSheets(tx, ids, viewerId, now),
+      firstReadableSheets(tx, ids, viewerId, now),
     ]);
 
     const statOf = new Map(stats.map((s) => [s.bookId, s]));
     const markOf = new Map(marks.map((m) => [m.bookId, m.position]));
-    const latestOf = new Map(latest.map((l) => [l.bookId, l.content]));
     const rangesOf = groupBy(ranges, (r) => r.bookId);
+    const pickedOf = new Map(picked.map((p) => [p.bookId, p]));
+    const firstOf = new Map(firsts.map((p) => [p.bookId, p]));
 
     return visible
       .map((b): ShelfBook => {
         const s = statOf.get(b.id);
         const last = s?.last ?? 0;
         const mine = b.ownerId === viewerId;
-        const content = latestOf.get(b.id);
         const locked = (rangesOf.get(b.id) ?? []).filter((r) => isLockedFor(r, mine, now));
-        const lastLocked = locked.find((r) => r.firstPosition <= last && last <= r.lastPosition);
+        // To chon hom nay; khong co thi to doc duoc dau tien co chu. Khong to doc duoc nao co chu thi giu cach cu: dong
+        // he lo cua niem phong phu to cuoi neu con khoa, khong thi khong co doan trich; man doc van mo o to doc duoc dau
+        // tien (moi to deu khoa thi to cuoi) de bam khung khong day dau doc vuot to chua doc.
+        const first = firstOf.get(b.id);
+        const sheet = pickedOf.get(b.id) ?? (first?.hasText ? first : undefined);
+        const lastSeal = sheet ? undefined : locked.find((r) => r.firstPosition <= last && last <= r.lastPosition);
         return {
           id: b.id, title: b.title, mode: b.mode, cover: b.cover, coverMediaId: b.coverMediaId, mine, ownerNickname: b.ownerNickname,
           pageCount: s?.n ?? 0,
@@ -85,10 +163,10 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
           // To niem phong van tinh la to moi: markRead khong cho moc vuot qua to dang khoa.
           newCount: mine ? 0 : Math.max(0, last - (markOf.get(b.id) ?? 0)),
           lockedCount: locked.reduce((n, r) => n + r.lastPosition - r.firstPosition + 1, 0),
-          lastPosition: last,
-          lastLocked: lastLocked !== undefined,
+          excerptPosition: sheet?.position ?? first?.position ?? last,
+          excerptLocked: lastSeal !== undefined,
           lastPublishedAt: s?.at ?? null,
-          excerpt: lastLocked ? lastLocked.teaser || null : content ? docExcerpt(content) : null,
+          excerpt: sheet ? docExcerpt(sheet.content) : lastSeal?.teaser || null,
           createdAt: b.createdAt,
         };
       })

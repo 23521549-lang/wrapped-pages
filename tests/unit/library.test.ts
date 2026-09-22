@@ -82,25 +82,30 @@ describe("ke sach", () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await dang(db, seat1.id, chung, "một", "hai", "ba");
     const cuaNguoiKia = (await listShelf(db, seat2.id)).find((b) => b.id === chung)!;
-    expect(cuaNguoiKia).toMatchObject({ pageCount: 3, newCount: 3, lastPosition: 3, mine: false, ownerNickname: "Linh" });
+    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
+    // Nguoi kia chua doc gi nen doan trich la to doc duoc dau tien co chu.
+    expect(cuaNguoiKia).toMatchObject({ pageCount: 3, newCount: 3, excerptPosition: 1, mine: false, ownerNickname: "Linh" });
     await markRead(db, seat2.id, chung, 2);
     expect((await listShelf(db, seat2.id)).find((b) => b.id === chung)!.newCount).toBe(1);
     expect((await listShelf(db, seat1.id)).find((b) => b.id === chung)!).toMatchObject({ newCount: 0, mine: true });
   });
 
-  it("cuon co to dang gan nhat nam dau ke, kem doan trich cua to cuoi", async () => {
+  it("cuon co to dang gan nhat nam dau ke; doan trich la chu cua dung to excerptPosition", async () => {
     const { db, seat1, chung, rieng } = await haiCuon();
     await dang(db, seat1.id, rieng, "cũ");
     await dang(db, seat1.id, chung, "đầu", "Em tới sớm hơn giờ hẹn bốn mươi phút");
     const shelf = await listShelf(db, seat1.id);
-    expect(shelf[0]).toMatchObject({ id: chung, excerpt: "Em tới sớm hơn giờ hẹn bốn mươi phút" });
-    expect(shelf[1]).toMatchObject({ id: rieng, excerpt: "cũ" });
+    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
+    expect(shelf[0].id).toBe(chung);
+    expect(shelf[0].excerpt).toBe(["đầu", "Em tới sớm hơn giờ hẹn bốn mươi phút"][shelf[0].excerptPosition - 1]);
+    expect(shelf[1]).toMatchObject({ id: rieng, excerpt: "cũ", excerptPosition: 1 });
   });
 
   it("cuon chua co to nao van len ke, khong co doan trich", async () => {
     const { db, seat1, chung } = await haiCuon();
     expect((await listShelf(db, seat1.id)).find((b) => b.id === chung)).toMatchObject({
-      pageCount: 0, newCount: 0, lastPosition: 0, lastPublishedAt: null, excerpt: null,
+      // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
+      pageCount: 0, newCount: 0, excerptPosition: 0, excerptLocked: false, lastPublishedAt: null, excerpt: null,
     });
   });
 });

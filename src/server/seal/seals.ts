@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { sealAttempts, sealReplies, seals } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { DocJson } from "@/lib/doc/types";
@@ -33,6 +33,16 @@ export async function insertSeal(
 export function isLockedFor(seal: Pick<SealRow, "kind" | "opensAt" | "openedAt">, isOwner: boolean, now: Date): boolean {
   if (seal.kind === "hen-gio") return seal.opensAt === null || now.getTime() < seal.opensAt.getTime();
   return !isOwner && seal.openedAt === null;
+}
+
+/**
+ * Luat cua isLockedFor viet bang SQL, cho truy van chon to tren ke sach: dong seals dang xet con khoa voi nguoi xem
+ * khong. isOwner la bieu thuc SQL dung khi nguoi xem la chu sach. Hen gio khoa ca chu sach toi opens_at; cau do va trao
+ * doi khoa nguoi kia toi khi opened_at co. Doi luat o isLockedFor thi doi ca o day: tests/unit/shelf-excerpt.test.ts so
+ * hai ban tren tung truong hop.
+ */
+export function lockedForSql(isOwner: SQL, now: Date): SQL {
+  return sql`(case when ${seals.kind} = 'hen-gio' then ${seals.opensAt} is null or ${seals.opensAt} > ${now.toISOString()}::timestamptz else not (${isOwner}) and ${seals.openedAt} is null end)`;
 }
 
 /** Moi niem phong cua mot cuon, theo vi tri. Dong day du, chi dung ben trong may chu. */

@@ -94,10 +94,10 @@ export default async function KeSach() {
                   cover={recent.cover}
                   coverMediaId={recent.coverMediaId}
                   pageCount={recent.pageCount}
-                  lastPosition={recent.lastPosition}
+                  lastPosition={recent.excerptPosition}
                   when={when(recent)}
                   excerpt={recent.excerpt}
-                  locked={recent.lastLocked}
+                  locked={recent.excerptLocked}
                   isPrivate={recent.mode === "rieng-tu"}
                   action={recent.mine
                     ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet` }
