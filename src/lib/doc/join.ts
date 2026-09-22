@@ -1,7 +1,7 @@
 import type { DocJson } from "./types";
 
 /** Nut tai lieu nhin chung: khoi, muc danh sach, doan, chu hay xuong dong. */
-type Nut = { type: string; content?: Nut[]; noiTiep?: true; text?: string; marks?: unknown[]; attrs?: unknown };
+type Nut = { type: string; content?: Nut[]; noiTiep?: boolean; text?: string; marks?: unknown[]; attrs?: unknown };
 
 const laNoiDong = (n: Nut) => n.type === "text" || n.type === "hardBreak";
 
@@ -20,22 +20,30 @@ function nhanh(goc: Nut, cuoi: boolean): Nut[] {
 
 /**
  * So tang can noi giua to truoc va to sau: bao nhieu nut tren nhanh dau cua to sau la phan tiep cua nut tren nhanh
- * cuoi cua to truoc. splitDoc dat dau noiTiep tren moi nut bi cat, va nut bi cat thi moi nut bao no cung bi cat.
- * To cat theo cach cu chi co dau tren muc danh sach: muc chi gom mot doan, nen doan cua muc cung bi cat. To cu khong
- * co dau nao ma to truoc ket thuc bang mot lan xuong dong (Shift+Enter) thi cho ngat nam ngay sau lan xuong dong do,
- * trong cung mot doan. Hai nhanh phai cung loai o moi tang duoc noi; lech thi dung o tang lech.
+ * cuoi cua to truoc. Xet rieng tung bien to.
+ * Cach cat moi: khoi dau cua to sau co dau noiTiep (true hay false). splitDoc dat true tren moi nut bi cat, va nut bi
+ * cat thi moi nut bao no cung bi cat, nen so tang la so dau true lien nhau tu tren xuong; false la to bat dau dung bien
+ * khoi, khong noi.
+ * Cach cat cu (khoi dau khong co dau): chi muc danh sach co dau; muc chi gom mot doan, nen doan cua muc cung bi cat.
+ * To truoc ket thuc bang mot lan xuong dong (Shift+Enter) ma to sau khong co dau nao thi cho ngat nam ngay sau lan
+ * xuong dong do, trong cung mot doan. Khoi media khong mang dau va khong bao gio noi (loai lech o tang dau).
+ * Hai nhanh phai cung loai o moi tang duoc noi; lech thi dung o tang lech.
  */
-function soTangNoi(truoc: Nut, sau: Nut, catMoi: boolean): number {
+function soTangNoi(truoc: Nut, sau: Nut): number {
   const dau = nhanh(sau, false);
   const cuoi = nhanh(truoc, true);
   let d = 0;
-  dau.forEach((n, i) => {
-    if (n.noiTiep === true) d = i + 1;
-  });
-  if (d > 0 && dau[d - 1].type === "listItem") d += 1;
-  const doanCuoi = cuoi[cuoi.length - 1];
-  const hetBangXuongDong = doanCuoi?.type === "paragraph" && doanCuoi.content?.[doanCuoi.content.length - 1]?.type === "hardBreak";
-  if (!catMoi && d === 0 && hetBangXuongDong) d = dau.length;
+  if (typeof dau[0]?.noiTiep === "boolean") {
+    while (d < dau.length && dau[d].noiTiep === true) d++;
+  } else {
+    dau.forEach((n, i) => {
+      if (n.noiTiep === true) d = i + 1;
+    });
+    if (d > 0 && dau[d - 1].type === "listItem") d += 1;
+    const doanCuoi = cuoi[cuoi.length - 1];
+    const hetBangXuongDong = doanCuoi?.type === "paragraph" && doanCuoi.content?.[doanCuoi.content.length - 1]?.type === "hardBreak";
+    if (d === 0 && hetBangXuongDong) d = dau.length;
+  }
   let k = 0;
   while (k < d && k < cuoi.length && k < dau.length && cuoi[k].type === dau[k].type) k++;
   return k;
@@ -75,17 +83,16 @@ function boDau(n: Nut): void {
 }
 
 /**
- * Noi cac to cua mot luot thanh mot tai lieu cho trinh viet. To cat bang splitDoc co dau noiTiep: noi roi cat lai o
- * cung cac cho ngat ra dung cac to cu, nen xep trang lai ngat dung cho cu khi chua sua gi. To cu thieu dau tren doan
- * va trich dan: phan sau cua khoi bi cat thanh khoi rieng, cho ngat va noi dung tung to van y nhu cu. Tai lieu tra ve
+ * Noi cac to cua mot luot thanh mot tai lieu cho trinh viet. To cat bang splitDoc co dau noiTiep o khoi dau moi to
+ * sau: noi roi cat lai o cung cac cho ngat ra dung cac to cu, nen xep trang lai ngat dung cho cu khi chua sua gi. To cu
+ * thieu dau tren doan va trich dan: phan sau cua khoi bi cat thanh khoi rieng, cho ngat va noi dung tung to van y nhu
+ * cu. Moi bien to duoc xet rieng theo dau cua khoi dau to sau (xem soTangNoi). Tai lieu tra ve
  * khong con dau noiTiep nao (so do cua trinh viet khong co dau do). Thuan, khong doi dau vao.
  */
 export function joinSheets(sheets: readonly DocJson[]): DocJson {
   const [dau, ...con] = sheets.map((s) => structuredClone(s) as unknown as Nut);
   if (!dau) return { type: "doc", content: [{ type: "paragraph" }] };
-  // Cach cat moi dat dau tren doan, danh sach, trich dan bi cat ngang: co mot dau nhu vay la ca luot cat theo cach moi.
-  const catMoi = con.some((to) => nhanh(to, false).some((n) => n.noiTiep === true && n.type !== "listItem"));
-  for (const to of con) noi(dau, to, soTangNoi(dau, to, catMoi));
+  for (const to of con) noi(dau, to, soTangNoi(dau, to));
   boDau(dau);
   return dau as unknown as DocJson;
 }

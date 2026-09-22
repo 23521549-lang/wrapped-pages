@@ -42,7 +42,7 @@ const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !
 
 /**
  * Kiem mot tai lieu do trinh duyet gui len theo danh sach cho phep, roi dung lai ban sach:
- * chi giu type, content, text, marks va dau noiTiep = true (xem splitDoc); moi thuoc tinh khac bi bo. Sai bat ky cho nao thi tra null.
+ * chi giu type, content, text, marks va dau noiTiep kieu boolean (xem splitDoc); moi thuoc tinh khac bi bo. Sai bat ky cho nao thi tra null.
  * Ky tu NUL va nua cap surrogate le bi bo (xem toStorable) vi Postgres khong luu duoc chung trong jsonb.
  * Khoi media (anh, ghi am) chi hop le o cap cao nhat va duoc kiem chat hon khoi chu: thieu hay thua thuoc tinh la tu
  * choi ca tai lieu (cleanMedia). Khoi media khong cong ky tu nao vao tran chu, nen duoc dem rieng trong cung budget:
@@ -78,9 +78,9 @@ function cleanBlocks(list: unknown[], depth: number, budget: Budget): TextBlockN
   return out;
 }
 
-/** Dau noiTiep (xem splitDoc) chi giu khi dung la true; gia tri khac bi bo nhu moi thuoc tinh la. */
-function tiepCua(node: Obj): { noiTiep?: true } {
-  return node.noiTiep === true ? { noiTiep: true } : {};
+/** Dau noiTiep (xem splitDoc) chi giu khi la boolean (true hay false); gia tri khac bi bo nhu moi thuoc tinh la. */
+function tiepCua(node: Obj): { noiTiep?: boolean } {
+  return typeof node.noiTiep === "boolean" ? { noiTiep: node.noiTiep } : {};
 }
 
 /**

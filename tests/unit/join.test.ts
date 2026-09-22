@@ -112,6 +112,38 @@ describe("joinSheets: to cat theo cach moi", () => {
     expect(joinSheets(to)).toEqual(hai.toJSON());
   });
 
+  it("chi ngat o bien khoi cap cao nhat, doan truoc ket thuc bang Shift+Enter: khong noi, cat lai ra dung cac to cu", () => {
+    const hai = PMNode.fromJSON(schema, { type: "doc", content: [p(t("Kết"), { type: "hardBreak" }), p(t("Sau"))] });
+    const cho = [hai.child(0).nodeSize];
+    const to = splitDoc(hai, cho);
+    expect(to[1].content[0]).toEqual({ ...p(t("Sau")), noiTiep: false });
+    const noi = joinSheets(to);
+    expect(noi).toEqual(hai.toJSON());
+    expect(splitDoc(PMNode.fromJSON(schema, noi), cho)).toEqual(to);
+  });
+
+  it("nhieu kieu bien trong mot luot: giua doan, bien khoi sau Shift+Enter, giua muc danh sach, truoc anh", () => {
+    const doc = PMNode.fromJSON(schema, {
+      type: "doc",
+      content: [
+        p(t("Một hai ba")),
+        p(t("Kết"), { type: "hardBreak" }),
+        { type: "bulletList", content: [li("một"), li("hai")] },
+        { type: "anh", attrs: { id: ANH, w: 10, h: 10 } },
+        p(t("Cuối")),
+      ],
+    });
+    const c0 = doc.child(0).nodeSize;
+    const c1 = c0 + doc.child(1).nodeSize;
+    const c2 = c1 + doc.child(2).nodeSize;
+    const cho = [1 + "Một ".length, c0, c1, c1 + 1 + doc.child(2).child(0).nodeSize, c2];
+    const to = splitDoc(doc, cho);
+    expect(to.map((s) => (s.content[0] as { noiTiep?: boolean }).noiTiep)).toEqual([undefined, true, false, false, true, undefined]);
+    const noi = joinSheets(to);
+    expect(noi).toEqual(doc.toJSON());
+    expect(splitDoc(PMNode.fromJSON(schema, noi), cho)).toEqual(to);
+  });
+
   it("khong doi dau vao, khong con dau noiTiep nao trong tai lieu noi", () => {
     const to = splitDoc(MAU, [viTriNgat(MAU)[3]]);
     const truoc = JSON.stringify(to);
@@ -127,7 +159,10 @@ describe("joinSheets: to cat theo cach cu (chi muc danh sach co dau)", () => {
     const noi = joinSheets(cu);
     expect(noi).toEqual({ type: "doc", content: [p(t("Một hai ")), p(t("ba bốn năm")), p(t("Sáu"))] });
     const lai = PMNode.fromJSON(schema, noi);
-    expect(splitDoc(lai, [lai.child(0).nodeSize])).toEqual(cu);
+    // Cat lai ra to cach moi (co dau false o bien): noi dung tung to y het to cu, chi them dau.
+    const lan2 = splitDoc(lai, [lai.child(0).nodeSize]);
+    expect(lan2[1].content[0]).toEqual({ ...p(t("ba bốn năm")), noiTiep: false });
+    expect(cachCu(lan2)).toEqual(cu);
   });
 
   it("cat giua muc danh sach: muc, doan va danh sach noi lai nhu goc", () => {
@@ -142,6 +177,28 @@ describe("joinSheets: to cat theo cach cu (chi muc danh sach co dau)", () => {
     const cu = cachCu(splitDoc(tho, [1 + "Dòng một".length + 1]));
     expect(JSON.stringify(cu)).not.toContain("noiTiep");
     expect(joinSheets(cu)).toEqual(tho.toJSON());
+  });
+
+  it("to cu khong co dau nao, to truoc ket thuc bang Shift+Enter o bien khoi: van noi theo luat cu", () => {
+    const cu: DocJson[] = [
+      { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Kết" }, { type: "hardBreak" }] }] },
+      { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Sau" }] }] },
+    ];
+    expect(joinSheets(cu)).toEqual({ type: "doc", content: [p(t("Kết"), { type: "hardBreak" }, t("Sau"))] });
+  });
+
+  it("luot tron to cu va to moi: moi bien xet theo dau cua chinh no", () => {
+    const ket = { type: "paragraph" as const, content: [{ type: "text" as const, text: "Kết" }, { type: "hardBreak" as const }] };
+    const sau = (noiTiep?: boolean) => ({ type: "paragraph" as const, ...(noiTiep === undefined ? {} : { noiTiep }), content: [{ type: "text" as const, text: "Sau" }] });
+    const to: DocJson[] = [
+      { type: "doc", content: [ket] },
+      { type: "doc", content: [sau(false), ket] },
+      { type: "doc", content: [sau()] },
+    ];
+    expect(joinSheets(to)).toEqual({
+      type: "doc",
+      content: [p(t("Kết"), { type: "hardBreak" }), p(t("Sau")), p(t("Kết"), { type: "hardBreak" }, t("Sau"))],
+    });
   });
 
   it("mot to: tra lai ban sao cua chinh to do", () => {

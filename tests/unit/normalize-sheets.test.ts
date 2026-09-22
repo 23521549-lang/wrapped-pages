@@ -27,6 +27,20 @@ describe("normalizeSheets", () => {
     ]);
   });
 
+  it("giu dau false tren khoi dau cua to sau; bo dau false o to dau va o cho khac", () => {
+    const voi = (noiTiep: boolean) => ({ type: "paragraph" as const, noiTiep, content: [{ type: "text" as const, text: "x" }] });
+    const to: DocJson[] = [
+      { type: "doc", content: [voi(false)] },
+      { type: "doc", content: [voi(false), voi(false)] },
+      { type: "doc", content: [{ type: "blockquote", noiTiep: false, content: [voi(false)] }] },
+    ];
+    expect(normalizeSheets(to)).toEqual([
+      { type: "doc", content: [doan("x")] },
+      { type: "doc", content: [voi(false), doan("x")] },
+      { type: "doc", content: [{ type: "blockquote", noiTiep: false, content: [doan("x")] }] },
+    ]);
+  });
+
   it("khong doi dau vao, khong them dau o cho chua co", () => {
     const to: DocJson[] = [{ type: "doc", content: [doan("a")] }, { type: "doc", content: [doan("b")] }];
     const truoc = JSON.stringify(to);

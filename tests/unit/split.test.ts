@@ -59,11 +59,13 @@ describe("splitDoc", () => {
     expect(splitDoc(DOC, [])).toEqual([DOC.toJSON()]);
   });
 
-  it("ngat o bien khoi: hai phan deu nguyen cau truc, khong co dau noi tiep", () => {
+  it("ngat o bien khoi: hai phan deu nguyen cau truc, khoi dau phan sau mang noiTiep = false, khong dau true nao", () => {
     const [a, c] = splitDoc(DOC, [blockBoundary(DOC, doan(DOC)[1])]);
     expect(a.content.map((n) => n.type)).toEqual(["paragraph"]);
     expect(c.content.map((n) => n.type)).toEqual(["bulletList", "blockquote"]);
-    expect(JSON.stringify(c)).not.toContain("noiTiep");
+    expect(c.content[0]).toEqual({ type: "bulletList", noiTiep: false, content: [li("một"), li("hai hai hai")] });
+    expect(JSON.stringify(c)).not.toContain("true");
+    expect(JSON.stringify(a)).not.toContain("noiTiep");
     expect(cleanDoc(a)).toEqual(a);
     expect(cleanDoc(c)).toEqual(c);
   });
@@ -103,6 +105,16 @@ describe("splitDoc", () => {
     expect(a.content).toEqual([p("Mở ")]);
     expect(c.content[0]).toEqual({ ...p("đầu"), noiTiep: true });
     expect(c.content.slice(1).map((n) => n.type)).toEqual(["bulletList", "blockquote"]);
+    expect(cleanDoc(c)).toEqual(c);
+  });
+
+  it("to bat dau bang khoi media o bien khoi: khong dat dau len khoi media", () => {
+    const co = PMNode.fromJSON(schema, {
+      type: "doc",
+      content: [p("Trước"), { type: "anh", attrs: { id: "0b6f9d2c-4a1e-4c3b-9f7d-2e5a8c1b3d4f", w: 10, h: 10 } }],
+    });
+    const [, c] = splitDoc(co, [co.child(0).nodeSize]);
+    expect(JSON.stringify(c)).not.toContain("noiTiep");
     expect(cleanDoc(c)).toEqual(c);
   });
 
