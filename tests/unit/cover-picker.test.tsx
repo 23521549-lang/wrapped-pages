@@ -211,6 +211,44 @@ describe("BookForm bia tu tai len: buoc cat", () => {
 });
 
 describe("BookForm bia tu tai len: tai len", () => {
+  it("o chon tep nhan ca HEIC, HEIF, AVIF", () => {
+    formMoi();
+    expect(oTep().accept).toBe("image/*,.heic,.heif,.avif");
+  });
+
+  it("HEIC: luc bo doc HEIF dang chay hien Dang doc anh, nut gui khoa; Huy doc thi bo ket qua va tra anh", async () => {
+    const loi = new DOMException("heic", "InvalidStateError");
+    giaiMa.mockRejectedValueOnce(loi).mockRejectedValueOnce(loi);
+    let xong!: (b: typeof anhHeif) => void;
+    decodeHeif.mockImplementationOnce(() => new Promise((ok) => { xong = ok; }));
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepTu(isoDau("heic", ["mif1"], ispe(120, 80)), "IMG_0003.HEIC")] } });
+    expect(await screen.findByRole("progressbar", { name: "Đang đọc ảnh" })).toBeTruthy();
+    expect(loa()).toBe("Đang đọc ảnh");
+    expect(nut("Tạo sách").disabled).toBe(true);
+    fireEvent.click(nut("Hủy đọc ảnh"));
+    expect([screen.queryByRole("progressbar"), nut("Tạo sách").disabled, document.activeElement === oTep()]).toEqual([null, false, true]);
+    await act(async () => xong(anhHeif));
+    expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    expect(anhHeif.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("khong nap duoc bo doc HEIF: Thu lai nap lai va doc lai dung tep, mo buoc cat", async () => {
+    const loi = new DOMException("heic", "InvalidStateError");
+    giaiMa.mockRejectedValueOnce(loi).mockRejectedValueOnce(loi).mockRejectedValueOnce(loi).mockRejectedValueOnce(loi);
+    loadHeif.mockRejectedValueOnce(new TypeError("Failed to fetch dynamically imported module"));
+    formMoi();
+    const tep = tepTu(isoDau("heic", ["mif1"], ispe(120, 80)), "IMG_0004.HEIC");
+    fireEvent.change(oTep(), { target: { files: [tep] } });
+    await waitFor(() => expect(loa()).toBe("Chưa tải được bộ đọc ảnh iPhone, thử lại."));
+    expect(screen.queryByRole("button", { name: "Chọn ảnh khác" })).toBeNull();
+    fireEvent.click(nut("Thử lại"));
+    const cat = await screen.findByRole("group", { name: "Khung cắt ảnh bìa" });
+    expect(cat.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 80 120");
+    expect(loadHeif).toHaveBeenCalledTimes(2);
+    expect(decodeHeif).toHaveBeenCalledWith(tep);
+  });
+
   it("Dung anh nay: cat dung khung ve 1200x720 WebP, tai len loai bia; xong thi Anh cua ban dang chon, xem truoc doi theo, form gui coverMedia", async () => {
     const xong = taiTreo();
     formMoi();

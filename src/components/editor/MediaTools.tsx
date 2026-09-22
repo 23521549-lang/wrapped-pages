@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { IconAnh, IconMic } from "@/components/media/icons";
+import { IMAGE_ACCEPT } from "@/lib/media/image";
 import { ImageUploadLine } from "./ImageUploadLine";
 import { insertMediaBlock } from "./insertMedia";
 import { DA_CHEN_GHI_AM, mediaAnnouncement } from "./mediaAnnounce";
@@ -107,7 +108,7 @@ export function MediaTools({ editor, bookId, author, mediaEnabled, announce, ext
         <input
           ref={chonAnhRef}
           type="file"
-          accept="image/*"
+          accept={IMAGE_ACCEPT}
           hidden
           onChange={(e) => {
             const tep = e.currentTarget.files?.[0];

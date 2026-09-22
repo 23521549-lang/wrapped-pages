@@ -18,22 +18,29 @@ export type SourceImage = { image: DecodedImage; size: ImageSize; previewUrl: st
 export async function readSourceImage(file: File, options: { onHeif?: () => void } = {}): Promise<SourceImage | ImageFailure> {
   const image = await decodeImage(file, options);
   if (typeof image === "string") return image;
-  const size = { width: image.width, height: image.height };
-  const k = Math.min(1, PREVIEW_MAX_SIDE / Math.max(size.width, size.height));
-  const width = Math.max(1, Math.round(size.width * k));
-  const height = Math.max(1, Math.round(size.height * k));
-  const canvas = paintCanvas(width, height, (ctx) => ctx.drawImage(image.source, 0, 0, width, height));
-  const preview = canvas && (await canvasBlob(canvas, "image/jpeg", PREVIEW_QUALITY));
-  // Byte cua anh xem truoc da nam trong blob: tra bo dem canvas (toi 1600 canh dai) lai ngay, cung ly do nhu encodeCanvas.
-  if (canvas) {
-    canvas.width = 0;
-    canvas.height = 0;
-  }
-  if (!preview) {
+  try {
+    const size = { width: image.width, height: image.height };
+    const k = Math.min(1, PREVIEW_MAX_SIDE / Math.max(size.width, size.height));
+    const width = Math.max(1, Math.round(size.width * k));
+    const height = Math.max(1, Math.round(size.height * k));
+    const canvas = paintCanvas(width, height, (ctx) => ctx.drawImage(image.source, 0, 0, width, height));
+    const preview = canvas && (await canvasBlob(canvas, "image/jpeg", PREVIEW_QUALITY));
+    // Byte cua anh xem truoc da nam trong blob: tra bo dem canvas (toi 1600 canh dai) lai ngay, cung ly do nhu encodeCanvas.
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    if (!preview) {
+      image.release();
+      return canvas ? "broken" : "too-large";
+    }
+    return { image, size, previewUrl: URL.createObjectURL(preview) };
+  } catch (err) {
+    // ve (drawImage) hay ma hoa xem truoc (toBlob) nem loi thay vi tra null (vd ImageBitmap bi dong o noi khac giua
+    // chung): giai phong anh goc ngay o day, khong thi ro ri bo nho toi khi ai do dong tab hay lam moi trang.
     image.release();
-    return canvas ? "broken" : "too-large";
+    throw err;
   }
-  return { image, size, previewUrl: URL.createObjectURL(preview) };
 }
 
 /** Giai phong anh goc: tra bo nho cua anh da giai ma, thu hoi blob URL xem truoc. */

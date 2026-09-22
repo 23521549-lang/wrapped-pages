@@ -6,7 +6,7 @@ import { IconAnh } from "@/components/media/icons";
 import { UploadFailure, UploadProgress } from "@/components/media/UploadLine";
 import { COVERS, type CoverKey } from "@/lib/book";
 import type { CropRect, ImageSize } from "@/lib/media/crop";
-import { IMAGE_ERRORS, IMAGE_HINTS, type ImageFailure } from "@/lib/media/image";
+import { HEIF_LOADER_FAILURE, IMAGE_ACCEPT, IMAGE_ERRORS, IMAGE_HINTS, type ImageFailure } from "@/lib/media/image";
 import { COVER_LABEL, COVER_NAME, CoverArt } from "./CoverArt";
 import { CoverCrop } from "./CoverCrop";
 import { CoverImage } from "./CoverImage";
@@ -14,6 +14,8 @@ import { encodeCover, readSourceImage, releaseSourceImage, type SourceImage } fr
 
 /** Chu cua dong tai bia, dung cho ca dong hien va vung doc. */
 const TAI_BIA = "Đang tải ảnh bìa lên";
+/** Chu cua dong doc anh HEIC (bo doc mat vai giay), dung cho ca dong hien va vung doc. */
+const DOC_ANH = "Đang đọc ảnh";
 
 /**
  * Bia cua form sach. cover la tranh ve, luon co va la nen du phong. photo la bia tu tai len dang co (cua
@@ -29,9 +31,10 @@ export function chosenCoverMedia(value: CoverValue): string | null {
 /** Viec dang lam cua o bia anh. Anh goc cua buoc cat nam trong ref, vi phai giai phong dung luc. */
 type Step =
   | { kind: "nghi" }
+  | { kind: "doc" }
   | { kind: "cat"; size: ImageSize; previewUrl: string }
   | { kind: "tai" }
-  | { kind: "loi"; message: string; hint: string | null; retry: Blob | null };
+  | { kind: "loi"; message: string; hint: string | null; retry: (() => void) | null };
 
 export type CoverPickerProps = {
   value: CoverValue;
@@ -53,6 +56,8 @@ export type CoverPickerProps = {
  *   actionUploadMedia loai bia. Xong thi o cuoi thanh radio dang chon ve chinh anh do, kem Doi anh.
  * - Radio anh cung name "cover" voi cac tranh va mang value la tranh du phong, nen truong cover cua form luon la mot tranh
  *   ve; id anh di trong truong an coverMedia.
+ * - Tep HEIC ma trinh duyet khong doc duoc: hien Dang doc anh trong luc nap va chay bo doc HEIF; khong nap duoc (mat
+ *   mang) thi Thu lai doc lai tep.
  * Moi viec bat dong bo mang mot so luot (run): Huy, chon lai hay go component lam ket qua ve sau bi bo qua.
  */
 export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, onBusyChange }: CoverPickerProps) {
@@ -96,7 +101,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   function go(next: Step) {
     run.current += 1;
     setStep(next);
-    onBusyChange(next.kind === "cat" || next.kind === "tai");
+    onBusyChange(next.kind === "doc" || next.kind === "cat" || next.kind === "tai");
   }
 
   function dropSource() {
@@ -104,8 +109,10 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     source.current = null;
   }
 
-  function fail(reason: ImageFailure) {
-    go({ kind: "loi", message: IMAGE_ERRORS[reason], hint: IMAGE_HINTS[reason] ?? null, retry: null });
+  /** Loi doc anh. Hong bo doc anh iPhone (mat mang) thi Thu lai doc lai dung tep do; loi khac thi chon anh khac. */
+  function fail(reason: ImageFailure, file: File | null = null) {
+    const retry = reason === HEIF_LOADER_FAILURE && file ? () => void read(file) : null;
+    go({ kind: "loi", message: IMAGE_ERRORS[reason], hint: IMAGE_HINTS[reason] ?? null, retry });
   }
 
   // Cung mot cong: nut Doi anh (disabled tren chinh no), nut Chon anh khac o buoc cat va o dong loi (hai nut
@@ -115,25 +122,33 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     fileRef.current?.click();
   }
 
-  async function open(e: ChangeEvent<HTMLInputElement>) {
+  function open(e: ChangeEvent<HTMLInputElement>) {
     const file = e.currentTarget.files?.[0];
     // Xoa gia tri de chon lai dung tep do van bao change.
     e.currentTarget.value = "";
-    if (!file) return;
+    if (file) void read(file);
+  }
+
+  async function read(file: File) {
     const mine = ++run.current;
     // Giai ma (toi 40 MB) va ve lai anh xem truoc co the mat vai giay tren dien thoai: khoa nut gui ngay tu day,
     // truoc khi buoc cat kip hien, de khong tao sach thieu bia nguoi viet vua chon. go() se tu cap nhat lai
     // trang thai ban khi buoc cat hien hoac khi doc that bai.
     onBusyChange(true);
-    const read = await readSourceImage(file);
+    // Tep HEIC can nap bo doc rieng: hien dong "Dang doc anh" co nut Huy. Dat thang setStep, khong qua go(), de luot
+    // dang chay (mine) van la luot hien hanh.
+    const onHeif = () => {
+      if (run.current === mine) setStep({ kind: "doc" });
+    };
+    const got = await readSourceImage(file, { onHeif });
     if (run.current !== mine) {
-      if (typeof read !== "string") releaseSourceImage(read);
+      if (typeof got !== "string") releaseSourceImage(got);
       return;
     }
     dropSource();
-    if (typeof read === "string") return fail(read);
-    source.current = read;
-    go({ kind: "cat", size: read.size, previewUrl: read.previewUrl });
+    if (typeof got === "string") return fail(got, file);
+    source.current = got;
+    go({ kind: "cat", size: got.size, previewUrl: got.previewUrl });
   }
 
   async function use(rect: CropRect) {
@@ -156,7 +171,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     fd.set("file", blob, "bia");
     const result = await actionUploadMedia(fd).catch(() => null);
     if (run.current !== mine) return;
-    if (result === null) return go({ kind: "loi", message: IMAGE_ERRORS.upload, hint: null, retry: blob });
+    if (result === null) return go({ kind: "loi", message: IMAGE_ERRORS.upload, hint: null, retry: () => void upload(blob) });
     if ("error" in result) return go({ kind: "loi", message: result.error, hint: null, retry: null });
     focusNext.current = "photo";
     go({ kind: "nghi" });
@@ -170,7 +185,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   }
 
   const retry = step.kind === "loi" ? step.retry : null;
-  const status = step.kind === "tai" ? TAI_BIA : step.kind === "loi" ? [step.message, step.hint].filter(Boolean).join(" ") : "";
+  const status = step.kind === "tai" ? TAI_BIA : step.kind === "doc" ? DOC_ANH : step.kind === "loi" ? [step.message, step.hint].filter(Boolean).join(" ") : "";
 
   return (
     <fieldset className="chon" aria-describedby={photoChosen ? `${id}-du-phong` : undefined}>
@@ -211,7 +226,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept={IMAGE_ACCEPT}
                 disabled={disabled || uploading}
                 onChange={open}
                 aria-label="Ảnh của bạn, chọn ảnh làm bìa"
@@ -233,7 +248,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
                 ref={fileRef}
                 className="sr-only"
                 type="file"
-                accept="image/*"
+                accept={IMAGE_ACCEPT}
                 tabIndex={-1}
                 aria-hidden="true"
                 disabled={disabled || uploading}
@@ -249,9 +264,10 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
       {step.kind === "cat" && (
         <CoverCrop key={step.previewUrl} size={step.size} previewUrl={step.previewUrl} onUse={use} onPickAgain={pick} onCancel={back} />
       )}
+      {step.kind === "doc" && <UploadProgress label={DOC_ANH} cancelLabel="Hủy đọc ảnh" preview={null} onCancel={back} />}
       {step.kind === "tai" && <UploadProgress label={TAI_BIA} cancelLabel="Hủy tải ảnh bìa" preview={null} onCancel={back} />}
       {step.kind === "loi" && (
-        <UploadFailure message={step.message} hint={step.hint} preview={null} onRetry={retry ? () => upload(retry) : null} onPick={pick} onClose={back} />
+        <UploadFailure message={step.message} hint={step.hint} preview={null} onRetry={retry} onPick={pick} onClose={back} />
       )}
       {/* Mot vung doc giu nguyen qua moi trang thai, nen trinh doc man hinh doc duoc cau tai va cau loi moi. */}
       <output className="sr-only">{status}</output>

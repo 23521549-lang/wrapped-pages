@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Editor } from "@/components/editor/Editor";
 import type { DocJson } from "@/lib/doc/types";
-import { IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
+import { IMAGE_ACCEPT, IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
 import { PEAK_COUNT } from "@/lib/media/kinds";
-import { jpegDau, tepTu } from "../helpers/anh-mau";
+import { isoDau, ispe, jpegDau, tepTu } from "../helpers/anh-mau";
 
 /*
  * Them anh va ghi am o man viet tren Editor that. Trinh duyet gia: createImageBitmap va canvas cho anh;
@@ -20,6 +20,9 @@ vi.mock("@/app/actions/library", () => ({
   actionPublish: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ unstable_rethrow: () => {} }));
+
+const { loadHeif } = vi.hoisted(() => ({ loadHeif: vi.fn() }));
+vi.mock("@/components/media/loadHeif", () => ({ loadHeif }));
 
 const SACH = "5d3a1c2b-8e7f-4a6b-9c0d-1e2f3a4b5c6d";
 const ID = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
@@ -182,6 +185,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  loadHeif.mockReset();
 });
 
 describe("thanh cong cu man viet", () => {
@@ -213,6 +217,37 @@ describe("thanh cong cu man viet", () => {
 });
 
 describe("them anh", () => {
+  it("o chon anh nhan ca HEIC, HEIF, AVIF", async () => {
+    giaLapAnh(800, 600);
+    const { container } = await veEditor();
+    expect(container.querySelector<HTMLInputElement>('input[type="file"]')?.accept).toBe(IMAGE_ACCEPT);
+  });
+
+  it("anh HEIC: khong nap duoc bo doc thi Thu lai doc lai dung tep; dang doc thi bao Dang doc anh; xong thi chen", async () => {
+    const { createImageBitmap } = giaLapAnh(800, 600);
+    createImageBitmap.mockRejectedValue(new DOMException("heic", "InvalidStateError"));
+    let nap!: (giaiMa: (tep: Blob) => Promise<unknown>) => void;
+    loadHeif
+      .mockRejectedValueOnce(new TypeError("Failed to fetch dynamically imported module"))
+      .mockImplementationOnce(() => new Promise((ok) => { nap = ok; }));
+    actionUploadMedia.mockResolvedValue({ id: ID, w: 120, h: 80 });
+    const { container } = await veEditor();
+
+    await chonTep(container, tepTu(isoDau("heic", ["mif1", "heic"], ispe(120, 80)), "IMG_0001.HEIC"));
+    expect(dongTai(container)).toEqual(["Chưa tải được bộ đọc ảnh iPhone, thử lại."]);
+    expect(screen.queryByRole("button", { name: "Chọn ảnh khác" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
+    await xong();
+    expect([dongTai(container), vungDoc(container)]).toEqual([["Đang đọc ảnh"], "Đang đọc ảnh"]);
+    expect(screen.getByRole("button", { name: "Thêm ảnh" }).getAttribute("aria-disabled")).toBe("true");
+
+    await act(async () => nap(async () => ({ width: 120, height: 80, close: vi.fn() })));
+    await xong();
+    expect(actionUploadMedia).toHaveBeenCalledTimes(1);
+    expect(khoiCapCao(container)).toEqual(["P", "anh", "P"]);
+  });
+
   it("xoay theo EXIF, ve lai rong 1200 bang WebP, gui len, chen khoi sau doan dang go, bao Da chen anh roi tu an", async () => {
     const { bitmap, createImageBitmap, drawImage } = giaLapAnh(4000, 3000);
     actionUploadMedia.mockResolvedValue({ id: ID, w: 1200, h: 900 });

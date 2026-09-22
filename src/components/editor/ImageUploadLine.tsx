@@ -2,7 +2,7 @@
 
 import { IconDung } from "@/components/media/icons";
 import { UploadFailure, UploadProgress, UploadThumb } from "@/components/media/UploadLine";
-import { IMAGE_ERRORS, IMAGE_HINTS } from "@/lib/media/image";
+import { IMAGE_ERRORS, IMAGE_HINTS, imageRetryable } from "@/lib/media/image";
 import { IMAGE_STATUS, type ImageUploadState } from "./useImageUpload";
 
 type Props = {
@@ -37,7 +37,7 @@ export function ImageUploadLine({ state, onPick, onRetry, onClose }: Props) {
           message={IMAGE_ERRORS[state.problem]}
           hint={IMAGE_HINTS[state.problem] ?? null}
           preview={state.preview}
-          onRetry={state.problem === "upload" ? onRetry : null}
+          onRetry={imageRetryable(state.problem) ? onRetry : null}
           onPick={onPick}
           onClose={onClose}
         />

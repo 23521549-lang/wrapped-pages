@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { actionUploadMedia } from "@/app/actions/media";
-import { imageErrorText, type ImageProblem } from "@/lib/media/image";
+import { HEIF_LOADER_FAILURE, imageErrorText, type ImageProblem } from "@/lib/media/image";
 import type { ImageAttrs } from "@/lib/media/node";
 import { processImage } from "./processImage";
 
@@ -11,6 +11,7 @@ export const XONG_HIEN_MS = 3_000;
 
 /** Chu cua dong tai anh o cac buoc dang chay, dung cho ca dong hien va vung doc cua man viet. */
 export const IMAGE_STATUS = {
+  "doc-anh": "Đang đọc ảnh",
   "thu-nho": "Đang thu nhỏ ảnh",
   "tai-len": "Đang tải ảnh lên",
   xong: "Đã chèn ảnh.",
@@ -19,6 +20,7 @@ export const IMAGE_STATUS = {
 export type ImageUploadState =
   | { kind: "nghi" }
   | { kind: "thu-nho" }
+  | { kind: "doc-anh" }
   | { kind: "tai-len"; preview: string }
   | { kind: "xong"; preview: string }
   | { kind: "loi"; problem: ImageProblem; preview: string | null };
@@ -36,11 +38,13 @@ type Options = {
  * id va kich thuoc that may chu tra ve. Mot anh mot luc. Server action khong bao tien do tai len, nen thanh tien do chay
  * khong xac dinh. Thu lai dung lai anh da xu ly. Huy hay dong thi bo ket qua cua luot dang chay; tep da len kho (neu co)
  * thanh rac va duoc don sau 24 gio.
+ * Anh HEIC ma trinh duyet khong doc duoc thi nap bo doc rieng; khong nap duoc thi Thu lai doc lai dung tep.
  */
 export function useImageUpload({ bookId, onInsert, announce }: Options) {
   const [state, setState] = useState<ImageUploadState>({ kind: "nghi" });
   const luot = useRef(0);
   const anh = useRef<{ blob: Blob; preview: string } | null>(null);
+  const tep = useRef<File | null>(null);
   const hen = useRef<ReturnType<typeof setTimeout> | null>(null);
   const goi = useRef({ onInsert, announce });
 
@@ -59,8 +63,9 @@ export function useImageUpload({ bookId, onInsert, announce }: Options) {
 
   function doi(next: ImageUploadState) {
     setState(next);
-    // ImageUploadLine ve dong goi y ngay duoi cau loi cho nguoi nhin duoc; vung doc phai doc ca hai cau, khong thi
-    // nguoi dung trinh doc man hinh chi nghe cau loi ma khong nghe phai lam gi tiep theo.
+    // ImageUploadLine ve dong goi y ngay duoi cau loi cho nguoi nhin thay; vung doc phai doc ca cau loi lan cau goi y,
+    // khong thi nguoi dung trinh doc man hinh chi nghe cau loi ma khong nghe phai lam gi tiep theo. Cac buoc dang chay
+    // (doc anh HEIF, thu nho, tai len) chi can mot cau ngan bao dung viec dang xay ra.
     if (next.kind === "loi") goi.current.announce(imageErrorText(next.problem));
     else if (next.kind !== "nghi") goi.current.announce(IMAGE_STATUS[next.kind]);
   }
@@ -76,6 +81,7 @@ export function useImageUpload({ bookId, onInsert, announce }: Options) {
 
   function close() {
     don();
+    tep.current = null;
     setState({ kind: "nghi" });
   }
 
@@ -100,9 +106,15 @@ export function useImageUpload({ bookId, onInsert, announce }: Options) {
 
   async function pick(file: File) {
     don();
+    tep.current = file;
     const ma = luot.current;
     doi({ kind: "thu-nho" });
-    const ket = await processImage(file);
+    // Tep HEIC can nap bo doc rieng (vai giay): doi dong tien do sang "Dang doc anh" neu luot nay con hien hanh.
+    const ket = await processImage(file, {
+      onHeif: () => {
+        if (ma === luot.current) doi({ kind: "doc-anh" });
+      },
+    });
     if (ma !== luot.current) return;
     if ("problem" in ket) {
       doi({ kind: "loi", problem: ket.problem, preview: null });
@@ -112,10 +124,15 @@ export function useImageUpload({ bookId, onInsert, announce }: Options) {
     await taiLen(ma);
   }
 
+  /** Thu lai: hong bo doc anh iPhone thi doc lai tep vua chon; hong tai len thi gui lai anh da xu ly. */
   function retry() {
+    if (state.kind === "loi" && state.problem === HEIF_LOADER_FAILURE && tep.current) {
+      void pick(tep.current);
+      return;
+    }
     luot.current += 1;
     void taiLen(luot.current);
   }
 
-  return { state, busy: state.kind === "thu-nho" || state.kind === "tai-len", pick, retry, close };
+  return { state, busy: state.kind === "thu-nho" || state.kind === "doc-anh" || state.kind === "tai-len", pick, retry, close };
 }

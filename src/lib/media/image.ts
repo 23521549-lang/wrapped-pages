@@ -45,6 +45,21 @@ export const IMAGE_HINTS: Readonly<Partial<Record<ImageProblem, string>>> = {
   unsupported: "Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP.",
 };
 
+/** Thuoc tinh accept cua o chon anh: image/* kem duoi tep ma mot so he dieu hanh khong xep vao image/* (HEIC tren Windows). */
+export const IMAGE_ACCEPT = "image/*,.heic,.heif,.avif";
+
+/**
+ * Loai loi duy nhat con thu lai duoc bang cach nap lai bo doc anh iPhone roi doc lai chinh tep do (khac loi "upload",
+ * thu lai bang cach gui lai anh da xu ly san co). Xuat rieng de moi noi so voi loai loi nay (CoverPicker chon duong thu
+ * lai) deu di qua cung mot hang so, khong so chuoi tay.
+ */
+export const HEIF_LOADER_FAILURE: ImageFailure = "heif-loader";
+
+/** Loi thu lai duoc voi chinh du lieu dang co: gui lai anh da xu ly, hoac nap lai bo doc anh iPhone roi doc lai tep. */
+export function imageRetryable(problem: ImageProblem): boolean {
+  return problem === HEIF_LOADER_FAILURE || problem === "upload";
+}
+
 /** Cau vung doc doc khi loi: cau loi kem dong goi y (neu co), dung bo chu nguoi nhin thay tren man. */
 export function imageErrorText(problem: ImageProblem): string {
   const hint = IMAGE_HINTS[problem];

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
-  checkImageSource, chooseEncoded, decodeResizeWidth, DECODE_MAX_PIXELS, encodingOf, FIRST_ENCODE, fitImage, IMAGE_ENCODINGS,
-  IMAGE_ERRORS, IMAGE_HINTS, IMAGE_LOWER_QUALITIES, IMAGE_SOURCE_MAX_BYTES, imageErrorText,
+  checkImageSource, chooseEncoded, decodeResizeWidth, DECODE_MAX_PIXELS, encodingOf, FIRST_ENCODE, fitImage, IMAGE_ACCEPT, IMAGE_ENCODINGS,
+  IMAGE_ERRORS, IMAGE_HINTS, IMAGE_LOWER_QUALITIES, IMAGE_SOURCE_MAX_BYTES, imageErrorText, imageRetryable,
 } from "@/lib/media/image";
 import { IMAGE_MAX_HEIGHT_PX, IMAGE_MAX_WIDTH_PX, MEDIA_MAX_BYTES } from "@/lib/media/kinds";
 
@@ -126,5 +126,16 @@ describe("cau bao loi anh", () => {
     expect(IMAGE_HINTS).toEqual({ unsupported: "Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP." });
     expect(imageErrorText("unsupported")).toBe("Chưa đọc được loại ảnh này. Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP.");
     expect(imageErrorText("broken")).toBe(IMAGE_ERRORS.broken);
+  });
+});
+
+describe("o chon anh va loi thu lai duoc", () => {
+  it("o chon tep nhan image/* kem duoi HEIC, HEIF, AVIF (Windows khong xep .heic vao image/*)", () => {
+    expect(IMAGE_ACCEPT).toBe("image/*,.heic,.heif,.avif");
+  });
+
+  it("chi loi tai len va loi nap bo doc anh iPhone co Thu lai", () => {
+    expect((["unsupported", "source-too-large", "broken", "heif-loader", "too-large", "upload"] as const).filter(imageRetryable))
+      .toEqual(["heif-loader", "upload"]);
   });
 });
