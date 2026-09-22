@@ -197,6 +197,22 @@ export async function nhapCua(bookId: string): Promise<{ sheetCount: number; con
   }
 }
 
+/** Cuon con trong database e2e khong. Chi doc de kiem. Cung rao voi nhapCua. */
+export async function coSach(bookId: string): Promise<boolean> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1 });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    if (ten !== "mqce_e2e") throw new Error("coSach chi chay tren database mqce_e2e");
+    return (await sql`select 1 from books where id = ${bookId}`).length === 1;
+  } catch (e) {
+    const { code, message } = e as { code?: string; message?: string };
+    // oxlint-disable-next-line eslint/preserve-caught-error -- co y KHONG gan cause: loi goc cua driver postgres co the chua chuoi ket noi (mat khau); rao ngay tren ham nay cam in no ra.
+    throw new Error(`coSach hong: ${code ?? "?"} ${message ?? ""}`);
+  } finally {
+    await sql.end();
+  }
+}
+
 const DOAN = "Hôm nay mưa từ ba giờ chiều tới tối, anh đứng ở hiên nhìn nước chảy thành dòng trên mái tôn. ";
 
 /** Go muoi doan dai o man viet dang mo, du tran sang it nhat to thu hai. */

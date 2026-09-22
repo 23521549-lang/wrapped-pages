@@ -272,6 +272,9 @@ const MIEN_TRU: MienTru[] = [
       ".niem__form",
       ".niem__cuoi",
       ".niem__chon, .niem__form",
+      // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
+      // phan tren cua chinh the, khong phai vien cua dieu khien nao.
+      ".nhap__hoi",
       // Cung mot vai tro nhung vien la mot vong box-shadow 0/0/0 (vd inset 0 0 0 1px), khong phai border.
       ".to-giay", // to giay: khung trang giay trong sach/man viet (PagedSurface.tsx, SealPanel.tsx, Flipbook.tsx)
       ".khoi-ghi-am", // khoi ghi am nhung trong bai (figure, mediaNodes.tsx): khung chua, khong phai nut ben trong
