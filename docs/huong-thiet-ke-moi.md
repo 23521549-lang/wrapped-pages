@@ -149,30 +149,23 @@ Luật sửa và đăng:
 
 Chuyển động: mỗi lần đổi loại, cột giữa trượt vào 8px và hiện dần, 220ms, `--ease-out`, chỉ `transform` và `opacity`. Với `prefers-reduced-motion: reduce` cột giữa hiện thẳng. Lật tờ trong khung không có hoạt ảnh.
 
-## 12. Sửa trang đã đăng
+## 12. Sửa nội dung theo lượt đăng
 
-Chủ sách sửa được chữ, ảnh, ghi âm trên một tờ đã đăng của mình, trong khuôn đúng một tờ.
+Chủ sách sửa được chữ, ảnh, ghi âm của cả một lượt đăng (mọi tờ đăng cùng một lần). Số tờ của lượt đổi được; các tờ phía sau dời theo.
 
 Luật của việc sửa:
 
-- Chỉ chủ sách, chỉ tờ của sách mình. Người kia gọi thẳng action nhận đúng câu "Không tìm thấy trang này." như với sách lạ, không có gì được ghi.
-- Đơn vị sửa là đúng một tờ (một dòng `pages`), sửa tại chỗ: vị trí tờ, mốc đăng, mốc đã đọc, niêm phong, bản nháp và Hoạt động không đổi. Nội dung sau khi sửa phải vừa đúng một tờ, đo bằng đúng bộ đo của trang trả lời, nên màn đọc ngắt trang y như trước. Bộ xếp trang không bị đụng tới.
-- Tờ trong niêm phong không sửa được ở mọi trạng thái (còn khóa hay đã mở). Hàm đọc cho màn sửa xét niêm phong trước và không bao giờ đọc nội dung tờ niêm phong, kể cả cho chủ sách.
-- Không tự lưu lên máy chủ: chỉ "Lưu thay đổi" mới gửi. Hai tab sửa cùng một tờ được chặn bằng khóa lạc quan theo mốc phiên bản (lần sửa gần nhất, hay lúc đăng); tab giữ mốc cũ nhận "Trang này vừa được sửa ở nơi khác." thay vì ghi đè im lặng.
-- `edited_at` do database tính trong câu ghi, không bao giờ sớm hơn `published_at` và luôn tăng sau mỗi lần lưu. Gửi lại y nguyên nội dung cũ thì không ghi gì, `edited_at` giữ nguyên.
-- Lưu nháp, đăng nháp và sửa tờ cùng khóa dòng sách trong giao dịch, nên một ảnh vừa tải lên không thể cùng lúc lọt vào nháp và vào tờ đang sửa.
-- Media giữ lại được là media đang có trên chính tờ đó. Media mới phải của chủ sách, đúng cuốn, đúng loại, chưa nằm trên tờ đã đăng nào và chưa nằm trong nháp. Media bỏ khỏi tờ bị xóa hẳn ở lần dọn kế tiếp, và màn sửa báo trước điều này.
-- Dấu "nối tiếp" của mục danh sách bắt đầu từ tờ trước được giữ: chỉ còn trên mục đầu tiên của khối đầu tiên; Enter ở mục đó sinh mục mới bình thường, có dấu chấm.
+- Chỉ chủ sách, chỉ lượt của sách mình. Người kia gọi thẳng action nhận đúng câu "Không tìm thấy lượt này." như với lượt lạ, không có gì được ghi.
+- Lượt có niêm phong còn đóng với người kia (câu đố chưa giải, trao đổi chưa có trang trả lời, hẹn giờ chưa tới giờ) thì chưa sửa được; mở rồi thì sửa được. Dòng hé lộ cắt lúc đăng giữ nguyên.
+- Vị trí tờ chỉ sống ở `pages.position`. Niêm phong và dòng Hoạt động bám lượt (`round_id`), khoảng tờ của chúng tính từ các tờ của lượt, nên sửa lượt không phải dời gì ngoài các tờ phía sau và mốc đã đọc.
+- Màn sửa nối các tờ của lượt thành một tài liệu trên trình viết có ngắt trang của màn viết, lưu thì cắt lại bằng đúng bộ đo và bộ xếp trang của màn viết. Dấu `noiTiep` trên mọi khối bị cắt ngang giúp nối lại đúng chỗ, nên chưa sửa gì thì cắt lại ra đúng các tờ cũ.
+- Không tự lưu lên máy chủ: chỉ "Lưu thay đổi" mới gửi. Hai tab sửa cùng một lượt được chặn bằng khóa lạc quan theo mốc phiên bản của lượt; tab giữ mốc cũ nhận "Lượt này vừa được sửa ở nơi khác. Tải lại để xem bản mới nhất.".
+- Lưu nháp, đăng, sửa lượt cùng khóa dòng sách trong giao dịch; mốc đã đọc cũng tính và ghi dưới khóa chia sẻ của dòng sách.
+- Media giữ lại được là media đang có trên các tờ của lượt. Media bỏ khỏi lượt bị xóa hẳn ở lần dọn kế tiếp, màn sửa báo trước.
 
-**Dải dưới cuốn sách (màn đọc).** Ngay dưới khung sách có một dải `.trang-ghi`, mỗi tờ đang hiện một cột, cột thẳng với tờ trái và tờ phải vì dải dùng chung `--so-to` với khung sách. Dải nằm **ngoài** tờ giấy và không bị thu phóng theo `--k`: chữ không nhỏ đi ở màn hẹp, vùng bấm giữ đủ 44px, và hình học tờ giấy mà bộ xếp trang dựa vào không bị chạm tới. Trong mỗi cột, theo thứ tự:
+**Lối vào.** Màn sửa sách có mục "Nội dung": mỗi lượt một dòng "Lượt 2 · trang 6 tới 11 · 20.09" và nút viền "Sửa lượt này"; lượt còn niêm phong thay nút bằng chữ "Đang niêm phong" kèm ổ khóa 12px. Dải dưới cuốn sách của màn đọc giữ "Đã sửa lúc ..." (mốc sửa của lượt) cho cả hai người; với chủ sách mỗi tờ có "Sửa trang N" mở màn sửa lượt ngay tại tờ đó, hay dòng "Đang niêm phong, chưa sửa được". Đường dẫn cũ `/sach/[id]/sua-trang/[so]` chuyển 308 sang màn sửa lượt tương ứng.
 
-- "Đã sửa lúc 14:05" (thẻ `time` có `dateTime` đầy đủ), chữ `--text-xs` màu `--color-ink-3`, cho cả hai người;
-- "Sửa trang 3", nút cấp chữ (`.btn--chu`), chỉ có với chủ sách; người kia không có nút nào, kể cả trong DOM;
-- tờ trong niêm phong: dòng chữ "Trang niêm phong không sửa được" kèm ổ khóa 12px, là chữ chứ không phải nút bị khóa, nên không có điều khiển nào nhận Tab mà không dùng được.
-
-Không cột nào có gì để hiện thì không vẽ dải. Không nền, không viền, không hoạt ảnh.
-
-**Màn sửa một tờ** (`/sach/[id]/sua-trang/[so]`) theo khuôn trang trả lời trao đổi: một tờ giấy khổ thật, đo tràn bằng đúng bộ đo của trang trả lời. Đầu màn là tiêu đề "Sửa trang 5", dòng phụ "Tên sách, đăng 18.09", dòng trạng thái "Vừa một trang", nút chính "Lưu thay đổi" và nút viền "Hủy". Tràn thì dòng trạng thái đổi thành "Đã tràn khỏi trang, cần gọn lại", vạch "Hết trang" hiện ở đáy tờ và nút lưu bị khóa. "Hủy" hay liên kết "Về sách" khi đã đổi thì hiện hộp xác nhận nội tuyến như hộp đăng trang, focus ở "Sửa tiếp", Esc trả focus về đúng chỗ đã mở hộp. Đang lưu thì hai nút "Thêm ảnh", "Ghi âm" bị khóa; đang xử lý ảnh hay hộp ghi âm đang mở thì "Lưu thay đổi" bị khóa, nên không khối media nào rơi vào giữa lúc lưu. Chữ đang sửa được giữ tạm trong phiên trình duyệt để rời trang lỡ tay không mất; bản tạm bị xóa khi lưu xong, khi bỏ thay đổi, khi trùng bản đã đăng hay thuộc phiên bản cũ, và bản tạm quá 24 giờ của các tờ khác cùng cuốn bị dọn mỗi lần mở màn sửa. Vùng báo khôi phục và báo xóa media là vùng `aria-live` luôn có trong DOM (rỗng thì chỉ bỏ khoảng cách, không `display: none`). Tờ niêm phong không có trình soạn thảo: chỉ tiêu đề "Không sửa được", một câu giải thích và nút "Về trang 5".
+**Màn sửa lượt** (`/sach/[id]/sua-luot/[luot]`, `?trang=N` mở tờ thứ N của lượt) dùng lại khung màn viết: tiêu đề "Sửa lượt 2", dòng phụ "Tên sách, đăng 18.09", số tờ, bộ đếm chữ khi gần trần 20 000, nút chính "Lưu thay đổi", nút viền "Hủy", "Thêm ảnh", "Ghi âm". Số in dưới tờ là số trang thật trong cuốn. "Hủy" hay "Về sách" khi đã đổi thì hiện hộp xác nhận nội tuyến, focus ở "Sửa tiếp", Esc trả focus về chỗ đã mở hộp. Chữ đang sửa được giữ tạm trong phiên trình duyệt; bản tạm quá 24 giờ của lượt khác bị dọn mỗi lần mở màn sửa. Lượt còn niêm phong không có trình soạn thảo: chỉ tiêu đề "Không sửa được", một câu giải thích và nút "Về trang N".
 
 ## 13. Việc còn lại
 

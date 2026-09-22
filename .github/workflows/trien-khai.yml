@@ -1,5 +1,8 @@
 # Trien khai production len Vercel: khi push vao main, hoac bam "Run workflow" tren GitHub.
-# Thu tu bat buoc: kiem thu xanh -> sao luu (ma hoa) -> migrate database -> build va deploy.
+# Thu tu bat buoc: kiem thu xanh -> build (khong cham database) -> sao luu (ma hoa) -> migrate database -> deploy ban da build.
+# Build truoc migrate de khoang ma cu chay tren schema moi chi con thoi gian day ban build len Vercel. next build khong
+# truy van database: moi trang va route cham database goi connection() (tests/unit/pages-connection.test.ts), va lan
+# build hong thi chua sao luu, chua migrate gi.
 # Deploy do workflow nay goi Vercel CLI; tu deploy qua git cua Vercel da tat trong vercel.json,
 # vi Vercel tu deploy ngay khi push, truoc buoc migrate.
 name: Trien khai
@@ -50,6 +53,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Lay cau hinh du an tu Vercel
+        run: npx --yes vercel@59.23.2 pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - name: Build
+        run: npx --yes vercel@59.23.2 build --prod --token="$VERCEL_TOKEN"
       - name: Sao luu database truoc khi migrate
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
@@ -72,9 +79,5 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
         run: npm run db:migrate
-      - name: Lay cau hinh du an tu Vercel
-        run: npx --yes vercel@59.23.2 pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - name: Build
-        run: npx --yes vercel@59.23.2 build --prod --token="$VERCEL_TOKEN"
       - name: Deploy
         run: npx --yes vercel@59.23.2 deploy --prebuilt --prod --token="$VERCEL_TOKEN"

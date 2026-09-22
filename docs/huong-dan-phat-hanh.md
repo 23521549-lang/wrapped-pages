@@ -32,8 +32,9 @@ Repo có hai quy trình tự động trên GitHub Actions (thư mục `.github/w
   Nó chạy lint, kiểm kiểu, test đơn vị và toàn bộ test đầu cuối trên một database Postgres tạm của riêng lần
   chạy đó, không chạm database thật.
 - **Triển khai** (`trien-khai.yml`): chạy khi có commit mới vào `main`, hoặc khi bạn bấm nút thủ công. Thứ tự
-  luôn là: kiểm thử xanh, sao lưu database (mã hóa), migrate database, rồi mới build và deploy lên Vercel.
-  Kiểm thử đỏ thì không bước nào sau đó chạy.
+  luôn là: kiểm thử xanh, build (không chạm database), sao lưu database (mã hóa), migrate database, rồi
+  deploy đúng bản vừa build lên Vercel. Build trước để khoảng mã cũ chạy trên schema mới chỉ còn thời gian
+  đẩy bản build lên. Kiểm thử đỏ thì không bước nào sau đó chạy.
 
 Vercel tự deploy mỗi khi có push nếu repo nối với Vercel, và làm vậy trước bước migrate. Vì thế
 `vercel.json` đã tắt việc tự deploy qua git: chỉ quy trình Triển khai mới deploy.
