@@ -7,7 +7,6 @@ import ChoCaiDat from "@/app/cai-dat/loading";
 import ChoDoc from "@/app/sach/[id]/(doc)/loading";
 import ChoViet from "@/app/sach/[id]/viet/loading";
 import ChoSua from "@/app/sach/[id]/sua/loading";
-import ChoSuaTrang from "@/app/sach/[id]/sua-trang/[so]/loading";
 
 afterEach(cleanup);
 
@@ -18,7 +17,6 @@ const KHUNG = [
   { ten: "man doc", C: ChoDoc, chu: "Đang mở sách…", muc: "Kệ sách" },
   { ten: "man viet", C: ChoViet, chu: "Đang mở trang viết…", muc: "Kệ sách" },
   { ten: "sua sach", C: ChoSua, chu: "Đang mở sách…", muc: "Kệ sách" },
-  { ten: "sua trang", C: ChoSuaTrang, chu: "Đang mở trang…", muc: "Kệ sách" },
 ];
 
 describe("khung giu cho (loading.tsx)", () => {

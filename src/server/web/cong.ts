@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { findOwnBook, findReadableBook } from "@/server/library/books";
-import { ownPageExists } from "@/server/library/edit-page";
 import { requireMe } from "./guard";
 
 /*
@@ -40,13 +39,5 @@ export async function congSachCuaToi(bookId: string): Promise<void> {
   if (!(await sachCuaToi(me.accountId, bookId))) notFound();
 }
 
-/** Mau chat cho so trang tren duong dan: khong nhan 1e3, 0x10, khoang trang hay so 0 dau. */
+/** Mau chat cho so trang hay so luot tren duong dan: khong nhan 1e3, 0x10, khoang trang hay so 0 dau. */
 export const SO_TRANG = /^[1-9][0-9]{0,4}$/;
-
-/** Man sua mot to: to co that trong cuon cua chinh minh. */
-export async function congSuaTrang(bookId: string, so: string): Promise<void> {
-  if (!(await laTaiTrang())) return;
-  const me = await requireMe();
-  if (!SO_TRANG.test(so)) notFound();
-  if (!(await ownPageExists(db, me.accountId, bookId, Number(so)))) notFound();
-}

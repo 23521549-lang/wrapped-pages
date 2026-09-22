@@ -5,28 +5,17 @@ import { refresh } from "next/cache";
 import { db } from "@/server/db";
 import { createBook, findOwnBook, updateBook } from "@/server/library/books";
 import { MAX_SHEETS_PER_PUBLISH, publishDraft, saveDraft } from "@/server/library/drafts";
-import { editPage, type EditResult } from "@/server/library/edit-page";
 import { markRead } from "@/server/library/pages";
 import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
 import { parseBookInput } from "@/lib/book";
-import { normalizeContinuation } from "@/lib/doc/continuation";
-import { docCharCount, isBlankDoc } from "@/lib/doc/text";
-import { checkDraftInput, checkPublishInput, DOC_LIMITS, EDIT_SHEET_MAX_CHARS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
+import { checkDraftInput, checkPublishInput, DOC_LIMITS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 import { parseSealInput } from "@/lib/seal/input";
-import { CAN_DANG_NHAP, KHONG_THAY_SACH, TRANG_VUA_SUA_NOI_KHAC } from "./messages";
+import { CAN_DANG_NHAP, KHONG_THAY_SACH } from "./messages";
 
 const NHAP_KHONG_DOC_DUOC = "Bản nháp có nội dung không đọc được.";
 const BIA_KHONG_DUNG_DUOC = "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa.";
-const KHONG_THAY_TRANG = "Không tìm thấy trang này.";
-const TRANG_DAI = "Trang dài quá một trang.";
-const LOI_SUA: Record<Exclude<EditResult, "saved" | "unchanged">, string> = {
-  "not-found": KHONG_THAY_TRANG,
-  sealed: "Trang niêm phong không sửa được.",
-  stale: TRANG_VUA_SUA_NOI_KHAC,
-  "invalid-media": "Có ảnh hoặc ghi âm không dùng được trên trang này.",
-};
 const LOI_XOA_SACH: Record<Exclude<DeleteBookResult, "deleted">, string> = {
   "not-found": KHONG_THAY_SACH,
   "has-pages": "Cuốn này đã có trang đăng nên không xóa được. Bạn vẫn bỏ được bản nháp.",
@@ -133,29 +122,6 @@ export async function actionPublish(bookId: string, sheets: unknown, seal: unkno
   if (!r) return { error: "Chưa đăng được. Trang còn trống hoặc cuốn sách không còn." };
   sweepMediaAfterResponse();
   redirect(`/sach/${bookId}?trang=${r.firstPosition}`);
-}
-
-/**
- * Chu sach luu mot to da dang vua sua. Moi phep kiem re (vi tri, moc, cau truc, tran chu cua mot to, to trong) dat
- * truoc khi cham database. Quyen nam trong giao dich cua editPage: nguoi kia goi thang voi dung bookId va vi tri cua
- * mot sach chia se nhan cung cau voi sach la, vi tri la, va khong co gi duoc ghi. CSRF do server action cua Next lo
- * (chi nhan POST mang Next-Action, so Origin voi Host, cookie phien SameSite=Lax), khong them allowedOrigins.
- * Dau noi tiep cua danh sach chi giu o muc dau cua khoi dau (normalizeContinuation), nhu splitDoc dat no. Luu xong hen don rac
- * media, vi media bi bo khoi to thanh rac; khong doi gi thi chi ve lai man doc.
- */
-export async function actionEditPage(bookId: string, position: unknown, doc: unknown, base: unknown) {
-  const me = await readMe();
-  if (!me) return { error: CAN_DANG_NHAP };
-  if (typeof position !== "number" || !Number.isInteger(position) || position < 1 || position > 99_999) return { error: KHONG_THAY_TRANG };
-  if (typeof base !== "string" || base.length > 40 || Number.isNaN(new Date(base).getTime())) return { error: KHONG_THAY_TRANG };
-  const checked = checkDraftInput(doc);
-  if (!checked.ok) return { error: checked.reason === "too-long" ? TRANG_DAI : "Trang có nội dung không đọc được." };
-  if (docCharCount(checked.doc) > EDIT_SHEET_MAX_CHARS) return { error: TRANG_DAI };
-  if (isBlankDoc(checked.doc)) return { error: "Trang không được để trống." };
-  const r = await editPage(db, me.accountId, bookId, position, normalizeContinuation(checked.doc), new Date(base));
-  if (r !== "saved" && r !== "unchanged") return { error: LOI_SUA[r] };
-  if (r === "saved") sweepMediaAfterResponse();
-  redirect(`/sach/${bookId}?trang=${position}`);
 }
 
 /**
