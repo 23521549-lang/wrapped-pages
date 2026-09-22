@@ -39,4 +39,9 @@ describe("charCountLabel", () => {
     expect(charCountLabel(MAX + 1)).toEqual({ kind: "tran", text: "Vượt 20 000 ký tự, nháp không lưu được. Đăng bớt trang rồi viết tiếp." });
     expect(charCountLabel(100000)).toEqual({ kind: "tran", text: "Vượt 20 000 ký tự, nháp không lưu được. Đăng bớt trang rồi viết tiếp." });
   });
+
+  it("noi goi truyen cau canh bao rieng cho truong hop vuot tran", () => {
+    expect(charCountLabel(MAX + 1, "Câu riêng.")).toEqual({ kind: "tran", text: "Câu riêng." });
+    expect(charCountLabel(NGUONG, "Câu riêng.")).toEqual({ kind: "gan", text: "18 000 / 20 000 ký tự" });
+  });
 });

@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { findOwnBook, findReadableBook } from "@/server/library/books";
+import { ownRoundExists } from "@/server/library/edit-round";
+import { SO_TRANG } from "@/lib/round";
 import { requireMe } from "./guard";
 
 /*
@@ -39,5 +41,10 @@ export async function congSachCuaToi(bookId: string): Promise<void> {
   if (!(await sachCuaToi(me.accountId, bookId))) notFound();
 }
 
-/** Mau chat cho so trang hay so luot tren duong dan: khong nhan 1e3, 0x10, khoang trang hay so 0 dau. */
-export const SO_TRANG = /^[1-9][0-9]{0,4}$/;
+/** Man sua mot luot: luot co that trong cuon cua chinh minh (chi dem luot, khong doc noi dung). */
+export async function congSuaLuot(bookId: string, luot: string): Promise<void> {
+  if (!(await laTaiTrang())) return;
+  const me = await requireMe();
+  if (!SO_TRANG.test(luot)) notFound();
+  if (!(await ownRoundExists(db, me.accountId, bookId, Number(luot)))) notFound();
+}

@@ -185,7 +185,7 @@ export function KhungDoc() {
   );
 }
 
-/** Man viet va man sua mot to: thanh tren (ten, cong cu) va mot to giay. */
+/** Man viet va man sua luot: thanh tren (ten, cong cu) va mot to giay. */
 export function KhungViet({ ten }: { ten: string }) {
   return (
     <Khung ten={ten} current="ke-sach" sticky={false} lop="viet">

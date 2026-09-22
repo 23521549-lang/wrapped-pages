@@ -29,7 +29,7 @@ export type MediaToolsProps = {
 
 /**
  * Thanh cong cu dinh dang kem nhom "Them anh", "Ghi am", roi dong tai anh va hop ghi am ngay duoi. Dung chung cho man viet
- * va man sua mot to. Kho media tat thi hai nut mo di, van Tab toi duoc, kem mot cau ghi chu.
+ * va man sua luot. Kho media tat thi hai nut mo di, van Tab toi duoc, kem mot cau ghi chu.
  */
 export function MediaTools({ editor, bookId, author, mediaEnabled, announce, extra, locked = false, onBusyChange }: MediaToolsProps) {
   // Chen khoi bang editor moi nhat, khong bang closure cu cua lan render luc bat dau tai anh hay ghi am.

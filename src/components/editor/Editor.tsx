@@ -6,23 +6,19 @@ import Link from "next/link";
 import { useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import { actionSaveDraft } from "@/app/actions/library";
-import { paginate } from "@/lib/paginate";
-import { CONTENT_HEIGHT } from "@/lib/sheet";
 import { charCountLabel } from "@/lib/doc/counter";
 import { toPlainJson } from "@/lib/doc/plain";
-import { trimTrailingBlank } from "@/lib/doc/text";
 import type { DocJson } from "@/lib/doc/types";
 import { createAutosave, type SaveStatus } from "./autosave";
+import { cutSheets } from "./cutSheets";
 import { editorExtensions } from "./extensions";
 import { FocusMode } from "./focusMode";
-import { measureUnits } from "./measure";
 import { MediaTools } from "./MediaTools";
 import { NONCE_TAI_LIEU } from "./nonce";
 import { PageBreaks } from "./pageBreaks";
 import { PagedSurface } from "./PagedSurface";
 import { PublishButton, PublishPanel, usePublish } from "./PublishBar";
 import { SaveBadge } from "./SaveBadge";
-import { splitDoc } from "./split";
 import { usePagedLayout } from "./usePagedLayout";
 
 export type EditorProps = {
@@ -80,18 +76,14 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
   const prepare = useCallback((): { sheets: DocJson[] } | { error: string } => {
     const ed = editorRef.current;
     if (!ed || !mirrorRef.current) return { error: "Trang chưa sẵn sàng. Thử lại sau một giây." };
-    const doc = ed.state.doc;
-    let parts: DocJson[];
+    let kept: DocJson[];
     try {
-      // measureUnits (nhu splitDoc ben duoi) co the nem khi ban sao do lech so doan voi tai lieu - ca
-      // hai deu phai nam trong cung khoi try nay, khong de mot cu nem thoat thang vao onClick.
-      const units = measureUnits(mirrorRef.current, doc);
-      const sheets = paginate(units, CONTENT_HEIGHT);
-      parts = splitDoc(doc, sheets.slice(1).map((s) => units[s.from].pos));
+      // cutSheets co the nem khi ban sao do lech so doan voi tai lieu hay cho ngat lam rong mot khoi: phai nam trong
+      // khoi try nay, khong de mot cu nem thoat thang vao onClick.
+      kept = cutSheets(ed, mirrorRef.current);
     } catch {
       return { error: "Chưa cắt được trang. Thử sửa một chút rồi đăng lại." };
     }
-    const kept = trimTrailingBlank(parts);
     return kept.length > 0 ? { sheets: kept } : { error: "Trang còn trống, chưa có gì để đăng." };
   }, []);
 

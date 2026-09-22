@@ -66,7 +66,7 @@ const MUI_SAU = (
  * bang transform de lat; ca khung thu phong bang transform, khong doi be rong hay co chu, nen cho ngat trang
  * giong het man doc.
  */
-export function PagedSurface({ editor, sheetCount, mirrorRef, height, numbered = true, children, lat = false }: {
+export function PagedSurface({ editor, sheetCount, mirrorRef, height, numbered = true, children, lat = false, firstNumber = 1 }: {
   editor: Editor | null;
   sheetCount: number;
   mirrorRef: RefObject<HTMLDivElement | null>;
@@ -78,6 +78,8 @@ export function PagedSurface({ editor, sheetCount, mirrorRef, height, numbered =
   children?: ReactNode;
   /** Xem tung to (mot hoac hai to canh nhau) kem nut lat, thay vi chong doc. */
   lat?: boolean;
+  /** So in duoi to dau tien. Man sua luot in dung so trang trong cuon (to dau cua luot). Mac dinh 1. */
+  firstNumber?: number;
 }) {
   const fitRef = useRef<HTMLDivElement>(null);
   const oRef = useRef<HTMLDivElement>(null);
@@ -153,7 +155,7 @@ export function PagedSurface({ editor, sheetCount, mirrorRef, height, numbered =
           >
             {Array.from({ length: sheetCount }, (_, i) => (
               <div key={i} className="to-giay viet-to" style={lat ? { top: 0, left: i * SHEET.width } : { top: i * BUOC }} aria-hidden="true">
-                {numbered && <span className="to-giay__so">{i + 1}</span>}
+                {numbered && <span className="to-giay__so">{firstNumber + i}</span>}
               </div>
             ))}
             <EditorContent editor={editor} className="viet-chu" />

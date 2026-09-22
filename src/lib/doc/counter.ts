@@ -13,13 +13,17 @@ export function groupThousands(n: number): string {
   return groups.join(" ");
 }
 
+/** Canh bao mac dinh khi vuot tran: cua man viet, noi ban nhap tu luu. */
+const TRAN_NHAP = `Vượt ${groupThousands(DOC_LIMITS.maxChars)} ký tự, nháp không lưu được. Đăng bớt trang rồi viết tiếp.`;
+
 /**
- * Chu cua bo dem cho so ky tu cua ca ban nhap. Duoi nguong hien thi thi an. Vuot DOC_LIMITS.maxChars (actionSaveDraft
- * tu choi tu day) thi la canh bao thay cho trang thai luu; dung bang tran van luu duoc nen van la so dem.
+ * Chu cua bo dem cho so ky tu cua ca tai lieu dang viet. Duoi nguong hien thi thi an. Vuot DOC_LIMITS.maxChars thi la
+ * canh bao `tran` (man viet: actionSaveDraft tu choi tu day; man sua luot truyen cau canh bao cua no); dung bang tran
+ * van luu duoc nen van la so dem.
  */
-export function charCountLabel(chars: number): CharCountLabel {
+export function charCountLabel(chars: number, tran: string = TRAN_NHAP): CharCountLabel {
   const max = DOC_LIMITS.maxChars;
-  if (chars > max) return { kind: "tran", text: `Vượt ${groupThousands(max)} ký tự, nháp không lưu được. Đăng bớt trang rồi viết tiếp.` };
+  if (chars > max) return { kind: "tran", text: tran };
   if (chars < max * CHAR_COUNT_SHOW_RATIO) return { kind: "an" };
   return { kind: "gan", text: `${groupThousands(chars)} / ${groupThousands(max)} ký tự` };
 }

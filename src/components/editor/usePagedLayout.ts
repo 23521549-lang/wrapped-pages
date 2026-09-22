@@ -14,14 +14,16 @@ import { useMeasure } from "./useMeasure";
  * useOneSheet cua trang tra loi, de rao ghep chu chi co mot ban. Cung luot do dem luon so ky tu cua ca tai lieu
  * cho bo dem o dau man viet: khong them hen gio nao, va khong bao gio dem giua luc dang ghep chu.
  * afterMeasure (tuy chon) chay cuoi moi lan do, vi du de tinh lai so to se dang khi khung niem phong dang mo.
+ * breaks: vi tri dau moi to tu to 2, de man sua luot dat con tro o dung to ?trang=.
  */
 export function usePagedLayout(
   editor: Editor | null,
   mirror: RefObject<HTMLDivElement | null>,
   afterMeasure?: () => void,
-): { sheetCount: number; chars: number } {
+): { sheetCount: number; chars: number; breaks: readonly number[] } {
   const [sheetCount, setSheetCount] = useState(1);
   const [chars, setChars] = useState(0);
+  const [breakPos, setBreakPos] = useState<readonly number[]>([]);
   const last = useRef("");
 
   useMeasure(editor, mirror, (units, ed) => {
@@ -34,11 +36,12 @@ export function usePagedLayout(
     if (sig !== last.current) {
       last.current = sig;
       setBreaks(ed, breaks);
+      setBreakPos(breaks.map((b) => b.pos));
     }
     setSheetCount(sheets.length);
     setChars(editorCharCount(ed.state.doc));
     afterMeasure?.();
   });
 
-  return { sheetCount, chars };
+  return { sheetCount, chars, breaks: breakPos };
 }
