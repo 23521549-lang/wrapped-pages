@@ -297,3 +297,62 @@ export async function veCuoiTaiLieu(page: Page): Promise<void> {
   await page.keyboard.press("ControlOrMeta+End");
   await choConTroCuoi(page);
 }
+
+/** Moi to da dang cua mot cuon trong database e2e, theo vi tri, kem luot. Chi doc de so truoc va sau. */
+export async function cacToCua(bookId: string): Promise<{ position: number; roundId: string; content: unknown }[]> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const rows = await sql<{ position: number; round_id: string; content: unknown }[]>`
+      select position, round_id, content from pages where book_id = ${bookId} order by position`;
+    return rows.map((r) => ({ position: r.position, roundId: r.round_id, content: r.content }));
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Moc da doc cua nguoi kia tren mot cuon (chu sach khong co moc), hoac null. */
+export async function mocDocCua(bookId: string): Promise<number | null> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const rows = await sql<{ position: number }[]>`select position from read_marks where book_id = ${bookId}`;
+    return rows[0]?.position ?? null;
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Dua moi to cua mot cuon ve cach cat cu: bo dau noiTiep tren moi nut tru muc danh sach, nhu to dang truoc khi splitDoc
+ * danh dau doan, danh sach va trich dan bi cat. De kiem man sua luot voi du lieu da co tu truoc.
+ */
+export async function veCachCatCu(bookId: string): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  const bo = (n: unknown): unknown => {
+    if (Array.isArray(n)) return n.map(bo);
+    if (typeof n !== "object" || n === null) return n;
+    const { noiTiep, ...rest } = n as Record<string, unknown>;
+    const out = Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, bo(v)]));
+    return rest.type === "listItem" && noiTiep === true ? { ...out, noiTiep } : out;
+  };
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const rows = await sql<{ id: string; content: unknown }[]>`select id, content from pages where book_id = ${bookId}`;
+    for (const r of rows) await sql`update pages set content = ${sql.json(bo(r.content) as never)} where id = ${r.id}`;
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
