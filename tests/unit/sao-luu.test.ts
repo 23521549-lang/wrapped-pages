@@ -100,6 +100,10 @@ async function gieo(c: PGlite) {
     insert into activity (kind, actor_id, book_id, seal_id, round_id, shared, at) values
       ('dang-trang', '${A1}', '${B1}', null, '${R1}', true, now()),
       ('thu-sai', '${A2}', '${B1}', '${S1}', '${R1}', true, now());
+    insert into round_replies (round_id, account_id, body, created_at) values
+      ('${R1}', '${A2}', 'Đọc tới đây thương ghê.' || chr(10) || chr(10) || 'Cảm ơn nhé.', '2026-09-05 01:02:03.456789+00');
+    insert into activity (kind, actor_id, book_id, seal_id, round_id, shared, at) values
+      ('hoi-dap', '${A2}', '${B1}', null, '${R1}', true, now());
     insert into activity (kind, actor_id, subject_id, shared, at) values ('doi-mat-khau', '${A1}', '${A2}', false, now());
   `);
 }

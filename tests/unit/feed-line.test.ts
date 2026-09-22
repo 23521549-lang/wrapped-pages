@@ -11,7 +11,7 @@ let dem = 0;
 function su(kind: FeedItem["kind"], by: FeedActor, sua: Partial<FeedItem> = {}): FeedItem {
   dem += 1;
   const coSach = kind !== "doi-mat-khau";
-  const sealKind = { "dang-trang": null, "moi-trao-doi": "trao-doi", "mo-hen-gio": "hen-gio", "mo-trang": "cau-do", "thu-sai": "cau-do", "tang-khoa": "cau-do", "doi-mat-khau": null } as const;
+  const sealKind = { "dang-trang": null, "moi-trao-doi": "trao-doi", "mo-hen-gio": "hen-gio", "mo-trang": "cau-do", "thu-sai": "cau-do", "tang-khoa": "cau-do", "doi-mat-khau": null, "hoi-dap": null } as const;
   return {
     id: `su-kien-${dem}`, kind, by, at: new Date("2026-09-15T08:00:00.000Z"),
     bookId: coSach ? SACH : null, bookTitle: coSach ? "Chuyện chưa kể" : null,
@@ -42,6 +42,8 @@ describe("feedLine: cau cua tung loai, ca hai phia", () => {
     ["thu-sai cua minh", su("thu-sai", "me", { count: 5 }), "Bạn thử trang 3 tới 4 trong **Chuyện chưa kể**, chưa đúng", ["Câu đố", "5 lần"]],
     ["tang-khoa cua nguoi kia", su("tang-khoa", "partner", { lastPosition: 3 }), "Linh tặng bạn chìa khóa trang 3 trong **Chuyện chưa kể**", ["Câu đố"]],
     ["tang-khoa cua minh", su("tang-khoa", "me", { sealKind: "trao-doi" }), "Bạn tặng Linh chìa khóa trang 3 tới 4 trong **Chuyện chưa kể**", ["Trao đổi"]],
+    ["hoi-dap cua nguoi kia", su("hoi-dap", "partner"), "Linh đã hồi đáp trang 3 tới 4 của **Chuyện chưa kể**", []],
+    ["hoi-dap cua minh, mot to", su("hoi-dap", "me", { lastPosition: 3 }), "Bạn đã hồi đáp trang 3 của **Chuyện chưa kể**", []],
   ])("%s", (_ten, item, chu, chips) => {
     const line = feedLine(item, TEN);
     expect(cau(line)).toBe(chu);

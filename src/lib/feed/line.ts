@@ -81,6 +81,9 @@ export function feedLine(item: FeedItem, names: FeedNames): FeedLine {
     case "tang-khoa":
       sentence = cau(`${ai} tặng ${nguoiKia} chìa khóa ${trang} trong `);
       break;
+    case "hoi-dap":
+      sentence = cau(`${ai} đã hồi đáp ${trang} của `);
+      break;
     default: {
       const khongCo: never = item.kind;
       throw new Error(`loai su kien la: ${String(khongCo)}`);

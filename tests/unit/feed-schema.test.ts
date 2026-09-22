@@ -25,7 +25,7 @@ async function coNiemPhong() {
 
 type CoNiemPhong = Awaited<ReturnType<typeof coNiemPhong>>;
 
-/** Moi loai mot su kien dung hinh; kieu buoc phai du ca bay loai. */
+/** Moi loai mot su kien dung hinh; kieu buoc phai du ca tam loai. */
 function moiLoai(s: CoNiemPhong): { [K in FeedKind]: ActivityEvent & { kind: K } } {
   const cuaChu = { actorId: s.seat1.id, at: NOW, bookId: s.chung, roundId: s.roundId, mode: "chia-se" } as const;
   const cuaNguoiKia = { ...cuaChu, actorId: s.seat2.id, sealId: s.sealId };
@@ -37,6 +37,7 @@ function moiLoai(s: CoNiemPhong): { [K in FeedKind]: ActivityEvent & { kind: K }
     "thu-sai": { ...cuaNguoiKia, kind: "thu-sai" },
     "tang-khoa": { ...cuaChu, kind: "tang-khoa", sealId: s.sealId },
     "doi-mat-khau": { kind: "doi-mat-khau", actorId: s.seat2.id, subjectId: s.seat1.id, at: NOW },
+    "hoi-dap": { ...cuaChu, actorId: s.seat2.id, kind: "hoi-dap", sealId: null },
   };
 }
 
@@ -74,7 +75,7 @@ describe("bang activity", () => {
     await recordActivity(s.db, { ...events["dang-trang"], bookId: s.rieng, mode: "rieng-tu", roundId: s.luotRieng });
     const rows = await s.db.select().from(activity).orderBy(asc(activity.kind), asc(activity.shared));
     expect(rows.map((r) => [r.kind, r.shared])).toEqual([
-      ["dang-trang", false], ["dang-trang", true], ["doi-mat-khau", false], ["mo-hen-gio", true],
+      ["dang-trang", false], ["dang-trang", true], ["doi-mat-khau", false], ["hoi-dap", true], ["mo-hen-gio", true],
       ["mo-trang", true], ["moi-trao-doi", true], ["tang-khoa", true], ["thu-sai", true],
     ]);
     expect(rows.find((r) => r.kind === "doi-mat-khau")).toEqual({
@@ -84,6 +85,10 @@ describe("bang activity", () => {
     expect(rows.find((r) => r.kind === "thu-sai")).toEqual({
       id: expect.any(String), kind: "thu-sai", actorId: s.seat2.id, subjectId: null,
       bookId: s.chung, sealId: s.sealId, roundId: s.roundId, shared: true, at: NOW,
+    });
+    expect(rows.find((r) => r.kind === "hoi-dap")).toEqual({
+      id: expect.any(String), kind: "hoi-dap", actorId: s.seat2.id, subjectId: null,
+      bookId: s.chung, sealId: null, roundId: s.roundId, shared: true, at: NOW,
     });
   });
 
@@ -95,6 +100,7 @@ describe("bang activity", () => {
     ["gan sach ma thieu sach", () => ({ bookId: null }), "activity_sach"],
     ["gan sach ma co nguoi bi doi", (s) => ({ subjectId: s.seat1.id }), "activity_sach"],
     ["thieu luot", () => ({ roundId: null }), "activity_sach"],
+    ["hoi-dap ma thieu luot", () => ({ kind: "hoi-dap", sealId: null, roundId: null }), "activity_sach"],
     ...LOAI_GAN_NIEM_PHONG.map((kind): [string, Sua, string] => [
       `${kind} ma thieu niem phong`, () => ({ kind, sealId: null }), "activity_niem_phong",
     ]),
@@ -115,12 +121,12 @@ describe("bang activity", () => {
     await viPham(s.db.insert(activity).values({ ...hangMatKhau(s), ...sua(s) } as ActivityInsert), rangBuoc);
   });
 
-  it("dang-trang khong can niem phong; xoa sach, niem phong hay tai khoan thi xoa theo su kien cua no", async () => {
+  it("dang-trang va hoi-dap khong can niem phong; xoa sach, niem phong hay tai khoan thi xoa theo su kien cua no", async () => {
     const s = await coNiemPhong();
     const events = moiLoai(s);
     for (const kind of FEED_KINDS) await recordActivity(s.db, events[kind]);
     await s.db.delete(seals).where(eq(seals.id, s.sealId));
-    expect((await s.db.select().from(activity)).map((r) => r.kind).sort()).toEqual(["dang-trang", "doi-mat-khau"]);
+    expect((await s.db.select().from(activity)).map((r) => r.kind).sort()).toEqual(["dang-trang", "doi-mat-khau", "hoi-dap"]);
     await s.db.delete(books).where(eq(books.id, s.chung));
     expect((await s.db.select().from(activity)).map((r) => r.kind)).toEqual(["doi-mat-khau"]);
     await s.db.delete(accounts).where(eq(accounts.id, s.seat1.id));

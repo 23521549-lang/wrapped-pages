@@ -8,12 +8,13 @@ type BookEvent = { actorId: string; at: Date; bookId: string; roundId: string; m
 
 /**
  * Mot su kien cua dong Hoat dong. Kieu buoc moi loai co dung cac cot cua no, giong cac CHECK cua bang activity:
- * loai gan niem phong phai co sealId; dang-trang co sealId khi lan dang kem cau do hay hen gio; doi-mat-khau
- * chi co nguoi doi va nguoi bi doi.
+ * loai gan niem phong phai co sealId; dang-trang co sealId khi lan dang kem cau do hay hen gio; hoi-dap bam luot, khong
+ * bao gio gan niem phong; doi-mat-khau chi co nguoi doi va nguoi bi doi.
  */
 export type ActivityEvent =
   | (BookEvent & { kind: "dang-trang"; sealId: string | null })
-  | (BookEvent & { kind: Exclude<FeedKind, "dang-trang" | "doi-mat-khau">; sealId: string })
+  | (BookEvent & { kind: "hoi-dap"; sealId: null })
+  | (BookEvent & { kind: Exclude<FeedKind, "dang-trang" | "hoi-dap" | "doi-mat-khau">; sealId: string })
   | { kind: "doi-mat-khau"; actorId: string; subjectId: string; at: Date };
 
 /**

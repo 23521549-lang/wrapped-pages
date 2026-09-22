@@ -203,11 +203,25 @@ export const sealReplies = pgTable("seal_replies", {
 });
 
 /**
+ * Loi hoi dap cua nguoi kia cho mot luot dang. Moi luot nhieu nhat mot (khoa chinh round_id), va bat bien: khong co
+ * cot sua. body da chuan hoa (src/lib/round-reply.ts); 1000 trong CHECK phai khop REPLY_MAX va dem theo ky tu
+ * (char_length dem code point), khong theo byte. Luat ai duoc gui nam o submitRoundReply.
+ */
+export const roundReplies = pgTable("round_replies", {
+  roundId: uuid("round_id").primaryKey().references(() => rounds.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  bodyLength: check("round_replies_body", sql`char_length(${t.body}) between 1 and 1000`),
+}));
+
+/**
  * Dong Hoat dong: moi hang mot su kien, khong co cot chu tu do nao. Ten sach, kieu niem phong va loi nhan tang
  * chia khoa join luc doc, nen noi dung trang, chuoi da go, dap an va mat khau khong co duong vao day.
  * shared: cuon dang chia se ngay luc ghi. round_id: luot cua su kien, khoang to tinh tu luot; moi loai tru
- * doi-mat-khau deu co. Danh sach trong activity_kind phai khop FEED_KINDS cua
- * src/lib/feed/types.ts (co test).
+ * doi-mat-khau deu co. hoi-dap: nguoi kia gui loi hoi dap cho luot, khong gan niem phong nao. Danh sach trong
+ * activity_kind phai khop FEED_KINDS cua src/lib/feed/types.ts (co test).
  */
 export const activity = pgTable("activity", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -223,13 +237,13 @@ export const activity = pgTable("activity", {
 }, (t) => ({
   kindValue: check(
     "activity_kind",
-    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau')`,
+    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap')`,
   ),
   sach: check(
     "activity_sach",
     sql`${t.kind} = 'doi-mat-khau' or (${t.bookId} is not null and ${t.subjectId} is null and ${t.roundId} is not null)`,
   ),
-  niemPhong: check("activity_niem_phong", sql`${t.kind} in ('dang-trang', 'doi-mat-khau') or ${t.sealId} is not null`),
+  niemPhong: check("activity_niem_phong", sql`${t.kind} in ('dang-trang', 'doi-mat-khau', 'hoi-dap') or ${t.sealId} is not null`),
   matKhau: check(
     "activity_mat_khau",
     sql`${t.kind} <> 'doi-mat-khau' or (${t.subjectId} is not null and ${t.subjectId} <> ${t.actorId} and ${t.bookId} is null and ${t.sealId} is null and ${t.roundId} is null and ${t.shared} = false)`,

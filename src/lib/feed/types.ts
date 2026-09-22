@@ -1,11 +1,11 @@
 import type { SealKind } from "@/lib/seal/types";
 
 /**
- * Bay loai su kien cua dong Hoat dong. Danh sach trong CHECK activity_kind cua bang activity phai
+ * Tam loai su kien cua dong Hoat dong. Danh sach trong CHECK activity_kind cua bang activity phai
  * khop dung danh sach nay, ca thu tu (co test).
  */
 export const FEED_KINDS = [
-  "dang-trang", "moi-trao-doi", "mo-hen-gio", "mo-trang", "thu-sai", "tang-khoa", "doi-mat-khau",
+  "dang-trang", "moi-trao-doi", "mo-hen-gio", "mo-trang", "thu-sai", "tang-khoa", "doi-mat-khau", "hoi-dap",
 ] as const;
 export type FeedKind = (typeof FEED_KINDS)[number];
 
