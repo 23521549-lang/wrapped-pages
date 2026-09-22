@@ -1,15 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { asc, eq, sql } from "drizzle-orm";
-import { accounts, activity, drafts, pages, sealAttempts, sealReplies, seals } from "@/server/db/schema";
+import { accounts, activity, drafts, pages, roundReplies, sealAttempts, sealReplies, seals } from "@/server/db/schema";
 import { createSeat } from "@/server/identity/accounts";
 import { login } from "@/server/identity/login";
 import { readSecretHistory, renamePartner, revealSecret } from "@/server/identity/rename";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
+import { submitRoundReply } from "@/server/library/round-replies";
 import { khoangLuot } from "@/server/library/rounds";
 import { giftKey, submitReply, tryAnswer } from "@/server/seal/unlock";
 import type { SealInput } from "@/lib/seal/types";
 import { makeTestDb, type TestDb } from "../helpers/db";
-import { haiCuon, to } from "../helpers/library";
+import { dang, haiCuon, to } from "../helpers/library";
+import { luotCua } from "../helpers/round";
 import { CAU_DO, dangNiemPhong, henGio, TRAO_DOI } from "../helpers/seal";
 
 const NOW = new Date("2026-09-15T08:00:00.000Z");
@@ -208,6 +210,29 @@ describe("submitReply ghi su kien", () => {
     await khiGhiSuKienHong(db, () => submitReply(db, seat2.id, sealId, to("Em nghĩ về anh"), NOW));
     expect(await db.select().from(sealReplies)).toHaveLength(0);
     expect((await db.select().from(seals))[0].openedAt).toBeNull();
+  });
+});
+
+describe("submitRoundReply ghi su kien", () => {
+  it("gui: dung mot hoi-dap cua nguoi kia, khong gan niem phong, khoang to cua luot; gui lai khong ghi them", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    await dang(db, seat1.id, chung, "Một", "Hai");
+    await db.delete(activity);
+    const roundId = await luotCua(db, chung, 1);
+    expect(await submitRoundReply(db, seat2.id, roundId, "Thương ghê.", NOW)).toBe("sent");
+    expect(await submitRoundReply(db, seat2.id, roundId, "Lần hai", ms(1))).toBe("exists");
+    expect(await suKien(db)).toEqual([{
+      kind: "hoi-dap", actorId: seat2.id, subjectId: null, bookId: chung, sealId: null,
+      firstPosition: 1, lastPosition: 2, shared: true, at: NOW,
+    }]);
+  });
+
+  it("ghi su kien hong thi khong luu loi hoi dap", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    await dang(db, seat1.id, chung, "Một");
+    const roundId = await luotCua(db, chung, 1);
+    await khiGhiSuKienHong(db, () => submitRoundReply(db, seat2.id, roundId, "Thương ghê.", NOW));
+    expect(await db.select().from(roundReplies)).toHaveLength(0);
   });
 });
 

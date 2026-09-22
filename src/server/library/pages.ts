@@ -3,13 +3,17 @@ import { books, pages, readMarks } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import type { DocJson } from "@/lib/doc/types";
+import type { ReaderReply } from "@/lib/round-reply";
 import type { ReaderRound, ReaderSeal, ReaderSheet } from "@/lib/seal/types";
 import { isUuid } from "@/lib/uuid";
 import { closedToPartner, isLockedFor, readerSeals, sealsOfBook } from "@/server/seal/seals";
 import { findReadableBook, readableBy, type Book } from "./books";
+import { repliesOfBook } from "./round-replies";
 import { roundsOfBook } from "./rounds";
 
-export type ReaderView = { book: Book; mine: boolean; sheets: ReaderSheet[]; seals: ReaderSeal[]; rounds: ReaderRound[]; mark: number };
+export type ReaderView = {
+  book: Book; mine: boolean; sheets: ReaderSheet[]; seals: ReaderSeal[]; rounds: ReaderRound[]; replies: ReaderReply[]; mark: number;
+};
 
 /** Tai lieu dung thay cho to khoa: chi dong he lo, hoac mot doan trong. Khong bao gio chua noi dung that. */
 function teaserDoc(teaser: string | null): DocJson {
@@ -24,13 +28,15 @@ function teaserDoc(teaser: string | null): DocJson {
  * chua doc). To nam trong niem phong con khoa voi viewer duoc thay content bang teaserDoc: noi dung that duoc doc len
  * may chu nhung khong bao gio duoc dat vao doi tuong tra ve. Moi cau lenh doc chung mot anh chup, nen mot publishDraft
  * hay editRound commit giua chung khong the de lo to vua dang ma thieu niem phong cua no.
+ * replies: loi hoi dap cua cac luot, chi voi sach dang chia se (sach rieng tu khong co khung hoi dap, nen khong doc bang
+ * round_replies).
  */
 export async function readBook(db: AnyDb, viewerId: string, bookId: string, now: Date = new Date()): Promise<ReaderView | null> {
   return readSnapshot(db, async (tx) => {
     const book = await findReadableBook(tx, viewerId, bookId);
     if (!book) return null;
     const mine = book.ownerId === viewerId;
-    const [rows, marks, sealRows, luot] = await Promise.all([
+    const [rows, marks, sealRows, luot, replies] = await Promise.all([
       tx
         .select({ position: pages.position, content: pages.content, publishedAt: pages.publishedAt, roundId: pages.roundId })
         .from(pages)
@@ -42,6 +48,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
         .where(and(eq(readMarks.accountId, viewerId), eq(readMarks.bookId, book.id))),
       sealsOfBook(tx, book.id),
       roundsOfBook(tx, book.id),
+      book.mode === "chia-se" ? repliesOfBook(tx, book.id) : Promise.resolve<ReaderReply[]>([]),
     ]);
     const seals = await readerSeals(tx, sealRows, viewerId, mine, now);
     const lockedIds = new Set(seals.filter((s) => s.locked).map((s) => s.id));
@@ -66,7 +73,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const rounds = luot.map((r): ReaderRound => ({
       id: r.id, ordinal: r.ordinal, first: r.first, last: r.last, sealed: closedToPartner(niemCua.get(r.id), now),
     }));
-    return { book, mine, sheets, seals, rounds, mark: marks[0]?.position ?? 0 };
+    return { book, mine, sheets, seals, rounds, replies, mark: marks[0]?.position ?? 0 };
   });
 }
 

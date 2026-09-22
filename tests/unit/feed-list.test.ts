@@ -60,6 +60,17 @@ describe("listActivity: ai thay gi", () => {
     expect(await listActivity(db, seat2.id, NOW)).toEqual([{ ...cuaChu, by: "partner" }]);
   });
 
+  it("hoi-dap: chu sach va nguoi hoi dap deu thay, khoang to cua luot, khong chip; sach chuyen rieng tu thi chi chu sach thay", async () => {
+    const { db, seat1, seat2, chung, tren } = await ke();
+    await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-1)), kind: "hoi-dap", sealId: null });
+    const dong = (ds: Awaited<ReturnType<typeof listActivity>>) => ds.map((i) => [i.kind, i.by, i.firstPosition, i.lastPosition, i.sealKind]);
+    expect(dong(await listActivity(db, seat1.id, NOW))).toEqual([["hoi-dap", "partner", 1, 2, null]]);
+    expect(dong(await listActivity(db, seat2.id, NOW))).toEqual([["hoi-dap", "me", 1, 2, null]]);
+    await db.update(books).set({ mode: "rieng-tu" }).where(eq(books.id, chung));
+    expect(await listActivity(db, seat2.id, NOW)).toEqual([]);
+    expect(await listActivity(db, seat1.id, NOW)).toHaveLength(1);
+  });
+
   it("sach rieng tu: nguoi kia khong thay gi, ke ca hen gio da toi gio; chu sach thay het", async () => {
     const { db, seat1, seat2, rieng, henGio, tren } = await ke();
     await recordActivity(db, { ...tren(seat1.id, rieng, "rieng-tu", phut(-60), 3), kind: "dang-trang", sealId: henGio });
