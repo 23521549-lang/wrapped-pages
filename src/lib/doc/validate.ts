@@ -9,10 +9,12 @@ import { isUuid } from "@/lib/uuid";
 export const DOC_LIMITS = { maxChars: 20_000, maxDepth: 6, maxMedia: 60 } as const;
 
 /**
- * Tran tong cho MOT LAN goi actionPublish - khac voi DOC_LIMITS.maxChars, la tran cho
- * TUNG to rieng. actionPublish la diem cuoi cong khai, nhan toi da MAX_SHEETS_PER_PUBLISH (40) to, moi
- * to duoc phep toi DOC_LIMITS.maxChars (20 000) rieng, nen khong co tran tong thi mot lan goi mang toi
- * ~800 000 ky tu vao bang pages.
+ * Tran tong cho MOT LAN goi actionPublish, va cung la tran tong cho MOT LUOT o man sua luot - mot luot dung bang mot
+ * lan dang, nen hai dau phai dung CHUNG con so nay, khong duoc moi ben mot tran (mot lan dang 25 000 ky tu hop le ma
+ * man sua chi cho 20 000 thi luot do khong bao gio sua duoc, ke ca khi chu sach khong doi gi).
+ * Khac voi DOC_LIMITS.maxChars, la tran cho TUNG to rieng. actionPublish la diem cuoi cong khai, nhan toi da
+ * MAX_SHEETS_PER_PUBLISH (40) to, moi to duoc phep toi DOC_LIMITS.maxChars (20 000) rieng, nen khong co tran tong thi
+ * mot lan goi mang toi ~800 000 ky tu vao bang pages.
  *
  * Con so nay KHONG duoc dung lai DOC_LIMITS.maxChars: mot to giay that su (kho co dinh 360x540px, xem
  * src/lib/sheet.ts) o co chu 16px / line-height 1.7 (giay.css) chi chua duoc khoang 500-700 ky tu -
@@ -233,12 +235,11 @@ export function checkPublishInput(sheets: readonly unknown[]): PublishCheck {
 }
 
 /**
- * Kiem cac to cua mot luot vua sua: nhu checkPublishInput, them tran tong chu cua ca luot bang DOC_LIMITS.maxChars,
- * cung tran cua ban nhap ma luot sinh ra tu do. "too-long" mang tong so ky tu.
+ * Kiem cac to cua mot luot vua sua. Mot luot dung bang mot lan dang, nen luat y het checkPublishInput: tung to qua
+ * cleanDoc voi tran rieng DOC_LIMITS.maxChars, tong ca luot qua PUBLISH_TOTAL_MAX_CHARS. Tran rieng thap hon cho luot
+ * se tu choi chinh nhung luot da dang hop le (xem chu thich cua PUBLISH_TOTAL_MAX_CHARS). Giu ten rieng vi man sua luot
+ * va actionEditRound bao loi bang cau chu cua rieng no.
  */
 export function checkRoundInput(sheets: readonly unknown[]): PublishCheck {
-  const checked = checkPublishInput(sheets);
-  if (!checked.ok) return checked;
-  const chars = checked.sheets.reduce((n, s) => n + docCharCount(s), 0);
-  return chars > DOC_LIMITS.maxChars ? { ok: false, reason: "too-long", chars } : checked;
+  return checkPublishInput(sheets);
 }

@@ -27,7 +27,8 @@ const LOI_XOA_SACH: Record<Exclude<DeleteBookResult, "deleted">, string> = {
 };
 const KHONG_THAY_NHAP = "Không tìm thấy bản nháp này.";
 const KHONG_THAY_LUOT = "Không tìm thấy lượt này.";
-const LUOT_DAI = `Lượt dài quá ${groupThousands(DOC_LIMITS.maxChars)} ký tự.`;
+/** Tran chu cua mot luot dung bang tran cua mot lan dang (PUBLISH_TOTAL_MAX_CHARS): mot luot chinh la mot lan dang. */
+const LUOT_DAI = `Lượt dài quá ${groupThousands(PUBLISH_TOTAL_MAX_CHARS)} ký tự.`;
 const LOI_SUA_LUOT: Record<Extract<RoundEditResult, string>, string> = {
   "not-found": KHONG_THAY_LUOT,
   sealed: "Lượt này đang niêm phong nên chưa sửa được.",

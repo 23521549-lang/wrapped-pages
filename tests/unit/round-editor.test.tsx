@@ -6,6 +6,7 @@ import type { Editor as TiptapEditor } from "@tiptap/core";
 import { RoundEditor, type RoundEditorProps } from "@/components/editor/RoundEditor";
 import { ROUND_EDIT_TEMP_MAX_MS, roundEditKey, roundEditTemp } from "@/components/editor/roundEdit";
 import type { DocJson } from "@/lib/doc/types";
+import { PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 
 /*
  * Man sua luot tren TipTap that. Bo xep trang (usePagedLayout) va phep cat to (cutSheets) la gia de dieu khien so to va
@@ -154,6 +155,43 @@ describe("RoundEditor", () => {
     expect(sessionStorage.getItem(KHOA)).toBeNull();
   });
 
+  it("dang gui: ban tam va canh bao dong tab con nguyen; chi bo khi may chu da nhan xong", async () => {
+    let traLoi: (v: undefined) => void = () => {};
+    actionEditRound.mockReturnValue(new Promise<undefined>((giaiQuyet) => {
+      traLoi = giaiQuyet;
+    }));
+    await ve();
+    await go(" Thêm.");
+    await bam("Lưu thay đổi");
+    expect(actionEditRound).toHaveBeenCalledTimes(1);
+    // Request dang bay: dong tab dung luc nay thi chu phai con o ban tam, va tab phai hoi truoc khi dong.
+    expect(sessionStorage.getItem(KHOA)).not.toBeNull();
+    const dangBay = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, dangBay);
+    expect(dangBay.defaultPrevented).toBe(true);
+
+    await act(async () => {
+      traLoi(undefined);
+    });
+    await xong();
+    expect(sessionStorage.getItem(KHOA)).toBeNull();
+    const daXong = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, daXong);
+    expect(daXong.defaultPrevented).toBe(false);
+  });
+
+  it("gui hong (mat mang): giu ban tam, bao loi, va van canh bao truoc khi dong tab", async () => {
+    actionEditRound.mockRejectedValue(new Error("mat mang"));
+    await ve();
+    await go(" Thêm.");
+    await bam("Lưu thay đổi");
+    expect(screen.getByRole("alert").textContent).toBe("Chưa lưu được. Kiểm tra mạng rồi thử lại.");
+    expect(sessionStorage.getItem(KHOA)).not.toBeNull();
+    const conDo = new Event("beforeunload", { cancelable: true });
+    fireEvent(window, conDo);
+    expect(conDo.defaultPrevented).toBe(true);
+  });
+
   it("cat ra rong, qua 40 to hay cat hong: bao dung cau, khong goi action, vung soan thao mo lai", async () => {
     await ve();
     await go(" Thêm.");
@@ -250,13 +288,20 @@ describe("RoundEditor", () => {
     expect(window.scrollTo).toHaveBeenCalledTimes(1);
   });
 
-  it("bo dem: gan tran thi hien so ky tu, vuot tran thi bao cau rieng cua man sua luot", async () => {
-    bo.value = { sheetCount: 3, chars: 18_500, breaks: [] };
+  // Tran cua man sua luot la tran cua mot lan dang (PUBLISH_TOTAL_MAX_CHARS = 100 000), khong phai tran cua mot ban
+  // nhap: mot luot da dang 25 000 ky tu phai sua duoc, nen bo dem cung phai noi dung con so may chu that su xet.
+  it("bo dem: gan tran cua mot luot thi hien so ky tu, vuot thi bao cau rieng cua man sua luot", async () => {
+    expect(PUBLISH_TOTAL_MAX_CHARS).toBe(100_000);
+    bo.value = { sheetCount: 3, chars: 25_000, breaks: [] };
     await ve();
-    expect(screen.getByText("18 500 / 20 000 ký tự")).toBeTruthy();
+    expect(screen.queryByText(/ký tự$/)).toBeNull();
     cleanup();
-    bo.value = { sheetCount: 3, chars: 20_001, breaks: [] };
+    bo.value = { sheetCount: 3, chars: 92_500, breaks: [] };
     await ve();
-    expect(screen.getByText("Vượt 20 000 ký tự, chưa lưu được. Bớt chữ rồi lưu lại.")).toBeTruthy();
+    expect(screen.getByText("92 500 / 100 000 ký tự")).toBeTruthy();
+    cleanup();
+    bo.value = { sheetCount: 3, chars: 100_001, breaks: [] };
+    await ve();
+    expect(screen.getByText("Vượt 100 000 ký tự, chưa lưu được. Bớt chữ rồi lưu lại.")).toBeTruthy();
   });
 });

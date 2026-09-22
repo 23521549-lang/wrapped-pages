@@ -114,9 +114,11 @@ export async function ownRoundExists(db: AnyDb, ownerId: string, bookId: string,
  * - khoa lac quan: base phai trung moc phien ban (edited_at, hay published_at khi chua sua), so o muc mili giay vi Date
  *   chi giu toi do, con timestamptz giu micro giay;
  * - media qua bindMedia voi keep la moi id dang co tren cac to cua luot;
- * - cac to moi y het cac to cu (so bang phep bang cua jsonb, khong giu thu tu khoa) thi "unchanged", khong ghi gi;
+ * - cac to moi y het cac to cu (so bang phep bang cua jsonb, khong giu thu tu khoa) thi "unchanged", khong ghi gi; chi
+ *   hoi cau nay khi so to khong doi, vi doi so to thi khong the y het;
  * - xoa cac to cu, doi cac to sau luot di delta qua khoang dem, chen cac to moi lien nhau tu to dau cu, cung round_id va
- *   published_at cua luot; moc doc sau luot doi theo delta, moc doc trong luot kep ve to cuoi moi cua luot;
+ *   published_at cua luot; khi so to doi: moc doc sau luot doi theo delta, moc doc trong luot kep ve to cuoi moi cua
+ *   luot (so to khong doi thi phep doi nay la dong nhat nen khong chay);
  * - edited_at tinh ngay trong cau UPDATE: now (mac dinh gio database, test truyen moc co dinh) nhung khong som hon
  *   published_at, va sau moc phien ban cu it nhat 1 ms, nen CHECK rounds_edited_at khong vo va tab giu moc cu luon nhan
  *   "stale", khong ghi de im lang.
@@ -165,30 +167,38 @@ export async function editRound(
     const last = cu.at(-1)?.position ?? first;
     const n = bound.length;
     const delta = n - cu.length;
-    // So bang phep bang cua jsonb: thu tu khoa trong tai lieu khong tinh la thay doi, nen mot lan mo ra dong lai khong
-    // day moc phien ban len va khong lam tab kia thanh "stale".
-    const [{ giongHet }] = await tx
-      .select({
-        giongHet: sql<boolean>`jsonb_agg(${pages.content} order by ${pages.position}) = ${JSON.stringify(bound)}::jsonb`.mapWith(Boolean),
-      })
-      .from(pages)
-      .where(eq(pages.roundId, round.id));
-    if (giongHet) return { status: "unchanged", first };
+    if (delta === 0) {
+      // So bang phep bang cua jsonb: thu tu khoa trong tai lieu khong tinh la thay doi, nen mot lan mo ra dong lai khong
+      // day moc phien ban len va khong lam tab kia thanh "stale". Chi hoi khi so to khong doi: hai mang khac do dai
+      // khong the bang nhau, nen voi delta != 0 day la mot vong goi database chac chan vo nghia.
+      const [{ giongHet }] = await tx
+        .select({
+          giongHet: sql<boolean>`jsonb_agg(${pages.content} order by ${pages.position}) = ${JSON.stringify(bound)}::jsonb`.mapWith(Boolean),
+        })
+        .from(pages)
+        .where(eq(pages.roundId, round.id));
+      if (giongHet) return { status: "unchanged", first };
+    }
 
     await tx.delete(pages).where(eq(pages.roundId, round.id));
     if (delta !== 0) {
+      // Buoc 1 day moi to sau luot len vung dem (> last + DEM); buoc 2 chi ha dung nhung to vua duoc day len, nen moc
+      // loc la last + DEM chu khong phai DEM: khong dua vao gia thiet "khong cuon nao toi DEM to" o ngoai cau lenh.
       await tx.update(pages).set({ position: sql`${pages.position} + ${DEM}` }).where(and(eq(pages.bookId, book), gt(pages.position, last)));
-      await tx.update(pages).set({ position: sql`${pages.position} - ${DEM - delta}` }).where(and(eq(pages.bookId, book), gt(pages.position, DEM)));
+      await tx.update(pages).set({ position: sql`${pages.position} - ${DEM - delta}` }).where(and(eq(pages.bookId, book), gt(pages.position, last + DEM)));
     }
     await tx.insert(pages).values(bound.map((content, i) => ({
       bookId: book, roundId: round.id, position: first + i, content, publishedAt: round.publishedAt,
     })));
-    await tx
-      .update(readMarks)
-      .set({
-        position: sql`case when ${readMarks.position} > ${last} then ${readMarks.position} + ${delta} else least(${readMarks.position}, ${first + n - 1}) end`,
-      })
-      .where(and(eq(readMarks.bookId, book), gte(readMarks.position, first)));
+    if (delta !== 0) {
+      // delta = 0 thi phep bien doi nay la dong nhat (first + n - 1 = last): khong ghi vao bang cua nguoi kia cho vui.
+      await tx
+        .update(readMarks)
+        .set({
+          position: sql`case when ${readMarks.position} > ${last} then ${readMarks.position} + ${delta} else least(${readMarks.position}, ${first + n - 1}) end`,
+        })
+        .where(and(eq(readMarks.bookId, book), gte(readMarks.position, first)));
+    }
     await tx
       .update(rounds)
       .set({

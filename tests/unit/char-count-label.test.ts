@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { CHAR_COUNT_SHOW_RATIO, charCountLabel, groupThousands } from "@/lib/doc/counter";
-import { DOC_LIMITS } from "@/lib/doc/validate";
+import { DOC_LIMITS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 
 const MAX = DOC_LIMITS.maxChars;
 const NGUONG = Math.ceil(MAX * CHAR_COUNT_SHOW_RATIO);
@@ -43,5 +43,12 @@ describe("charCountLabel", () => {
   it("noi goi truyen cau canh bao rieng cho truong hop vuot tran", () => {
     expect(charCountLabel(MAX + 1, "Câu riêng.")).toEqual({ kind: "tran", text: "Câu riêng." });
     expect(charCountLabel(NGUONG, "Câu riêng.")).toEqual({ kind: "gan", text: "18 000 / 20 000 ký tự" });
+  });
+
+  // Man sua luot dem theo tran cua mot lan dang, khong phai tran cua ban nhap: cung mot ham, khac con so.
+  it("noi goi truyen tran rieng: nguong hien va cau dem deu tinh theo tran do", () => {
+    expect(charCountLabel(MAX, "Câu riêng.", PUBLISH_TOTAL_MAX_CHARS)).toEqual({ kind: "an" });
+    expect(charCountLabel(90_000, "Câu riêng.", PUBLISH_TOTAL_MAX_CHARS)).toEqual({ kind: "gan", text: "90 000 / 100 000 ký tự" });
+    expect(charCountLabel(PUBLISH_TOTAL_MAX_CHARS + 1, "Câu riêng.", PUBLISH_TOTAL_MAX_CHARS)).toEqual({ kind: "tran", text: "Câu riêng." });
   });
 });

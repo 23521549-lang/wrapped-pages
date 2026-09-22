@@ -324,10 +324,18 @@ describe("checkPublishInput (tran tong cho ca lan dang, doc lap voi tran rieng t
 describe("checkRoundInput", () => {
   const chu = (n: number) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a".repeat(n) }] }] });
 
-  it("tong chu cua luot toi DOC_LIMITS.maxChars thi qua, vuot thi too-long kem so ky tu", () => {
-    const vua = checkRoundInput([chu(DOC_LIMITS.maxChars - 1), chu(1)]);
-    expect(vua.ok).toBe(true);
-    expect(checkRoundInput([chu(DOC_LIMITS.maxChars), chu(1)])).toEqual({ ok: false, reason: "too-long", chars: DOC_LIMITS.maxChars + 1 });
+  // Mot luot dung bang mot lan dang, nen tran tong cua luot phai la tran cua lan dang. Tran thap hon
+  // (DOC_LIMITS.maxChars) se tu choi chinh nhung luot da dang hop le: viet day 40 to that roi dang mot lan roi vao
+  // khoang 20 000-28 000 ky tu, va luot do phai mo ra sua duoc ke ca khi chu sach khong doi gi.
+  it("tran tong cua mot luot dung bang tran cua mot lan dang, khong phai tran cua mot ban nhap", () => {
+    expect(checkRoundInput([chu(DOC_LIMITS.maxChars), chu(5_000)]).ok).toBe(true);
+    expect(checkRoundInput(Array.from({ length: 5 }, () => chu(DOC_LIMITS.maxChars))).ok).toBe(true);
+    const vuot = Array.from({ length: 6 }, () => chu(DOC_LIMITS.maxChars));
+    expect(checkRoundInput(vuot)).toEqual({ ok: false, reason: "too-long", chars: PUBLISH_TOTAL_MAX_CHARS + DOC_LIMITS.maxChars });
+  });
+
+  it("tran rieng cua tung to giu nguyen: mot to vuot DOC_LIMITS.maxChars van bi tu choi", () => {
+    expect(checkRoundInput([chu(DOC_LIMITS.maxChars + 1)])).toEqual({ ok: false, reason: "invalid" });
   });
 
   it("cau truc hong thi invalid; tran so to cua lan dang la 40", () => {

@@ -12,7 +12,7 @@ import { LUOT_VUA_SUA_NOI_KHAC } from "@/app/actions/messages";
 import { charCountLabel, groupThousands } from "@/lib/doc/counter";
 import { toPlainJson } from "@/lib/doc/plain";
 import type { DocJson } from "@/lib/doc/types";
-import { checkRoundInput, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
+import { checkRoundInput, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 import { dateLabel, timeAgo } from "@/lib/when";
 import { cutSheets } from "./cutSheets";
 import { editorExtensions } from "./extensions";
@@ -54,11 +54,12 @@ export type RoundEditorProps = {
 type Hoi = "huy" | "ve-sach" | "tai-lai";
 
 const CAU_HOI = "Bỏ các thay đổi trong lượt này?";
-const TRAN_LUOT = `Vượt ${groupThousands(DOC_LIMITS.maxChars)} ký tự, chưa lưu được. Bớt chữ rồi lưu lại.`;
+// Tran chu cua mot luot dung bang tran cua mot lan dang (PUBLISH_TOTAL_MAX_CHARS), la con so checkRoundInput that su xet.
+const TRAN_LUOT = `Vượt ${groupThousands(PUBLISH_TOTAL_MAX_CHARS)} ký tự, chưa lưu được. Bớt chữ rồi lưu lại.`;
 const LOI = {
   trong: "Lượt phải còn ít nhất một trang không trống.",
   nhieu: `Mỗi lượt tối đa ${MAX_SHEETS_PER_PUBLISH} trang.`,
-  dai: `Lượt dài quá ${groupThousands(DOC_LIMITS.maxChars)} ký tự.`,
+  dai: `Lượt dài quá ${groupThousands(PUBLISH_TOTAL_MAX_CHARS)} ký tự.`,
   hong: "Có trang có nội dung không đọc được.",
   chuaCat: "Chưa cắt được trang. Thử sửa một chút rồi lưu lại.",
   mang: "Chưa lưu được. Kiểm tra mạng rồi thử lại.",
@@ -120,7 +121,8 @@ export function RoundEditor({
   const mirrorRef = useRef<HTMLDivElement>(null);
   // Moc "chua doi gi": JSON cua trinh soan thao ngay sau khi tao, truoc khi khoi phuc ban tam.
   const gocRef = useRef<string | null>(null);
-  // Da gui action: roi trang luc nay (redirect) khong phai mat chu.
+  // May chu da nhan xong ban sua (hay nguoi viet chon bo thay doi): roi trang luc nay khong phai mat chu. Dat khi da co
+  // ket qua, khong phai luc vua gui: dang gui van la luc chu chi con o tab nay.
   const daGuiRef = useRef(false);
   // Da dat con tro va cuon toi to ?trang= mot lan: lan xep trang sau khong keo nguoi viet ve cho cu.
   const daMoToRef = useRef(false);
@@ -169,7 +171,7 @@ export function RoundEditor({
     },
   });
   const { sheetCount, chars, breaks } = usePagedLayout(editor, mirrorRef);
-  const dem = charCountLabel(chars, TRAN_LUOT);
+  const dem = charCountLabel(chars, TRAN_LUOT, PUBLISH_TOTAL_MAX_CHARS);
 
   const daDoi = useCallback((ed: TiptapEditor) => gocRef.current !== null && JSON.stringify(ed.getJSON()) !== gocRef.current, []);
 
@@ -240,22 +242,33 @@ export function RoundEditor({
     }
     setError(null);
     const draft = toPlainJson(ed.getJSON());
-    // Hong thi ghi lai ban tam, hien loi, mo khoa: chu van con de sua tiep hay luu lai.
+    // Hong thi ghi lai ban tam (no van con nguyen tu luc go, day chi la ghi de cho chac), hien loi, mo khoa: chu van
+    // con de sua tiep hay luu lai.
     const hong = (loi: string) => {
-      daGuiRef.current = false;
       luuTam(khoa, version, draft);
       setError(loi);
       ed.setEditable(true, false);
     };
+    // Chi goi khi may chu da nhan xong: TRUOC luc do ban tam va hang rao beforeunload phai con nguyen, khong thi dong
+    // tab dung luc request dang bay se lam mat han chu ma khong hoi mot cau nao.
+    const xongXuoi = () => {
+      daGuiRef.current = true;
+      xoaTam(khoa);
+    };
     startTransition(async () => {
       try {
-        daGuiRef.current = true;
-        xoaTam(khoa);
         const res = await actionEditRound(bookId, roundId, r.sheets, version);
         if (res?.error) hong(res.error);
+        else xongXuoi();
       } catch (err) {
-        // Luu thanh cong thi redirect() ben trong action nem loi dieu huong dac biet: phai de no di tiep cho Next.
-        unstable_rethrow(err);
+        try {
+          // Luu thanh cong thi redirect() ben trong action nem loi dieu huong dac biet: phai de no di tiep cho Next.
+          unstable_rethrow(err);
+        } catch (dieuHuong) {
+          // Loi dieu huong: action da luu xong va Next dang roi trang, gio moi den luot don ban tam.
+          xongXuoi();
+          throw dieuHuong;
+        }
         hong(LOI.mang);
       }
     });

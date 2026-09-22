@@ -217,7 +217,9 @@ describe("actionEditRound", () => {
     expect(await goi(() => actionEditRound(BOOK, LUOT, [], BASE))).toEqual({ error: soTo });
     expect(await goi(() => actionEditRound(BOOK, LUOT, Array.from({ length: 41 }, () => TO), BASE))).toEqual({ error: soTo });
     expect(await goi(() => actionEditRound(BOOK, LUOT, [{ type: "x" }], BASE))).toEqual({ error: "Có trang có nội dung không đọc được." });
-    expect(await goi(() => actionEditRound(BOOK, LUOT, [chu(DOC_LIMITS.maxChars), chu(1)], BASE))).toEqual({ error: "Lượt dài quá 20 000 ký tự." });
+    // Tran chu cua mot luot dung bang tran cua mot lan dang (100 000): can 6 to day tran rieng moi vuot.
+    const quaTran = Array.from({ length: 6 }, () => chu(DOC_LIMITS.maxChars));
+    expect(await goi(() => actionEditRound(BOOK, LUOT, quaTran, BASE))).toEqual({ error: "Lượt dài quá 100 000 ký tự." });
     expect(editRound).not.toHaveBeenCalled();
   });
 
