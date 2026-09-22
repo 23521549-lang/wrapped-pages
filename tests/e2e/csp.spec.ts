@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
 import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
-import { anhPng, giaMicro } from "./media";
+import { anhPng, giaMicro, tepMau } from "./media";
 import { batMayHong, GOC_MAY_HONG } from "./may-hong";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
 import { baoYt, ghiYt, giaYoutube } from "./youtube-gia";
@@ -108,6 +108,7 @@ test("header Content-Security-Policy co that tren response, mang nonce moi cho t
   expect(csp).toContain("frame-src https://www.youtube-nocookie.com");
   expect(csp).toContain("media-src 'self' blob:");
   expect(csp).toContain("img-src 'self' data: blob:");
+  expect(csp).toContain("worker-src 'self' blob:");
   expect(csp).toContain("'strict-dynamic'");
   expect(csp, "ban phat hanh khong duoc co 'unsafe-eval'").not.toContain("'unsafe-eval'");
 
@@ -211,6 +212,14 @@ test("khong mot vi pham CSP nao tren cac man chinh, ke ca o man viet va man doc"
   // Vi pham truoc, de loi do ra dung ten chi thi; roi moi toi ket qua nap.
   expect(await viPhamCua(a), "anh bia xem thu (blob:): co vi pham CSP").toEqual([]);
   expect(napAnh, "anh xem thu cua bia (blob:) phai nap duoc").toBe("da nap");
+
+  // worker-src blob:: bo doc anh iPhone (heic-to) giai ma trong mot Worker tao tu blob:. San cat hien dung kich thuoc
+  // nghia la worker da chay xong duoi CSP that.
+  await a.getByRole("button", { name: "Hủy", exact: true }).click();
+  await a.getByLabel("Ảnh của bạn, chọn ảnh làm bìa").setInputFiles(tepMau("plain.heic"));
+  await expect(a.getByRole("group", { name: "Khung cắt ảnh bìa" }).locator("svg").first())
+    .toHaveAttribute("viewBox", "0 0 120 80", { timeout: 20_000 });
+  expect(await viPhamCua(a), "bo doc anh iPhone (Worker blob:): co vi pham CSP").toEqual([]);
 
   // Trang tra loi (trinh viet thu hai), mo bang CHUYEN TRANG ben trong ung dung nhu nguoi dung that: tai lieu
   // khong tai lai nen nonce phai la nonce cua lan tai dau tien, khong phai cua lan lay du lieu RSC.
