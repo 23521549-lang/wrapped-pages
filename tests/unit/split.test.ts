@@ -68,31 +68,41 @@ describe("splitDoc", () => {
     expect(cleanDoc(c)).toEqual(c);
   });
 
-  it("ngat giua hai muc danh sach: moi ben mot danh sach nguyen", () => {
+  it("ngat giua hai muc danh sach: danh sach bi cat ngang mang dau noi tiep, muc sau thi khong", () => {
     const [a, c] = splitDoc(DOC, [blockBoundary(DOC, doan(DOC)[2])]);
     expect(JSON.stringify(a)).toContain("một");
-    expect(c.content[0]).toEqual({ type: "bulletList", content: [li("hai hai hai")] });
+    expect(c.content[0]).toEqual({ type: "bulletList", noiTiep: true, content: [li("hai hai hai")] });
     expect(cleanDoc(a)).toEqual(a);
     expect(cleanDoc(c)).toEqual(c);
   });
 
-  it("ngat giua chu cua mot muc: phan sau danh dau muc do la noi tiep, ca hai phan hop le", () => {
+  it("ngat giua chu cua mot muc: danh sach, muc va doan deu mang dau noi tiep, ca hai phan hop le", () => {
     const pos = doan(DOC)[2] + 1 + "hai ".length;
     const [a, c] = splitDoc(DOC, [pos]);
     expect(c.content[0]).toEqual({
       type: "bulletList",
-      content: [{ type: "listItem", noiTiep: true, content: [p("hai hai")] }],
+      noiTiep: true,
+      content: [{ type: "listItem", noiTiep: true, content: [{ ...p("hai hai"), noiTiep: true }] }],
     });
-    expect(JSON.stringify(a)).toContain("\"hai \"");
+    expect(JSON.stringify(a)).toContain('"hai "');
     expect(cleanDoc(a)).toEqual(a);
     expect(cleanDoc(c)).toEqual(c);
   });
 
-  it("ngat giua chu trong trich dan: phan sau van la trich dan, khong co dau noi tiep", () => {
+  it("ngat giua chu trong trich dan: trich dan va doan bi cat mang dau noi tiep, doan sau thi khong", () => {
     const pos = doan(DOC)[3] + 1 + "trích ".length;
     const [a, c] = splitDoc(DOC, [pos]);
-    expect(c.content[0]).toEqual({ type: "blockquote", content: [p("một"), p("trích hai")] });
+    expect(c.content[0]).toEqual({ type: "blockquote", noiTiep: true, content: [{ ...p("một"), noiTiep: true }, p("trích hai")] });
     expect(cleanDoc(a)).toEqual(a);
+    expect(cleanDoc(c)).toEqual(c);
+  });
+
+  it("ngat giua doan cap cao nhat: chi doan do mang dau noi tiep", () => {
+    const pos = doan(DOC)[0] + 1 + "Mở ".length;
+    const [a, c] = splitDoc(DOC, [pos]);
+    expect(a.content).toEqual([p("Mở ")]);
+    expect(c.content[0]).toEqual({ ...p("đầu"), noiTiep: true });
+    expect(c.content.slice(1).map((n) => n.type)).toEqual(["bulletList", "blockquote"]);
     expect(cleanDoc(c)).toEqual(c);
   });
 

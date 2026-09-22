@@ -42,7 +42,7 @@ const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !
 
 /**
  * Kiem mot tai lieu do trinh duyet gui len theo danh sach cho phep, roi dung lai ban sach:
- * chi giu type, content, text, marks; moi thuoc tinh khac bi bo. Sai bat ky cho nao thi tra null.
+ * chi giu type, content, text, marks va dau noiTiep = true (xem splitDoc); moi thuoc tinh khac bi bo. Sai bat ky cho nao thi tra null.
  * Ky tu NUL va nua cap surrogate le bi bo (xem toStorable) vi Postgres khong luu duoc chung trong jsonb.
  * Khoi media (anh, ghi am) chi hop le o cap cao nhat va duoc kiem chat hon khoi chu: thieu hay thua thuoc tinh la tu
  * choi ca tai lieu (cleanMedia). Khoi media khong cong ky tu nao vao tran chu, nen duoc dem rieng trong cung budget:
@@ -78,6 +78,11 @@ function cleanBlocks(list: unknown[], depth: number, budget: Budget): TextBlockN
   return out;
 }
 
+/** Dau noiTiep (xem splitDoc) chi giu khi dung la true; gia tri khac bi bo nhu moi thuoc tinh la. */
+function tiepCua(node: Obj): { noiTiep?: true } {
+  return node.noiTiep === true ? { noiTiep: true } : {};
+}
+
 /**
  * Rao do sau dat o DAY, dau ham, vi day la noi duy nhat moi duong de quy cua khoi (kiem qua
  * cleanBlocks lan goi thang tu nhanh bulletList cho muc danh sach) deu phai di qua.
@@ -88,11 +93,12 @@ function cleanBlock(node: unknown, depth: number, budget: Budget): TextBlockNode
   if (!isObj(node)) return null;
   switch (node.type) {
     case "paragraph": {
-      if (node.content === undefined) return { type: "paragraph" };
+      const tiep = tiepCua(node);
+      if (node.content === undefined) return { type: "paragraph", ...tiep };
       if (!Array.isArray(node.content)) return null;
       const inline = cleanInlines(node.content, budget);
       if (!inline) return null;
-      return inline.length > 0 ? { type: "paragraph", content: inline } : { type: "paragraph" };
+      return inline.length > 0 ? { type: "paragraph", ...tiep, content: inline } : { type: "paragraph", ...tiep };
     }
     case "bulletList": {
       if (!Array.isArray(node.content) || node.content.length === 0) return null;
@@ -103,16 +109,14 @@ function cleanBlock(node: unknown, depth: number, budget: Budget): TextBlockNode
         }
         const para = cleanBlock(item.content[0], depth + 1, budget);
         if (!para || para.type !== "paragraph") return null;
-        items.push(
-          item.noiTiep === true ? { type: "listItem", noiTiep: true, content: [para] } : { type: "listItem", content: [para] },
-        );
+        items.push({ type: "listItem", ...tiepCua(item), content: [para] });
       }
-      return { type: "bulletList", content: items };
+      return { type: "bulletList", ...tiepCua(node), content: items };
     }
     case "blockquote": {
       if (!Array.isArray(node.content) || node.content.length === 0) return null;
       const inner = cleanBlocks(node.content, depth + 1, budget);
-      return inner ? { type: "blockquote", content: inner } : null;
+      return inner ? { type: "blockquote", ...tiepCua(node), content: inner } : null;
     }
     default:
       return null;

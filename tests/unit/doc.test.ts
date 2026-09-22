@@ -60,6 +60,22 @@ describe("cleanDoc", () => {
     expect(cleanDoc(item({ noiTiep: "co" }))).toEqual(item({}));
   });
 
+  it("giu dau noiTiep tren doan, danh sach va trich dan khi la true, bo khi la gia tri khac", () => {
+    const doanCo = (extra: object) => ({ type: "doc", content: [{ type: "paragraph", ...extra, content: [{ type: "text", text: "a" }] }] });
+    expect(cleanDoc(doanCo({ noiTiep: true }))).toEqual(doanCo({ noiTiep: true }));
+    expect(cleanDoc(doanCo({ noiTiep: 1 }))).toEqual(doanCo({}));
+    const doanRong = { type: "doc", content: [{ type: "paragraph", noiTiep: true }] };
+    expect(cleanDoc(doanRong)).toEqual(doanRong);
+    const ds = (extra: object) => ({
+      type: "doc", content: [{ type: "bulletList", ...extra, content: [{ type: "listItem", content: [{ type: "paragraph" }] }] }],
+    });
+    expect(cleanDoc(ds({ noiTiep: true }))).toEqual(ds({ noiTiep: true }));
+    expect(cleanDoc(ds({ noiTiep: "co" }))).toEqual(ds({}));
+    const trich = (extra: object) => ({ type: "doc", content: [{ type: "blockquote", ...extra, content: [{ type: "paragraph" }] }] });
+    expect(cleanDoc(trich({ noiTiep: true }))).toEqual(trich({ noiTiep: true }));
+    expect(cleanDoc(trich({ noiTiep: false }))).toEqual(trich({}));
+  });
+
   it.each([
     ["loai khoi la", { type: "doc", content: [{ type: "heading", content: [] }] }],
     ["dinh dang la", { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "link" }] }] }] }],
