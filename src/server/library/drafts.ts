@@ -5,6 +5,7 @@ import type { BookMode, CoverKey } from "@/lib/book";
 import { normalizeSheets } from "@/lib/doc/continuation";
 import type { DocJson } from "@/lib/doc/types";
 import { docExcerpt, trimTrailingBlank } from "@/lib/doc/text";
+import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
 import { isUuid } from "@/lib/uuid";
 import { sealTeaser } from "@/lib/seal/teaser";
 import type { SealInput } from "@/lib/seal/types";
@@ -12,8 +13,6 @@ import { recordActivity } from "@/server/feed/record";
 import { bindMedia } from "@/server/media/access";
 import { insertSeal } from "@/server/seal/seals";
 import { findOwnBook } from "./books";
-
-export const MAX_SHEETS_PER_PUBLISH = 40;
 
 /**
  * Luu (hoac ghi de) ban nhap duy nhat cua mot cuon. Chi chu sach. Tai lieu qua bindMedia truoc khi ghi: khoi media

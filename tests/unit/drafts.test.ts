@@ -3,9 +3,10 @@ import { asc, eq } from "drizzle-orm";
 import { dang, haiCuon, to } from "../helpers/library";
 import { books, drafts, pages, readMarks, rounds } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
-import { listDrafts, listUnwrittenBooks, MAX_SHEETS_PER_PUBLISH, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
+import { listDrafts, listUnwrittenBooks, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
 import type { DocJson } from "@/lib/doc/types";
+import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
 
 describe("ban nhap", () => {
   it("chi chu sach luu va doc duoc ban nhap; voi nguoi kia no nhu khong ton tai", async () => {

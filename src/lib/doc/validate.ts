@@ -24,6 +24,12 @@ export const DOC_LIMITS = { maxChars: 20_000, maxDepth: 6, maxMedia: 60 } as con
  */
 export const PUBLISH_TOTAL_MAX_CHARS = 100_000;
 
+/**
+ * Tran so to cua mot lan dang, va cua mot luot sau khi sua (luot la dung cac to cua mot lan dang). Dat o day de man
+ * sua luot o trinh duyet va may chu doc cung mot so.
+ */
+export const MAX_SHEETS_PER_PUBLISH = 40;
+
 const MARKS = new Set<string>(["bold", "italic", "underline"] satisfies MarkType[]);
 
 type Obj = Record<string, unknown>;
@@ -224,4 +230,15 @@ export function checkPublishInput(sheets: readonly unknown[]): PublishCheck {
     clean.push(c);
   }
   return total > PUBLISH_TOTAL_MAX_CHARS ? { ok: false, reason: "too-long", chars: total } : { ok: true, sheets: clean };
+}
+
+/**
+ * Kiem cac to cua mot luot vua sua: nhu checkPublishInput, them tran tong chu cua ca luot bang DOC_LIMITS.maxChars,
+ * cung tran cua ban nhap ma luot sinh ra tu do. "too-long" mang tong so ky tu.
+ */
+export function checkRoundInput(sheets: readonly unknown[]): PublishCheck {
+  const checked = checkPublishInput(sheets);
+  if (!checked.ok) return checked;
+  const chars = checked.sheets.reduce((n, s) => n + docCharCount(s), 0);
+  return chars > DOC_LIMITS.maxChars ? { ok: false, reason: "too-long", chars } : checked;
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { actionDeleteBook, actionDiscardDraft, actionPublish, actionUpdateBook } from "@/app/actions/library";
-import { CAN_DANG_NHAP, KHONG_THAY_SACH } from "@/app/actions/messages";
+import { actionDeleteBook, actionDiscardDraft, actionEditRound, actionPublish, actionUpdateBook } from "@/app/actions/library";
+import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "@/app/actions/messages";
+import { DOC_LIMITS } from "@/lib/doc/validate";
 
 /*
  * Hai day noi cua don rac media o src/app/actions/library.ts: sua sach xong va dang trang xong deu phai hen
@@ -13,13 +14,14 @@ import { CAN_DANG_NHAP, KHONG_THAY_SACH } from "@/app/actions/messages";
  */
 
 const {
-  readMe, updateBook, findOwnBook, publishDraft, deleteUnpublishedBook, discardDraft,
+  readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
   sweepMediaAfterResponse, redirect, refresh,
 } = vi.hoisted(() => ({
   readMe: vi.fn(),
   updateBook: vi.fn(),
   findOwnBook: vi.fn(),
   publishDraft: vi.fn(),
+  editRound: vi.fn(),
   deleteUnpublishedBook: vi.fn(),
   discardDraft: vi.fn(),
   sweepMediaAfterResponse: vi.fn(),
@@ -32,7 +34,8 @@ const {
 }));
 vi.mock("@/server/web/guard", () => ({ readMe }));
 vi.mock("@/server/library/books", () => ({ createBook: vi.fn(), findOwnBook, updateBook }));
-vi.mock("@/server/library/drafts", () => ({ MAX_SHEETS_PER_PUBLISH: 40, publishDraft, saveDraft: vi.fn() }));
+vi.mock("@/server/library/drafts", () => ({ publishDraft, saveDraft: vi.fn() }));
+vi.mock("@/server/library/edit-round", () => ({ editRound }));
 vi.mock("@/server/library/pages", () => ({ markRead: vi.fn() }));
 vi.mock("@/server/library/remove", () => ({ deleteUnpublishedBook, discardDraft }));
 vi.mock("@/server/web/media-sweep", () => ({ sweepMediaAfterResponse }));
@@ -69,7 +72,7 @@ function truoc(a: { mock: { invocationCallOrder: number[] } }, b: { mock: { invo
 
 afterEach(() => {
   for (const f of [
-    readMe, updateBook, findOwnBook, publishDraft, deleteUnpublishedBook, discardDraft,
+    readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
     sweepMediaAfterResponse, redirect, refresh,
   ]) f.mockReset();
   redirect.mockImplementation((to: string) => {
@@ -177,5 +180,84 @@ describe("actionDeleteBook va actionDiscardDraft", () => {
     expect(await actionDeleteBook(BOOK)).toEqual({ error: CAN_DANG_NHAP });
     expect(await actionDiscardDraft(BOOK)).toEqual({ error: CAN_DANG_NHAP });
     expect([deleteUnpublishedBook.mock.calls.length, discardDraft.mock.calls.length]).toEqual([0, 0]);
+  });
+});
+
+describe("actionEditRound", () => {
+  const BASE = "2026-09-19T07:05:00.000Z";
+  const LUOT = "7c1d9e4a-2b3f-4a6c-8d5e-1f0a9b8c7d6e";
+  const KHONG_THAY_LUOT = "Không tìm thấy lượt này.";
+  const chu = (n: number) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a".repeat(n) }] }] });
+
+  it("chua dang nhap: khong goi editRound", async () => {
+    readMe.mockResolvedValue(null);
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [TO], BASE))).toEqual({ error: CAN_DANG_NHAP });
+    expect(editRound).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, unknown, unknown]>([
+    ["ma luot rac", "rac", BASE],
+    ["ma luot la so", 1, BASE],
+    ["ma luot null", null, BASE],
+    ["moc la so", LUOT, 123],
+    ["moc khong doc duoc", LUOT, "hom qua"],
+    ["moc rong", LUOT, ""],
+    // Moc doc duoc va dung thoi diem cua BASE, chi dai hon 40 ky tu: bi tu choi vi do dai chu khong vi khong doc duoc.
+    ["moc dai hon 40 ky tu", LUOT, "Sat Sep 19 2026 07:05:00 GMT+0000 (Coordinated Universal Time)"],
+  ])("%s: khong tim thay luot, khong goi editRound", async (_ten, luot, moc) => {
+    readMe.mockResolvedValue(ME);
+    expect(await goi(() => actionEditRound(BOOK, luot, [TO], moc))).toEqual({ error: KHONG_THAY_LUOT });
+    expect(editRound).not.toHaveBeenCalled();
+  });
+
+  it("mang to sai, to hong, qua tran chu cua luot: bao dung cau, khong goi editRound", async () => {
+    readMe.mockResolvedValue(ME);
+    const soTo = "Mỗi lượt có từ 1 tới 40 trang.";
+    expect(await goi(() => actionEditRound(BOOK, LUOT, "khong phai mang", BASE))).toEqual({ error: soTo });
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [], BASE))).toEqual({ error: soTo });
+    expect(await goi(() => actionEditRound(BOOK, LUOT, Array.from({ length: 41 }, () => TO), BASE))).toEqual({ error: soTo });
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [{ type: "x" }], BASE))).toEqual({ error: "Có trang có nội dung không đọc được." });
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [chu(DOC_LIMITS.maxChars), chu(1)], BASE))).toEqual({ error: "Lượt dài quá 20 000 ký tự." });
+    expect(editRound).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, string]>([
+    ["not-found", KHONG_THAY_LUOT],
+    ["sealed", "Lượt này đang niêm phong nên chưa sửa được."],
+    ["stale", LUOT_VUA_SUA_NOI_KHAC],
+    ["invalid-media", "Có ảnh hoặc ghi âm không dùng được trong lượt này."],
+    ["invalid", "Lượt phải còn ít nhất một trang không trống."],
+  ])("editRound tra %s: bao dung cau, khong hen don, khong chuyen trang", async (ketQua, cau) => {
+    readMe.mockResolvedValue(ME);
+    editRound.mockResolvedValue(ketQua);
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [TO], BASE))).toEqual({ error: cau });
+    expect([sweepMediaAfterResponse.mock.calls.length, redirect.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  it("saved: hen don rac dung mot lan, truoc khi ve to dau cua luot", async () => {
+    readMe.mockResolvedValue(ME);
+    editRound.mockResolvedValue({ status: "saved", first: 6 });
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [TO], BASE))).toEqual({ di: `/sach/${BOOK}?trang=6` });
+    expect(sweepMediaAfterResponse).toHaveBeenCalledTimes(1);
+    expect(truoc(editRound, sweepMediaAfterResponse)).toBe(true);
+    expect(truoc(sweepMediaAfterResponse, redirect)).toBe(true);
+  });
+
+  it("unchanged: ve cung dich, khong hen don", async () => {
+    readMe.mockResolvedValue(ME);
+    editRound.mockResolvedValue({ status: "unchanged", first: 6 });
+    expect(await goi(() => actionEditRound(BOOK, LUOT, [TO], BASE))).toEqual({ di: `/sach/${BOOK}?trang=6` });
+    expect(sweepMediaAfterResponse).not.toHaveBeenCalled();
+  });
+
+  it("editRound nhan db, nguoi dang nhap, sach, luot, cac to da qua kiem va moc dang Date", async () => {
+    readMe.mockResolvedValue(ME);
+    editRound.mockResolvedValue({ status: "saved", first: 1 });
+    // Truong la bi cleanDoc bo: editRound chi thay ban da qua kiem.
+    const coRac = { ...TO, content: [{ ...TO.content[0], rac: 1 }] };
+    await goi(() => actionEditRound(BOOK, LUOT, [coRac, TO], BASE));
+    const [dbGoi, ai, sach, luot, cacTo, moc] = editRound.mock.calls[0];
+    expect([dbGoi, ai, sach, luot, cacTo]).toEqual([{ la: "db-gia" }, ME.accountId, BOOK, LUOT, [TO, TO]]);
+    expect((moc as Date).getTime()).toBe(new Date(BASE).getTime());
   });
 });

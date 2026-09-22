@@ -55,26 +55,28 @@ export function lockedForSql(isOwner: SQL, now: Date): SQL {
 
 /** Moi niem phong cua mot cuon, theo vi tri. Dong day du, chi dung ben trong may chu. */
 export async function sealsOfBook(db: AnyDb, bookId: string): Promise<SealRow[]> {
+  const khoang = khoangLuot(bookId);
   return db
-    .select({ ...getTableColumns(seals), firstPosition: khoangLuot.first, lastPosition: khoangLuot.last })
+    .select({ ...getTableColumns(seals), firstPosition: khoang.first, lastPosition: khoang.last })
     .from(seals)
-    .innerJoin(khoangLuot, eq(khoangLuot.roundId, seals.roundId))
+    .innerJoin(khoang, eq(khoang.roundId, seals.roundId))
     .where(eq(seals.bookId, bookId))
-    .orderBy(asc(khoangLuot.first));
+    .orderBy(asc(khoang.first));
 }
 
 /** Khoang to va trang thai niem phong cua nhieu cuon mot luc, cho ke sach. Khong lay cau hoi, dap an hay goi y. */
 export async function sealsOfBooks(db: AnyDb, bookIds: readonly string[]): Promise<SealRange[]> {
   if (bookIds.length === 0) return [];
+  const khoang = khoangLuot();
   return db
     .select({
-      id: seals.id, bookId: seals.bookId, roundId: seals.roundId, firstPosition: khoangLuot.first, lastPosition: khoangLuot.last,
+      id: seals.id, bookId: seals.bookId, roundId: seals.roundId, firstPosition: khoang.first, lastPosition: khoang.last,
       kind: seals.kind, opensAt: seals.opensAt, openedAt: seals.openedAt, teaser: seals.teaser,
     })
     .from(seals)
-    .innerJoin(khoangLuot, eq(khoangLuot.roundId, seals.roundId))
+    .innerJoin(khoang, eq(khoang.roundId, seals.roundId))
     .where(inArray(seals.bookId, [...bookIds]))
-    .orderBy(asc(seals.bookId), asc(khoangLuot.first));
+    .orderBy(asc(seals.bookId), asc(khoang.first));
 }
 
 /** Niem phong phu vi tri position, neu co. */

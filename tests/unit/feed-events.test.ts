@@ -18,14 +18,15 @@ const KHONG_CO = "00000000-0000-4000-8000-000000000000";
 
 /** Moi su kien da ghi, cu nhat truoc, khong kem id; khoang to tinh tu luot cua su kien. */
 function suKien(db: TestDb) {
+  const khoang = khoangLuot();
   return db
     .select({
       kind: activity.kind, actorId: activity.actorId, subjectId: activity.subjectId, bookId: activity.bookId,
-      sealId: activity.sealId, firstPosition: khoangLuot.first, lastPosition: khoangLuot.last,
+      sealId: activity.sealId, firstPosition: khoang.first, lastPosition: khoang.last,
       shared: activity.shared, at: activity.at,
     })
     .from(activity)
-    .leftJoin(khoangLuot, eq(khoangLuot.roundId, activity.roundId))
+    .leftJoin(khoang, eq(khoang.roundId, activity.roundId))
     .orderBy(asc(activity.at), asc(activity.kind));
 }
 

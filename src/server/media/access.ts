@@ -66,8 +66,8 @@ function boundNode(type: MediaNodeType, row: BindRow): MediaNode | null {
  * song am tu bang. Sai mot id thi tra null cho ca tai lieu. Moi khoi khac giu nguyen, dung thu tu. Goi bang db hoac
  * giao dich cua noi luu nhap, dang trang, truoc khi chen to cua lan dang do.
  *
- * Khi sua mot to da dang (editPage), opts.keep la tap id dang nam tren chinh to do. Id trong keep khong xet luat
- * "da nam tren to da dang": chung da nam tren to, giu lai khong lo gi moi, ke ca khi mot lan dang dan cung media
+ * Khi sua mot luot da dang (editRound), opts.keep la tap id dang nam tren cac to cua luot do. Id trong keep khong xet
+ * luat "da nam tren to da dang": chung da nam tren to, giu lai khong lo gi moi, ke ca khi mot lan dang dan cung media
  * len hai to lien nhau. Luat chu, cuon, loai van ap cho moi id. Id moi (ngoai keep) phai khong nam tren to da dang
  * nao cua cuon va khong nam trong nhap hien tai cua cuon: neu cho qua, lan dang nhap sau se bi tu choi vi media do
  * vua o nhap vua o to da dang. Khong truyen opts thi hanh vi y nhu tren (luu nhap, dang trang).

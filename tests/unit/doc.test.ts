@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { checkDraftInput, checkPublishInput, cleanDoc, DOC_LIMITS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
+import {
+  checkDraftInput, checkPublishInput, checkRoundInput, cleanDoc, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS,
+} from "@/lib/doc/validate";
 import { cutAtWord, docCharCount, docExcerpt, docText, isBlankDoc, roughCharCount, trimTrailingBlank } from "@/lib/doc/text";
 import type { DocJson } from "@/lib/doc/types";
 
@@ -316,5 +318,20 @@ describe("checkPublishInput (tran tong cho ca lan dang, doc lap voi tran rieng t
 
   it("mang rong: tong la 0, ok true (actionPublish tu choi mang rong o buoc truoc, rieng ham nay khong)", () => {
     expect(checkPublishInput([])).toEqual({ ok: true, sheets: [] });
+  });
+});
+
+describe("checkRoundInput", () => {
+  const chu = (n: number) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a".repeat(n) }] }] });
+
+  it("tong chu cua luot toi DOC_LIMITS.maxChars thi qua, vuot thi too-long kem so ky tu", () => {
+    const vua = checkRoundInput([chu(DOC_LIMITS.maxChars - 1), chu(1)]);
+    expect(vua.ok).toBe(true);
+    expect(checkRoundInput([chu(DOC_LIMITS.maxChars), chu(1)])).toEqual({ ok: false, reason: "too-long", chars: DOC_LIMITS.maxChars + 1 });
+  });
+
+  it("cau truc hong thi invalid; tran so to cua lan dang la 40", () => {
+    expect(checkRoundInput([{ type: "doc", content: "x" }])).toEqual({ ok: false, reason: "invalid" });
+    expect(MAX_SHEETS_PER_PUBLISH).toBe(40);
   });
 });

@@ -4,15 +4,20 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { db } from "@/server/db";
 import { createBook, findOwnBook, updateBook } from "@/server/library/books";
-import { MAX_SHEETS_PER_PUBLISH, publishDraft, saveDraft } from "@/server/library/drafts";
+import { publishDraft, saveDraft } from "@/server/library/drafts";
+import { editRound, type RoundEditResult } from "@/server/library/edit-round";
 import { markRead } from "@/server/library/pages";
 import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
 import { parseBookInput } from "@/lib/book";
-import { checkDraftInput, checkPublishInput, DOC_LIMITS, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
+import { groupThousands } from "@/lib/doc/counter";
+import {
+  checkDraftInput, checkPublishInput, checkRoundInput, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS,
+} from "@/lib/doc/validate";
 import { parseSealInput } from "@/lib/seal/input";
-import { CAN_DANG_NHAP, KHONG_THAY_SACH } from "./messages";
+import { isUuid } from "@/lib/uuid";
+import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "./messages";
 
 const NHAP_KHONG_DOC_DUOC = "Bản nháp có nội dung không đọc được.";
 const BIA_KHONG_DUNG_DUOC = "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa.";
@@ -21,6 +26,15 @@ const LOI_XOA_SACH: Record<Exclude<DeleteBookResult, "deleted">, string> = {
   "has-pages": "Cuốn này đã có trang đăng nên không xóa được. Bạn vẫn bỏ được bản nháp.",
 };
 const KHONG_THAY_NHAP = "Không tìm thấy bản nháp này.";
+const KHONG_THAY_LUOT = "Không tìm thấy lượt này.";
+const LUOT_DAI = `Lượt dài quá ${groupThousands(DOC_LIMITS.maxChars)} ký tự.`;
+const LOI_SUA_LUOT: Record<Extract<RoundEditResult, string>, string> = {
+  "not-found": KHONG_THAY_LUOT,
+  sealed: "Lượt này đang niêm phong nên chưa sửa được.",
+  stale: LUOT_VUA_SUA_NOI_KHAC,
+  "invalid-media": "Có ảnh hoặc ghi âm không dùng được trong lượt này.",
+  invalid: "Lượt phải còn ít nhất một trang không trống.",
+};
 
 /** Tao cuon moi cho nguoi dang dang nhap, roi mo man viet cua cuon do. Bia tu tai len khong dung duoc thi bao loi. */
 export async function actionCreateBook(formData: FormData) {
@@ -145,4 +159,28 @@ export async function actionDiscardDraft(bookId: string): Promise<{ error: strin
   if ((await discardDraft(db, me.accountId, bookId)) !== "discarded") return { error: KHONG_THAY_NHAP };
   sweepMediaAfterResponse();
   refresh();
+}
+
+/**
+ * Chu sach luu mot luot vua sua. Moi phep kiem re (ma luot, moc, so to, cau truc, tran chu cua luot) dat truoc khi cham
+ * database; moc chi la chuoi ngan doc duoc thanh thoi diem (moc ISO that dai 24 ky tu). Quyen nam trong giao dich cua
+ * editRound: nguoi kia goi thang voi dung bookId va ma luot cua mot sach chia se nhan cung cau voi luot la, va khong co
+ * gi duoc ghi. CSRF do server action cua Next lo (chi nhan POST mang Next-Action, so Origin voi Host, cookie phien
+ * SameSite=Lax), khong them allowedOrigins. Luu xong hen don rac media, vi media bi bo khoi luot thanh rac; khong doi gi
+ * thi chi ve lai man doc, tai to dau cua luot.
+ */
+export async function actionEditRound(bookId: string, roundId: unknown, sheets: unknown, base: unknown) {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  if (typeof roundId !== "string" || !isUuid(roundId)) return { error: KHONG_THAY_LUOT };
+  if (typeof base !== "string" || base.length > 40 || Number.isNaN(new Date(base).getTime())) return { error: KHONG_THAY_LUOT };
+  if (!Array.isArray(sheets) || sheets.length === 0 || sheets.length > MAX_SHEETS_PER_PUBLISH) {
+    return { error: `Mỗi lượt có từ 1 tới ${MAX_SHEETS_PER_PUBLISH} trang.` };
+  }
+  const checked = checkRoundInput(sheets);
+  if (!checked.ok) return { error: checked.reason === "too-long" ? LUOT_DAI : "Có trang có nội dung không đọc được." };
+  const r = await editRound(db, me.accountId, bookId, roundId, checked.sheets, new Date(base));
+  if (typeof r === "string") return { error: LOI_SUA_LUOT[r] };
+  if (r.status === "saved") sweepMediaAfterResponse();
+  redirect(`/sach/${bookId}?trang=${r.first}`);
 }

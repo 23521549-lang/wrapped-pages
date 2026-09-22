@@ -6,8 +6,11 @@ import { isUuid } from "@/lib/uuid";
 export type DeleteBookResult = "deleted" | "not-found" | "has-pages";
 export type DiscardDraftResult = "discarded" | "not-found";
 
-/** Khoa dong sach cua chinh ownerId (FOR UPDATE): xep hang voi publishDraft va saveDraft tren cung khoa. */
-async function lockOwnBook(tx: AnyDb, ownerId: string, bookId: string): Promise<string | null> {
+/**
+ * Khoa dong sach cua chinh ownerId (FOR UPDATE): xep hang voi publishDraft, saveDraft va editRound tren cung khoa.
+ * Chi SELECT ... FOR UPDATE, khong ghi gi, nen goi truoc moi duong tra ve som cua mot giao dich van an toan.
+ */
+export async function lockOwnBook(tx: AnyDb, ownerId: string, bookId: string): Promise<string | null> {
   const [book] = await tx
     .select({ id: books.id })
     .from(books)

@@ -15,3 +15,6 @@ export const CHUA_LUU_NHAC = "Chưa lưu được lựa chọn nhạc.";
  * ba loai media (anh trong trang, ghi am, bia), nen phai noi dung ca ba - va trung voi cau man viet hien san.
  */
 export const CHUA_BAT_KHO_MEDIA = "Chưa bật kho lưu ảnh và ghi âm.";
+
+/** Chu sach luu mot luot ma luot do vua duoc luu o the khac: man sua nhan ra cau nay de moi tai lai. */
+export const LUOT_VUA_SUA_NOI_KHAC = "Lượt này vừa được sửa ở nơi khác. Tải lại để xem bản mới nhất.";
