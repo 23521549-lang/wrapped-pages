@@ -33,7 +33,7 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     await b.goto("/ke-sach");
     await expect(theSach(b, "Chuyện chưa kể").locator(".cham")).toHaveCount(1);
     await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo} trang mới`);
-    await expect(b.getByRole("article", { name: "Trang gần nhất" })).toContainText(`${tenCuaA} vừa viết`);
+    await expect(b.getByRole("article", { name: "Một trang trong sách" })).toContainText(`${tenCuaA} vừa viết`);
   });
 
   await test.step("B mo sach o khung dau, chua lat da quay lai: con dung so to chua thay", async () => {

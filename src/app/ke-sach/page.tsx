@@ -94,7 +94,8 @@ export default async function KeSach() {
                   cover={recent.cover}
                   coverMediaId={recent.coverMediaId}
                   pageCount={recent.pageCount}
-                  lastPosition={recent.excerptPosition}
+                  position={recent.excerptPosition}
+                  readHref={`/sach/${recent.id}?trang=${recent.excerptPosition}`}
                   when={when(recent)}
                   excerpt={recent.excerpt}
                   locked={recent.excerptLocked}

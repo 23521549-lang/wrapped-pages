@@ -96,7 +96,7 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
     .toHaveAttribute("href", `/sach/${rieng}?trang=1`);
   await expect(cuon(a).getByRole("listitem")).toHaveCount(2);
   // Cuon rieng tu cua chinh chu sach la trang gan nhat: doan trich lam mo, an voi trinh doc man hinh, nhan Rieng tu de len.
-  const ganNhat = a.getByRole("article", { name: "Trang gần nhất" });
+  const ganNhat = a.getByRole("article", { name: "Một trang trong sách" });
   await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveAttribute("aria-hidden", "true");
   await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveText(HOP_THOI_GIAN);
   await expect(ganNhat.locator(".trang-che--giua")).toHaveText("Riêng tưMở sách để đọc");
@@ -233,7 +233,7 @@ test("khung cuon: man rong cao dung bang cuon sach mo, man hep toi da 340px, an 
   expect(Math.abs(rong["vua-viet"].duoi - rong["hoat-dong"].duoi)).toBeLessThanOrEqual(1);
 
   // Ban phim: Tab tu nut duy nhat cua cuon sach mo (cuon cua chinh minh nen la Viet tiep) vao vung cuon; mui ten va PageDown cuon vung.
-  await a.getByRole("article", { name: "Trang gần nhất" }).getByRole("link", { name: "Viết tiếp" }).focus();
+  await a.getByRole("article", { name: "Một trang trong sách" }).getByRole("link", { name: "Viết tiếp" }).focus();
   await a.keyboard.press("Tab");
   await expect(vung).toBeFocused();
   const cuonToi = () => vung.evaluate((el) => el.scrollTop);

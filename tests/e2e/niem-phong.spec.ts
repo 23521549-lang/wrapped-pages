@@ -77,7 +77,7 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await daGuiMoc;
   await b.goto("/ke-sach");
   const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
-  const ganNhat = b.getByRole("article", { name: "Trang gần nhất" });
+  const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
   await expect(the.locator(".dh--moi")).toHaveText("1 trang mới");
   await expect(the.locator(".dh--khoa")).toHaveText("1 trang khóa");
   await expect(ganNhat.locator(".he-lo")).toHaveText(HE_LO);
@@ -140,6 +140,8 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await expect(the.locator(".dh--khoa")).toHaveCount(0);
   await expect(ganNhat.locator(".trang-khoa")).toHaveCount(0);
   await expect(ganNhat.locator(".vua-viet__chu")).toContainText(BI_MAT);
+  // Spec 2026-09-22 muc 7: ca khung la lien ket toi to cua doan trich; cuon chi co mot to nen la to 1.
+  await expect(ganNhat.getByRole("link", { name: "Đọc Chuyện chưa kể tại trang 1" })).toHaveAttribute("href", `/sach/${id}?trang=1`);
 
   // Chu sach mo dung URL co mo: khong nghi thuc (ritual chi cua nguoi kia tu mo).
   await a.goto(`/sach/${id}?trang=1&mo=${s.id}`);

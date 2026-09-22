@@ -19,7 +19,7 @@ test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi h
   const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
   await expect(the.locator(".dh--moi")).toHaveText("3 trang mới");
   await expect(the.locator(".cham")).toHaveCount(1);
-  const ganNhat = b.getByRole("article", { name: "Trang gần nhất" });
+  const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
   await expect(ganNhat).toContainText("Chuyện chưa kể");
   await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveCount(0);
   await ganNhat.getByRole("link", { name: "Đọc tiếp" }).click();

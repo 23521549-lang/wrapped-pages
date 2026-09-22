@@ -34,7 +34,8 @@ describe("ShelfBook", () => {
 });
 
 const MO: OpenBookProps = {
-  who: "Linh", title: "Chuyện chưa kể", cover: "trang-nuoc", coverMediaId: null, pageCount: 4, lastPosition: 4,
+  who: "Linh", title: "Chuyện chưa kể", cover: "trang-nuoc", coverMediaId: null, pageCount: 4, position: 4,
+  readHref: "/sach/abc?trang=4",
   when: "vừa xong", excerpt: "Dòng chữ thật", locked: false, isPrivate: false, action: { label: "Đọc tiếp", href: "/sach/abc" },
 };
 const mo = (p: Partial<OpenBookProps> = {}) => renderToStaticMarkup(createElement(OpenBook, { ...MO, ...p }));
@@ -42,8 +43,12 @@ const mo = (p: Partial<OpenBookProps> = {}) => renderToStaticMarkup(createElemen
 describe("OpenBook", () => {
   it("trang trai co ai viet, ten, dong phu va mot nut chinh; trang phai la doan trich va so trang", () => {
     const html = mo();
-    expect(html.match(/<a /g)).toHaveLength(1);
+    expect(html).toContain('<article class="vua-viet" aria-label="Một trang trong sách">');
+    expect(html.match(/<a /g)).toHaveLength(2);
+    // Link phu khung dung dau, chi chua chu an; nut chinh la link rieng, khong link nao nam trong link nao.
+    expect(html).toContain('<div class="sach-mo"><a class="sach-mo__lien" href="/sach/abc?trang=4"><span class="sr-only">Đọc Chuyện chưa kể tại trang 4</span></a>');
     expect(html).toContain('<a class="btn sach-mo__nut" href="/sach/abc">Đọc tiếp</a>');
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<a /);
     expect(chu(html)).toContain("Linh vừa viết");
     expect(html).toContain('<p class="vua-viet__chu">Dòng chữ thật</p>');
     expect(html).toContain('<span class="sach-mo__so" aria-hidden="true">4</span>');
@@ -57,6 +62,13 @@ describe("OpenBook", () => {
     expect(chu(html)).toContain("Trang khóa, vượt thử thách để đọc");
     expect(html).not.toContain("vua-viet__chu");
     expect(chu(mo({ locked: true, excerpt: null }))).not.toContain("hé lộ");
+  });
+
+  it("dong he lo khong phai chu cua to position: khong in so trang, nhan lien ket noi noi man doc bat dau", () => {
+    // Khong to doc duoc nao co chu: to position (vd to 1 chi co anh) khac to khoa mang dong he lo.
+    const html = mo({ locked: true, excerpt: "Dòng hé lộ", position: 1, readHref: "/sach/abc?trang=1" });
+    expect(html).not.toContain("sach-mo__so");
+    expect(html).toContain('<a class="sach-mo__lien" href="/sach/abc?trang=1"><span class="sr-only">Đọc Chuyện chưa kể từ trang 1</span></a>');
   });
 
   it("rieng tu: doan trich lam mo va an voi trinh doc man hinh, nhan Rieng tu de len", () => {

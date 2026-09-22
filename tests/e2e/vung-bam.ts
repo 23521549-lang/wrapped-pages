@@ -139,7 +139,7 @@ export async function doMoiManChinh(page: Page, phepDo: (p: Page) => Promise<str
 
   // Lay ca hai href TRUOC khi roi khoi /ke-sach: sau khi dieu huong di, ke sach khong con tren trang nua.
   const docHref = await page.locator(".cuon__lien").first().getAttribute("href");
-  const vietHref = await page.getByRole("article", { name: "Trang gần nhất" }).getByRole("link", { name: "Viết tiếp" }).getAttribute("href");
+  const vietHref = await page.getByRole("article", { name: "Một trang trong sách" }).getByRole("link", { name: "Viết tiếp" }).getAttribute("href");
   if (!docHref) {
     throw new Error("doMoiManChinh: khong tim thay cuon nao tren ke sach - can it nhat mot cuon");
   }

@@ -12,12 +12,21 @@ export type OpenBookProps = {
   cover: CoverKey;
   coverMediaId: string | null;
   pageCount: number;
-  /** Vi tri to cuoi, in o chan trang phai nhu so trang. */
-  lastPosition: number;
+  /**
+   * To man doc mo khi bam khung: to co chu chon cho hom nay, khong co thi to doc duoc dau tien co chu; khong to doc duoc
+   * nao co chu thi to doc duoc dau tien (moi to deu khoa thi to cuoi). In o chan trang phai nhu so trang khi khong locked.
+   */
+  position: number;
+  /** Man doc mo dung to position: ca khung sach la mot lien ket toi day. */
+  readHref: string;
   when: string;
-  /** Doan trich cua to cuoi; khi to cuoi dang khoa thi day chi la dong he lo (hoac null), khong bao gio la chu that. */
+  /** Chu cua to position; khi locked thi chi la dong he lo (hoac null), khong bao gio la chu that. */
   excerpt: string | null;
-  /** To cuoi dang khoa voi nguoi xem. */
+  /**
+   * Khong to doc duoc nao co chu va to cuoi nam trong niem phong con khoa voi nguoi xem: excerpt la dong he lo cua niem
+   * phong do, khong phai chu cua to position (to position co the chi co anh). Vi vay khi locked khong in so trang duoi
+   * dong he lo, va nhan lien ket noi "tu trang N" (noi man doc bat dau) thay vi "tai trang N".
+   */
   locked: boolean;
   /** Cuon rieng tu cua chinh nguoi xem. */
   isPrivate: boolean;
@@ -52,12 +61,17 @@ function TrangPhai({ excerpt, locked, isPrivate }: Pick<OpenBookProps, "excerpt"
 /**
  * "X vua viet": mot cuon sach mo nho cung chat lieu to giay man doc. Trang trai: ai viet, ten sach, bia that cua
  * cuon nay dan nhu tranh in (nghieng nhe, re chuot hay focus thi dat thang) va mot nut chinh duy nhat o chan trang.
- * Trang phai: doan trich cua to cuoi va so trang o chan. Man hep chi con mot to: doan trich truoc, thong tin sau.
+ * Trang phai: doan trich cua to position va so trang o chan. Man hep chi con mot to: doan trich truoc, thong tin sau.
+ * Ca khung la mot lien ket toi man doc o dung to cua doan trich (lop phu dau DOM, nut chinh nam tren no va ngoai no),
+ * nen khong co lien ket long nhau.
  */
-export function OpenBook({ who, title, cover, coverMediaId, pageCount, lastPosition, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
+export function OpenBook({ who, title, cover, coverMediaId, pageCount, position, readHref, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
   return (
-    <article className="vua-viet" aria-label="Trang gần nhất">
+    <article className="vua-viet" aria-label="Một trang trong sách">
       <div className="sach-mo">
+        <Link className="sach-mo__lien" href={readHref}>
+          <span className="sr-only">{`Đọc ${title} ${locked ? "từ" : "tại"} trang ${position}`}</span>
+        </Link>
         <div className="sach-mo__to sach-mo__to--trai">
           <div>
             <p className="vua-viet__ai"><b>{who}</b> vừa viết</p>
@@ -76,7 +90,7 @@ export function OpenBook({ who, title, cover, coverMediaId, pageCount, lastPosit
         </div>
         <div className="sach-mo__to sach-mo__to--phai">
           <TrangPhai excerpt={excerpt} locked={locked} isPrivate={isPrivate} />
-          <span className="sach-mo__so" aria-hidden="true">{lastPosition}</span>
+          {!locked && <span className="sach-mo__so" aria-hidden="true">{position}</span>}
         </div>
       </div>
     </article>
