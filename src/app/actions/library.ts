@@ -1,11 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { refresh } from "next/cache";
 import { db } from "@/server/db";
 import { createBook, findOwnBook, updateBook } from "@/server/library/books";
 import { MAX_SHEETS_PER_PUBLISH, publishDraft, saveDraft } from "@/server/library/drafts";
 import { editPage, type EditResult } from "@/server/library/edit-page";
 import { markRead } from "@/server/library/pages";
+import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
 import { parseBookInput } from "@/lib/book";
@@ -25,6 +27,11 @@ const LOI_SUA: Record<Exclude<EditResult, "saved" | "unchanged">, string> = {
   stale: TRANG_VUA_SUA_NOI_KHAC,
   "invalid-media": "Có ảnh hoặc ghi âm không dùng được trên trang này.",
 };
+const LOI_XOA_SACH: Record<Exclude<DeleteBookResult, "deleted">, string> = {
+  "not-found": KHONG_THAY_SACH,
+  "has-pages": "Cuốn này đã có trang đăng nên không xóa được. Bạn vẫn bỏ được bản nháp.",
+};
+const KHONG_THAY_NHAP = "Không tìm thấy bản nháp này.";
 
 /** Tao cuon moi cho nguoi dang dang nhap, roi mo man viet cua cuon do. Bia tu tai len khong dung duoc thi bao loi. */
 export async function actionCreateBook(formData: FormData) {
@@ -149,4 +156,27 @@ export async function actionEditPage(bookId: string, position: unknown, doc: unk
   if (r !== "saved" && r !== "unchanged") return { error: LOI_SUA[r] };
   if (r === "saved") sweepMediaAfterResponse();
   redirect(`/sach/${bookId}?trang=${position}`);
+}
+
+/**
+ * Chu sach xoa han mot cuon chua co to da dang, tu the o /ban-nhap. Chu la nguoi dang dang nhap (readMe), khong bao gio
+ * nhan tu client; cuon cua nguoi kia hay khong con tra loi nhu cuon khong ton tai. Xoa xong hen don rac media (tep trong
+ * kho cua cuon da mat dong media) roi lam moi trang dang mo.
+ */
+export async function actionDeleteBook(bookId: string): Promise<{ error: string } | undefined> {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  const r = await deleteUnpublishedBook(db, me.accountId, bookId);
+  if (r !== "deleted") return { error: LOI_XOA_SACH[r] };
+  sweepMediaAfterResponse();
+  refresh();
+}
+
+/** Chu sach bo ban nhap cua mot cuon, tu the o /ban-nhap. Media chi nam trong nhap thanh rac, duoc don sau. */
+export async function actionDiscardDraft(bookId: string): Promise<{ error: string } | undefined> {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  if ((await discardDraft(db, me.accountId, bookId)) !== "discarded") return { error: KHONG_THAY_NHAP };
+  sweepMediaAfterResponse();
+  refresh();
 }

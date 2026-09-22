@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { eq } from "drizzle-orm";
 import { dang, haiCuon, to } from "../helpers/library";
-import { drafts, pages, readMarks } from "@/server/db/schema";
-import { listDrafts, MAX_SHEETS_PER_PUBLISH, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
+import { books, drafts, pages, readMarks } from "@/server/db/schema";
+import { createBook } from "@/server/library/books";
+import { listDrafts, listUnwrittenBooks, MAX_SHEETS_PER_PUBLISH, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
 
 describe("ban nhap", () => {
@@ -42,6 +44,31 @@ describe("ban nhap", () => {
     expect(mine.find((d) => d.bookId === chung)).toMatchObject({ excerpt: "Em tới sớm", sheetCount: 2, cover: "nui-xa", mode: "chia-se" });
     expect(mine.find((d) => d.bookId === rieng)).toMatchObject({ mode: "rieng-tu", cover: "chim-bay" });
     expect(await listDrafts(db, seat2.id)).toEqual([]);
+  });
+
+  it("listDrafts cho biet cuon da co to dang chua (hasPages)", async () => {
+    const { db, seat1, chung, rieng } = await haiCuon();
+    await dang(db, seat1.id, chung, "một");
+    await saveDraft(db, seat1.id, chung, to("hai"), 1);
+    await saveDraft(db, seat1.id, rieng, to("nháp"), 1);
+    const ds = await listDrafts(db, seat1.id);
+    expect(Object.fromEntries(ds.map((d) => [d.bookId, d.hasPages]))).toEqual({ [chung]: true, [rieng]: false });
+  });
+
+  it("listUnwrittenBooks: chi cuon cua chinh chu chua co to va chua co nhap, moi tao truoc", async () => {
+    const { db, seat1, seat2, chung, rieng } = await haiCuon();
+    // Gio tao mac dinh la now() cua database, co the trung nhau: dat lui gio hai cuon cu de thu tu chac chan.
+    await db.update(books).set({ createdAt: new Date("2026-09-01T00:00:00.000Z") }).where(eq(books.id, chung));
+    await db.update(books).set({ createdAt: new Date("2026-09-02T00:00:00.000Z") }).where(eq(books.id, rieng));
+    const moi = await createBook(db, seat1.id, { title: "Sổ mới tinh", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: null });
+    await createBook(db, seat2.id, { title: "Của người kia", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: null });
+    // Ban dau ca ba cuon cua seat1 deu chua viet; cuon moi nhat dung dau; cuon cua nguoi kia khong co.
+    expect((await listUnwrittenBooks(db, seat1.id)).map((b) => b.bookId)).toEqual([moi, rieng, chung]);
+    await dang(db, seat1.id, chung, "một");
+    await saveDraft(db, seat1.id, rieng, to("nháp"), 1);
+    const con = await listUnwrittenBooks(db, seat1.id);
+    expect(con).toEqual([expect.objectContaining({ bookId: moi, title: "Sổ mới tinh", mode: "chia-se", cover: "nui-xa", coverMediaId: null })]);
+    expect(con[0].createdAt).toBeInstanceOf(Date);
   });
 });
 

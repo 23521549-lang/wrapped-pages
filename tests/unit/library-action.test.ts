@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { actionEditPage, actionPublish, actionUpdateBook } from "@/app/actions/library";
+import { actionDeleteBook, actionDiscardDraft, actionEditPage, actionPublish, actionUpdateBook } from "@/app/actions/library";
 import { CAN_DANG_NHAP, KHONG_THAY_SACH } from "@/app/actions/messages";
 import { EDIT_SHEET_MAX_CHARS } from "@/lib/doc/validate";
 
@@ -13,13 +13,19 @@ import { EDIT_SHEET_MAX_CHARS } from "@/lib/doc/validate";
  * ghi thanh cong truoc, roi moi hen don - va kiem rang moi duong that bai khong hen don.
  */
 
-const { readMe, updateBook, findOwnBook, publishDraft, editPage, sweepMediaAfterResponse, redirect } = vi.hoisted(() => ({
+const {
+  readMe, updateBook, findOwnBook, publishDraft, editPage, deleteUnpublishedBook, discardDraft,
+  sweepMediaAfterResponse, redirect, refresh,
+} = vi.hoisted(() => ({
   readMe: vi.fn(),
   editPage: vi.fn(),
   updateBook: vi.fn(),
   findOwnBook: vi.fn(),
   publishDraft: vi.fn(),
+  deleteUnpublishedBook: vi.fn(),
+  discardDraft: vi.fn(),
   sweepMediaAfterResponse: vi.fn(),
+  refresh: vi.fn(),
   redirect: vi.fn((to: string) => {
     // redirect that cua Next nem de moi thu sau no khong chay. Giu dung tinh chat do, neu khong thi test se do qua mot
     // doan ma production khong bao gio chay toi.
@@ -31,9 +37,11 @@ vi.mock("@/server/library/books", () => ({ createBook: vi.fn(), findOwnBook, upd
 vi.mock("@/server/library/drafts", () => ({ MAX_SHEETS_PER_PUBLISH: 40, publishDraft, saveDraft: vi.fn() }));
 vi.mock("@/server/library/pages", () => ({ markRead: vi.fn() }));
 vi.mock("@/server/library/edit-page", () => ({ editPage }));
+vi.mock("@/server/library/remove", () => ({ deleteUnpublishedBook, discardDraft }));
 vi.mock("@/server/web/media-sweep", () => ({ sweepMediaAfterResponse }));
 vi.mock("@/server/db", () => ({ db: { la: "db-gia" } }));
 vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("next/cache", () => ({ refresh }));
 
 const ME = { accountId: "tai-khoan-1", seat: 1, nickname: "Linh", partnerNickname: "Manh" };
 const BOOK = "5d1c7a9e-2b4f-4c6d-8e0a-1f3b5d7c9e2a";
@@ -63,7 +71,10 @@ function truoc(a: { mock: { invocationCallOrder: number[] } }, b: { mock: { invo
 }
 
 afterEach(() => {
-  for (const f of [readMe, updateBook, findOwnBook, publishDraft, editPage, sweepMediaAfterResponse, redirect]) f.mockReset();
+  for (const f of [
+    readMe, updateBook, findOwnBook, publishDraft, editPage, deleteUnpublishedBook, discardDraft,
+    sweepMediaAfterResponse, redirect, refresh,
+  ]) f.mockReset();
   redirect.mockImplementation((to: string) => {
     throw Object.assign(new Error(`redirect:${to}`), { di: to });
   });
@@ -226,5 +237,43 @@ describe("actionEditPage", () => {
     const guiLen = { type: "doc", content: [{ type: "bulletList", content: [muc("một", true), muc("hai", true)] }] };
     await goi(() => actionEditPage(BOOK, 2, guiLen, BASE));
     expect(editPage.mock.calls[0][4]).toEqual({ type: "doc", content: [{ type: "bulletList", content: [muc("một", true), muc("hai", false)] }] });
+  });
+});
+
+describe("actionDeleteBook va actionDiscardDraft", () => {
+  it("xoa sach: chu la nguoi dang dang nhap (khong nhan tu client), xoa xong hen don rac roi lam moi trang", async () => {
+    readMe.mockResolvedValue(ME);
+    deleteUnpublishedBook.mockResolvedValue("deleted");
+    expect(await actionDeleteBook(BOOK)).toBeUndefined();
+    expect(deleteUnpublishedBook).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, BOOK);
+    expect(truoc(deleteUnpublishedBook, sweepMediaAfterResponse)).toBe(true);
+    expect(truoc(sweepMediaAfterResponse, refresh)).toBe(true);
+  });
+
+  it.each([
+    ["has-pages", "Cuốn này đã có trang đăng nên không xóa được. Bạn vẫn bỏ được bản nháp."],
+    ["not-found", KHONG_THAY_SACH],
+  ])("xoa sach tra %s: bao loi, khong don rac, khong lam moi", async (ketQua, loi) => {
+    readMe.mockResolvedValue(ME);
+    deleteUnpublishedBook.mockResolvedValue(ketQua);
+    expect(await actionDeleteBook(BOOK)).toEqual({ error: loi });
+    expect([sweepMediaAfterResponse.mock.calls.length, refresh.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  it("bo ban nhap: xong thi hen don rac va lam moi; khong co ban nhap thi bao loi", async () => {
+    readMe.mockResolvedValue(ME);
+    discardDraft.mockResolvedValueOnce("discarded").mockResolvedValueOnce("not-found");
+    expect(await actionDiscardDraft(BOOK)).toBeUndefined();
+    expect(discardDraft).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, BOOK);
+    expect([sweepMediaAfterResponse.mock.calls.length, refresh.mock.calls.length]).toEqual([1, 1]);
+    expect(await actionDiscardDraft(BOOK)).toEqual({ error: "Không tìm thấy bản nháp này." });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("chua dang nhap: khong cham database", async () => {
+    readMe.mockResolvedValue(null);
+    expect(await actionDeleteBook(BOOK)).toEqual({ error: CAN_DANG_NHAP });
+    expect(await actionDiscardDraft(BOOK)).toEqual({ error: CAN_DANG_NHAP });
+    expect([deleteUnpublishedBook.mock.calls.length, discardDraft.mock.calls.length]).toEqual([0, 0]);
   });
 });

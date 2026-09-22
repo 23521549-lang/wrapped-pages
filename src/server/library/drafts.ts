@@ -1,4 +1,4 @@
-import { and, desc, eq, max } from "drizzle-orm";
+import { and, desc, eq, max, notExists, sql } from "drizzle-orm";
 import { books, drafts, pages } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode, CoverKey } from "@/lib/book";
@@ -61,6 +61,8 @@ export async function readDraft(db: AnyDb, ownerId: string, bookId: string) {
 export type DraftItem = {
   bookId: string; title: string; mode: BookMode; cover: CoverKey; coverMediaId: string | null; sheetCount: number; updatedAt: Date;
   excerpt: string;
+  /** Cuon da co to dang: /ban-nhap chi cho bo ban nhap, khong cho xoa sach. */
+  hasPages: boolean;
 };
 
 /** Moi ban nhap cua rieng ownerId, moi nhat truoc. */
@@ -69,6 +71,7 @@ export async function listDrafts(db: AnyDb, ownerId: string): Promise<DraftItem[
     .select({
       bookId: drafts.bookId, title: books.title, mode: books.mode, cover: books.cover, coverMediaId: books.coverMediaId,
       sheetCount: drafts.sheetCount, updatedAt: drafts.updatedAt, content: drafts.content,
+      hasPages: sql<boolean>`exists (select 1 from ${pages} where ${pages.bookId} = ${drafts.bookId})`.mapWith(Boolean),
     })
     .from(drafts)
     .innerJoin(books, eq(books.id, drafts.bookId))
@@ -77,6 +80,24 @@ export async function listDrafts(db: AnyDb, ownerId: string): Promise<DraftItem[
   // rest la vat the moi tao rieng cho tung dong (tu destructuring), khong ai khac giu tham chieu,
   // nen gan thang excerpt vao do re hon tao vat the sao chep lai lan nua.
   return rows.map(({ content, ...rest }) => Object.assign(rest, { excerpt: docExcerpt(content) }));
+}
+
+export type UnwrittenBook = { bookId: string; title: string; mode: BookMode; cover: CoverKey; coverMediaId: string | null; createdAt: Date };
+
+/**
+ * Cuon cua rieng ownerId chua co to nao va chua co ban nhap (vua tao, chua go chu nao), moi tao truoc. /ban-nhap hien
+ * chung canh cac ban nhap de moi cuon chua dang deu xoa duoc tu mot noi.
+ */
+export async function listUnwrittenBooks(db: AnyDb, ownerId: string): Promise<UnwrittenBook[]> {
+  return db
+    .select({ bookId: books.id, title: books.title, mode: books.mode, cover: books.cover, coverMediaId: books.coverMediaId, createdAt: books.createdAt })
+    .from(books)
+    .where(and(
+      eq(books.ownerId, ownerId),
+      notExists(db.select({ position: pages.position }).from(pages).where(eq(pages.bookId, books.id))),
+      notExists(db.select({ bookId: drafts.bookId }).from(drafts).where(eq(drafts.bookId, books.id))),
+    ))
+    .orderBy(desc(books.createdAt), desc(books.id));
 }
 
 /**
