@@ -109,6 +109,7 @@ test("header Content-Security-Policy co that tren response, mang nonce moi cho t
   expect(csp).toContain("media-src 'self' blob:");
   expect(csp).toContain("img-src 'self' data: blob:");
   expect(csp).toContain("worker-src 'self' blob:");
+  expect(csp).toContain("connect-src 'self' blob:");
   expect(csp).toContain("'strict-dynamic'");
   expect(csp, "ban phat hanh khong duoc co 'unsafe-eval'").not.toContain("'unsafe-eval'");
 
@@ -213,8 +214,9 @@ test("khong mot vi pham CSP nao tren cac man chinh, ke ca o man viet va man doc"
   expect(await viPhamCua(a), "anh bia xem thu (blob:): co vi pham CSP").toEqual([]);
   expect(napAnh, "anh xem thu cua bia (blob:) phai nap duoc").toBe("da nap");
 
-  // worker-src blob:: bo doc anh iPhone (heic-to) giai ma trong mot Worker tao tu blob:. San cat hien dung kich thuoc
-  // nghia la worker da chay xong duoi CSP that.
+  // worker-src va connect-src co blob:: bo doc anh iPhone (heic-to) giai ma trong mot Worker tao tu blob: (worker-src),
+  // roi chinh Worker do doc tep nguoi dung chon qua mot blob: URL (connect-src). San cat hien dung kich thuoc nghia la
+  // worker da chay xong duoi CSP that.
   await a.getByRole("button", { name: "Hủy", exact: true }).click();
   await a.getByLabel("Ảnh của bạn, chọn ảnh làm bìa").setInputFiles(tepMau("plain.heic"));
   await expect(a.getByRole("group", { name: "Khung cắt ảnh bìa" }).locator("svg").first())

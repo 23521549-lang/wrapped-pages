@@ -43,8 +43,10 @@ export function chuoiCsp(nonce: string, dev: boolean): string {
     // next/font/google tai phong ve luc dung va tu phuc vu, nen khong mo fonts.googleapis.com hay
     // fonts.gstatic.com. Neu mot ngay nao do phong duoc nap tu mang that thi moi phai them vao day.
     "font-src 'self'",
-    // Server action va moi fetch cua trang chi goi chinh may chu nay.
-    "connect-src 'self'",
+    // Server action va moi fetch cua trang chi goi chinh may chu nay; rieng blob: la vi bo doc anh iPhone
+    // (heic-to) doc tep nguoi dung vua chon qua mot blob: URL trong Worker cua no (worker-src o tren), khong
+    // phai mo cho mang ngoai.
+    "connect-src 'self' blob:",
     // Trinh phat nhac nen nhung qua ban khong luu dau chan cua YouTube.
     "frame-src https://www.youtube-nocookie.com",
 

@@ -107,8 +107,8 @@ describe("chuoiCsp", () => {
     expect(csp).not.toContain("fonts.gstatic.com");
   });
 
-  it("connect-src chi 'self'", () => {
-    expect(chiThi(chuoiCsp(NONCE, false))["connect-src"]).toEqual(["'self'"]);
+  it("connect-src co blob:: bo doc anh iPhone (heic-to) doc tep qua blob: URL trong Worker cua no", () => {
+    expect(chiThi(chuoiCsp(NONCE, false))["connect-src"]).toEqual(["'self'", "blob:"]);
   });
 
   it("frame-src dung ban khong luu dau chan cua YouTube, ghi du ten mien", () => {
