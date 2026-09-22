@@ -14,3 +14,8 @@ export function roundSheetParam(trang: string | string[] | undefined, count: num
   if (typeof trang !== "string" || !SO_TRANG.test(trang)) return 1;
   return Math.min(Number(trang), Math.max(1, count));
 }
+
+/** Luot chua to position, neu co. Ham thuan: may chu (sua luot) va man doc (khung hoi dap) dung chung. */
+export function roundAt<T extends { first: number; last: number }>(list: readonly T[], position: number): T | undefined {
+  return list.find((r) => r.first <= position && position <= r.last);
+}

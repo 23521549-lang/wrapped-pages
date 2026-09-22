@@ -39,11 +39,6 @@ export async function roundsOfBook(db: AnyDb, bookId: string): Promise<RoundSpan
   return rows.map((r, i) => Object.assign(r, { ordinal: i + 1 }));
 }
 
-/** Luot chua to position, neu co. */
-export function roundAt<T extends { first: number; last: number }>(list: readonly T[], position: number): T | undefined {
-  return list.find((r) => r.first <= position && position <= r.last);
-}
-
 /** To dau cua mot luot, doc bang db hay giao dich dang chay. */
 export async function roundFirst(db: AnyDb, roundId: string): Promise<number> {
   const [row] = await db.select({ first: min(pages.position) }).from(pages).where(eq(pages.roundId, roundId));
