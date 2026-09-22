@@ -34,6 +34,7 @@ describe("chuoiCsp", () => {
       "style-src-attr",
       "img-src",
       "media-src",
+      "worker-src",
       "font-src",
       "connect-src",
       "frame-src",
@@ -91,6 +92,12 @@ describe("chuoiCsp", () => {
 
   it("media-src co blob:, vi ban ghi am nghe thu truoc khi chen phat tu mot blob: URL", () => {
     expect(chiThi(chuoiCsp(NONCE, false))["media-src"]).toEqual(["'self'", "blob:"]);
+  });
+
+  it("worker-src chi 'self' va blob:: bo doc anh iPhone (heic-to) chay trong mot Worker tao tu blob:", () => {
+    for (const dev of [false, true]) {
+      expect(chiThi(chuoiCsp(NONCE, dev))["worker-src"], `dev=${dev}`).toEqual(["'self'", "blob:"]);
+    }
   });
 
   it("font-src chi 'self': next/font/google tai phong ve luc dung nen khong mo mien cua Google", () => {

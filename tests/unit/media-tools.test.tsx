@@ -5,6 +5,7 @@ import { Editor } from "@/components/editor/Editor";
 import type { DocJson } from "@/lib/doc/types";
 import { IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
 import { PEAK_COUNT } from "@/lib/media/kinds";
+import { jpegDau, tepTu } from "../helpers/anh-mau";
 
 /*
  * Them anh va ghi am o man viet tren Editor that. Trinh duyet gia: createImageBitmap va canvas cho anh;
@@ -216,7 +217,7 @@ describe("them anh", () => {
     const { bitmap, createImageBitmap, drawImage } = giaLapAnh(4000, 3000);
     actionUploadMedia.mockResolvedValue({ id: ID, w: 1200, h: 900 });
     const { container } = await veEditor();
-    const tep = new File(["jpeg"], "bua-sang.jpg", { type: "image/jpeg" });
+    const tep = tepTu(jpegDau(4000, 3000), "bua-sang.jpg", "image/jpeg");
     await chonTep(container, tep);
 
     expect(createImageBitmap).toHaveBeenCalledWith(tep, { imageOrientation: "from-image" });
@@ -243,7 +244,7 @@ describe("them anh", () => {
     }));
     const moChonTep = vi.spyOn(HTMLInputElement.prototype, "click");
     const { container } = await veEditor();
-    await chonTep(container, new File(["jpeg"], "a.jpg", { type: "image/jpeg" }));
+    await chonTep(container, tepTu(jpegDau(800, 600), "a.jpg", "image/jpeg"));
     expect(dongTai(container)).toEqual(["Đang tải ảnh lên"]);
     const nut = screen.getByRole("button", { name: "Thêm ảnh" });
     expect(nut.getAttribute("aria-disabled")).toBe("true");
@@ -261,23 +262,23 @@ describe("them anh", () => {
 
   it("anh hong, anh goc qua 40 MB, tai len hong roi Thu lai dung lai anh da xu ly", async () => {
     const { createImageBitmap } = giaLapAnh(800, 600);
-    createImageBitmap.mockRejectedValueOnce(new DOMException("heic", "InvalidStateError"));
+    const loi = new DOMException("hong", "InvalidStateError");
+    createImageBitmap.mockRejectedValueOnce(loi).mockRejectedValueOnce(loi);
     actionUploadMedia.mockRejectedValueOnce(new Error("mat mang")).mockResolvedValueOnce({ id: ID, w: 800, h: 600 });
     const { container } = await veEditor();
 
-    await chonTep(container, new File(["heic"], "a.heic", { type: "image/heic" }));
+    await chonTep(container, tepTu(jpegDau(800, 600), "hong.jpg", "image/jpeg"));
     expect(dongTai(container)).toEqual(["Ảnh này bị hỏng hoặc không mở được, thử ảnh khác."]);
     expect(vungDoc(container)).toBe("Ảnh này bị hỏng hoặc không mở được, thử ảnh khác.");
     expect(screen.getByRole("button", { name: "Chọn ảnh khác" })).toBeTruthy();
 
-    const lon = new File(["jpeg"], "lon.jpg", { type: "image/jpeg" });
-    Object.defineProperty(lon, "size", { value: IMAGE_SOURCE_MAX_BYTES + 1 });
+    const lon = tepTu(jpegDau(800, 600), "lon.jpg", "image/jpeg", IMAGE_SOURCE_MAX_BYTES + 1);
     createImageBitmap.mockClear();
     await chonTep(container, lon);
     expect(createImageBitmap).not.toHaveBeenCalled();
     expect(dongTai(container)).toEqual(["Ảnh lớn quá (tối đa 40 MB), chọn ảnh khác."]);
 
-    await chonTep(container, new File(["jpeg"], "b.jpg", { type: "image/jpeg" }));
+    await chonTep(container, tepTu(jpegDau(800, 600), "b.jpg", "image/jpeg"));
     expect([dongTai(container), vungDoc(container)]).toEqual([["Chưa tải được, thử lại."], "Chưa tải được, thử lại."]);
     createImageBitmap.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));

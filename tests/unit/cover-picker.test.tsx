@@ -5,6 +5,7 @@ import type { AnchorHTMLAttributes } from "react";
 import { BookForm, type BookFormProps } from "@/components/book/BookForm";
 import { IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
 import { MEDIA_MAX_BYTES } from "@/lib/media/kinds";
+import { isoDau, ispe, jpegDau, KHONG_NHAN, tepTu } from "../helpers/anh-mau";
 
 /*
  * O bia "Anh cua ban" cua form sach tren DOM that: chon tep, buoc cat 5:3 (phim, keo, thu phong),
@@ -14,13 +15,16 @@ import { MEDIA_MAX_BYTES } from "@/lib/media/kinds";
 
 type KetQuaTai = { error: string } | { id: string; w: number; h: number };
 
-const { actionCreateBook, actionUpdateBook, actionUploadMedia } = vi.hoisted(() => ({
+const { actionCreateBook, actionUpdateBook, actionUploadMedia, loadHeif, decodeHeif } = vi.hoisted(() => ({
   actionCreateBook: vi.fn(async (_fd: FormData) => ({ error: "Chưa tạo được." })),
   actionUpdateBook: vi.fn(async (_bookId: string, _fd: FormData) => ({ error: "Chưa lưu được." })),
   actionUploadMedia: vi.fn(async (_fd: FormData): Promise<KetQuaTai> => ({ error: "chua dat" })),
+  loadHeif: vi.fn(),
+  decodeHeif: vi.fn(),
 }));
 vi.mock("@/app/actions/library", () => ({ actionCreateBook, actionUpdateBook }));
 vi.mock("@/app/actions/media", () => ({ actionUploadMedia }));
+vi.mock("@/components/media/loadHeif", () => ({ loadHeif }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...rest}>{children}</a>,
 }));
@@ -34,6 +38,8 @@ const SACH: NonNullable<BookFormProps["book"]> = {
 /** Anh nguon 2000x1500 da xoay theo EXIF. */
 const bitmap = { width: 2000, height: 1500, close: vi.fn() };
 const giaiMa = vi.fn(async (_file: Blob, _options?: ImageBitmapOptions): Promise<typeof bitmap> => bitmap);
+/** Anh HEIC 80x120 da xoay tra ve tu bo doc HEIF gia lap. */
+const anhHeif = { width: 80, height: 120, close: vi.fn() };
 /** Moi lan drawImage: toa do nguon va dich, kem kich thuoc canvas. */
 let ve: number[][] = [];
 let khongWebp = false;
@@ -54,6 +60,11 @@ beforeEach(() => {
   maHoa = [];
   bitmap.close.mockClear();
   giaiMa.mockClear();
+  loadHeif.mockReset();
+  loadHeif.mockResolvedValue(decodeHeif);
+  decodeHeif.mockReset();
+  decodeHeif.mockResolvedValue(anhHeif);
+  anhHeif.close.mockClear();
   vi.stubGlobal("createImageBitmap", giaiMa);
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (this: HTMLCanvasElement) {
     return {
@@ -100,9 +111,7 @@ const san = () => screen.getByRole("group", { name: "Khung cắt ảnh bìa" });
 const soKhung = () => ["x", "y", "width", "height"].map((a) => Number(document.querySelector(".cat-bia__vien")?.getAttribute(a)));
 
 function tepAnh(bytes = 3_000_000): File {
-  const tep = new File([new Uint8Array(8)], "IMG_2041.jpg", { type: "image/jpeg" });
-  Object.defineProperty(tep, "size", { value: bytes });
-  return tep;
+  return tepTu(jpegDau(2000, 1500), "IMG_2041.jpg", "image/jpeg", bytes);
 }
 
 async function chon(input: HTMLInputElement, tep = tepAnh()) {
@@ -271,12 +280,52 @@ describe("BookForm bia tu tai len: tai len", () => {
   });
 
   it("trinh duyet khong giai ma duoc: bao anh hong, khong co dong goi y", async () => {
-    giaiMa.mockRejectedValueOnce(new DOMException("Khong giai ma duoc", "InvalidStateError"));
+    const loi = new DOMException("Khong giai ma duoc", "InvalidStateError");
+    giaiMa.mockRejectedValueOnce(loi).mockRejectedValueOnce(loi);
     formMoi();
     fireEvent.change(oTep(), { target: { files: [tepAnh()] } });
     await waitFor(() => expect(loa()).toBe("Ảnh này bị hỏng hoặc không mở được, thử ảnh khác."));
     expect(document.querySelector(".tai-anh__phu")).toBeNull();
     expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    expect(nut("Tạo sách").disabled).toBe(false);
+    expect(giaiMa).toHaveBeenCalledTimes(2);
+    expect(loadHeif).not.toHaveBeenCalled();
+  });
+
+  it("anh 48 MP: thu nho ngay luc giai ma, khong giai ma nguyen co", async () => {
+    formMoi();
+    const tep = tepTu(jpegDau(8000, 6000), "IMG_48MP.jpg", "image/jpeg", 18_000_000);
+    await chon(oTep(), tep);
+    expect(giaiMa).toHaveBeenCalledWith(tep, { imageOrientation: "from-image", resizeWidth: 4729, resizeQuality: "high" });
+  });
+
+  it("loai khong nhan (TIFF): cau loi kem dong goi y, vung doc doc ca hai, khong giai ma", async () => {
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepTu(KHONG_NHAN["TIFF II"], "scan.tif", "image/tiff")] } });
+    await waitFor(() => expect(loa()).toBe("Chưa đọc được loại ảnh này. Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP."));
+    expect(document.querySelector(".tai-anh__chu--loi")?.textContent).toBe("!Chưa đọc được loại ảnh này.");
+    expect(document.querySelector(".tai-anh__phu")?.textContent).toBe("Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP.");
+    expect(giaiMa).not.toHaveBeenCalled();
+  });
+
+  it("HEIC ma trinh duyet khong doc duoc: nap bo doc HEIF, mo buoc cat voi anh da xoay", async () => {
+    const loi = new DOMException("heic", "InvalidStateError");
+    giaiMa.mockRejectedValueOnce(loi).mockRejectedValueOnce(loi);
+    formMoi();
+    const tep = tepTu(isoDau("heic", ["mif1", "heic"], ispe(120, 80)), "IMG_0001.HEIC");
+    const cat = await chon(oTep(), tep);
+    expect(decodeHeif).toHaveBeenCalledWith(tep);
+    expect(cat.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 80 120");
+  });
+
+  it("khong nap duoc bo doc HEIF (mat mang): bao cau rieng cua bo doc anh iPhone", async () => {
+    const loi = new DOMException("heic", "InvalidStateError");
+    giaiMa.mockRejectedValueOnce(loi).mockRejectedValueOnce(loi);
+    loadHeif.mockRejectedValueOnce(new TypeError("Failed to fetch dynamically imported module"));
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepTu(isoDau("heic", ["mif1"]), "IMG_0002.HEIC")] } });
+    await waitFor(() => expect(loa()).toBe("Chưa tải được bộ đọc ảnh iPhone, thử lại."));
+    expect(decodeHeif).not.toHaveBeenCalled();
     expect(nut("Tạo sách").disabled).toBe(false);
   });
 

@@ -34,6 +34,12 @@ export function chuoiCsp(nonce: string, dev: boolean): string {
     "img-src 'self' data: blob:",
     // Ghi am da luu phat tu /m/[id] (self), con ban nghe thu TRUOC KHI chen phat tu mot blob: URL.
     "media-src 'self' blob:",
+
+    // Bo doc anh iPhone (heic-to, nap luoi o src/components/media/heif.ts) chay trong mot Worker tao tu blob: o lan
+    // giai ma dau. Chromium cho qua nho 'strict-dynamic' cua script-src, nhung Firefox va Safari xu ly worker theo cach
+    // rieng; ghi ro de khong phu thuoc vao do. Chi mo blob:, khong mo mien nao.
+    "worker-src 'self' blob:",
+
     // next/font/google tai phong ve luc dung va tu phuc vu, nen khong mo fonts.googleapis.com hay
     // fonts.gstatic.com. Neu mot ngay nao do phong duoc nap tu mang that thi moi phai them vao day.
     "font-src 'self'",

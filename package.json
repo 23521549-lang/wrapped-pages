@@ -27,6 +27,7 @@
     "@tiptap/react": "3.31.3",
     "@tiptap/starter-kit": "3.31.3",
     "drizzle-orm": "^0.45.2",
+    "heic-to": "1.5.2",
     "next": "^16.3.4",
     "postgres": "^3.4.9",
     "react": "^19.3.0",

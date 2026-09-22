@@ -1,24 +1,9 @@
-import { checkImageSource, chooseEncoded, encodingOf, FIRST_ENCODE, type EncodeAttempt, type ImageFailure } from "@/lib/media/image";
+import { chooseEncoded, encodingOf, FIRST_ENCODE, type EncodeAttempt, type ImageFailure } from "@/lib/media/image";
 
 /*
  * Xu ly anh bang canvas o trinh duyet, dung chung cho anh trong trang (processImage) va bia (coverFile). Canvas ve
  * lai diem anh, nen EXIF va GPS bi bo. May chu khong xu ly anh, chi kiem lai byte.
  */
-
-/**
- * Giai ma tep anh goc, xoay theo EXIF (imageOrientation from-image). Tep qua IMAGE_SOURCE_MAX_BYTES thi lon qua ma khong
- * giai ma; trinh duyet khong giai ma duoc (HEIC tren Windows, tep hong, khong phai anh) thi hong. Noi goi dong bitmap
- * khi xong.
- */
-export async function decodeImage(file: File): Promise<ImageBitmap | ImageFailure> {
-  const problem = checkImageSource(file);
-  if (problem) return problem;
-  try {
-    return await createImageBitmap(file, { imageOrientation: "from-image" });
-  } catch {
-    return "broken";
-  }
-}
 
 /**
  * Canvas width x height da ve xong bang draw, ve dong bo. null khi trinh duyet khong cap context 2d, thuong vi het bo nho

@@ -35,3 +35,7 @@ Xem `docs/huong-dan-phat-hanh.md` để biết thứ tự deploy lần đầu, c
 `npm run test:e2e` dùng một database Postgres **riêng**, tên cố định `mqce_e2e`, trên cùng máy chủ với `DATABASE_URL`. Lần chạy đầu tiên, `globalSetup` tự tạo database này (nếu chưa có) và chạy migration thật lên đó - không đụng tới database ở `DATABASE_URL`.
 
 Hàm `resetDb` (dọn sạch dữ liệu trước mỗi test) có một rào chặn: nó luôn kiểm tra tên database đang kết nối tới, và **từ chối chạy** nếu tên đó không đúng là `mqce_e2e`. Nhờ vậy một cấu hình sai không thể vô tình xoá sạch database thật.
+
+## Thư viện bên thứ ba
+
+- `heic-to` 1.5.2 (LGPL-3.0, https://github.com/hoppergee/heic-to): đọc ảnh HEIC, HEIF của iPhone ngay trong trình duyệt khi trình duyệt không tự đọc được. Dùng nguyên bản, không sửa, chỉ nạp thành một tệp JavaScript riêng khi người dùng chọn ảnh HEIC.
