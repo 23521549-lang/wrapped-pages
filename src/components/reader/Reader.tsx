@@ -14,6 +14,7 @@ import type { ReaderSeal } from "@/lib/seal/types";
 import { editedLabel } from "@/lib/when";
 import { Flipbook, SheetText } from "./Flipbook";
 import { LockedSheet, SealMark } from "./LockedSheet";
+import { useShownSheets } from "./ShownSheets";
 
 /** Dung lat bao lau thi moi gui moc, de lat nhanh qua nhieu to chi gui mot lan. */
 const CHO_MS = 600;
@@ -63,7 +64,8 @@ export function Reader({
   const pending = useRef<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inflight = useRef<Promise<void> | null>(null);
-  const [shown, setShown] = useState({ first: start + 1, last: start + 1 });
+  // To dang hien song o ShownSheetsProvider (neu co) de cot phai cua man doc cung theo; khung thu thach van doc no.
+  const { shown, setShown } = useShownSheets(start);
   // Lech dong ho do mot lan cho ca man doc: khung thu thach go ra gan lai khi lat trang van dem dung.
   const lech = useClockSkew(now);
   const [nghiThuc, setNghiThuc] = useState<NghiThuc | null>(null);
@@ -115,11 +117,11 @@ export function Reader({
 
   const onShow = useCallback(
     (first: number, last: number) => {
-      setShown((old) => (old.first === first && old.last === last ? old : { first, last }));
+      setShown({ first, last });
       // Khung dung yen ma khong con to dang go thi thoi: quay lai thi to do hien thang, khong go lai tu dau.
       if (moIndex !== null && (moIndex + 1 < first || moIndex + 1 > last)) stopReveal();
     },
-    [moIndex, stopReveal],
+    [moIndex, stopReveal, setShown],
   );
 
   useEffect(
