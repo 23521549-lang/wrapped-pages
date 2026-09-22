@@ -140,7 +140,15 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     const onHeif = () => {
       if (run.current === mine) setStep({ kind: "doc" });
     };
-    const got = await readSourceImage(file, { onHeif });
+    // readSourceImage nem loi thay vi tra "broken" khi ve (drawImage) hay ma hoa anh xem truoc (toBlob) nem loi giua
+    // chung (vd nguon anh bi dong o noi khac): bat o day de form thoat trang thai ban va hien loi chung, khong treo mai.
+    let got;
+    try {
+      got = await readSourceImage(file, { onHeif });
+    } catch {
+      if (run.current === mine) fail("broken", file);
+      return;
+    }
     if (run.current !== mine) {
       if (typeof got !== "string") releaseSourceImage(got);
       return;

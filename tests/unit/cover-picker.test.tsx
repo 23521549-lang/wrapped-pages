@@ -330,6 +330,23 @@ describe("BookForm bia tu tai len: tai len", () => {
     expect(loadHeif).not.toHaveBeenCalled();
   });
 
+  it("readSourceImage nem loi giua chung (khong tra chuoi, vd nguon anh bi dong o noi khac luc ve xem truoc): thoat trang thai ban, hien dung cau anh hong, cho chon lai", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (this: HTMLCanvasElement) {
+      return {
+        imageSmoothingQuality: "low",
+        drawImage: () => {
+          throw new Error("mat nguon anh giua chung");
+        },
+      } as never;
+    });
+    formMoi();
+    fireEvent.change(oTep(), { target: { files: [tepAnh()] } });
+    await waitFor(() => expect(loa()).toBe("Ảnh này bị hỏng hoặc không mở được, thử ảnh khác."));
+    expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
+    expect(nut("Tạo sách").disabled).toBe(false);
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
+  });
+
   it("anh 48 MP: thu nho ngay luc giai ma, khong giai ma nguyen co", async () => {
     formMoi();
     const tep = tepTu(jpegDau(8000, 6000), "IMG_48MP.jpg", "image/jpeg", 18_000_000);

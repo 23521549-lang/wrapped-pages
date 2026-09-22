@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { books, drafts, media, pages } from "@/server/db/schema";
+import { activity, books, drafts, media, pages } from "@/server/db/schema";
 import { listDrafts, publishDraft, saveDraft } from "@/server/library/drafts";
 import { deleteUnpublishedBook, discardDraft } from "@/server/library/remove";
 import { listShelf } from "@/server/library/shelf";
@@ -58,6 +58,14 @@ describe("deleteUnpublishedBook", () => {
     expect(await conSach(s.db, s.rieng)).toBe(false);
   });
 
+  it("xoa sach chua dang khong ghi dong Hoat dong nao (khong co recordActivity tren duong nay)", async () => {
+    const s = await haiCuon();
+    await saveDraft(s.db, s.seat1.id, s.chung, to("một"), 1);
+    const truoc = (await s.db.select().from(activity)).length;
+    expect(await deleteUnpublishedBook(s.db, s.seat1.id, s.chung)).toBe("deleted");
+    expect((await s.db.select().from(activity)).length).toBe(truoc);
+  });
+
   it("da co to dang: has-pages, khong xoa gi (sach, to, ban nhap giu nguyen)", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "một");
@@ -112,6 +120,16 @@ describe("discardDraft", () => {
     await saveDraft(s.db, s.seat1.id, s.chung, khoiAnh(anh.id), 1);
     expect(await discardDraft(s.db, s.seat1.id, s.chung)).toBe("discarded");
     expect(await sweepMedia(s.db, store, sau(MEDIA_ORPHAN_MS + GIO))).toEqual({ media: 1, objects: 1 });
+  });
+
+  it("bo ban nhap cua sach DA co to dang (co dong Hoat dong tu lan dang truoc) khong ghi them dong Hoat dong nao", async () => {
+    const s = await haiCuon();
+    await dang(s.db, s.seat1.id, s.chung, "một");
+    await saveDraft(s.db, s.seat1.id, s.chung, to("hai"), 1);
+    const truoc = (await s.db.select().from(activity)).length;
+    expect(truoc).toBeGreaterThan(0);
+    expect(await discardDraft(s.db, s.seat1.id, s.chung)).toBe("discarded");
+    expect((await s.db.select().from(activity)).length).toBe(truoc);
   });
 
   it("khong co ban nhap, nguoi kia, ma sai dang: not-found, ban nhap cua chu giu nguyen", async () => {

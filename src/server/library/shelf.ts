@@ -87,10 +87,16 @@ function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
 }
 
 /**
- * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem), uu tien to co
- * chu: du phong khi pickedSheets khong co ung vien. Voi nguoi chua doc gi, to co chu dau tien la to chua doc ke tiep can
- * doc. Cuon khong co to doc duoc nao co chu thi dong nay la to doc duoc dau tien (hasText sai): man doc mo o day, khong
- * vuot to chua doc nao. Moi to deu khoa thi khong co dong.
+ * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem): du phong khi
+ * pickedSheets khong co ung vien. Moi to deu khoa thi khong co dong.
+ * - Cuon cua chinh nguoi xem: khong bi dau doc gioi han, uu tien to co chu roi moi toi vi tri (nhu truoc).
+ * - Cuon cua nguoi kia: KHONG BAO GIO duoc chon mot to o xa hon dau doc + 1 chi vi to do co chu. Trong cac to doc duoc
+ *   MA NGUOI XEM CHUA DOC (vi tri > dau doc), lay to nho nhat - ke ca khi to do khong co chu; khong duoc bo qua no de
+ *   tim to co chu o xa hon, vi Reader bao moi to da hien qua onReach va markRead chi tang (greatest), nen mo tai to xa
+ *   hon se am tham danh dau to chua doc (thuong la to chi co anh) la da doc. Chi khi khong con to doc duoc nao chua doc
+ *   (vd phan con lai da bi niem phong) moi lui ve to doc duoc nho nhat trong cac to DA doc (cung theo vi tri nho nhat,
+ *   khong phan biet co chu). listShelf chi dung noi dung to nay lam doan trich khi hasText dung; to khong chu thi
+ *   khong co doan trich (giu nguyen luat dong he lo niem phong khi ap dung).
  */
 function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
   return tx
@@ -99,8 +105,16 @@ function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Da
     })
     .from(pages)
     .innerJoin(books, eq(books.id, pages.bookId))
+    .leftJoin(readMarks, and(eq(readMarks.bookId, pages.bookId), eq(readMarks.accountId, viewerId)))
     .where(and(inArray(pages.bookId, ids), notExists(lockedSealOf(tx, viewerId, now))))
-    .orderBy(pages.bookId, sql`not ${HAS_TEXT}`, pages.position);
+    .orderBy(
+      pages.bookId,
+      sql`case
+        when ${books.ownerId} = ${viewerId} then (case when not ${HAS_TEXT} then 1 else 0 end)
+        else (case when ${pages.position} <= coalesce(${readMarks.position}, 0) then 1 else 0 end)
+      end`,
+      pages.position,
+    );
 }
 
 /**

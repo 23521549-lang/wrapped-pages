@@ -87,12 +87,24 @@ describe("listShelf chon to cua doan trich", () => {
   it("bo to chi co anh, to trong, to chi xuong dong, to chi co khoang trang (ke ca khoang trang khong ngat va chu Han)", async () => {
     const s = await haiCuon();
     await chenTo(s.db, s.chung, khoiAnh, trong, khoangTrang, to("Chữ thật"), chiXuongDong);
-    // Chua doc gi: du phong la to doc duoc dau tien CO CHU, bo qua ca to anh dung truoc no.
-    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: "Chữ thật", excerptPosition: 4, excerptLocked: false });
+    // Nguoi kia chua doc gi: du phong KHONG duoc nhay qua to 1 (anh, chua doc) de toi to 4 (co chu) - vi mo tai to 4 se
+    // am tham danh dau to 1..3 la da doc. Phai mo dung to 1, va vi to 1 khong co chu nen khong co doan trich.
+    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: null, excerptPosition: 1, excerptLocked: false });
     await docToi(s.db, s.seat2.id, s.chung, 5);
     for (const ai of [s.seat1.id, s.seat2.id]) {
       expect(await cuaCuon(s.db, ai, s.chung, SANG)).toMatchObject({ excerpt: "Chữ thật", excerptPosition: 4, excerptLocked: false });
     }
+  });
+
+  it("nguoi kia: du phong khong bao gio vuot dau doc + 1, ke ca khi to ke tiep khong co chu", async () => {
+    const s = await haiCuon();
+    // To 1 da doc nhung khong co chu (anh); to 2 chua doc, khong co chu (anh); to 3 chua doc, co chu.
+    await chenTo(s.db, s.chung, khoiAnh, khoiAnh, to("Xa hon"));
+    await docToi(s.db, s.seat2.id, s.chung, 1);
+    // Du to 3 co chu, du phong khong duoc nhay qua to 2 (dau doc + 1) - phai dung lai o to 2, khong doan trich.
+    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: null, excerptPosition: 2, excerptLocked: false });
+    // Chu sach (mine) khong bi dau doc cua nguoi kia gioi han: van uu tien to co chu dau tien (to 3).
+    expect(await cuaCuon(s.db, s.seat1.id, s.chung, SANG)).toMatchObject({ excerpt: "Xa hon", excerptPosition: 3, excerptLocked: false });
   });
 
   it("to trong niem phong: loai dung theo luat isLockedFor voi tung nguoi xem va tung thoi diem", async () => {
