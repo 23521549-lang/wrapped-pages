@@ -5,6 +5,7 @@ import { readSnapshot } from "@/server/db/snapshot";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
 import { listShelf } from "@/server/library/shelf";
+import { sealsOfBook } from "@/server/seal/seals";
 import type { DocJson } from "@/lib/doc/types";
 import { SEAL_COOLDOWN_MS } from "@/lib/seal/attempts";
 import { RITUAL_WINDOW_MS, type SealInput } from "@/lib/seal/types";
@@ -35,7 +36,7 @@ async function dangTo(s: Bo, seal: SealInput | null, ...docs: DocJson[]) {
   await saveDraft(s.db, s.seat1.id, s.chung, docs[0], docs.length);
   const r = await publishDraft(s.db, s.seat1.id, s.chung, docs, seal);
   if (!r) throw new Error("khong dang duoc");
-  const rows = await s.db.select().from(seals).where(eq(seals.bookId, s.chung));
+  const rows = await sealsOfBook(s.db, s.chung);
   return rows.find((x) => x.firstPosition === r.firstPosition)?.id ?? null;
 }
 
@@ -463,11 +464,12 @@ describe("doc tren mot anh chup", () => {
     }
   });
 
-  it("markRead tinh tran trong mot anh chup, chi lenh ghi moc nam ngoai", async () => {
+  it("markRead tinh tran va ghi moc trong cung mot giao dich, khong lenh nao nam ngoai", async () => {
     const s = await sachCoKhoa(CAU_DO);
-    const { boc, cauHinh } = chiQuaAnhChup(s.db, "insert");
+    const { boc, cauHinh } = chiQuaAnhChup(s.db);
     await markRead(boc, s.seat2.id, s.chung, 3, NOW);
-    expect(cauHinh).toEqual([ANH_CHUP]);
+    // Giao dich thuong (khong phai anh chup chi doc): lenh ghi moc nam ben trong, tran tinh tren cung trang thai vi tri.
+    expect(cauHinh).toEqual([undefined]);
     expect(await mocCua(s)).toBe(1);
   });
 });

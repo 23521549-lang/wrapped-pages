@@ -6,6 +6,7 @@ import { recordActivity, type ActivityEvent } from "@/server/feed/record";
 import { FEED_KINDS, type FeedKind } from "@/lib/feed/types";
 import { viPham } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
+import { luotChu } from "../helpers/round";
 
 const NOW = new Date("2026-09-15T08:00:00.000Z");
 
@@ -13,18 +14,20 @@ type ActivityInsert = typeof activity.$inferInsert;
 
 async function coNiemPhong() {
   const s = await haiCuon();
+  const roundId = await luotChu(s.db, s.chung, 2, 3);
   const [seal] = await s.db
     .insert(seals)
-    .values({ bookId: s.chung, firstPosition: 2, lastPosition: 3, kind: "cau-do", question: "Ở đâu?", answers: ["ben xe"], teaser: "" })
+    .values({ bookId: s.chung, roundId, kind: "cau-do", question: "Ở đâu?", answers: ["ben xe"], teaser: "" })
     .returning({ id: seals.id });
-  return { ...s, sealId: seal.id };
+  const luotRieng = await luotChu(s.db, s.rieng, 1);
+  return { ...s, sealId: seal.id, roundId, luotRieng };
 }
 
 type CoNiemPhong = Awaited<ReturnType<typeof coNiemPhong>>;
 
 /** Moi loai mot su kien dung hinh; kieu buoc phai du ca bay loai. */
 function moiLoai(s: CoNiemPhong): { [K in FeedKind]: ActivityEvent & { kind: K } } {
-  const cuaChu = { actorId: s.seat1.id, at: NOW, bookId: s.chung, firstPosition: 2, lastPosition: 3, mode: "chia-se" } as const;
+  const cuaChu = { actorId: s.seat1.id, at: NOW, bookId: s.chung, roundId: s.roundId, mode: "chia-se" } as const;
   const cuaNguoiKia = { ...cuaChu, actorId: s.seat2.id, sealId: s.sealId };
   return {
     "dang-trang": { ...cuaChu, kind: "dang-trang", sealId: null },
@@ -42,7 +45,7 @@ const LOAI_GAN_NIEM_PHONG = ["moi-trao-doi", "mo-hen-gio", "mo-trang", "thu-sai"
 
 /** Hang dung hinh ghi thang vao bang, de moi ca chi lam sai dung mot luat. */
 const hangSach = (s: CoNiemPhong): ActivityInsert => ({
-  kind: "thu-sai", actorId: s.seat2.id, bookId: s.chung, sealId: s.sealId, firstPosition: 2, lastPosition: 3, shared: true, at: NOW,
+  kind: "thu-sai", actorId: s.seat2.id, bookId: s.chung, sealId: s.sealId, roundId: s.roundId, shared: true, at: NOW,
 });
 const hangMatKhau = (s: CoNiemPhong): ActivityInsert => ({
   kind: "doi-mat-khau", actorId: s.seat2.id, subjectId: s.seat1.id, shared: false, at: NOW,
@@ -59,7 +62,7 @@ describe("bang activity", () => {
   it("khong co cot chu tu do: cot text duy nhat la kind", () => {
     const cols = getTableConfig(activity).columns;
     expect(cols.map((c) => c.name).sort()).toEqual(
-      ["actor_id", "at", "book_id", "first_position", "id", "kind", "last_position", "seal_id", "shared", "subject_id"],
+      ["actor_id", "at", "book_id", "id", "kind", "round_id", "seal_id", "shared", "subject_id"],
     );
     expect(cols.filter((c) => c.getSQLType() === "text").map((c) => c.name)).toEqual(["kind"]);
   });
@@ -68,7 +71,7 @@ describe("bang activity", () => {
     const s = await coNiemPhong();
     const events = moiLoai(s);
     for (const kind of FEED_KINDS) await recordActivity(s.db, events[kind]);
-    await recordActivity(s.db, { ...events["dang-trang"], bookId: s.rieng, mode: "rieng-tu", firstPosition: 1, lastPosition: 1 });
+    await recordActivity(s.db, { ...events["dang-trang"], bookId: s.rieng, mode: "rieng-tu", roundId: s.luotRieng });
     const rows = await s.db.select().from(activity).orderBy(asc(activity.kind), asc(activity.shared));
     expect(rows.map((r) => [r.kind, r.shared])).toEqual([
       ["dang-trang", false], ["dang-trang", true], ["doi-mat-khau", false], ["mo-hen-gio", true],
@@ -76,11 +79,11 @@ describe("bang activity", () => {
     ]);
     expect(rows.find((r) => r.kind === "doi-mat-khau")).toEqual({
       id: expect.any(String), kind: "doi-mat-khau", actorId: s.seat2.id, subjectId: s.seat1.id,
-      bookId: null, sealId: null, firstPosition: null, lastPosition: null, shared: false, at: NOW,
+      bookId: null, sealId: null, roundId: null, shared: false, at: NOW,
     });
     expect(rows.find((r) => r.kind === "thu-sai")).toEqual({
       id: expect.any(String), kind: "thu-sai", actorId: s.seat2.id, subjectId: null,
-      bookId: s.chung, sealId: s.sealId, firstPosition: 2, lastPosition: 3, shared: true, at: NOW,
+      bookId: s.chung, sealId: s.sealId, roundId: s.roundId, shared: true, at: NOW,
     });
   });
 
@@ -91,10 +94,7 @@ describe("bang activity", () => {
     ["loai la", () => ({ kind: "xoa-sach" }), "activity_kind"],
     ["gan sach ma thieu sach", () => ({ bookId: null }), "activity_sach"],
     ["gan sach ma co nguoi bi doi", (s) => ({ subjectId: s.seat1.id }), "activity_sach"],
-    ["thieu vi tri dau", () => ({ firstPosition: null }), "activity_sach"],
-    ["thieu vi tri cuoi", () => ({ lastPosition: null }), "activity_sach"],
-    ["vi tri dau nho hon 1", () => ({ firstPosition: 0 }), "activity_sach"],
-    ["vi tri cuoi truoc vi tri dau", () => ({ firstPosition: 3, lastPosition: 2 }), "activity_sach"],
+    ["thieu luot", () => ({ roundId: null }), "activity_sach"],
     ...LOAI_GAN_NIEM_PHONG.map((kind): [string, Sua, string] => [
       `${kind} ma thieu niem phong`, () => ({ kind, sealId: null }), "activity_niem_phong",
     ]),
@@ -108,7 +108,7 @@ describe("bang activity", () => {
     ["tu doi mat khau cua minh", (s) => ({ subjectId: s.seat2.id }), "activity_mat_khau"],
     ["gan sach", (s) => ({ bookId: s.chung }), "activity_mat_khau"],
     ["gan niem phong", (s) => ({ sealId: s.sealId }), "activity_mat_khau"],
-    ["co vi tri", () => ({ firstPosition: 1, lastPosition: 1 }), "activity_mat_khau"],
+    ["gan luot", (s) => ({ roundId: s.roundId }), "activity_mat_khau"],
     ["danh dau chia se", () => ({ shared: true }), "activity_mat_khau"],
   ])("tu choi doi-mat-khau sai hinh: %s", async (_ten, sua, rangBuoc) => {
     const s = await coNiemPhong();

@@ -122,23 +122,28 @@ export async function taoSach(page: Page, ten: string, cheDo: CheDo): Promise<st
 }
 
 /**
- * Chen to da dang thang vao database e2e, khong qua man viet. Rao giong resetDb: chi ghi khi dang o
- * mqce_e2e; loi chi giu code va message, khong bao gio in chuoi ket noi.
+ * Chen mot luot dang thang vao database e2e, khong qua man viet: mot dong rounds, cac to lien nhau sau to cuoi, cung
+ * published_at (nhu publishDraft). Rao giong resetDb: chi ghi khi dang o mqce_e2e; loi chi giu code va message, khong
+ * bao gio in chuoi ket noi.
  */
 export async function dangToThang(bookId: string, ...cacTo: (string | DocJson)[]): Promise<void> {
   const sql = postgres(e2eUrls().e2eUrl, { max: 1 });
   try {
     const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
     if (ten !== "mqce_e2e") throw new Error("dangToThang chi chay tren database mqce_e2e");
-    const [{ cuoi }] = await sql<{ cuoi: number | null }[]>`select max(position) as cuoi from pages where book_id = ${bookId}`;
-    let position = cuoi ?? 0;
-    for (const x of cacTo) {
-      position += 1;
-      const content = typeof x === "string"
-        ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: x }] }] }
-        : x;
-      await sql`insert into pages (book_id, position, content) values (${bookId}, ${position}, ${sql.json(content)})`;
-    }
+    const luc = new Date();
+    await sql.begin(async (tx) => {
+      const [{ cuoi }] = await tx<{ cuoi: number | null }[]>`select max(position) as cuoi from pages where book_id = ${bookId}`;
+      const [{ id }] = await tx<{ id: string }[]>`insert into rounds (book_id, published_at) values (${bookId}, ${luc}) returning id`;
+      let position = cuoi ?? 0;
+      for (const x of cacTo) {
+        position += 1;
+        const content = typeof x === "string"
+          ? { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: x }] }] }
+          : x;
+        await tx`insert into pages (book_id, round_id, position, content, published_at) values (${bookId}, ${id}, ${position}, ${tx.json(content)}, ${luc})`;
+      }
+    });
   } catch (e) {
     const { code, message } = e as { code?: string; message?: string };
     // oxlint-disable-next-line eslint/preserve-caught-error -- co y KHONG gan cause: loi goc cua driver postgres co the chua chuoi ket noi (mat khau); rao ngay tren ham nay cam in no ra.
@@ -241,20 +246,24 @@ export async function dangTrang(page: Page): Promise<number> {
 }
 
 /**
- * Doc mot to da dang trong database e2e, hoac null neu vi tri do chua co to. Chi doc de so truoc va sau: e2e sua
- * trang dung no de chung minh mot loi goi bi tu choi khong ghi gi. Cung rao voi nhapCua.
+ * Doc mot to da dang trong database e2e kem luot cua no (moc dang, lan sua gan nhat cua luot), hoac null neu vi tri do
+ * chua co to. Chi doc de so truoc va sau. Cung rao voi nhapCua.
  */
 export async function toDaDang(
   bookId: string,
   position: number,
-): Promise<{ content: unknown; editedAt: Date | null; publishedAt: Date } | null> {
+): Promise<{ content: unknown; roundId: string; editedAt: Date | null; publishedAt: Date } | null> {
   const sql = postgres(e2eUrls().e2eUrl, { max: 1 });
   try {
     const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
     if (ten !== "mqce_e2e") throw new Error("toDaDang chi chay tren database mqce_e2e");
-    const rows = await sql<{ content: unknown; edited_at: Date | null; published_at: Date }[]>`
-      select content, edited_at, published_at from pages where book_id = ${bookId} and position = ${position}`;
-    return rows.length > 0 ? { content: rows[0].content, editedAt: rows[0].edited_at, publishedAt: rows[0].published_at } : null;
+    const rows = await sql<{ content: unknown; round_id: string; edited_at: Date | null; published_at: Date }[]>`
+      select p.content, p.round_id, r.edited_at, r.published_at
+      from pages p join rounds r on r.id = p.round_id
+      where p.book_id = ${bookId} and p.position = ${position}`;
+    return rows.length > 0
+      ? { content: rows[0].content, roundId: rows[0].round_id, editedAt: rows[0].edited_at, publishedAt: rows[0].published_at }
+      : null;
   } catch (e) {
     const { code, message } = e as { code?: string; message?: string };
     // oxlint-disable-next-line eslint/preserve-caught-error -- co y KHONG gan cause: loi goc cua driver postgres co the chua chuoi ket noi (mat khau); rao ngay tren ham nay cam in no ra.

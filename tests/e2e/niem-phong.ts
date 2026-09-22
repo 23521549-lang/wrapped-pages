@@ -44,8 +44,11 @@ export type DongNiemPhong = {
 export async function niemPhongCua(bookId: string): Promise<DongNiemPhong[]> {
   return trenE2e("niemPhongCua", async (sql) => [
     ...(await sql<DongNiemPhong[]>`
-      select id, kind, first_position, last_position, question, answers, hints, opens_at, opened_at, gift_note, teaser
-      from seals where book_id = ${bookId} order by first_position`),
+      select s.id, s.kind, k.dau as first_position, k.cuoi as last_position, s.question, s.answers, s.hints,
+        s.opens_at, s.opened_at, s.gift_note, s.teaser
+      from seals s
+      join (select round_id, min(position) as dau, max(position) as cuoi from pages group by round_id) k on k.round_id = s.round_id
+      where s.book_id = ${bookId} order by k.dau`),
   ]);
 }
 

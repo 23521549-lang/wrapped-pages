@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { pages, readMarks, seals } from "@/server/db/schema";
+import { readMarks, seals } from "@/server/db/schema";
 import { listShelf } from "@/server/library/shelf";
 import { isLockedFor } from "@/server/seal/seals";
 import type { DocJson } from "@/lib/doc/types";
 import { dayKey } from "@/lib/when";
 import type { TestDb } from "../helpers/db";
 import { dang, haiCuon, to } from "../helpers/library";
+import { luotCua, themLuot } from "../helpers/round";
 
 /** 10 gio sang 22.09 theo gio Viet Nam. */
 const SANG = new Date("2026-09-22T03:00:00.000Z");
@@ -20,9 +21,9 @@ function chiSo(bookId: string, viewerId: string, ngay: string, n: number): numbe
 const cuaCuon = async (db: TestDb, viewerId: string, bookId: string, now: Date) =>
   (await listShelf(db, viewerId, now)).find((b) => b.id === bookId)!;
 
-/** Chen thang cac to vao cuon (khong qua bindMedia): du cho phep chon, ke ca to chi co khoi media. */
+/** Chen thang cac to vao cuon (khong qua bindMedia), moi to mot luot: du cho phep chon, ke ca to chi co khoi media. */
 async function chenTo(db: TestDb, bookId: string, ...docs: DocJson[]) {
-  await db.insert(pages).values(docs.map((content, i) => ({ bookId, position: i + 1, content })));
+  for (const [i, content] of docs.entries()) await themLuot(db, bookId, i + 1, [content]);
 }
 
 /** Dat thang dau doc cua mot nguoi tren mot cuon (khong qua markRead), de dung dung tinh huong can kiem. */
@@ -114,7 +115,7 @@ describe("listShelf chon to cua doan trich", () => {
     await docToi(s.db, s.seat2.id, s.chung, 2);
     const [cauDo] = await s.db
       .insert(seals)
-      .values({ bookId: s.chung, firstPosition: 2, lastPosition: 2, kind: "cau-do", question: "?", answers: ["a"], teaser: "Hé lộ" })
+      .values({ bookId: s.chung, roundId: await luotCua(s.db, s.chung, 2), kind: "cau-do", question: "?", answers: ["a"], teaser: "Hé lộ" })
       .returning();
     const MO = new Date("2026-09-22T05:00:00.000Z");
     const truongHop = async (tieuDe: string) => {
@@ -149,9 +150,9 @@ describe("listShelf chon to cua doan trich", () => {
     }
     expect(await cuaCuon(s.db, s.seat1.id, s.rieng, SANG)).toMatchObject({ excerpt: null, excerptPosition: 0, excerptLocked: false });
 
-    await chenTo(s.db, s.rieng, to("Hé lộ trước"), to("Bí mật"));
+    const roundId = await themLuot(s.db, s.rieng, 1, [to("Hé lộ trước"), to("Bí mật")]);
     await s.db.insert(seals).values({
-      bookId: s.rieng, firstPosition: 1, lastPosition: 2, kind: "hen-gio", opensAt: new Date("2030-01-01T00:00:00.000Z"), teaser: "Hé lộ trước",
+      bookId: s.rieng, roundId, kind: "hen-gio", opensAt: new Date("2030-01-01T00:00:00.000Z"), teaser: "Hé lộ trước",
     });
     const ke = await cuaCuon(s.db, s.seat1.id, s.rieng, SANG);
     expect(ke).toMatchObject({ excerpt: "Hé lộ trước", excerptPosition: 2, excerptLocked: true });

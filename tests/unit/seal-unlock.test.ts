@@ -7,6 +7,7 @@ import { SEAL_COOLDOWN_MS } from "@/lib/seal/attempts";
 import { SEAL_LIMITS, type SealInput } from "@/lib/seal/types";
 import type { DocJson } from "@/lib/doc/types";
 import { haiCuon, to } from "../helpers/library";
+import { luotChu } from "../helpers/round";
 import { CAU_DO, dangNiemPhong, henGio, TRAO_DOI } from "../helpers/seal";
 
 const NOW = new Date("2026-09-13T08:00:00.000Z");
@@ -92,9 +93,10 @@ describe("tryAnswer", () => {
 
   it("cau do nam tren sach rieng tu thi nguoi kia khong cham toi duoc", async () => {
     const { db, seat2, rieng } = await haiCuon();
+    const roundId = await luotChu(db, rieng, 1);
     const [s] = await db
       .insert(seals)
-      .values({ bookId: rieng, firstPosition: 1, lastPosition: 1, kind: "cau-do", question: "?", answers: ["a"], teaser: "" })
+      .values({ bookId: rieng, roundId, kind: "cau-do", question: "?", answers: ["a"], teaser: "" })
       .returning({ id: seals.id });
     expect(await tryAnswer(db, seat2.id, s.id, "a", NOW)).toBeNull();
   });
@@ -197,9 +199,10 @@ describe("submitReply", () => {
 
   it("trao doi nam tren sach rieng tu thi nguoi kia khong gui duoc", async () => {
     const { db, seat2, rieng } = await haiCuon();
+    const roundId = await luotChu(db, rieng, 1);
     const [s] = await db
       .insert(seals)
-      .values({ bookId: rieng, firstPosition: 1, lastPosition: 1, kind: "trao-doi", question: "?", teaser: "" })
+      .values({ bookId: rieng, roundId, kind: "trao-doi", question: "?", teaser: "" })
       .returning({ id: seals.id });
     expect(await submitReply(db, seat2.id, s.id, to("x"), NOW)).toBeNull();
     expect(await db.select().from(sealReplies)).toHaveLength(0);

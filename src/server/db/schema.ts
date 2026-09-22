@@ -92,9 +92,24 @@ export const books = pgTable("books", {
 }));
 
 /**
- * Mot to giay da dang. Ngat trang dong bang tu luc dang: moi dong luon la dung mot to, vi tri khong bao gio doi,
- * nen may nao cung thay cung cho ngat trang. Chu sach sua duoc noi dung trong khuon mot to qua editPage, tru to
- * nam trong niem phong. Vi tri lien nhau tu 1 trong moi cuon (publishDraft noi tiep sau to cuoi).
+ * Mot luot dang: moi lan publishDraft la mot luot, cac to cua no cung published_at. Don vi sua noi dung la mot luot
+ * (editRound): so to cua luot doi duoc, cac to sau doi theo. edited_at la lan sua gan nhat, null la chua sua lan nao,
+ * khong bao gio som hon published_at.
+ */
+export const rounds = pgTable("rounds", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
+  publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
+  editedAt: timestamp("edited_at", { withTimezone: true }),
+}, (t) => ({
+  byBook: index("rounds_book_idx").on(t.bookId, t.publishedAt),
+  editedAfterPublish: check("rounds_edited_at", sql`${t.editedAt} is null or ${t.editedAt} >= ${t.publishedAt}`),
+}));
+
+/**
+ * Mot to giay da dang. Moi dong luon la dung mot to, cat san luc dang hay luc sua luot bang cung bo xep trang, nen may
+ * nao cung thay cung cho ngat trang. Vi tri lien nhau tu 1 trong moi cuon va chi song o day: khoang to cua luot, cua
+ * niem phong va cua dong Hoat dong deu tinh tu cac to cua luot (src/server/library/rounds.ts).
  */
 export const pages = pgTable("pages", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -102,12 +117,11 @@ export const pages = pgTable("pages", {
   position: integer("position").notNull(),
   content: jsonb("content").$type<DocJson>().notNull(),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
-  /** Lan sua gan nhat cua chu sach; null la chua sua lan nao. Khong bao gio som hon publishedAt. */
-  editedAt: timestamp("edited_at", { withTimezone: true }),
+  roundId: uuid("round_id").notNull().references(() => rounds.id, { onDelete: "cascade" }),
 }, (t) => ({
   byBookPosition: uniqueIndex("pages_book_position_idx").on(t.bookId, t.position),
   positionFromOne: check("pages_position", sql`${t.position} >= 1`),
-  editedAfterPublish: check("pages_edited_at", sql`${t.editedAt} is null or ${t.editedAt} >= ${t.publishedAt}`),
+  byRound: index("pages_round_idx").on(t.roundId),
 }));
 
 /** Moi cuon co toi da mot ban nhap, cua chinh chu sach. Nguoi kia khong bao gio thay. */
@@ -128,15 +142,15 @@ export const readMarks = pgTable("read_marks", {
 }));
 
 /**
- * Mot niem phong phu mot lan dang: cac to tu firstPosition toi lastPosition cua mot cuon.
+ * Mot niem phong phu tron mot luot dang (round_id, moi luot nhieu nhat mot). Khoang to cua no la khoang to cua luot,
+ * tinh tu pages, nen sua luot doi so to thi niem phong van phu dung luot do.
  * Dap an va goi y nam o day nhung khong bao gio roi may chu nguyen ven: chi src/server/seal/ quyet phan
  * nao duoc gui xuong. teaser la dong he lo cat san luc dang, phan duy nhat cua to khoa duoc phep lo.
  */
 export const seals = pgTable("seals", {
   id: uuid("id").primaryKey().defaultRandom(),
   bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
-  firstPosition: integer("first_position").notNull(),
-  lastPosition: integer("last_position").notNull(),
+  roundId: uuid("round_id").notNull().unique().references(() => rounds.id, { onDelete: "cascade" }),
   kind: text("kind").$type<SealKind>().notNull(),
   question: text("question"),
   answers: jsonb("answers").$type<string[]>().notNull().default([]),
@@ -149,7 +163,6 @@ export const seals = pgTable("seals", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   kindValue: check("seals_kind", sql`${t.kind} in ('cau-do', 'hen-gio', 'trao-doi')`),
-  range: check("seals_range", sql`${t.firstPosition} >= 1 and ${t.lastPosition} >= ${t.firstPosition}`),
   henGio: check(
     "seals_hen_gio",
     sql`${t.kind} <> 'hen-gio' or (${t.opensAt} is not null and ${t.question} is null and ${t.openedAt} is null and ${t.giftNote} is null)`,
@@ -166,7 +179,6 @@ export const seals = pgTable("seals", {
   cauHoi: check("seals_cau_hoi", sql`${t.question} is null or char_length(${t.question}) between 1 and 200`),
   loiNhan: check("seals_loi_nhan", sql`${t.giftNote} is null or char_length(${t.giftNote}) <= 200`),
   heLo: check("seals_he_lo", sql`char_length(${t.teaser}) <= 81`),
-  byBookFirst: uniqueIndex("seals_book_first_idx").on(t.bookId, t.firstPosition),
 }));
 
 /** Moi lan nguoi kia go dap an cho mot cau do. La nhat ky go cua cua nguoi viet, va nguon cua goi y, ha nhiet. */
@@ -193,7 +205,8 @@ export const sealReplies = pgTable("seal_replies", {
 /**
  * Dong Hoat dong: moi hang mot su kien, khong co cot chu tu do nao. Ten sach, kieu niem phong va loi nhan tang
  * chia khoa join luc doc, nen noi dung trang, chuoi da go, dap an va mat khau khong co duong vao day.
- * shared: cuon dang chia se ngay luc ghi. Danh sach trong activity_kind phai khop FEED_KINDS cua
+ * shared: cuon dang chia se ngay luc ghi. round_id: luot cua su kien, khoang to tinh tu luot; moi loai tru
+ * doi-mat-khau deu co. Danh sach trong activity_kind phai khop FEED_KINDS cua
  * src/lib/feed/types.ts (co test).
  */
 export const activity = pgTable("activity", {
@@ -204,8 +217,7 @@ export const activity = pgTable("activity", {
   subjectId: uuid("subject_id").references(() => accounts.id, { onDelete: "cascade" }),
   bookId: uuid("book_id").references(() => books.id, { onDelete: "cascade" }),
   sealId: uuid("seal_id").references(() => seals.id, { onDelete: "cascade" }),
-  firstPosition: integer("first_position"),
-  lastPosition: integer("last_position"),
+  roundId: uuid("round_id").references(() => rounds.id, { onDelete: "cascade" }),
   shared: boolean("shared").notNull(),
   at: timestamp("at", { withTimezone: true }).notNull(),
 }, (t) => ({
@@ -215,12 +227,12 @@ export const activity = pgTable("activity", {
   ),
   sach: check(
     "activity_sach",
-    sql`${t.kind} = 'doi-mat-khau' or (${t.bookId} is not null and ${t.subjectId} is null and ${t.firstPosition} is not null and ${t.lastPosition} is not null and ${t.firstPosition} >= 1 and ${t.lastPosition} >= ${t.firstPosition})`,
+    sql`${t.kind} = 'doi-mat-khau' or (${t.bookId} is not null and ${t.subjectId} is null and ${t.roundId} is not null)`,
   ),
   niemPhong: check("activity_niem_phong", sql`${t.kind} in ('dang-trang', 'doi-mat-khau') or ${t.sealId} is not null`),
   matKhau: check(
     "activity_mat_khau",
-    sql`${t.kind} <> 'doi-mat-khau' or (${t.subjectId} is not null and ${t.subjectId} <> ${t.actorId} and ${t.bookId} is null and ${t.sealId} is null and ${t.firstPosition} is null and ${t.lastPosition} is null and ${t.shared} = false)`,
+    sql`${t.kind} <> 'doi-mat-khau' or (${t.subjectId} is not null and ${t.subjectId} <> ${t.actorId} and ${t.bookId} is null and ${t.sealId} is null and ${t.roundId} is null and ${t.shared} = false)`,
   ),
   byAt: index("activity_at_idx").on(t.at),
 }));

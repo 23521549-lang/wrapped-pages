@@ -3,6 +3,7 @@ import { activity, books, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import type { FeedActor, FeedItem } from "@/lib/feed/types";
+import { khoangLuot } from "@/server/library/rounds";
 
 /** So dong hien thi toi da cua khung Hoat dong, dem sau khi da gom cac lan thu sai. */
 export const FEED_LIMIT = 50;
@@ -20,7 +21,7 @@ const NGAY_VIET_NAM = sql`((${activity.at} at time zone 'UTC') + interval '7 hou
  *   se, tru thu-sai chi chu sach thay;
  * - doi-mat-khau: nguoi doi va nguoi bi doi deu thay;
  * - at lon hon now thi chua hien: mo-hen-gio duoc ghi san voi at = opensAt.
- * Cac lan thu sai cung nguoi, cung niem phong, cung khoang to, cung ngay gio Viet Nam gom thanh mot dong ngay trong
+ * Cac lan thu sai cung nguoi, cung niem phong, cung luot, cung ngay gio Viet Nam gom thanh mot dong ngay trong
  * SQL, roi moi tron voi cac loai khac va cat FEED_LIMIT dong: mot buoi doan sai khong day mat dong nao khac. Dong gom
  * mang gio cua lan moi nhat va id cua lan dau tien, nen id khong doi khi co them lan thu. Ten sach, kieu niem phong
  * va loi nhan join luc doc. Ket qua khong mang id tai khoan nao.
@@ -45,11 +46,12 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
         .select({
           id: activity.id, kind: activity.kind, actorId: activity.actorId, at: activity.at,
           bookId: activity.bookId, bookTitle: books.title,
-          firstPosition: activity.firstPosition, lastPosition: activity.lastPosition,
+          firstPosition: khoangLuot.first, lastPosition: khoangLuot.last,
           sealKind: seals.kind, giftNote: seals.giftNote,
         })
         .from(activity)
         .leftJoin(books, eq(books.id, activity.bookId))
+        .leftJoin(khoangLuot, eq(khoangLuot.roundId, activity.roundId))
         .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
         .where(and(thay, ne(activity.kind, "thu-sai")))
         .orderBy(desc(activity.at), desc(activity.id))
@@ -58,14 +60,15 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
         .select({
           id: lanDau, actorId: activity.actorId, at: lanCuoi, count: count(),
           bookId: activity.bookId, bookTitle: books.title,
-          firstPosition: activity.firstPosition, lastPosition: activity.lastPosition, sealKind: seals.kind,
+          firstPosition: khoangLuot.first, lastPosition: khoangLuot.last, sealKind: seals.kind,
         })
         .from(activity)
         .leftJoin(books, eq(books.id, activity.bookId))
+        .leftJoin(khoangLuot, eq(khoangLuot.roundId, activity.roundId))
         .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
         .where(and(thay, eq(activity.kind, "thu-sai")))
         .groupBy(
-          activity.actorId, activity.sealId, activity.bookId, activity.firstPosition, activity.lastPosition, NGAY_VIET_NAM,
+          activity.actorId, activity.sealId, activity.bookId, activity.roundId, khoangLuot.first, khoangLuot.last, NGAY_VIET_NAM,
           books.title, seals.kind,
         )
         .orderBy(desc(lanCuoi), desc(lanDau))

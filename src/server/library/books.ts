@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import { books } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookInput } from "@/lib/book";
@@ -11,16 +11,18 @@ export type Book = typeof books.$inferSelect;
 export type BookUpdate = "saved" | "not-found" | "invalid-cover";
 
 /**
- * Cuon viewer duoc doc: cua chinh minh, hoac cuon o che do chia se (web chi co hai nguoi, nen cuon
- * chia se khong phai cua minh thi la cua nguoi kia). Khong duoc doc thi tra null, giong het nhu cuon
- * do khong ton tai.
+ * Luat "viewer duoc doc cuon nay" viet bang SQL tren bang books: cua chinh minh, hoac cuon o che do chia se (web chi
+ * co hai nguoi, nen cuon chia se khong phai cua minh thi la cua nguoi kia). Moi truy van can luat nay dung chung ham
+ * nay de luat chi nam mot cho.
  */
+export function readableBy(viewerId: string): SQL {
+  return sql`(${eq(books.ownerId, viewerId)} or ${eq(books.mode, "chia-se")})`;
+}
+
+/** Cuon viewer duoc doc (readableBy). Khong duoc doc thi tra null, giong het nhu cuon do khong ton tai. */
 export async function findReadableBook(db: AnyDb, viewerId: string, bookId: string): Promise<Book | null> {
   if (!isUuid(bookId)) return null;
-  const [row] = await db
-    .select()
-    .from(books)
-    .where(and(eq(books.id, bookId), or(eq(books.ownerId, viewerId), eq(books.mode, "chia-se"))));
+  const [row] = await db.select().from(books).where(and(eq(books.id, bookId), readableBy(viewerId)));
   return row ?? null;
 }
 

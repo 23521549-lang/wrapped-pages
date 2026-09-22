@@ -3,8 +3,8 @@ import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
 import type { FeedKind } from "@/lib/feed/types";
 
-/** Phan chung cua moi su kien gan mot cuon: ai lam, luc nao, khoang to, va che do cuon ngay luc ghi. */
-type BookEvent = { actorId: string; at: Date; bookId: string; firstPosition: number; lastPosition: number; mode: BookMode };
+/** Phan chung cua moi su kien gan mot cuon: ai lam, luc nao, luot nao, va che do cuon ngay luc ghi. */
+type BookEvent = { actorId: string; at: Date; bookId: string; roundId: string; mode: BookMode };
 
 /**
  * Mot su kien cua dong Hoat dong. Kieu buoc moi loai co dung cac cot cua no, giong cac CHECK cua bang activity:

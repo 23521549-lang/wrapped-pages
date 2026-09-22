@@ -1,12 +1,14 @@
-import { and, asc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, sql, type SQL } from "drizzle-orm";
 import { sealAttempts, sealReplies, seals } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { DocJson } from "@/lib/doc/types";
 import { attemptState } from "@/lib/seal/attempts";
 import { RITUAL_WINDOW_MS, type KnockEntry, type ReaderSeal, type SealInput } from "@/lib/seal/types";
+import { khoangLuot } from "@/server/library/rounds";
 
-export type SealRow = typeof seals.$inferSelect;
-export type SealRange = Pick<SealRow, "id" | "bookId" | "firstPosition" | "lastPosition" | "kind" | "opensAt" | "openedAt" | "teaser">;
+/** Dong niem phong kem khoang to cua luot no phu (tinh tu pages, xem khoangLuot). */
+export type SealRow = typeof seals.$inferSelect & { firstPosition: number; lastPosition: number };
+export type SealRange = Pick<SealRow, "id" | "bookId" | "roundId" | "firstPosition" | "lastPosition" | "kind" | "opensAt" | "openedAt" | "teaser">;
 
 /** Cot rieng cua tung loai niem phong. */
 function sealColumns(input: SealInput) {
@@ -15,13 +17,11 @@ function sealColumns(input: SealInput) {
   return { kind: input.kind, question: input.question, answers: input.answers, hints: input.hints };
 }
 
-/** Ghi mot niem phong phu cac to firstPosition toi lastPosition, tra id. Goi ben trong giao dich cua publishDraft. */
-export async function insertSeal(
-  tx: AnyDb, bookId: string, firstPosition: number, lastPosition: number, input: SealInput, teaser: string,
-): Promise<string> {
+/** Ghi mot niem phong phu tron mot luot, tra id. Goi ben trong giao dich cua publishDraft, sau khi chen cac to cua luot. */
+export async function insertSeal(tx: AnyDb, bookId: string, roundId: string, input: SealInput, teaser: string): Promise<string> {
   const [row] = await tx
     .insert(seals)
-    .values({ bookId, firstPosition, lastPosition, teaser, ...sealColumns(input) })
+    .values({ bookId, roundId, teaser, ...sealColumns(input) })
     .returning({ id: seals.id });
   return row.id;
 }
@@ -36,6 +36,14 @@ export function isLockedFor(seal: Pick<SealRow, "kind" | "opensAt" | "openedAt">
 }
 
 /**
+ * Niem phong cua mot luot con dong voi nguoi kia (nguoi khong phai chu sach): cau do chua giai, trao doi chua co trang
+ * tra loi, hen gio chua toi gio. Luot nhu vay chua sua duoc. undefined la luot khong co niem phong.
+ */
+export function closedToPartner(seal: Pick<SealRow, "kind" | "opensAt" | "openedAt"> | undefined, now: Date): boolean {
+  return seal !== undefined && isLockedFor(seal, false, now);
+}
+
+/**
  * Luat cua isLockedFor viet bang SQL, cho truy van chon to tren ke sach: dong seals dang xet con khoa voi nguoi xem
  * khong. isOwner la bieu thuc SQL dung khi nguoi xem la chu sach. Hen gio khoa ca chu sach toi opens_at; cau do va trao
  * doi khoa nguoi kia toi khi opened_at co. Doi luat o isLockedFor thi doi ca o day: tests/unit/shelf-excerpt.test.ts so
@@ -47,7 +55,12 @@ export function lockedForSql(isOwner: SQL, now: Date): SQL {
 
 /** Moi niem phong cua mot cuon, theo vi tri. Dong day du, chi dung ben trong may chu. */
 export async function sealsOfBook(db: AnyDb, bookId: string): Promise<SealRow[]> {
-  return db.select().from(seals).where(eq(seals.bookId, bookId)).orderBy(asc(seals.firstPosition));
+  return db
+    .select({ ...getTableColumns(seals), firstPosition: khoangLuot.first, lastPosition: khoangLuot.last })
+    .from(seals)
+    .innerJoin(khoangLuot, eq(khoangLuot.roundId, seals.roundId))
+    .where(eq(seals.bookId, bookId))
+    .orderBy(asc(khoangLuot.first));
 }
 
 /** Khoang to va trang thai niem phong cua nhieu cuon mot luc, cho ke sach. Khong lay cau hoi, dap an hay goi y. */
@@ -55,12 +68,13 @@ export async function sealsOfBooks(db: AnyDb, bookIds: readonly string[]): Promi
   if (bookIds.length === 0) return [];
   return db
     .select({
-      id: seals.id, bookId: seals.bookId, firstPosition: seals.firstPosition, lastPosition: seals.lastPosition,
+      id: seals.id, bookId: seals.bookId, roundId: seals.roundId, firstPosition: khoangLuot.first, lastPosition: khoangLuot.last,
       kind: seals.kind, opensAt: seals.opensAt, openedAt: seals.openedAt, teaser: seals.teaser,
     })
     .from(seals)
+    .innerJoin(khoangLuot, eq(khoangLuot.roundId, seals.roundId))
     .where(inArray(seals.bookId, [...bookIds]))
-    .orderBy(asc(seals.bookId), asc(seals.firstPosition));
+    .orderBy(asc(seals.bookId), asc(khoangLuot.first));
 }
 
 /** Niem phong phu vi tri position, neu co. */

@@ -11,6 +11,7 @@ import { PEAK_COUNT } from "@/lib/media/kinds";
 import type { MediaNode } from "@/lib/media/node";
 import type { TestDb } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
+import { themLuot } from "../helpers/round";
 import { dangNiemPhong, henGio, TRAO_DOI } from "../helpers/seal";
 
 const SONG = Array.from({ length: PEAK_COUNT }, (_, i) => (i * 7) % 101);
@@ -265,10 +266,7 @@ describe("bindMedia khi sua to (keep)", () => {
   it("media dan o hai to lien nhau cua cung lan dang: sua to thu nhat voi keep chua no van gan duoc", async () => {
     const s = await haiCuon();
     const id = await taiAnh(s.db, s.seat1.id, s.chung);
-    await s.db.insert(pages).values([
-      { bookId: s.chung, position: 1, content: tai(anhThat(id)) },
-      { bookId: s.chung, position: 2, content: tai(anhThat(id), doan("Tiếp")) },
-    ]);
+    await themLuot(s.db, s.chung, 1, [tai(anhThat(id)), tai(anhThat(id), doan("Tiếp"))]);
     expect(await bindMedia(s.db, s.seat1.id, s.chung, tai(doan("Sửa"), khoiAnh(id)), { keep: new Set([id]) }))
       .toEqual(tai(doan("Sửa"), anhThat(id)));
   });

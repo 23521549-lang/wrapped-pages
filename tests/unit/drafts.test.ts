@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { dang, haiCuon, to } from "../helpers/library";
-import { books, drafts, pages, readMarks } from "@/server/db/schema";
+import { books, drafts, pages, readMarks, rounds } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
 import { listDrafts, listUnwrittenBooks, MAX_SHEETS_PER_PUBLISH, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
+import type { DocJson } from "@/lib/doc/types";
 
 describe("ban nhap", () => {
   it("chi chu sach luu va doc duoc ban nhap; voi nguoi kia no nhu khong ton tai", async () => {
@@ -102,6 +103,28 @@ describe("dang trang", () => {
     expect(await publishDraft(db, seat2.id, chung, [to("chen")])).toBeNull();
     expect(await publishDraft(db, seat1.id, "khong-phai-uuid", [to("a")])).toBeNull();
     expect(await db.select().from(pages)).toHaveLength(0);
+    expect(await db.select().from(rounds)).toHaveLength(0);
+  });
+
+  it("moi lan dang tao dung mot luot; dau noi tiep o to dau bi bo, o nhanh dau to sau thi giu", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    const dau: DocJson = { type: "doc", content: [{ type: "paragraph", noiTiep: true, content: [{ type: "text", text: "Một" }] }] };
+    const sau: DocJson = { type: "doc", content: [{ type: "paragraph", noiTiep: true, content: [{ type: "text", text: "Hai" }] }] };
+    await publishDraft(db, seat1.id, chung, [dau, sau]);
+    await publishDraft(db, seat1.id, chung, [to("Ba")]);
+    const luot = await db.select().from(rounds).where(eq(rounds.bookId, chung));
+    expect(luot).toHaveLength(2);
+    const cacTo = await db
+      .select({ roundId: pages.roundId, content: pages.content, publishedAt: pages.publishedAt })
+      .from(pages)
+      .where(eq(pages.bookId, chung))
+      .orderBy(asc(pages.position));
+    expect(cacTo[1].roundId).toBe(cacTo[0].roundId);
+    expect(cacTo[2].roundId).not.toBe(cacTo[0].roundId);
+    expect(cacTo.map((t) => t.content)).toEqual([to("Một"), sau, to("Ba")]);
+    const cua = luot.find((r) => r.id === cacTo[0].roundId);
+    expect(cua?.publishedAt).toEqual(cacTo[0].publishedAt);
+    expect(cua?.editedAt).toBeNull();
   });
 });
 

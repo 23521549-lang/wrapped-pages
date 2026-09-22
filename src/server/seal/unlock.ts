@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { books, sealAttempts, sealReplies, seals } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { recordActivity } from "@/server/feed/record";
+import { roundFirst } from "@/server/library/rounds";
 import type { DocJson } from "@/lib/doc/types";
 import { docCharCount, hasMediaBlock, isBlankDoc } from "@/lib/doc/text";
 import { matchesAnswer, normalizeAnswer } from "@/lib/seal/answer";
@@ -37,10 +38,15 @@ async function lockSeal(tx: AnyDb, sealId: string) {
 
 type LockedSeal = NonNullable<Awaited<ReturnType<typeof lockSeal>>>;
 
-/** Phan chung cua moi su kien mo khoa: niem phong, cuon, khoang to, che do cuon va luc ghi. */
+/** Phan chung cua moi su kien mo khoa: niem phong, cuon, luot, che do cuon va luc ghi. */
 function sealEvent(row: LockedSeal, at: Date) {
-  const { id, bookId, firstPosition, lastPosition } = row.seal;
-  return { sealId: id, bookId, firstPosition, lastPosition, mode: row.mode, at };
+  const { id, bookId, roundId } = row.seal;
+  return { sealId: id, bookId, roundId, mode: row.mode, at };
+}
+
+/** Noi chuyen toi sau khi mo: cuon va to dau cua luot ma niem phong phu, doc trong giao dich dang chay. */
+async function noiMo(tx: AnyDb, row: LockedSeal): Promise<Opened> {
+  return { bookId: row.seal.bookId, firstPosition: await roundFirst(tx, row.seal.roundId) };
 }
 
 /**
@@ -58,8 +64,7 @@ export async function tryAnswer(
   return db.transaction(async (tx): Promise<AnswerResult | null> => {
     const row = await lockSeal(tx, sealId);
     if (!row || row.seal.kind !== "cau-do" || row.mode !== "chia-se" || row.ownerId === viewerId) return null;
-    const opened: Opened = { bookId: row.seal.bookId, firstPosition: row.seal.firstPosition };
-    if (row.seal.openedAt !== null) return { status: "opened", ...opened };
+    if (row.seal.openedAt !== null) return { status: "opened", ...(await noiMo(tx, row)) };
 
     const fails = (
       await tx
@@ -76,7 +81,7 @@ export async function tryAnswer(
     if (correct) {
       await tx.update(seals).set({ openedAt: now }).where(eq(seals.id, sealId));
       await recordActivity(tx, { ...sealEvent(row, now), kind: "mo-trang", actorId: viewerId });
-      return { status: "opened", ...opened };
+      return { status: "opened", ...(await noiMo(tx, row)) };
     }
     await recordActivity(tx, { ...sealEvent(row, now), kind: "thu-sai", actorId: viewerId });
     // "now" o day chinh la gia tri vua ghi vao lan thu nay, nen luon dong nhat voi DB, khong phai loi bypass.
@@ -98,11 +103,10 @@ export async function giftKey(
   return db.transaction(async (tx): Promise<OpenResult | null> => {
     const row = await lockSeal(tx, sealId);
     if (!row || row.ownerId !== ownerId || row.mode !== "chia-se" || row.seal.kind === "hen-gio") return null;
-    const opened: Opened = { bookId: row.seal.bookId, firstPosition: row.seal.firstPosition };
-    if (row.seal.openedAt !== null) return { status: "already", ...opened };
+    if (row.seal.openedAt !== null) return { status: "already", ...(await noiMo(tx, row)) };
     await tx.update(seals).set({ openedAt: now, giftNote: n === "" ? null : n }).where(eq(seals.id, sealId));
     await recordActivity(tx, { ...sealEvent(row, now), kind: "tang-khoa", actorId: ownerId });
-    return { status: "opened", ...opened };
+    return { status: "opened", ...(await noiMo(tx, row)) };
   });
 }
 
@@ -120,11 +124,10 @@ export async function submitReply(
   return db.transaction(async (tx): Promise<OpenResult | null> => {
     const row = await lockSeal(tx, sealId);
     if (!row || row.seal.kind !== "trao-doi" || row.mode !== "chia-se" || row.ownerId === viewerId) return null;
-    const opened: Opened = { bookId: row.seal.bookId, firstPosition: row.seal.firstPosition };
-    if (row.seal.openedAt !== null) return { status: "already", ...opened };
+    if (row.seal.openedAt !== null) return { status: "already", ...(await noiMo(tx, row)) };
     await tx.insert(sealReplies).values({ sealId, accountId: viewerId, content: doc, createdAt: now });
     await tx.update(seals).set({ openedAt: now }).where(eq(seals.id, sealId));
     await recordActivity(tx, { ...sealEvent(row, now), kind: "mo-trang", actorId: viewerId });
-    return { status: "opened", ...opened };
+    return { status: "opened", ...(await noiMo(tx, row)) };
   });
 }

@@ -6,35 +6,52 @@ import { recordActivity } from "@/server/feed/record";
 import type { BookMode } from "@/lib/book";
 import { dayKey } from "@/lib/when";
 import { haiCuon } from "../helpers/library";
+import { luotChu } from "../helpers/round";
 
 const NOW = new Date("2026-09-15T08:00:00.000Z");
 const phut = (n: number) => new Date(NOW.getTime() + n * 60_000);
 
 /**
- * Hai cho ngoi, seat1 co mot cuon chia se (mot cau do) va mot cuon rieng tu (mot hen gio). Niem phong ghi thang
+ * Hai cho ngoi, seat1 co mot cuon chia se va mot cuon rieng tu. Moi to can dung la mot luot ghi thang (to 1-2 cua cuon
+ * chia se chung mot luot), mot cau do o to 5 cuon chia se, mot hen gio o to 3-4 cuon rieng tu. Niem phong ghi thang
  * vao bang, khong qua publishDraft, de moi ca chi thay dung cac su kien no tu ghi.
  */
 async function ke() {
   const s = await haiCuon();
+  const luot = new Map<string, string>();
+  const them = async (bookId: string, first: number, last = first) => {
+    const id = await luotChu(s.db, bookId, first, last);
+    for (let p = first; p <= last; p++) luot.set(`${bookId}:${p}`, id);
+  };
+  await them(s.chung, 1, 2);
+  for (let p = 3; p <= FEED_LIMIT + 1; p++) await them(s.chung, p);
+  await them(s.rieng, 1);
+  await them(s.rieng, 2);
+  await them(s.rieng, 3, 4);
+  await them(s.rieng, 10);
+  const luotCua = (bookId: string, position: number): string => {
+    const id = luot.get(`${bookId}:${position}`);
+    if (!id) throw new Error(`chua dung luot cho to ${position}`);
+    return id;
+  };
   const [cauDo] = await s.db
     .insert(seals)
-    .values({ bookId: s.chung, firstPosition: 5, lastPosition: 5, kind: "cau-do", question: "Ở đâu?", answers: ["ben xe"], teaser: "" })
+    .values({ bookId: s.chung, roundId: luotCua(s.chung, 5), kind: "cau-do", question: "Ở đâu?", answers: ["ben xe"], teaser: "" })
     .returning({ id: seals.id });
   const [henGio] = await s.db
     .insert(seals)
-    .values({ bookId: s.rieng, firstPosition: 3, lastPosition: 4, kind: "hen-gio", opensAt: phut(30), teaser: "" })
+    .values({ bookId: s.rieng, roundId: luotCua(s.rieng, 3), kind: "hen-gio", opensAt: phut(30), teaser: "" })
     .returning({ id: seals.id });
-  return { ...s, cauDo: cauDo.id, henGio: henGio.id };
+  /** Phan chung cua mot su kien gan sach: luot la luot chua to position. */
+  const tren = (actorId: string, bookId: string, mode: BookMode, at: Date, position = 1) =>
+    ({ actorId, bookId, mode, at, roundId: luotCua(bookId, position) });
+  return { ...s, cauDo: cauDo.id, henGio: henGio.id, luotCua, tren };
 }
-
-/** Phan chung cua mot su kien gan sach cua seat1. */
-const tren = (actorId: string, bookId: string, mode: BookMode, at: Date, firstPosition = 1) =>
-  ({ actorId, bookId, mode, at, firstPosition, lastPosition: firstPosition });
 
 describe("listActivity: ai thay gi", () => {
   it("trang moi cua sach chia se: ca hai cung thay, by theo nguoi xem, ten sach join luc doc", async () => {
-    const { db, seat1, seat2, chung } = await ke();
-    await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-10)), kind: "dang-trang", sealId: null, lastPosition: 2 });
+    const { db, seat1, seat2, chung, tren } = await ke();
+    await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-10)), kind: "dang-trang", sealId: null });
     const cuaChu = {
       id: expect.any(String), kind: "dang-trang", at: phut(-10), bookId: chung, bookTitle: "Chuyện chưa kể",
       firstPosition: 1, lastPosition: 2, sealKind: null, note: null, count: 1,
@@ -44,9 +61,9 @@ describe("listActivity: ai thay gi", () => {
   });
 
   it("sach rieng tu: nguoi kia khong thay gi, ke ca hen gio da toi gio; chu sach thay het", async () => {
-    const { db, seat1, seat2, rieng, henGio } = await ke();
-    await recordActivity(db, { ...tren(seat1.id, rieng, "rieng-tu", phut(-60), 3), kind: "dang-trang", sealId: henGio, lastPosition: 4 });
-    await recordActivity(db, { ...tren(seat1.id, rieng, "rieng-tu", phut(30), 3), kind: "mo-hen-gio", sealId: henGio, lastPosition: 4 });
+    const { db, seat1, seat2, rieng, henGio, tren } = await ke();
+    await recordActivity(db, { ...tren(seat1.id, rieng, "rieng-tu", phut(-60), 3), kind: "dang-trang", sealId: henGio });
+    await recordActivity(db, { ...tren(seat1.id, rieng, "rieng-tu", phut(30), 3), kind: "mo-hen-gio", sealId: henGio });
     expect(await listActivity(db, seat2.id, phut(31))).toEqual([]);
     expect((await listActivity(db, seat1.id, phut(31))).map((i) => [i.kind, i.bookTitle, i.sealKind])).toEqual([
       ["mo-hen-gio", "Cuốn không đặt tên", "hen-gio"], ["dang-trang", "Cuốn không đặt tên", "hen-gio"],
@@ -54,7 +71,7 @@ describe("listActivity: ai thay gi", () => {
   });
 
   it("chia se roi chuyen rieng tu: moi su kien cu bien mat voi nguoi kia, ke ca tang chia khoa va loi nhan", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     await db.update(seals).set({ openedAt: phut(-5), giftNote: "Cho em nè" }).where(eq(seals.id, cauDo));
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-20), 5), kind: "dang-trang", sealId: cauDo });
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-5), 5), kind: "tang-khoa", sealId: cauDo });
@@ -68,7 +85,7 @@ describe("listActivity: ai thay gi", () => {
   });
 
   it("rieng tu roi chuyen chia se: su kien luc con rieng tu kin mai, su kien sau khi chia se thi hien", async () => {
-    const { db, seat1, seat2, rieng } = await ke();
+    const { db, seat1, seat2, rieng, tren } = await ke();
     await recordActivity(db, { ...tren(seat1.id, rieng, "rieng-tu", phut(-20), 1), kind: "dang-trang", sealId: null });
     await db.update(books).set({ mode: "chia-se" }).where(eq(books.id, rieng));
     await recordActivity(db, { ...tren(seat1.id, rieng, "chia-se", phut(-5), 2), kind: "dang-trang", sealId: null });
@@ -77,7 +94,7 @@ describe("listActivity: ai thay gi", () => {
   });
 
   it("thu-sai chi chu sach thay, gom theo ngay; mo-trang thi ca hai thay", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     for (const at of [phut(-30), phut(-20), phut(-10)]) {
       await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", at, 5), kind: "thu-sai", sealId: cauDo });
     }
@@ -100,10 +117,10 @@ describe("listActivity: ai thay gi", () => {
   });
 
   it("mo-hen-gio ghi san o tuong lai chi hien khi now da toi opensAt, voi ca hai nguoi", async () => {
-    const { db, seat1, seat2, chung } = await ke();
+    const { db, seat1, seat2, chung, tren, luotCua } = await ke();
     const [hen] = await db
       .insert(seals)
-      .values({ bookId: chung, firstPosition: 7, lastPosition: 7, kind: "hen-gio", opensAt: phut(30), teaser: "" })
+      .values({ bookId: chung, roundId: luotCua(chung, 7), kind: "hen-gio", opensAt: phut(30), teaser: "" })
       .returning({ id: seals.id });
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(30), 7), kind: "mo-hen-gio", sealId: hen.id });
     for (const nguoi of [seat1.id, seat2.id]) {
@@ -116,7 +133,7 @@ describe("listActivity: ai thay gi", () => {
 
 describe("listActivity: gom thu sai trong SQL", () => {
   it("ngay gio Viet Nam cua SQL khop dayKey o ca hai phia nua dem: 16:59:59Z va 17:00:00Z la hai dong", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     // Ca bon lan cung mot ngay UTC; gom theo ngay UTC hay lech mui gio mot gio deu ra mot dong 4 lan.
     const cacLan = ["2026-09-14T16:00:00.000Z", "2026-09-14T16:59:59.000Z", "2026-09-14T17:00:00.000Z", "2026-09-14T17:30:00.000Z"]
       .map((iso) => new Date(iso));
@@ -130,10 +147,10 @@ describe("listActivity: gom thu sai trong SQL", () => {
   });
 
   it("khac niem phong thi tach dong; dong gom mang id cua lan thu dau tien, them lan thu khong doi id", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren, luotCua } = await ke();
     const [khac] = await db
       .insert(seals)
-      .values({ bookId: chung, firstPosition: 6, lastPosition: 6, kind: "cau-do", question: "Ai?", answers: ["em"], teaser: "" })
+      .values({ bookId: chung, roundId: luotCua(chung, 6), kind: "cau-do", question: "Ai?", answers: ["em"], teaser: "" })
       .returning({ id: seals.id });
     await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-30), 5), kind: "thu-sai", sealId: cauDo });
     await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-20), 6), kind: "thu-sai", sealId: khac.id });
@@ -148,7 +165,7 @@ describe("listActivity: gom thu sai trong SQL", () => {
   });
 
   it(`${FEED_LIMIT} dong tinh sau khi gom: ${FEED_LIMIT + 5} lan thu sai khong day mat dong doi mat khau cu hon`, async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     // seat2 doi mat khau cua seat1 (chu sach), roi doan sai cau do cua seat1 ca buoi.
     await recordActivity(db, { kind: "doi-mat-khau", actorId: seat2.id, subjectId: seat1.id, at: phut(-(FEED_LIMIT + 30)) });
     for (let i = 1; i <= FEED_LIMIT + 5; i++) {
@@ -163,7 +180,7 @@ describe("listActivity: gom thu sai trong SQL", () => {
 
 describe("listActivity: du lieu tra ve", () => {
   it("ten sach doc luc doc; loi nhan chi o tang-khoa, moi loai khac luon null", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     await db.update(seals).set({ openedAt: phut(-5), giftNote: "Cho em nè" }).where(eq(seals.id, cauDo));
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-40), 5), kind: "dang-trang", sealId: cauDo });
     await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-30), 5), kind: "thu-sai", sealId: cauDo });
@@ -179,14 +196,14 @@ describe("listActivity: du lieu tra ve", () => {
   });
 
   it("tang chia khoa khong kem loi nhan thi note null", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     await db.update(seals).set({ openedAt: phut(-5) }).where(eq(seals.id, cauDo));
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-5), 5), kind: "tang-khoa", sealId: cauDo });
     expect((await listActivity(db, seat2.id, NOW)).map((i) => i.note)).toEqual([null]);
   });
 
   it("khong bao gio mang id tai khoan hay chuoi da go", async () => {
-    const { db, seat1, seat2, chung, cauDo } = await ke();
+    const { db, seat1, seat2, chung, cauDo, tren } = await ke();
     await db.insert(sealAttempts).values({ sealId: cauDo, accountId: seat2.id, guess: "quán cũ bí mật", correct: false, at: phut(-9) });
     await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-9), 5), kind: "thu-sai", sealId: cauDo });
     await recordActivity(db, { kind: "doi-mat-khau", actorId: seat2.id, subjectId: seat1.id, at: phut(-3) });
@@ -202,10 +219,10 @@ describe("listActivity: du lieu tra ve", () => {
   });
 
   it("niem phong join phai cung cuon voi su kien: gan nham sealId cua cuon rieng tu khong lo sealKind/note", async () => {
-    const { db, seat1, seat2, chung, rieng } = await ke();
+    const { db, seat1, seat2, chung, rieng, tren, luotCua } = await ke();
     const [khoaRieng] = await db
       .insert(seals)
-      .values({ bookId: rieng, firstPosition: 10, lastPosition: 10, kind: "cau-do", question: "Bí mật?", answers: ["rieng"], teaser: "" })
+      .values({ bookId: rieng, roundId: luotCua(rieng, 10), kind: "cau-do", question: "Bí mật?", answers: ["rieng"], teaser: "" })
       .returning({ id: seals.id });
     await db.update(seals).set({ openedAt: phut(-5), giftNote: "Bí mật riêng tư" }).where(eq(seals.id, khoaRieng.id));
     // Su kien gan bookId cua cuon CHIA SE nhung sealId lai tro toi niem phong cua cuon RIENG TU: join phai loai,
@@ -219,7 +236,7 @@ describe("listActivity: du lieu tra ve", () => {
   });
 
   it(`chi doc ${FEED_LIMIT} su kien moi nhat sau khi loc theo nguoi xem`, async () => {
-    const { db, seat1, seat2, chung, rieng } = await ke();
+    const { db, seat1, seat2, chung, rieng, tren } = await ke();
     for (let i = 1; i <= FEED_LIMIT + 1; i++) {
       await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-i), i), kind: "dang-trang", sealId: null });
     }

@@ -5,6 +5,7 @@ import { createSeat } from "@/server/identity/accounts";
 import { login } from "@/server/identity/login";
 import { readSecretHistory, renamePartner, revealSecret } from "@/server/identity/rename";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
+import { khoangLuot } from "@/server/library/rounds";
 import { giftKey, submitReply, tryAnswer } from "@/server/seal/unlock";
 import type { SealInput } from "@/lib/seal/types";
 import { makeTestDb, type TestDb } from "../helpers/db";
@@ -15,15 +16,16 @@ const NOW = new Date("2026-09-15T08:00:00.000Z");
 const ms = (n: number) => new Date(NOW.getTime() + n);
 const KHONG_CO = "00000000-0000-4000-8000-000000000000";
 
-/** Moi su kien da ghi, cu nhat truoc, khong kem id. */
+/** Moi su kien da ghi, cu nhat truoc, khong kem id; khoang to tinh tu luot cua su kien. */
 function suKien(db: TestDb) {
   return db
     .select({
       kind: activity.kind, actorId: activity.actorId, subjectId: activity.subjectId, bookId: activity.bookId,
-      sealId: activity.sealId, firstPosition: activity.firstPosition, lastPosition: activity.lastPosition,
+      sealId: activity.sealId, firstPosition: khoangLuot.first, lastPosition: khoangLuot.last,
       shared: activity.shared, at: activity.at,
     })
     .from(activity)
+    .leftJoin(khoangLuot, eq(khoangLuot.roundId, activity.roundId))
     .orderBy(asc(activity.at), asc(activity.kind));
 }
 

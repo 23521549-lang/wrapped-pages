@@ -43,9 +43,17 @@ export type ReaderSheet = {
   sealId: string | null;
   /** Dong he lo, chi co tren to dau cua mot niem phong con khoa. */
   teaser: string | null;
-  /** Lan sua gan nhat; luon null voi to dang khoa voi nguoi xem. */
+  /** Luot dang chua to nay. */
+  roundId: string;
+  /** Lan sua gan nhat cua luot chua to nay; luon null voi to dang khoa voi nguoi xem. */
   editedAt: Date | null;
 };
+
+/**
+ * Mot luot dang cua cuon nhu man doc can: so thu tu, khoang to, va niem phong cua luot con dong voi nguoi kia khong
+ * (chu sach chua sua duoc luot do). Voi nguoi kia, sealed chi la dieu ho da thay: luot dang khoa voi chinh ho.
+ */
+export type ReaderRound = { id: string; ordinal: number; first: number; last: number; sealed: boolean };
 
 export type KnockEntry = { guess: string; correct: boolean; at: Date };
 

@@ -10,6 +10,7 @@ import { PEAK_COUNT } from "@/lib/media/kinds";
 import type { MediaNode } from "@/lib/media/node";
 import type { TestDb } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
+import { luotCua, themLuot } from "../helpers/round";
 
 const NOW = new Date("2026-09-16T08:00:00.000Z");
 const ms = (n: number) => new Date(NOW.getTime() + n);
@@ -38,18 +39,19 @@ async function tai(db: TestDb, record: UploadRecord): Promise<string> {
 const doan = (chu: string): ParagraphNode => ({ type: "paragraph", content: [{ type: "text", text: chu }] });
 const khoiAnh = (id: string): MediaNode => ({ type: "anh", attrs: { id, w: 1, h: 1 } });
 
-// DocJson chua co khoi media (chua co trong union), nen to va nhap co media duoc ghi thang jsonb bang SQL.
+// DocJson chua co khoi media (chua co trong union), nen to va nhap co media duoc ghi thang jsonb bang SQL; moi to la mot
+// luot rieng.
 async function to(db: TestDb, bookId: string, position: number, ...content: Khoi[]) {
-  await db.execute(sql`insert into pages (book_id, position, content) values (${bookId}, ${position}, ${JSON.stringify({ type: "doc", content })}::jsonb)`);
+  await themLuot(db, bookId, position, [{ type: "doc", content }]);
 }
 async function nhap(db: TestDb, bookId: string, ...content: Khoi[]) {
   await db.execute(sql`insert into drafts (book_id, content) values (${bookId}, ${JSON.stringify({ type: "doc", content })}::jsonb)`);
 }
 
-/** Niem phong ghi thang vao bang, phu dung mot to. Hen gio mo sau NOW 30 phut. */
+/** Niem phong ghi thang vao bang, phu dung luot cua mot to. Hen gio mo sau NOW 30 phut. */
 async function niemPhong(db: TestDb, bookId: string, position: number, kind: "cau-do" | "hen-gio") {
   const cot = kind === "hen-gio" ? { kind, opensAt: phut(30) } : { kind, question: "Ở đâu?", answers: ["ben xe"] };
-  const [row] = await db.insert(seals).values({ bookId, firstPosition: position, lastPosition: position, teaser: "", ...cot }).returning({ id: seals.id });
+  const [row] = await db.insert(seals).values({ bookId, roundId: await luotCua(db, bookId, position), teaser: "", ...cot }).returning({ id: seals.id });
   return row.id;
 }
 

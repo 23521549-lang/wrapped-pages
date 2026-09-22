@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, lte, max, notExists, or, sql } from "drizzle-orm";
+import { and, count, eq, inArray, lte, max, notExists, or, sql } from "drizzle-orm";
 import { accounts, books, pages, readMarks, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -39,17 +39,15 @@ export type ShelfBook = {
 /** To co it nhat mot nut chu chua ky tu khong phai khoang trang (cung tap khoang trang voi docExcerpt). */
 const HAS_TEXT = sql`exists (select 1 from jsonb_path_query(${pages.content}, '$.** ? (@.type == "text").text') as chu(v) where (chu.v #>> '{}') ~ ${NOT_BLANK_PATTERN})`;
 
-/** Niem phong phu to dang xet (pages) va con khoa voi nguoi xem; dung trong truy van co join books. */
+/**
+ * Niem phong phu to dang xet (pages) va con khoa voi nguoi xem; dung trong truy van co join books. Niem phong cua mot
+ * to dung la niem phong cua luot chua to, nen so luot la du, khong can khoang to.
+ */
 function lockedSealOf(tx: AnyDb, viewerId: string, now: Date) {
   return tx
     .select({ id: seals.id })
     .from(seals)
-    .where(and(
-      eq(seals.bookId, pages.bookId),
-      lte(seals.firstPosition, pages.position),
-      gte(seals.lastPosition, pages.position),
-      lockedForSql(sql`${books.ownerId} = ${viewerId}`, now),
-    ));
+    .where(and(eq(seals.roundId, pages.roundId), lockedForSql(sql`${books.ownerId} = ${viewerId}`, now)));
 }
 
 /**

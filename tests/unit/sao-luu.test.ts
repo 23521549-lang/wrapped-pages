@@ -45,6 +45,9 @@ const M2 = "66666666-6666-4666-8666-666666666666";
 const S1 = "77777777-7777-4777-8777-777777777777";
 const S2 = "88888888-8888-4888-8888-888888888888";
 const S3 = "99999999-9999-4999-8999-999999999999";
+const R1 = "aaaaaaa1-1111-4111-8111-111111111111";
+const R2 = "aaaaaaa2-2222-4222-8222-222222222222";
+const R3 = "aaaaaaa3-3333-4333-8333-333333333333";
 const DOC = JSON.stringify({
   type: "doc",
   content: [{ type: "paragraph", content: [
@@ -76,20 +79,27 @@ async function gieo(c: PGlite) {
     update books set cover_media_id = '${M1}' where id = '${B1}';
     insert into media_objects (store_key) values ('cho/${M2}.jpg');
     insert into media_sweeps (id, ran_at) values (1, '2026-03-04 05:06:07.1+00');
-    insert into pages (book_id, position, content) values ('${B1}', 1, '${DOC}'), ('${B1}', 2, '{"type":"doc","content":[]}');
+    insert into rounds (id, book_id, published_at, edited_at) values
+      ('${R1}', '${B1}', '2026-09-01 00:00:00.123456+00', '2026-09-02 03:04:05.654321+00'),
+      ('${R2}', '${B1}', '2026-09-03 00:00:00+00', null),
+      ('${R3}', '${B1}', '2026-09-04 00:00:00+00', null);
+    insert into pages (book_id, round_id, position, content, published_at) values
+      ('${B1}', '${R1}', 1, '${DOC}', '2026-09-01 00:00:00.123456+00'),
+      ('${B1}', '${R2}', 2, '{"type":"doc","content":[]}', '2026-09-03 00:00:00+00'),
+      ('${B1}', '${R3}', 3, '{"type":"doc","content":[]}', '2026-09-04 00:00:00+00');
     insert into drafts (book_id, content, sheet_count) values ('${B2}', '${DOC}', 3);
     insert into read_marks (account_id, book_id, position) values ('${A2}', '${B1}', 2);
-    insert into seals (id, book_id, first_position, last_position, kind, question, answers, hints, teaser) values
-      ('${S1}', '${B1}', 1, 1, 'cau-do', 'Mình gặp nhau ở đâu?', '["hồ tây","Hồ Tây"]', '["nước"]', 'Ngày ấy...');
-    insert into seals (id, book_id, first_position, last_position, kind, question) values
-      ('${S2}', '${B1}', 2, 2, 'trao-doi', 'Kể mình nghe?');
-    insert into seals (id, book_id, first_position, last_position, kind, opens_at) values
-      ('${S3}', '${B1}', 3, 3, 'hen-gio', '2027-01-01 00:00:00+07');
+    insert into seals (id, book_id, round_id, kind, question, answers, hints, teaser) values
+      ('${S1}', '${B1}', '${R1}', 'cau-do', 'Mình gặp nhau ở đâu?', '["hồ tây","Hồ Tây"]', '["nước"]', 'Ngày ấy...');
+    insert into seals (id, book_id, round_id, kind, question) values
+      ('${S2}', '${B1}', '${R2}', 'trao-doi', 'Kể mình nghe?');
+    insert into seals (id, book_id, round_id, kind, opens_at) values
+      ('${S3}', '${B1}', '${R3}', 'hen-gio', '2027-01-01 00:00:00+07');
     insert into seal_attempts (seal_id, account_id, guess, correct) values ('${S1}', '${A2}', 'sai', false);
     insert into seal_replies (seal_id, account_id, content) values ('${S2}', '${A2}', '${DOC}');
-    insert into activity (kind, actor_id, book_id, seal_id, first_position, last_position, shared, at) values
-      ('dang-trang', '${A1}', '${B1}', null, 1, 2, true, now()),
-      ('thu-sai', '${A2}', '${B1}', '${S1}', 1, 1, true, now());
+    insert into activity (kind, actor_id, book_id, seal_id, round_id, shared, at) values
+      ('dang-trang', '${A1}', '${B1}', null, '${R1}', true, now()),
+      ('thu-sai', '${A2}', '${B1}', '${S1}', '${R1}', true, now());
     insert into activity (kind, actor_id, subject_id, shared, at) values ('doi-mat-khau', '${A1}', '${A2}', false, now());
   `);
 }
