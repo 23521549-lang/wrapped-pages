@@ -31,7 +31,7 @@ export async function readSourceImage(file: File): Promise<SourceImage | ImageFa
   }
   if (!preview) {
     bitmap.close();
-    return canvas ? "unreadable" : "too-large";
+    return canvas ? "broken" : "too-large";
   }
   return { bitmap, size, previewUrl: URL.createObjectURL(preview) };
 }

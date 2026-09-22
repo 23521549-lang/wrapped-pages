@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Editor } from "@/components/editor/Editor";
 import type { DocJson } from "@/lib/doc/types";
+import { IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
 import { PEAK_COUNT } from "@/lib/media/kinds";
 
 /*
@@ -258,25 +259,23 @@ describe("them anh", () => {
     expect(container.querySelector(".ProseMirror p")?.textContent).toBe("Sáng");
   });
 
-  it("anh khong doc duoc, anh goc qua 25 MB, tai len hong roi Thu lai dung lai anh da xu ly", async () => {
+  it("anh hong, anh goc qua 40 MB, tai len hong roi Thu lai dung lai anh da xu ly", async () => {
     const { createImageBitmap } = giaLapAnh(800, 600);
     createImageBitmap.mockRejectedValueOnce(new DOMException("heic", "InvalidStateError"));
     actionUploadMedia.mockRejectedValueOnce(new Error("mat mang")).mockResolvedValueOnce({ id: ID, w: 800, h: 600 });
     const { container } = await veEditor();
 
     await chonTep(container, new File(["heic"], "a.heic", { type: "image/heic" }));
-    expect(dongTai(container)).toEqual(["Ảnh này không đọc được.", "Chọn ảnh JPG, PNG hoặc WebP."]);
-    // Vung doc phai doc CA dong goi y, khong chi cau loi - nguoi dung trinh doc man hinh cung phai
-    // duoc nghe phai lam gi tiep theo, giong het nguoi nhin thay hai dong tren man.
-    expect(vungDoc(container)).toBe("Ảnh này không đọc được. Chọn ảnh JPG, PNG hoặc WebP.");
+    expect(dongTai(container)).toEqual(["Ảnh này bị hỏng hoặc không mở được, thử ảnh khác."]);
+    expect(vungDoc(container)).toBe("Ảnh này bị hỏng hoặc không mở được, thử ảnh khác.");
     expect(screen.getByRole("button", { name: "Chọn ảnh khác" })).toBeTruthy();
 
     const lon = new File(["jpeg"], "lon.jpg", { type: "image/jpeg" });
-    Object.defineProperty(lon, "size", { value: 25 * 1024 * 1024 + 1 });
+    Object.defineProperty(lon, "size", { value: IMAGE_SOURCE_MAX_BYTES + 1 });
     createImageBitmap.mockClear();
     await chonTep(container, lon);
     expect(createImageBitmap).not.toHaveBeenCalled();
-    expect(dongTai(container)).toEqual(["Ảnh lớn quá, chọn ảnh khác."]);
+    expect(dongTai(container)).toEqual(["Ảnh lớn quá (tối đa 40 MB), chọn ảnh khác."]);
 
     await chonTep(container, new File(["jpeg"], "b.jpg", { type: "image/jpeg" }));
     expect([dongTai(container), vungDoc(container)]).toEqual([["Chưa tải được, thử lại."], "Chưa tải được, thử lại."]);

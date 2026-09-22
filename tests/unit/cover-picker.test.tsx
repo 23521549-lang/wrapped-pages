@@ -39,6 +39,8 @@ let ve: number[][] = [];
 let khongWebp = false;
 let byteBlob = 2048;
 let soUrl = 0;
+/** Kieu va chat luong moi lan toBlob duoc goi, theo thu tu. */
+let maHoa: [string | undefined, number | undefined][] = [];
 
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, "setPointerCapture", { value: vi.fn(), configurable: true });
@@ -49,6 +51,7 @@ beforeEach(() => {
   khongWebp = false;
   byteBlob = 2048;
   soUrl = 0;
+  maHoa = [];
   bitmap.close.mockClear();
   giaiMa.mockClear();
   vi.stubGlobal("createImageBitmap", giaiMa);
@@ -58,7 +61,8 @@ beforeEach(() => {
       drawImage: (_nguon: unknown, ...so: number[]) => ve.push([...so, this.width, this.height]),
     } as never;
   });
-  vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((cb: BlobCallback, type?: string) => {
+  vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((cb: BlobCallback, type?: string, quality?: number) => {
+    maHoa.push([type, quality]);
     // Safari cu tra PNG khi khong ma hoa duoc WebP.
     cb(new Blob([new Uint8Array(byteBlob)], { type: type === "image/webp" && khongWebp ? "image/png" : type }));
   });
@@ -247,6 +251,7 @@ describe("BookForm bia tu tai len: tai len", () => {
     fireEvent.click(nut("Dùng ảnh này"));
     await waitFor(() => expect(loa()).toBe("Ảnh lớn quá, chọn ảnh khác."));
     expect(document.querySelector(".tai-anh__chu--loi")?.textContent).toBe("!Ảnh lớn quá, chọn ảnh khác.");
+    expect(maHoa.slice(-3)).toEqual([["image/webp", 0.82], ["image/webp", 0.72], ["image/webp", 0.6]]);
     expect(actionUploadMedia).not.toHaveBeenCalled();
     expect(bitmap.close).toHaveBeenCalledTimes(1);
     const bam = vi.spyOn(oTep(), "click");
@@ -256,21 +261,21 @@ describe("BookForm bia tu tai len: tai len", () => {
     expect([document.querySelector(".tai-anh"), loa()]).toEqual([null, ""]);
   });
 
-  it("tep goc qua 25 MB: bao Anh lon qua ma khong giai ma; dung tran thi van mo buoc cat", async () => {
+  it("tep goc qua 40 MB: bao Anh lon qua (toi da 40 MB) ma khong giai ma; dung tran thi van mo buoc cat", async () => {
     formMoi();
     fireEvent.change(oTep(), { target: { files: [tepAnh(IMAGE_SOURCE_MAX_BYTES + 1)] } });
-    await waitFor(() => expect(loa()).toBe("Ảnh lớn quá, chọn ảnh khác."));
+    await waitFor(() => expect(loa()).toBe("Ảnh lớn quá (tối đa 40 MB), chọn ảnh khác."));
     expect(giaiMa).not.toHaveBeenCalled();
     await chon(oTep(), tepAnh(IMAGE_SOURCE_MAX_BYTES));
     expect(document.querySelector(".tai-anh")).toBeNull();
   });
 
-  it("trinh duyet khong giai ma duoc (HEIC tren Windows): bao khong doc duoc kem dong goi y", async () => {
+  it("trinh duyet khong giai ma duoc: bao anh hong, khong co dong goi y", async () => {
     giaiMa.mockRejectedValueOnce(new DOMException("Khong giai ma duoc", "InvalidStateError"));
     formMoi();
     fireEvent.change(oTep(), { target: { files: [tepAnh()] } });
-    await waitFor(() => expect(loa()).toBe("Ảnh này không đọc được."));
-    expect(screen.getByText("Chọn ảnh JPG, PNG hoặc WebP.")).toBeTruthy();
+    await waitFor(() => expect(loa()).toBe("Ảnh này bị hỏng hoặc không mở được, thử ảnh khác."));
+    expect(document.querySelector(".tai-anh__phu")).toBeNull();
     expect(screen.queryByRole("group", { name: "Khung cắt ảnh bìa" })).toBeNull();
     expect(nut("Tạo sách").disabled).toBe(false);
   });

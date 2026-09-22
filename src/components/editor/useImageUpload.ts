@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { actionUploadMedia } from "@/app/actions/media";
-import { IMAGE_ERRORS, IMAGE_UNREADABLE_HINT, type ImageProblem } from "@/lib/media/image";
+import { imageErrorText, type ImageProblem } from "@/lib/media/image";
 import type { ImageAttrs } from "@/lib/media/node";
 import { processImage } from "./processImage";
 
@@ -15,11 +15,6 @@ export const IMAGE_STATUS = {
   "tai-len": "Đang tải ảnh lên",
   xong: "Đã chèn ảnh.",
 } as const;
-
-/** Cau vung doc doc khi loi: cau loi, kem dong goi y cua truong hop co goi y (dung bo cau voi ImageUploadLine). */
-export function loiDoc(problem: ImageProblem): string {
-  return problem === "unreadable" ? `${IMAGE_ERRORS[problem]} ${IMAGE_UNREADABLE_HINT}` : IMAGE_ERRORS[problem];
-}
 
 export type ImageUploadState =
   | { kind: "nghi" }
@@ -65,8 +60,8 @@ export function useImageUpload({ bookId, onInsert, announce }: Options) {
   function doi(next: ImageUploadState) {
     setState(next);
     // ImageUploadLine ve dong goi y ngay duoi cau loi cho nguoi nhin duoc; vung doc phai doc ca hai cau, khong thi
-    // nguoi dung trinh doc man hinh chi nghe "anh khong doc duoc" ma khong nghe phai lam gi tiep theo.
-    if (next.kind === "loi") goi.current.announce(loiDoc(next.problem));
+    // nguoi dung trinh doc man hinh chi nghe cau loi ma khong nghe phai lam gi tiep theo.
+    if (next.kind === "loi") goi.current.announce(imageErrorText(next.problem));
     else if (next.kind !== "nghi") goi.current.announce(IMAGE_STATUS[next.kind]);
   }
 

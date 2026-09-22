@@ -6,7 +6,7 @@ import { IconAnh } from "@/components/media/icons";
 import { UploadFailure, UploadProgress } from "@/components/media/UploadLine";
 import { COVERS, type CoverKey } from "@/lib/book";
 import type { CropRect, ImageSize } from "@/lib/media/crop";
-import { IMAGE_ERRORS, IMAGE_UNREADABLE_HINT, type ImageFailure } from "@/lib/media/image";
+import { IMAGE_ERRORS, IMAGE_HINTS, type ImageFailure } from "@/lib/media/image";
 import { COVER_LABEL, COVER_NAME, CoverArt } from "./CoverArt";
 import { CoverCrop } from "./CoverCrop";
 import { CoverImage } from "./CoverImage";
@@ -105,7 +105,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   }
 
   function fail(reason: ImageFailure) {
-    go({ kind: "loi", message: IMAGE_ERRORS[reason], hint: reason === "unreadable" ? IMAGE_UNREADABLE_HINT : null, retry: null });
+    go({ kind: "loi", message: IMAGE_ERRORS[reason], hint: IMAGE_HINTS[reason] ?? null, retry: null });
   }
 
   // Cung mot cong: nut Doi anh (disabled tren chinh no), nut Chon anh khac o buoc cat va o dong loi (hai nut
@@ -121,7 +121,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     e.currentTarget.value = "";
     if (!file) return;
     const mine = ++run.current;
-    // Giai ma (toi 25 MB) va ve lai anh xem truoc co the mat vai giay tren dien thoai: khoa nut gui ngay tu day,
+    // Giai ma (toi 40 MB) va ve lai anh xem truoc co the mat vai giay tren dien thoai: khoa nut gui ngay tu day,
     // truoc khi buoc cat kip hien, de khong tao sach thieu bia nguoi viet vua chon. go() se tu cap nhat lai
     // trang thai ban khi buoc cat hien hoac khi doc that bai.
     onBusyChange(true);
@@ -170,7 +170,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   }
 
   const retry = step.kind === "loi" ? step.retry : null;
-  const status = step.kind === "tai" ? TAI_BIA : step.kind === "loi" ? step.message : "";
+  const status = step.kind === "tai" ? TAI_BIA : step.kind === "loi" ? [step.message, step.hint].filter(Boolean).join(" ") : "";
 
   return (
     <fieldset className="chon" aria-describedby={photoChosen ? `${id}-du-phong` : undefined}>

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { chooseEncoded, checkImageSource, fitImage, IMAGE_ENCODINGS, IMAGE_ERRORS, IMAGE_SOURCE_MAX_BYTES, IMAGE_UNREADABLE_HINT } from "@/lib/media/image";
+import {
+  checkImageSource, chooseEncoded, decodeResizeWidth, DECODE_MAX_PIXELS, encodingOf, FIRST_ENCODE, fitImage, IMAGE_ENCODINGS,
+  IMAGE_ERRORS, IMAGE_HINTS, IMAGE_LOWER_QUALITIES, IMAGE_SOURCE_MAX_BYTES, imageErrorText,
+} from "@/lib/media/image";
 import { IMAGE_MAX_HEIGHT_PX, IMAGE_MAX_WIDTH_PX, MEDIA_MAX_BYTES } from "@/lib/media/kinds";
 
 describe("fitImage", () => {
@@ -24,38 +27,71 @@ describe("fitImage", () => {
 });
 
 describe("checkImageSource", () => {
-  it("tep goc toi 25 MB thi qua, lon hon thi lon qua", () => {
+  it("tep goc toi 40 MB thi qua, lon hon thi lon qua (tran rieng cua tep goc)", () => {
+    expect(IMAGE_SOURCE_MAX_BYTES).toBe(40 * 1024 * 1024);
     expect(checkImageSource({ size: IMAGE_SOURCE_MAX_BYTES })).toBeNull();
-    expect(checkImageSource({ size: IMAGE_SOURCE_MAX_BYTES + 1 })).toBe("too-large");
+    expect(checkImageSource({ size: IMAGE_SOURCE_MAX_BYTES + 1 })).toBe("source-too-large");
+  });
+});
+
+describe("decodeResizeWidth", () => {
+  it("khong biet kich thuoc, hoac chua qua tran diem anh, thi giai ma nguyen co", () => {
+    expect(DECODE_MAX_PIXELS).toBe(4096 * 4096);
+    expect(decodeResizeWidth(null)).toBeNull();
+    expect(decodeResizeWidth({ width: 4096, height: 4096 })).toBeNull();
+    expect(decodeResizeWidth({ width: 4032, height: 3024 })).toBeNull();
+  });
+
+  it.each([[8000, 6000, 4729], [6000, 8000, 3547], [12000, 9000, 4729]])("%ix%i thu ve rong %i, dien tich nam trong tran", (w, h, rong) => {
+    expect(decodeResizeWidth({ width: w, height: h })).toBe(rong);
+    expect(rong * Math.round((rong * h) / w)).toBeLessThanOrEqual(DECODE_MAX_PIXELS);
+  });
+
+  it("anh det rat dai van rong it nhat 1", () => {
+    expect(decodeResizeWidth({ width: 1, height: 20_000_000 })).toBe(1);
   });
 });
 
 describe("chooseEncoded", () => {
   const blob = (type: string, size = 1000) => ({ type, size });
 
-  it("ra WebP trong tran thi dung ngay", () => {
+  it("ra WebP 0.82 trong tran thi dung ngay", () => {
+    expect(FIRST_ENCODE).toEqual({ format: 0, lowered: 0 });
+    expect(encodingOf(FIRST_ENCODE)).toEqual({ type: "image/webp", quality: 0.82 });
     const b = blob("image/webp");
-    expect(chooseEncoded(0, b, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "ok", blob: b });
+    expect(chooseEncoded(FIRST_ENCODE, b, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "ok", blob: b });
   });
 
-  it("trinh duyet khong ma hoa duoc WebP (null hoac tra PNG) thi thu JPEG", () => {
-    expect(chooseEncoded(0, null, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "retry", next: 1 });
-    expect(chooseEncoded(0, blob("image/png"), MEDIA_MAX_BYTES.anh)).toEqual({ kind: "retry", next: 1 });
-    expect(IMAGE_ENCODINGS[1].type).toBe("image/jpeg");
+  it("trinh duyet khong ma hoa duoc WebP (null hoac tra PNG) thi thu JPEG 0.85", () => {
+    const next = { format: 1, lowered: 0 };
+    expect(chooseEncoded(FIRST_ENCODE, null, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "retry", next });
+    expect(chooseEncoded(FIRST_ENCODE, blob("image/png"), MEDIA_MAX_BYTES.anh)).toEqual({ kind: "retry", next });
+    expect(encodingOf(next)).toEqual({ type: IMAGE_ENCODINGS[1].type, quality: 0.85 });
   });
 
-  it("JPEG cung khong ra thi anh khong doc duoc", () => {
-    expect(chooseEncoded(1, null, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "error", problem: "unreadable" });
-    expect(chooseEncoded(1, blob("image/png"), MEDIA_MAX_BYTES.anh)).toEqual({ kind: "error", problem: "unreadable" });
+  it("vuot tran thi ha chat luong hai bac, giu nguyen kieu, roi moi bao lon qua", () => {
+    expect(IMAGE_LOWER_QUALITIES).toEqual([0.72, 0.6]);
+    const lon = blob("image/webp", MEDIA_MAX_BYTES.anh + 1);
+    expect(chooseEncoded(FIRST_ENCODE, lon, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "retry", next: { format: 0, lowered: 1 } });
+    expect(encodingOf({ format: 0, lowered: 1 })).toEqual({ type: "image/webp", quality: 0.72 });
+    expect(chooseEncoded({ format: 0, lowered: 1 }, lon, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "retry", next: { format: 0, lowered: 2 } });
+    expect(encodingOf({ format: 0, lowered: 2 })).toEqual({ type: "image/webp", quality: 0.6 });
+    expect(chooseEncoded({ format: 0, lowered: 2 }, lon, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "error", problem: "too-large" });
+    expect([0, 1, 2].map((lowered) => encodingOf({ format: 1, lowered }).quality)).toEqual([0.85, 0.72, 0.6]);
   });
 
-  it("dung tran may chu cua loai thi qua, vuot mot byte thi lon qua", () => {
+  it("JPEG cung khong ra thi anh hong", () => {
+    expect(chooseEncoded({ format: 1, lowered: 0 }, null, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "error", problem: "broken" });
+    expect(chooseEncoded({ format: 1, lowered: 0 }, blob("image/png"), MEDIA_MAX_BYTES.anh)).toEqual({ kind: "error", problem: "broken" });
+  });
+
+  it("dung tran may chu cua loai thi qua", () => {
     const vua = blob("image/jpeg", MEDIA_MAX_BYTES.anh);
-    expect(chooseEncoded(1, vua, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "ok", blob: vua });
-    expect(chooseEncoded(0, blob("image/webp", MEDIA_MAX_BYTES.anh + 1), MEDIA_MAX_BYTES.anh)).toEqual({ kind: "error", problem: "too-large" });
-    expect(chooseEncoded(0, blob("image/webp", 500), 499)).toEqual({ kind: "error", problem: "too-large" });
+    expect(chooseEncoded({ format: 1, lowered: 0 }, vua, MEDIA_MAX_BYTES.anh)).toEqual({ kind: "ok", blob: vua });
   });
+});
 
+describe("image.ts", () => {
   /*
    * image.ts di vao tu component cua trinh duyet; truoc khi sua no import
    * UPLOAD_RETRY_MESSAGE tu upload.ts, ma upload.ts keo theo sniffMedia (gan 200 dong doc byte) va parseUploadForm cua
@@ -75,13 +111,20 @@ describe("chooseEncoded", () => {
     }
     expect([...den].sort()).toEqual(["image", "kinds", "messages"]);
   });
+});
 
-  it("cau loi va dong goi y dung chu da dinh", () => {
+describe("cau bao loi anh", () => {
+  it("dung chu spec muc 2.4; loai khong nhan co dong goi y, vung doc doc lien ca hai", () => {
     expect(IMAGE_ERRORS).toEqual({
-      unreadable: "Ảnh này không đọc được.",
+      unsupported: "Chưa đọc được loại ảnh này.",
+      "source-too-large": "Ảnh lớn quá (tối đa 40 MB), chọn ảnh khác.",
+      broken: "Ảnh này bị hỏng hoặc không mở được, thử ảnh khác.",
+      "heif-loader": "Chưa tải được bộ đọc ảnh iPhone, thử lại.",
       "too-large": "Ảnh lớn quá, chọn ảnh khác.",
       upload: "Chưa tải được, thử lại.",
     });
-    expect(IMAGE_UNREADABLE_HINT).toBe("Chọn ảnh JPG, PNG hoặc WebP.");
+    expect(IMAGE_HINTS).toEqual({ unsupported: "Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP." });
+    expect(imageErrorText("unsupported")).toBe("Chưa đọc được loại ảnh này. Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP.");
+    expect(imageErrorText("broken")).toBe(IMAGE_ERRORS.broken);
   });
 });
