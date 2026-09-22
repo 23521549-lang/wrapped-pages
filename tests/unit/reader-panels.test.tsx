@@ -55,7 +55,7 @@ const ve = (start: number) => (
     trackRead={false}
     mine={false}
     editedAt={[null, null, null]}
-    editable={[false, false, false]}
+    editHref={[null, null, null]}
   />
 );
 

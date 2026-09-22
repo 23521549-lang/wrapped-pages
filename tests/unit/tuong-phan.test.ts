@@ -253,6 +253,7 @@ const MIEN_TRU: MienTru[] = [
       ".hoat-dong",
       ".book",
       ".nhap-ds",
+      ".luot-ds",
       ".nhan-cu",
       ".nhac-the",
       ".thu-thach",
@@ -264,6 +265,7 @@ const MIEN_TRU: MienTru[] = [
       ".viet-tren",
       ".foot",
       ".nhap + .nhap",
+      ".luot + .luot",
       ".go-cua__dong + .go-cua__dong",
       // Vach chia giua cac cot cua khung dang trang (PublishBar.tsx PublishPanel): tach cot chon loai, cot cac o va
       // cot to giay, va tach cau xac nhan khoi danh sach loai. Moi dieu khien ben trong (radio, o nhap, nut) co

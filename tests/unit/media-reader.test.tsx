@@ -225,7 +225,7 @@ describe("Reader: to khoa", () => {
         trackRead={false}
         mine={false}
         editedAt={[null]}
-        editable={[false]}
+        editHref={[null]}
       />,
     );
     expect(container.querySelector(".to-giay")).not.toBeNull();

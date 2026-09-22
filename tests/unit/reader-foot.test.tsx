@@ -18,6 +18,8 @@ const NOW = new Date("2026-09-13T08:00:00.000Z");
 /** 14:05 cung ngay gio Viet Nam. */
 const SUA = new Date("2026-09-13T07:05:00.000Z");
 const BOOK = "5d1c7a9e-2b4f-4c6d-8e0a-1f3b5d7c9e2a";
+const SUA_1 = `/sach/${BOOK}/sua-luot/1`;
+const SUA_3 = `/sach/${BOOK}/sua-luot/2?trang=2`;
 
 function to(text: string): DocJson {
   return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
@@ -47,7 +49,7 @@ function props(p: Partial<ReaderProps> = {}): ReaderProps {
     bookId: BOOK, title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
     looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }], seals: [],
     ownerName: "Linh", readerName: "Mạnh", now: NOW, start: 0, revealAt: null, mark: 0, trackRead: false,
-    mine: true, editedAt: [null, null, null], editable: [true, false, true], ...p,
+    mine: true, editedAt: [null, null, null], editHref: [SUA_1, null, SUA_3], ...p,
   };
 }
 
@@ -59,7 +61,7 @@ function lat(ten: "Trang sau" | "Trang trước") {
   });
 }
 
-const lienKetSua = () => document.querySelectorAll('a[href*="/sua-trang/"]');
+const lienKetSua = () => document.querySelectorAll('a[href*="/sua-luot/"]');
 
 beforeEach(() => {
   rong = false;
@@ -79,18 +81,18 @@ afterEach(() => {
 });
 
 describe("Reader: dai ghi chu duoi cuon sach", () => {
-  it("chu sach: to thuong co lien ket Sua trang, to niem phong chi co dong chu kem o khoa an", () => {
+  it("chu sach: to sua duoc co lien ket Sua trang toi man sua luot, to niem phong con dong chi co dong chu kem o khoa an", () => {
     render(<Reader {...props()} />);
     const nut = screen.getByRole("link", { name: "Sửa trang 1" });
-    expect(nut.getAttribute("href")).toBe(`/sach/${BOOK}/sua-trang/1`);
+    expect(nut.getAttribute("href")).toBe(SUA_1);
     lat("Trang sau");
-    expect(screen.getByText("Trang niêm phong không sửa được")).toBeTruthy();
+    expect(screen.getByText("Đang niêm phong, chưa sửa được")).toBeTruthy();
     expect(lienKetSua()).toHaveLength(0);
     expect(document.querySelector(".trang-ghi__khoa svg")?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("nguoi kia: thay Da sua luc voi time day du, khong co lien ket sua nao", () => {
-    render(<Reader {...props({ mine: false, editable: [false, false, false], editedAt: [SUA, null, null] })} />);
+    render(<Reader {...props({ mine: false, editHref: [null, null, null], editedAt: [SUA, null, null] })} />);
     const time = document.querySelector(".trang-ghi__sua time");
     expect(time?.getAttribute("dateTime")).toBe(SUA.toISOString());
     expect(time?.textContent).toBe("Đã sửa lúc 14:05");
@@ -98,7 +100,7 @@ describe("Reader: dai ghi chu duoi cuon sach", () => {
   });
 
   it("nguoi kia, khong to nao da sua: khong co dai trong", () => {
-    const { container } = render(<Reader {...props({ mine: false, editable: [false, false, false] })} />);
+    const { container } = render(<Reader {...props({ mine: false, editHref: [null, null, null] })} />);
     expect(container.querySelector("ul.trang-ghi")).toBeNull();
     expect(container.querySelector(".doc__chan")).toBeNull();
   });
@@ -116,6 +118,7 @@ describe("Reader: dai ghi chu duoi cuon sach", () => {
     const li = ul?.querySelectorAll(":scope > li") ?? [];
     expect(li).toHaveLength(2);
     expect(li[0].textContent).toContain("Sửa trang 3");
+    expect(li[0].querySelector("a")?.getAttribute("href")).toBe(SUA_3);
     expect(li[1].childElementCount).toBe(0);
   });
 

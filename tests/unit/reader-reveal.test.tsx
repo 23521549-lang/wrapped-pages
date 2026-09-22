@@ -48,7 +48,7 @@ const VUA_MO: ReaderSeal = {
 const props = (sua: Partial<ReaderProps> = {}): ReaderProps => ({
   bookId: "b1", title: "Thu", sheets: [to("Mot"), to("Chu vua mo")], looks: [{ kind: "thuong" }, { kind: "thuong" }],
   seals: [VUA_MO], ownerName: "Linh", readerName: "Minh", now: T0, start: 1, revealAt: { index: 1, sealId: "s1" }, mark: 0, trackRead: false,
-  mine: false, editedAt: [null, null], editable: [false, false],
+  mine: false, editedAt: [null, null], editHref: [null, null],
   ...sua,
 });
 

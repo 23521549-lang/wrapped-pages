@@ -13,6 +13,7 @@ import { MusicRoom } from "@/components/music/MusicRoom";
 import { Reader } from "@/components/reader/Reader";
 import { musicGate } from "@/lib/music-gate";
 import { startSheet } from "@/lib/reading";
+import { roundEditPath } from "@/lib/round";
 import { revealTarget, sheetLooks } from "@/lib/seal/reader";
 
 export default async function DocSach({ params, searchParams }: {
@@ -26,8 +27,15 @@ export default async function DocSach({ params, searchParams }: {
   // Lua chon tat nhac la cua chinh nguoi xem, khong phu thuoc cuon sach, nen doc song song; chi dung khi sach co nhac.
   const [view, tatNhac] = await Promise.all([readBook(db, me.accountId, id, now), readMusicMuted(db, me.accountId)]);
   if (!view) notFound();
-  const { book, mine, sheets, seals, mark } = view;
+  const { book, mine, sheets, seals, rounds, mark } = view;
   const count = sheets.length;
+  // Nut "Sua trang N" chi cho chu sach: tro toi man sua luot chua to do, mo ngay to do. Luot con niem phong voi nguoi kia
+  // (hay nguoi xem khong phai chu sach) thi null.
+  const luotCua = new Map(rounds.map((r) => [r.id, r]));
+  const editHref = sheets.map((s) => {
+    const r = luotCua.get(s.roundId);
+    return mine && r && !r.sealed ? roundEditPath(book.id, r.ordinal, s.position - r.first + 1) : null;
+  });
   const locked = sheets.filter((s) => s.locked).length;
   // Doc duoc thi hoac la sach cua minh, hoac la sach chia se cua nguoi kia.
   const owner = mine ? me.nickname : me.partnerNickname;
@@ -78,7 +86,7 @@ export default async function DocSach({ params, searchParams }: {
           trackRead={!mine}
           mine={mine}
           editedAt={sheets.map((s) => s.editedAt)}
-          editable={sheets.map((s) => mine && s.sealId === null)}
+          editHref={editHref}
         />
       )}
     </>

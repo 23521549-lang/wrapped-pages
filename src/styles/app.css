@@ -415,6 +415,14 @@ a.hoat-dong__dong:hover .hoat-dong__chu{ text-decoration-color: currentColor; }
 .muc__x{ color: var(--color-ink-2); max-width: 52ch; }
 .muc__x b{ color: var(--color-ink); font-weight: 600; }
 .muc .form{ gap: var(--space-md); margin-top: var(--space-2xs); }
+/* Muc Noi dung cua man sua sach: moi luot dang mot dong, nut sua hay dong niem phong o ben phai, cung khung voi .nhap-ds. */
+.luot-muc{ margin-top: var(--space-2xl); }
+.luot-ds{ margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
+.luot{ display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2xs) var(--space-md); padding: var(--space-sm) var(--space-md); }
+.luot + .luot{ border-top: 1px solid var(--color-rule); }
+.luot__chu{ margin: 0; min-width: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.luot__khoa{ display: inline-flex; align-items: center; gap: .35rem; margin: 0; min-height: 44px; font-size: var(--text-sm); color: var(--color-ink-2); }
+.luot__khoa svg{ width: 12px; height: 12px; flex: none; }
 .nhan-ds{ display: grid; gap: var(--space-sm); }
 .nhan-cu{ display: grid; gap: .35rem; padding: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-rule); background: var(--color-paper-2); min-width: 0; }
 .nhan-cu__chu{ font-size: var(--text-sm); line-height: 1.6; overflow-wrap: anywhere; white-space: pre-line; }

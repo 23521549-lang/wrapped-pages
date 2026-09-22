@@ -39,12 +39,15 @@ export type ReaderProps = {
   mark: number;
   /** Chi sach cua nguoi kia moi day moc (chu sach khong co moc). */
   trackRead: boolean;
-  /** Nguoi xem la chu sach: to niem phong co dong "khong sua duoc" thay cho nut sua. */
+  /** Nguoi xem la chu sach: to chua sua duoc co dong "Dang niem phong" thay cho nut sua. */
   mine: boolean;
   /** Lan sua gan nhat cua tung to, cung thu tu voi sheets. */
   editedAt: readonly (Date | null)[];
-  /** To nao chu sach sua duoc, cung thu tu voi sheets. Nguoi kia toan false nen ma ve nut khong chay. */
-  editable: readonly boolean[];
+  /**
+   * Duong dan man sua luot mo dung tung to, cung thu tu voi sheets. null: to chu sach chua sua duoc (luot con niem phong
+   * voi nguoi kia), hay nguoi xem khong phai chu sach (khi do moi phan tu deu null va ma ve nut khong chay).
+   */
+  editHref: readonly (string | null)[];
 };
 
 /** Nghi thuc mo cua man doc nay: niem phong nao, va chu con dang hien dan tren to dau cua no khong. */
@@ -52,7 +55,7 @@ type NghiThuc = { sealId: string; dangGo: boolean };
 
 /** Man doc phia trinh duyet: sach lat duoc, to niem phong, nghi thuc mo, khung thu thach, day moc da doc cua nguoi kia. */
 export function Reader({
-  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, mark, trackRead, mine, editedAt, editable,
+  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, mark, trackRead, mine, editedAt, editHref,
 }: ReaderProps) {
   const router = useRouter();
   const moId = useId();
@@ -159,16 +162,17 @@ export function Reader({
         <ul className="trang-ghi" aria-label="Ghi chú trang đang mở">
           {dangHien.map((i, k) => {
             const sua = i === null ? null : editedAt[i];
+            const den = i === null ? null : editHref[i];
             return (
               <li key={i ?? `trong-${k}`}>
                 {sua && (
                   <p className="trang-ghi__sua"><time dateTime={sua.toISOString()}>{editedLabel(sua, now)}</time></p>
                 )}
-                {i !== null && mine && editable[i] && (
-                  <Link className="btn btn--chu" href={`/sach/${bookId}/sua-trang/${i + 1}`}>Sửa trang {i + 1}</Link>
+                {i !== null && mine && den !== null && (
+                  <Link className="btn btn--chu" href={den}>Sửa trang {i + 1}</Link>
                 )}
-                {i !== null && mine && !editable[i] && (
-                  <p className="trang-ghi__khoa"><GlyphKhoa />Trang niêm phong không sửa được</p>
+                {i !== null && mine && den === null && (
+                  <p className="trang-ghi__khoa"><GlyphKhoa />Đang niêm phong, chưa sửa được</p>
                 )}
               </li>
             );
@@ -176,7 +180,7 @@ export function Reader({
         </ul>
       );
     },
-    [bookId, editedAt, editable, mine, now],
+    [editedAt, editHref, mine, now],
   );
 
   const moSeal = nghiThuc === null ? undefined : seals.find((s) => s.id === nghiThuc.sealId);
