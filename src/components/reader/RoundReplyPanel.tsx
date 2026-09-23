@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type FocusEvent, type ReactNode } from "react";
 import { actionSubmitRoundReply } from "@/app/actions/round-reply";
 import { GlyphKhoa } from "@/components/book/ShelfBook";
 import { normalizeReplyBody, REPLY_MAX, replyLength, shownRound, type ReplyRound } from "@/lib/round-reply";
@@ -31,6 +31,17 @@ const MAT_MANG = "Chưa gửi được, thử lại nhé.";
 function hienRa(el: HTMLElement | null): void {
   el?.focus();
   el?.scrollIntoView?.({ block: "nearest" });
+}
+
+/**
+ * Bat moi duong focus con lai ma hienRa() khong voi toi: Shift+Tab tu nut Gui ve o chu, va lan khoi phuc vi tri cuon
+ * cua App Router sau refresh(). Focus co noi bot trong React (onFocus o day thuc chat la focusin), nen mot handler
+ * duy nhat tren section.hoi-dap phu moi phan tu con ben trong, khong can rai them hienRa() o tung noi. Goi sau khi
+ * focus da toi noi nen scroll-margin-top cua giay.css duoc tinh dung; jsdom khong co scrollIntoView nen goi co dieu
+ * kien.
+ */
+function onKhungFocus(e: FocusEvent<HTMLElement>): void {
+  e.target.scrollIntoView?.({ block: "nearest" });
 }
 
 type FormProps = {
@@ -218,7 +229,10 @@ export function RoundReplyPanel({ rounds, mine, replierName, now }: RoundReplyPa
   }
 
   return (
-    <section className="hoi-dap" aria-labelledby={tieuDe}>
+    // onFocus o day khong bat tuong tac chuot/phim, chi keo phan tu con vua nhan focus ra khoi cho the nhac ghim
+    // (xem chu thich cua onKhungFocus).
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <section className="hoi-dap" aria-labelledby={tieuDe} onFocus={onKhungFocus}>
       <div className="hoi-dap__dau">
         <h2 className="d hoi-dap__t" id={tieuDe}>Lời hồi đáp</h2>
         <p className="meta">Dành cho {pageRange(luot.first, luot.last)}</p>

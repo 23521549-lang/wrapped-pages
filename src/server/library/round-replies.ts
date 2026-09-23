@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { books, roundReplies, rounds, seals } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { recordActivity } from "@/server/feed/record";
@@ -33,10 +33,14 @@ export async function submitRoundReply(
   if (!isUuid(roundId)) return "not-found";
 
   return db.transaction(async (tx): Promise<RoundReplyResult> => {
+    // Thu tu khoa toan du an: books truoc, roi rounds (xem lockOwnBook o remove.ts, dung boi editRound truoc khi
+    // update(rounds); publishDraft o drafts.ts cung khoa books truoc roi insert(rounds)). FROM phai la books de
+    // LockRows cua Postgres lay khoa dong books truoc dong rounds, khong thi nguoc chieu voi cac duong ghi kia va
+    // sinh cua so deadlock (40P01) khi hai nguoi thao tac cung luc.
     const [row] = await tx
       .select({ bookId: rounds.bookId, ownerId: books.ownerId, mode: books.mode })
-      .from(rounds)
-      .innerJoin(books, eq(books.id, rounds.bookId))
+      .from(books)
+      .innerJoin(rounds, eq(rounds.bookId, books.id))
       .where(eq(rounds.id, roundId))
       .for("update");
     if (!row || row.ownerId === accountId || row.mode !== "chia-se") return "not-found";
@@ -58,12 +62,14 @@ export async function submitRoundReply(
   });
 }
 
-/** Moi loi hoi dap cua mot cuon, cu nhat truoc. Chi goi sau khi da kiem nguoi xem doc duoc cuon (readBook). */
+/**
+ * Moi loi hoi dap cua mot cuon, khong thu tu (nguoi goi dung theo roundId qua replyRounds, moi luot toi da mot dong
+ * nen thu tu tra ve khong quan sat duoc). Chi goi sau khi da kiem nguoi xem doc duoc cuon (readBook).
+ */
 export async function repliesOfBook(db: AnyDb, bookId: string): Promise<ReaderReply[]> {
   return db
     .select({ roundId: roundReplies.roundId, body: roundReplies.body, createdAt: roundReplies.createdAt })
     .from(roundReplies)
     .innerJoin(rounds, eq(rounds.id, roundReplies.roundId))
-    .where(eq(rounds.bookId, bookId))
-    .orderBy(asc(roundReplies.createdAt));
+    .where(eq(rounds.bookId, bookId));
 }

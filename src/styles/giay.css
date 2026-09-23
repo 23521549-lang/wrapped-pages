@@ -146,7 +146,9 @@
  * The nhac dinh o mep tren, nen khi TRINH DUYET tu dua mot phan tu cua khung hoi dap vao tam nhin (Shift+Tab tu nut
  * Gui ve o chu, hay focus toi loi vua gui sau khi da cuon) thi phai chua cho the nhac, khong thi phan tu dang co focus
  * nam khuat sau the. Do that o 1280x720: day the cach mep tren 347px; de 23rem cho du ca khi the cao them mot dong
- * bao. Thua thi chi la cuon hoi sau, khong hai gi; thieu thi phan tu co focus bi che.
+ * bao. Thua thi chi la cuon hoi sau, khong hai gi; thieu thi phan tu co focus bi che. So nay lay tu chieu cao thuc te
+ * cua .nhac-the (cong khoang trong); doi bo cuc hay them dong vao the nhac thi phai do lai .nhac-the roi cap nhat so
+ * o day.
  */
 .doc-luoi__phu--nhac .hoi-dap__o,
 .doc-luoi__phu--nhac .hoi-dap__loi{ scroll-margin-top: 23rem; }

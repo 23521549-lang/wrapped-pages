@@ -184,6 +184,18 @@ describe("RoundReplyPanel: nguoi doc", () => {
     const { container } = ve({ rounds: [] });
     expect(container.querySelector(".hoi-dap")).toBeNull();
   });
+
+  it("focus roi vao khung tu duong nao cung duoc (vd Shift+Tab tu nut Gui, hay khoi phuc cuon sau refresh): tu keo phan tu do khoi the nhac ghim", () => {
+    ve();
+    const scrollSpy = vi.fn();
+    o().scrollIntoView = scrollSpy;
+    // Goi .focus() that cua DOM (khong phai qua click cua component) de mo phong duong Shift+Tab hay khoi phuc cuon:
+    // jsdom phat "focusin" that khi do, dung nhu trinh duyet, nen bat dung handler onFocus noi bot tren section.
+    act(() => {
+      o().focus();
+    });
+    expect(scrollSpy).toHaveBeenCalledWith({ block: "nearest" });
+  });
 });
 
 describe("RoundReplyPanel: nguoi viet", () => {
