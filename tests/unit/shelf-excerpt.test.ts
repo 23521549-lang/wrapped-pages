@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { readSheets, seals } from "@/server/db/schema";
 import { listShelf } from "@/server/library/shelf";
 import { isLockedFor } from "@/server/seal/seals";
-import type { DocJson } from "@/lib/doc/types";
+import { SHELF_MARK, type DocJson } from "@/lib/doc/types";
 import { dayKey } from "@/lib/when";
 import type { TestDb } from "../helpers/db";
 import { dang, haiCuon, to } from "../helpers/library";
@@ -39,6 +39,19 @@ const trong: DocJson = { type: "doc", content: [{ type: "paragraph" }] };
 const chiXuongDong: DocJson = { type: "doc", content: [{ type: "paragraph", content: [{ type: "hardBreak" }] }] };
 const khoangTrang = to(String.fromCharCode(32, 160, 12288, 9));
 
+/** Tai lieu mot doan, trong do phan giua mang dau doan tren ke. */
+const toDau = (truoc: string, chon: string, sau: string): DocJson => ({
+  type: "doc",
+  content: [{
+    type: "paragraph",
+    content: [
+      ...(truoc === "" ? [] : [{ type: "text" as const, text: truoc }]),
+      { type: "text" as const, text: chon, marks: [{ type: SHELF_MARK }] },
+      ...(sau === "" ? [] : [{ type: "text" as const, text: sau }]),
+    ],
+  }],
+});
+
 describe("listShelf chon to cua doan trich", () => {
   it("chon to thu k = md5(cuon:nguoi xem:ngay Viet Nam) mod so ung vien; cung ngay tai lai van la to do", async () => {
     const s = await haiCuon();
@@ -69,22 +82,20 @@ describe("listShelf chon to cua doan trich", () => {
     expect(daGap.size).toBeGreaterThan(1);
   });
 
-  it("nguoi kia chi duoc chon trong cac to da doc; chua doc gi thi la to doc duoc dau tien, khong bao gio lo to chua doc", async () => {
+  it("luot moi nhat khong bi moc doc gioi han; chu sach cung vay", async () => {
     const s = await haiCuon();
     const chu = ["một", "hai", "ba", "bốn", "năm"];
     await dang(s.db, s.seat1.id, s.chung, ...chu);
-    // Chua co dau doc: to 1 (to chua doc ke tiep), khong phai to bam theo ngay.
-    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: "một", excerptPosition: 1, excerptLocked: false });
-    await docToi(s.db, s.seat2.id, s.chung, 3);
-    for (let d = 0; d < 30; d++) {
-      const luc = new Date(Date.UTC(2026, 8, 1 + d, 3));
-      const ke = await cuaCuon(s.db, s.seat2.id, s.chung, luc);
-      expect(ke.excerptPosition, dayKey(luc)).toBe(chiSo(s.chung, s.seat2.id, dayKey(luc), 3) + 1);
-      expect(ke.excerptPosition).toBeLessThanOrEqual(3);
-      expect(JSON.stringify(ke)).not.toMatch(new RegExp("bốn|năm"));
+    // Nam to nam trong MOT luot, va luot do la luot moi nhat: ca hai nguoi deu bat tham trong ca nam to, khong phu
+    // thuoc da xem to nao. An toan vi markRead chi ghi to that su hien, nen mo khung o to xa khong lam mat trang moi.
+    for (const ai of [s.seat1.id, s.seat2.id]) {
+      for (let d = 0; d < 30; d++) {
+        const luc = new Date(Date.UTC(2026, 8, 1 + d, 3));
+        const ke = await cuaCuon(s.db, ai, s.chung, luc);
+        expect(ke.excerptPosition, dayKey(luc)).toBe(chiSo(s.chung, ai, dayKey(luc), 5) + 1);
+        expect(ke.excerpt).toBe(chu[ke.excerptPosition - 1]);
+      }
     }
-    // Chu sach khong bi dau doc cua nguoi kia gioi han.
-    expect((await cuaCuon(s.db, s.seat1.id, s.chung, SANG)).excerptPosition).toBe(chiSo(s.chung, s.seat1.id, "2026-09-22", 5) + 1);
   });
 
   it("bo to chi co anh, to trong, to chi xuong dong, to chi co khoang trang (ke ca khoang trang khong ngat va chu Han)", async () => {
@@ -99,15 +110,14 @@ describe("listShelf chon to cua doan trich", () => {
     }
   });
 
-  it("nguoi kia: du phong khong bao gio vuot dau doc + 1, ke ca khi to ke tiep khong co chu", async () => {
+  it("to cuoi co chu thi ca hai nguoi deu thay no, du cac to truoc chi co anh", async () => {
     const s = await haiCuon();
-    // To 1 da doc nhung khong co chu (anh); to 2 chua doc, khong co chu (anh); to 3 chua doc, co chu.
-    await chenTo(s.db, s.chung, khoiAnh, khoiAnh, to("Xa hon"));
+    // Ba luot: to 1 va to 2 chi co anh, to 3 co chu va la luot moi nhat.
+    await chenTo(s.db, s.chung, khoiAnh, khoiAnh, to("Xa hơn"));
     await docToi(s.db, s.seat2.id, s.chung, 1);
-    // Du to 3 co chu, du phong khong duoc nhay qua to 2 (dau doc + 1) - phai dung lai o to 2, khong doan trich.
-    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: null, excerptPosition: 2, excerptLocked: false });
-    // Chu sach (mine) khong bi dau doc cua nguoi kia gioi han: van uu tien to co chu dau tien (to 3).
-    expect(await cuaCuon(s.db, s.seat1.id, s.chung, SANG)).toMatchObject({ excerpt: "Xa hon", excerptPosition: 3, excerptLocked: false });
+    for (const ai of [s.seat1.id, s.seat2.id]) {
+      expect(await cuaCuon(s.db, ai, s.chung, SANG)).toMatchObject({ excerpt: "Xa hơn", excerptPosition: 3, excerptLocked: false });
+    }
   });
 
   it("to trong niem phong: loai dung theo luat isLockedFor voi tung nguoi xem va tung thoi diem", async () => {
@@ -167,5 +177,65 @@ describe("listShelf chon to cua doan trich", () => {
     const ke = await listShelf(s.db, s.seat2.id, SANG);
     expect(ke.map((b) => b.id)).toEqual([s.chung]);
     expect(JSON.stringify(ke)).not.toContain("Chỉ mình em biết");
+  });
+});
+
+describe("listShelf lay doan tu luot moi nhat", () => {
+  it("co dau chon thi lay dung doan do, khong bat tham, ngay nao cung the", async () => {
+    const s = await haiCuon();
+    await themLuot(s.db, s.chung, 1, [to("Tờ một"), toDau("Trước ", "đoạn em chọn", " sau"), to("Tờ ba")]);
+    for (const ai of [s.seat1.id, s.seat2.id]) {
+      for (const luc of [SANG, new Date("2026-10-05T03:00:00.000Z")]) {
+        expect(await cuaCuon(s.db, ai, s.chung, luc), luc.toISOString()).toMatchObject({
+          excerpt: "đoạn em chọn", excerptPosition: 2, excerptLocked: false,
+        });
+      }
+    }
+  });
+
+  it("dau nam tren nhieu to thi lay to co vi tri nho nhat", async () => {
+    const s = await haiCuon();
+    await themLuot(s.db, s.chung, 1, [toDau("", "phần đầu", ""), toDau("", "phần sau", "")]);
+    expect(await cuaCuon(s.db, s.seat1.id, s.chung, SANG)).toMatchObject({ excerpt: "phần đầu", excerptPosition: 1 });
+  });
+
+  it("chu duoc danh dau chi toan khoang trang thi lui ve bat tham", async () => {
+    const s = await haiCuon();
+    await themLuot(s.db, s.chung, 1, [toDau("Có chữ hẳn hoi", String.fromCharCode(32, 160), "")]);
+    expect(await cuaCuon(s.db, s.seat1.id, s.chung, SANG)).toMatchObject({ excerpt: "Có chữ hẳn hoi", excerptPosition: 1 });
+  });
+
+  it("luot moi nhat khong giu doan cua luot cu, ke ca khi luot cu co dau chon", async () => {
+    const s = await haiCuon();
+    await themLuot(s.db, s.chung, 1, [toDau("", "đoạn của lượt cũ", "")]);
+    await themLuot(s.db, s.chung, 2, [to("Lượt mới một"), to("Lượt mới hai")], new Date("2026-09-02T00:00:00.000Z"));
+    const ke = await cuaCuon(s.db, s.seat1.id, s.chung, SANG);
+    expect(ke.excerptPosition).toBe(2 + chiSo(s.chung, s.seat1.id, "2026-09-22", 2));
+    expect(ke.excerpt).toBe(["Lượt mới một", "Lượt mới hai"][ke.excerptPosition - 2]);
+  });
+
+  it("dau nam trong luot con niem phong: khong hien mot chu nao, dung dong he lo", async () => {
+    const s = await haiCuon();
+    await themLuot(s.db, s.chung, 1, [to("Tờ mở")]);
+    const roundId = await themLuot(s.db, s.chung, 2, [toDau("", "đoạn còn khóa", "")], new Date("2026-09-02T00:00:00.000Z"));
+    await s.db.insert(seals).values({
+      bookId: s.chung, roundId, kind: "cau-do", question: "?", answers: ["a"], teaser: "Hé lộ",
+    });
+    const ke = await cuaCuon(s.db, s.seat2.id, s.chung, SANG);
+    expect(ke).toMatchObject({ excerpt: "Hé lộ", excerptLocked: true, excerptPosition: 1 });
+    expect(JSON.stringify(ke)).not.toContain("đoạn còn khóa");
+  });
+
+  it("luot moi nhat khong co to nao co chu: lui ve luat cu, chi bat tham trong cac to da xem", async () => {
+    const s = await haiCuon();
+    await themLuot(s.db, s.chung, 1, [to("Tờ một"), to("Tờ hai"), to("Tờ ba")]);
+    await themLuot(s.db, s.chung, 4, [khoiAnh], new Date("2026-09-02T00:00:00.000Z"));
+    // Chua xem to nao: duong lui khong bao gio chon xa hon to doc duoc dau tien, nen la to 1 chu khong phai to bam
+    // theo ngay - dung luat cu cua spec muc 7.
+    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: "Tờ một", excerptPosition: 1 });
+    await docToi(s.db, s.seat2.id, s.chung, 3);
+    const ke = await cuaCuon(s.db, s.seat2.id, s.chung, SANG);
+    expect(ke.excerptPosition).toBe(chiSo(s.chung, s.seat2.id, "2026-09-22", 3) + 1);
+    expect(ke.excerptPosition).toBeLessThanOrEqual(3);
   });
 });

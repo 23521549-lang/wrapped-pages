@@ -69,20 +69,28 @@ test("chu sach bam vao khung sach mo: man doc mo dung to cua doan trich; nut Vie
   await expect(a).toHaveURL(new RegExp(`/sach/${id}[?]trang=${so}$`));
 });
 
-test("nguoi kia chua doc gi: khung mo to chua doc ke tiep (to 1), khong lo chu cua to chua doc nao khac", async ({ browser }) => {
+/*
+ * Bon to nay nam trong MOT luot dang, nen do la luot moi nhat: theo spec 2026-09-22 muc 10, khung sach cua nguoi kia
+ * bat tham trong ca bon to, khong con bi gioi han "chi lay to nguoi kia da doc" cua muc 7 (luat do nay chi con ap cho
+ * cac luot cu). Chu cua ba to khong duoc chon van khong duoc xuong trinh duyet.
+ */
+test("nguoi kia chua doc gi: khung mo to bam theo ngay cua luot moi nhat, khong lo chu cua to nao khac", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangToThang(id, ...CAC_TO);
 
   await b.goto("/ke-sach");
   const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
-  await expect(ganNhat.getByRole("link", { name: "Đọc Chuyện chưa kể tại trang 1" })).toHaveAttribute("href", `/sach/${id}?trang=1`);
-  await expect(ganNhat.locator(".vua-viet__chu")).toHaveText(CAC_TO[0]);
+  const lien = ganNhat.getByRole("link", { name: new RegExp("^Đọc Chuyện chưa kể tại trang [1-4]$") });
+  const href = (await lien.getAttribute("href")) ?? "";
+  const so = Number(new RegExp(`^/sach/${id}[?]trang=([1-4])$`).exec(href)?.[1]);
+  expect(so, `href cua khung: ${href}`).toBeGreaterThan(0);
+  await expect(ganNhat.locator(".vua-viet__chu")).toHaveText(CAC_TO[so - 1]);
   await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", `/sach/${id}`);
   const html = await b.content();
-  for (const chu of CAC_TO.slice(1)) expect(html, chu).not.toContain(chu);
+  for (const chu of CAC_TO.filter((_, i) => i !== so - 1)) expect(html, chu).not.toContain(chu);
 
-  await ganNhat.getByRole("link", { name: "Đọc Chuyện chưa kể tại trang 1" }).click();
-  await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
-  await expect(b.locator(".sach")).toContainText(CAC_TO[0]);
+  await lien.click();
+  await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=${so}$`));
+  await expect(b.locator(".sach")).toContainText(CAC_TO[so - 1]);
 });

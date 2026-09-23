@@ -13,8 +13,8 @@ export type OpenBookProps = {
   coverMediaId: string | null;
   pageCount: number;
   /**
-   * To man doc mo khi bam khung: to co chu chon cho hom nay, khong co thi to doc duoc dau tien co chu; khong to doc duoc
-   * nao co chu thi to doc duoc dau tien (moi to deu khoa thi to cuoi). In o chan trang phai nhu so trang khi khong locked.
+   * To man doc mo khi bam khung: to mang doan trich cua hom nay (doan luon den tu luot dang moi nhat); khong co doan
+   * trich thi to doc duoc dau tien (moi to deu khoa thi to cuoi). In o chan trang phai nhu so trang khi khong locked.
    */
   position: number;
   /** Man doc mo dung to position: ca khung sach la mot lien ket toi day. */
@@ -23,7 +23,7 @@ export type OpenBookProps = {
   /** Chu cua to position; khi locked thi chi la dong he lo (hoac null), khong bao gio la chu that. */
   excerpt: string | null;
   /**
-   * Khong to doc duoc nao co chu va to cuoi nam trong niem phong con khoa voi nguoi xem: excerpt la dong he lo cua niem
+   * Khong co doan trich nao va to cuoi nam trong niem phong con khoa voi nguoi xem: excerpt la dong he lo cua niem
    * phong do, khong phai chu cua to position (to position co the chi co anh). Vi vay khi locked khong in so trang duoi
    * dong he lo, va nhan lien ket noi "tu trang N" (noi man doc bat dau) thay vi "tai trang N".
    */

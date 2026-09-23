@@ -82,9 +82,10 @@ describe("ke sach", () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await dang(db, seat1.id, chung, "một", "hai", "ba");
     const cuaNguoiKia = (await listShelf(db, seat2.id)).find((b) => b.id === chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Nguoi kia chua doc gi nen doan trich la to doc duoc dau tien co chu.
-    expect(cuaNguoiKia).toMatchObject({ pageCount: 3, newCount: 3, excerptPosition: 1, mine: false, ownerNickname: "Linh" });
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10): ba to nam trong cung mot luot va do la luot moi
+    // nhat, nen ca ba deu la ung vien cua phep bat tham theo ngay, khong con phu thuoc nguoi kia da xem to nao.
+    expect(cuaNguoiKia).toMatchObject({ pageCount: 3, newCount: 3, mine: false, ownerNickname: "Linh" });
+    expect(cuaNguoiKia.excerpt).toBe(["một", "hai", "ba"][cuaNguoiKia.excerptPosition - 1]);
     await markRead(db, seat2.id, chung, 1, 2);
     expect((await listShelf(db, seat2.id)).find((b) => b.id === chung)!.newCount).toBe(1);
     expect((await listShelf(db, seat1.id)).find((b) => b.id === chung)!).toMatchObject({ newCount: 0, mine: true });

@@ -15,7 +15,7 @@ const HE_LO = "Em tới sớm hơn giờ hẹn bốn mươi phút.";
 const BI_MAT = "Quán nhỏ tới mức chỉ có bốn cái bàn, cô chủ hỏi em đợi ai.";
 const HOP_THOI_GIAN = "Gửi em của năm ba mươi tuổi.";
 
-test("nguoi kia thay dung so trang khoa, doan trich la to doc duoc dau tien, khong thay chu that cua to khoa o dau tren ke", async ({ browser }) => {
+test("nguoi kia thay dung so trang khoa, luot moi nhat con khoa nen tren ke chi con dong he lo", async ({ browser }) => {
   test.setTimeout(180_000);
   const { a, b } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
@@ -27,12 +27,12 @@ test("nguoi kia thay dung so trang khoa, doan trich la to doc duoc dau tien, kho
   await expect(the.locator(".dh--khoa")).toHaveText("1 trang khóa");
   await expect(the.locator(".dh--moi")).toHaveText("2 trang mới");
   await expect(b.locator(".ke-dau__phu")).toHaveText("1 cuốn, 2 trang mới");
-  // Doan trich theo spec 2026-09-22 muc 7: nguoi kia chua doc gi nen khung mo to doc duoc dau tien (to 1, to chua doc ke
-  // tiep); to khoa khong bao gio duoc chon, nen trang phai hien chu that cua to 1, khong con dong he lo.
+  // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10); luot do con niem phong voi nguoi kia, nen khung sach
+  // dung dong he lo cua chinh no chu khong lui ve chu that cua luot cu. Man doc van mo o to doc duoc dau tien (to 1).
   const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
-  await expect(ganNhat.locator(".trang-khoa")).toHaveCount(0);
-  await expect(ganNhat.locator(".vua-viet__chu")).toHaveText("Tờ mở đầu.");
-  await expect(ganNhat.getByRole("link", { name: "Đọc Chuyện chưa kể tại trang 1" })).toHaveAttribute("href", `/sach/${id}?trang=1`);
+  await expect(ganNhat.locator(".trang-khoa .he-lo")).toHaveText(HE_LO);
+  await expect(ganNhat.locator(".vua-viet__chu")).toHaveCount(0);
+  await expect(ganNhat.getByRole("link", { name: "Đọc Chuyện chưa kể từ trang 1" })).toHaveAttribute("href", `/sach/${id}?trang=1`);
   await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", `/sach/${id}`);
   await expect(b.getByRole("list", { name: "Chú giải" }).getByRole("listitem")).toHaveText([
     "Trang mới chưa đọc", "Trang khóa cần vượt thử thách", "Riêng tư chỉ mình bạn thấy",
@@ -46,10 +46,10 @@ test("nguoi kia thay dung so trang khoa, doan trich la to doc duoc dau tien, kho
   await expect(a.locator(".ke-dau__phu")).toHaveText("1 cuốn");
   const ganNhatA = a.getByRole("article", { name: "Một trang trong sách" });
   await expect(ganNhatA.locator(".trang-khoa")).toHaveCount(0);
-  // Doan trich theo spec 2026-09-22 muc 7: moi to cua chu sach deu la ung vien, to 1 hoac to 2 duoc chon theo ngay.
-  const lienA = ganNhatA.getByRole("link", { name: new RegExp("^Đọc Chuyện chưa kể tại trang [12]$") });
-  const soA = Number(new RegExp("trang=([12])$").exec((await lienA.getAttribute("href")) ?? "")?.[1]);
-  await expect(ganNhatA.locator(".vua-viet__chu")).toContainText(soA === 1 ? "Tờ mở đầu." : BI_MAT);
+  // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10): cau do khong khoa chu sach, va luot moi nhat chi co
+  // to 2, nen ho thay chu that cua to 2 chu khong phai to 1 cua luot cu.
+  await expect(ganNhatA.getByRole("link", { name: "Đọc Chuyện chưa kể tại trang 2" })).toHaveAttribute("href", `/sach/${id}?trang=2`);
+  await expect(ganNhatA.locator(".vua-viet__chu")).toContainText(BI_MAT);
 
   // Hen gio khoa ca chu sach, ke ca tren sach rieng tu. To cuoi khoa thang the rieng tu: chi dong he lo, khong lam mo chu that.
   const rieng = await taoSach(a, "Thư gửi năm ba mươi", "rieng-tu");

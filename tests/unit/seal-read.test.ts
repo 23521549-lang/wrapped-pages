@@ -231,7 +231,8 @@ describe("markRead khong ghi to dang khoa", () => {
     expect(view.seals).toEqual([]);
     expect([view.seen, view.firstUnread]).toEqual([[3], 1]);
     const ke = (await listShelf(s.db, s.seat2.id, NOW)).find((b) => b.id === s.chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
+    // Doan trich bat tham theo ngay trong luot dang moi nhat (spec 2026-09-22 muc 10): ba to nam trong cung mot luot,
+    // nen ca ba deu la ung vien du nguoi kia moi xem to 3.
     expect(ke).toMatchObject({ pageCount: 3, newCount: 2, lockedCount: 0 });
     expect(ke.excerpt).toBe(["mot", "hai", "ba"][ke.excerptPosition - 1]);
   });
@@ -240,8 +241,8 @@ describe("markRead khong ghi to dang khoa", () => {
     const s = await haiCuon();
     await dangTo(s, CAU_DO, toKhoa("He lo dau", biMat(1)), toKhoa("to hai", biMat(2)));
     let ke = (await listShelf(s.db, s.seat2.id, NOW)).find((b) => b.id === s.chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Ca cuon khoa nen khong co to nao chon duoc: giu dong he lo cua to cuoi.
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10); luot do con niem phong voi nguoi xem nen khong
+    // hien mot chu nao, chi con dong he lo cua chinh no. Ca cuon khoa nen man doc mo o to cuoi.
     expect(ke).toMatchObject({ excerpt: "He lo dau", excerptPosition: 2, excerptLocked: true, lockedCount: 2, newCount: 2 });
     await markRead(s.db, s.seat2.id, s.chung, 1, 2, NOW);
     expect(await mocCua(s)).toEqual([]);
@@ -249,8 +250,7 @@ describe("markRead khong ghi to dang khoa", () => {
     await markRead(s.db, s.seat2.id, s.chung, 3, 3, NOW);
     expect(await mocCua(s)).toEqual([3]);
     ke = (await listShelf(s.db, s.seat2.id, NOW)).find((b) => b.id === s.chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Chi to 3 la ung vien: hai to dau con khoa. Hai to khoa van la trang moi.
+    // Luot dang moi nhat la luot cua to 3 va da mo: doan trich la chu cua chinh no. Hai to khoa van la trang moi.
     expect(ke).toMatchObject({ excerpt: "mo ba", excerptPosition: 3, excerptLocked: false, lockedCount: 2, newCount: 2 });
     const json = JSON.stringify([await readBook(s.db, s.seat2.id, s.chung, NOW), ke]);
     for (const i of [1, 2]) expect(json).not.toContain(biMat(i));
@@ -276,11 +276,9 @@ describe("markRead khong ghi to dang khoa", () => {
     expect(await mocCua(s)).toEqual([1, 2, 3]);
     await dang(s.db, s.seat1.id, s.chung, "mo sau");
     const ke = (await listShelf(s.db, s.seat2.id, NOW)).find((x) => x.id === s.chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Moi to 1-3 da xem nen chi chung la ung vien: to 4, 5 con khoa, to 6 chua xem.
-    expect(ke).toMatchObject({ lockedCount: 2, newCount: 3, pageCount: 6, excerptLocked: false });
-    const chuTo: Record<number, string> = { 1: "mo mot", 2: `He A ${biMat(2)}`, 3: `A2 ${biMat(3)}` };
-    expect(ke.excerpt).toBe(chuTo[ke.excerptPosition]);
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10): luot cuoi chi co to 6 va da mo, nen doan trich la
+    // chu cua to 6 - khong con bat tham trong cac to cu ma nguoi kia da xem.
+    expect(ke).toMatchObject({ lockedCount: 2, newCount: 3, pageCount: 6, excerptLocked: false, excerptPosition: 6, excerpt: "mo sau" });
     await s.db.insert(sealReplies).values({ sealId: b!, accountId: s.seat2.id, content: to("tra loi") });
     await s.db.update(seals).set({ openedAt: NOW }).where(eq(seals.id, b!));
     await markRead(s.db, s.seat2.id, s.chung, 4, 5, NOW);
@@ -301,9 +299,10 @@ describe("markRead khong ghi to dang khoa", () => {
     const cuaChu = (await readBook(s.db, s.seat1.id, s.chung, NOW))!;
     expect(cuaChu.sheets.map((x) => x.locked)).toEqual([false, true, true]);
     const keChu = (await listShelf(s.db, s.seat1.id, NOW)).find((b) => b.id === s.chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Hen gio khoa ca chu sach: to 1 la ung vien duy nhat.
-    expect(keChu).toMatchObject({ excerpt: "mo", excerptPosition: 1, excerptLocked: false, lockedCount: 2, newCount: 0 });
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10); luot moi nhat con niem phong voi nguoi xem thi
+    // khong hien mot chu nao, chi dong he lo cua chinh no. Hen gio khoa ca chu sach nen chu sach cung vay, va man doc
+    // van mo o to doc duoc dau tien (to 1).
+    expect(keChu).toMatchObject({ excerpt: "He T", excerptPosition: 1, excerptLocked: true, lockedCount: 2, newCount: 0 });
     expect(JSON.stringify([cuaChu, keChu])).not.toContain(biMat(2));
     await markRead(s.db, s.seat2.id, s.chung, 1, 2, phut(60));
     await markRead(s.db, s.seat2.id, s.chung, 3, 3, phut(60));
@@ -325,12 +324,13 @@ describe("markRead khong ghi to dang khoa", () => {
 });
 
 describe("listShelf voi to khoa", () => {
-  it("nguoi kia thay so to khoa; doan trich la to mo duy nhat, khong bao gio chu that cua to khoa", async () => {
+  it("nguoi kia thay so to khoa; luot moi nhat con khoa nen chi con dong he lo, khong bao gio chu that cua to khoa", async () => {
     const { db, seat2, chung } = await sachCoKhoa(CAU_DO);
     const shelf = await listShelf(db, seat2.id, NOW);
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10): luot cua to 2 va to 3 con niem phong voi nguoi
+    // kia, nen khung sach dung dong he lo chu khong lui ve chu cua to 1 o luot cu. Man doc van mo o to 1.
     expect(shelf.find((b) => b.id === chung)).toMatchObject({
-      pageCount: 3, newCount: 3, lockedCount: 2, excerpt: "Tờ mở", excerptPosition: 1, excerptLocked: false,
+      pageCount: 3, newCount: 3, lockedCount: 2, excerpt: "Dòng hé lộ", excerptPosition: 1, excerptLocked: true,
     });
     expect(JSON.stringify(shelf)).not.toContain(BI_MAT);
   });
@@ -342,29 +342,33 @@ describe("listShelf voi to khoa", () => {
     expect((await listShelf(b.db, b.seat1.id, NOW)).find((x) => x.id === b.chung)!.lockedCount).toBe(2);
   });
 
-  it("excerptLocked: chi khi khong co to nao chon duoc va to cuoi con khoa", async () => {
+  it("excerptLocked: chi khi luot dang moi nhat con khoa voi nguoi xem", async () => {
     const khoaCua = async (s: Bo, ai: string, luc: Date) => (await listShelf(s.db, ai, luc)).find((b) => b.id === s.chung)!;
 
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Cau do: to 1 mo nen khong ai thay dong he lo tren ke; nguoi kia chua doc gi nen la to doc duoc dau tien (to 1).
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10). Cau do: luot cua to 2 va to 3 con khoa voi nguoi
+    // kia nen ho chi thay dong he lo, con chu sach khong bi cau do cua minh khoa nen bat tham trong hai to do.
     const cauDo = await sachCoKhoa(CAU_DO);
-    expect(await khoaCua(cauDo, cauDo.seat2.id, NOW)).toMatchObject({ excerptLocked: false, excerptPosition: 1, excerpt: "Tờ mở" });
-    expect((await khoaCua(cauDo, cauDo.seat1.id, NOW)).excerptLocked).toBe(false);
+    expect(await khoaCua(cauDo, cauDo.seat2.id, NOW)).toMatchObject({ excerptLocked: true, excerptPosition: 1, excerpt: "Dòng hé lộ" });
+    const cuaChuSach = await khoaCua(cauDo, cauDo.seat1.id, NOW);
+    expect(cuaChuSach.excerptLocked).toBe(false);
+    expect(cuaChuSach.excerpt).toBe(`${["Dòng hé lộ", "Tờ thứ ba"][cuaChuSach.excerptPosition - 2]} ${BI_MAT}`);
 
-    // Hen gio: khoa ca chu sach toi dung gio mo; tu gio mo tro di to 2 vao tap ung vien.
+    // Hen gio: khoa ca chu sach toi dung gio mo, nen truoc gio ca hai chi thay dong he lo; tu gio mo tro di luot moi
+    // nhat (to 2) hien chu that.
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "mo");
     await dangTo(s, henGio(phut(60)), toKhoa("He T", biMat(2)));
     for (const ai of [s.seat1.id, s.seat2.id]) {
-      expect(await khoaCua(s, ai, NOW)).toMatchObject({ excerptLocked: false, excerptPosition: 1, excerpt: "mo" });
-      const denGio = await khoaCua(s, ai, phut(60));
-      expect(denGio.excerptLocked).toBe(false);
-      expect(denGio.excerpt).toBe(denGio.excerptPosition === 1 ? "mo" : `He T ${biMat(2)}`);
+      expect(await khoaCua(s, ai, NOW)).toMatchObject({ excerptLocked: true, excerptPosition: 1, excerpt: "He T" });
+      expect(await khoaCua(s, ai, phut(60))).toMatchObject({
+        excerptLocked: false, excerptPosition: 2, excerpt: `He T ${biMat(2)}`,
+      });
     }
 
-    // Nguoi kia chua co dau doc: van la to doc duoc dau tien co chu, niem phong con khoa khong lo chu that.
+    // Dang them mot luot khong niem phong: luot moi nhat la to 3, doan trich la chu cua chinh no du nguoi kia chua doc
+    // gi, va niem phong con khoa o giua khong lo chu that.
     await dang(s.db, s.seat1.id, s.chung, "mo sau");
-    expect(await khoaCua(s, s.seat2.id, NOW)).toMatchObject({ excerptLocked: false, excerptPosition: 1, excerpt: "mo", lockedCount: 1 });
+    expect(await khoaCua(s, s.seat2.id, NOW)).toMatchObject({ excerptLocked: false, excerptPosition: 3, excerpt: "mo sau", lockedCount: 1 });
     expect(JSON.stringify(await listShelf(s.db, s.seat2.id, NOW))).not.toContain(biMat(2));
 
     // Moi to deu khoa: khong co ung vien, doan trich la dong he lo cua to cuoi. Dat cuoi ca vi haiCuon() xoa sach du lieu.
@@ -381,9 +385,9 @@ describe("listShelf voi to khoa", () => {
     expect(view.sheets[3].content).toEqual({ type: "doc", content: [{ type: "paragraph" }] });
     expect(view.sheets[2].content).toEqual(to("He lo A"));
     const ke = (await listShelf(s.db, s.seat2.id, NOW)).find((b) => b.id === s.chung)!;
-    // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
-    // Nguoi kia chua doc gi: to doc duoc dau tien.
-    expect(ke).toMatchObject({ pageCount: 4, newCount: 4, lockedCount: 2, excerptLocked: false, excerptPosition: 1, excerpt: "mo mot" });
+    // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10): luot cua to 3 va to 4 con khoa voi nguoi kia, nen
+    // khung sach dung dong he lo chu khong lui ve chu cua luot cu. Man doc van mo o to doc duoc dau tien.
+    expect(ke).toMatchObject({ pageCount: 4, newCount: 4, lockedCount: 2, excerptLocked: true, excerptPosition: 1, excerpt: "He lo A" });
     const json = JSON.stringify([view, ke]);
     for (const i of [3, 4]) expect(json).not.toContain(biMat(i));
     expect(json).not.toContain("Sau A");
