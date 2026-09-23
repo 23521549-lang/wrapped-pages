@@ -17,6 +17,6 @@ export const henGio = (opensAt: Date): SealInput => ({ kind: "hen-gio", opensAt 
 export async function dangNiemPhong(db: TestDb, ownerId: string, bookId: string, seal: SealInput, ...chu: string[]) {
   await saveDraft(db, ownerId, bookId, to(chu[0]), chu.length);
   const r = await publishDraft(db, ownerId, bookId, chu.map(to), seal);
-  if (!r) throw new Error("khong dang duoc");
+  if (!r || r === "invalid-cover") throw new Error("khong dang duoc");
   return r;
 }

@@ -21,6 +21,6 @@ export async function haiCuon() {
 export async function dang(db: TestDb, ownerId: string, bookId: string, ...chu: string[]) {
   await saveDraft(db, ownerId, bookId, to(chu[0]), chu.length);
   const r = await publishDraft(db, ownerId, bookId, chu.map(to));
-  if (!r) throw new Error("khong dang duoc");
+  if (!r || r === "invalid-cover") throw new Error("khong dang duoc");
   return r;
 }

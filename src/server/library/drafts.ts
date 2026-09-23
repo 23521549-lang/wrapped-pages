@@ -1,7 +1,7 @@
 import { and, desc, eq, max, notExists, sql } from "drizzle-orm";
 import { books, drafts, pages, rounds } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
-import type { BookMode, CoverKey } from "@/lib/book";
+import type { BookEdit, BookMode, CoverKey } from "@/lib/book";
 import { normalizeSheets } from "@/lib/doc/continuation";
 import type { DocJson } from "@/lib/doc/types";
 import { docExcerpt, trimTrailingBlank } from "@/lib/doc/text";
@@ -11,6 +11,7 @@ import { sealTeaser } from "@/lib/seal/teaser";
 import type { SealInput } from "@/lib/seal/types";
 import { recordActivity } from "@/server/feed/record";
 import { bindMedia } from "@/server/media/access";
+import { attachCover, lockCover } from "@/server/media/cover";
 import { insertSeal } from "@/server/seal/seals";
 import { findOwnBook } from "./books";
 
@@ -114,10 +115,14 @@ export async function listUnwrittenBooks(db: AnyDb, ownerId: string): Promise<Un
  * chia se; che do duoc kiem lai ngay trong giao dich vi no co the bi doi sau luc action doc.
  * Su kien Hoat dong ghi cung giao dich va cung now voi cac to: trao doi thay cho dang-trang, hen gio ghi san
  * mo-hen-gio voi at = opensAt.
+ * edit doi ten, bia, bia anh va nhac nen ngay trong giao dich nay, truoc cac lenh chen to: hong mot phan thi khong
+ * phan nao duoc ghi. Khong co edit thi khong cham toi dong books. Che do sach khong nam trong edit nen luat niem phong
+ * doc book.mode van dung, va khong co su kien Hoat dong nao duoc ghi cho viec doi sach.
  */
 export async function publishDraft(
   db: AnyDb, ownerId: string, bookId: string, sheets: DocJson[], seal: SealInput | null = null, now: Date = new Date(),
-): Promise<{ firstPosition: number; count: number } | null> {
+  edit: BookEdit | null = null,
+): Promise<{ firstPosition: number; count: number } | "invalid-cover" | null> {
   if (!isUuid(bookId)) return null;
   const kept = normalizeSheets(trimTrailingBlank(sheets));
   if (kept.length === 0 || kept.length > MAX_SHEETS_PER_PUBLISH) return null;
@@ -128,14 +133,23 @@ export async function publishDraft(
       .from(books)
       .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)))
       .for("update");
-    // Drizzle COMMIT giao dich khi ham tra ve binh thuong, chi ROLLBACK khi co loi nem ra. Ba duong return duoi day deu
-    // nam TRUOC lenh ghi dau tien (tx.insert(rounds) o duoi), va moi thu chay truoc chung chi la lenh doc: SELECT ...
-    // FOR UPDATE o tren va bindMedia (chi SELECT). Khong duoc them lenh ghi nao vao khoang nay - lam vay thi mot lan
-    // dang bi tu choi se commit nua phan viec da ghi.
+    // Drizzle COMMIT giao dich khi ham tra ve binh thuong, chi ROLLBACK khi co loi nem ra. Bon duong return duoi day deu
+    // nam TRUOC lenh ghi dau tien (tx.update(books) cua edit, hoac tx.insert(rounds) khi khong co edit), va moi thu chay
+    // truoc chung chi la lenh doc: SELECT ... FOR UPDATE o tren, bindMedia (chi SELECT) va lockCover (SELECT ... FOR
+    // UPDATE). Khong duoc them lenh ghi nao vao khoang nay - lam vay thi mot lan dang bi tu choi se commit nua phan
+    // viec da ghi.
     if (!book) return null;
     if (seal && seal.kind !== "hen-gio" && book.mode !== "chia-se") return null;
+    // Bia tu tai len cua muc "Doi bia, ten, nhac": khoa va kiem y nhu updateBook, khong co duong kiem thu hai yeu hon.
+    if (edit && edit.coverMediaId !== null && !(await lockCover(tx, ownerId, book.id, edit.coverMediaId))) return "invalid-cover";
     const bound = (await Promise.all(kept.map((sheet) => bindMedia(tx, ownerId, book.id, sheet)))).filter((doc) => doc !== null);
     if (bound.length !== kept.length) return null;
+    // Dong books duoc ghi truoc cac to, nhung van cung mot giao dich: mot to chen hong o duoi thi ten, bia va nhac cung
+    // khong con. Dieu kien ownerId lap lai o day de mot lenh ghi cua chu sach khong bao gio cham duoc cuon nguoi khac.
+    if (edit) {
+      await tx.update(books).set({ ...edit, updatedAt: now }).where(and(eq(books.id, book.id), eq(books.ownerId, ownerId)));
+      if (edit.coverMediaId !== null) await attachCover(tx, book.id, edit.coverMediaId);
+    }
     const [{ last }] = await tx.select({ last: max(pages.position) }).from(pages).where(eq(pages.bookId, book.id));
     const first = (last ?? 0) + 1;
     const [round] = await tx.insert(rounds).values({ bookId: book.id, publishedAt: now }).returning({ id: rounds.id });

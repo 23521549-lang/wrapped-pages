@@ -10,7 +10,7 @@ import { markRead } from "@/server/library/pages";
 import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
-import { parseBookInput } from "@/lib/book";
+import { parseBookEdit, parseBookInput } from "@/lib/book";
 import { groupThousands } from "@/lib/doc/counter";
 import {
   checkDraftInput, checkPublishInput, checkRoundInput, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS,
@@ -115,8 +115,10 @@ export async function actionSaveDraft(bookId: string, doc: unknown, sheetCount: 
  * ky tu), parseSealInput cho niem phong. Mot phan bat ky loi la tu choi ca lan dang, khong dang mot phan.
  * Che do sach doc o day de kiem niem phong som va bao loi ro; publishDraft kiem lai trong giao dich, cung voi
  * moi khoi media cua tung to (bindMedia). Dang xong hen don rac media sau phan hoi.
+ * edit la muc "Doi bia, ten, nhac" cua buoc dang: kiem bang parseBookEdit truoc khi cham database, roi publishDraft ap
+ * dung trong cung giao dich voi lan dang. Quyen tren bia tu tai len kiem trong giao dich do (lockCover).
  */
-export async function actionPublish(bookId: string, sheets: unknown, seal: unknown = null) {
+export async function actionPublish(bookId: string, sheets: unknown, seal: unknown = null, edit: unknown = null) {
   const me = await readMe();
   if (!me) return { error: CAN_DANG_NHAP };
   if (!Array.isArray(sheets) || sheets.length === 0 || sheets.length > MAX_SHEETS_PER_PUBLISH) {
@@ -133,7 +135,11 @@ export async function actionPublish(bookId: string, sheets: unknown, seal: unkno
   if (!book) return { error: "Chưa đăng được. Trang còn trống hoặc cuốn sách không còn." };
   const parsed = parseSealInput(seal, book.mode, new Date());
   if (!parsed.ok) return { error: parsed.error };
-  const r = await publishDraft(db, me.accountId, bookId, checked.sheets, parsed.seal);
+  // Muc "Doi bia, ten, nhac" khong mo thi edit la null va dong books khong bi cham toi.
+  const doi = edit === null ? null : parseBookEdit(edit);
+  if (doi !== null && "error" in doi) return doi;
+  const r = await publishDraft(db, me.accountId, bookId, checked.sheets, parsed.seal, new Date(), doi);
+  if (r === "invalid-cover") return { error: BIA_KHONG_DUNG_DUOC };
   if (!r) return { error: "Chưa đăng được. Trang còn trống hoặc cuốn sách không còn." };
   sweepMediaAfterResponse();
   redirect(`/sach/${bookId}?trang=${r.firstPosition}`);

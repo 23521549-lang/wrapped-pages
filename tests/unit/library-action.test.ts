@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { actionDeleteBook, actionDiscardDraft, actionEditRound, actionPublish, actionUpdateBook } from "@/app/actions/library";
 import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "@/app/actions/messages";
+import { TITLE_MAX } from "@/lib/book";
 import { DOC_LIMITS } from "@/lib/doc/validate";
 
 /*
@@ -142,6 +143,62 @@ describe("actionPublish hen don rac media", () => {
     readMe.mockResolvedValue(ME);
     expect(await goi(() => actionPublish(BOOK, [{ type: "doc", content: "khong phai mang" }]))).toEqual({ error: "Có trang có nội dung không đọc được." });
     expect([findOwnBook.mock.calls.length, publishDraft.mock.calls.length, sweepMediaAfterResponse.mock.calls.length]).toEqual([0, 0, 0]);
+  });
+
+  it("khong mo muc doi sach: publishDraft nhan null o tham so thu bay, moi thu khac y nguyen", async () => {
+    readMe.mockResolvedValue(ME);
+    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    publishDraft.mockResolvedValue({ firstPosition: 1, count: 1 });
+    await goi(() => actionPublish(BOOK, [TO]));
+    expect(publishDraft).toHaveBeenLastCalledWith(
+      expect.anything(), ME.accountId, BOOK, expect.any(Array), null, expect.any(Date), null,
+    );
+  });
+
+  it("muc doi sach sai mot truong: bao loi, khong goi publishDraft, khong hen don rac", async () => {
+    readMe.mockResolvedValue(ME);
+    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    const r = await goi(() => actionPublish(BOOK, [TO], null, { title: "  ", cover: "nui-xa", coverMedia: "", music: "" }));
+    expect(r).toEqual({ error: `Tên sách phải từ 1 tới ${TITLE_MAX} ký tự.` });
+    expect(publishDraft).not.toHaveBeenCalled();
+    expect(sweepMediaAfterResponse).not.toHaveBeenCalled();
+  });
+
+  it("muc doi sach khong phai doi tuong bon truong: bao loi, khong goi publishDraft", async () => {
+    readMe.mockResolvedValue(ME);
+    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    for (const la of ["chuoi", 7, [], { title: "Tên mới" }]) {
+      expect(await goi(() => actionPublish(BOOK, [TO], null, la)), JSON.stringify(la)).toHaveProperty("error");
+    }
+    expect(publishDraft).not.toHaveBeenCalled();
+  });
+
+  it("muc doi sach hop le: di thang vao publishDraft o tham so thu bay", async () => {
+    readMe.mockResolvedValue(ME);
+    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    publishDraft.mockResolvedValue({ firstPosition: 1, count: 1 });
+    await goi(() => actionPublish(BOOK, [TO], null, { title: "Tên mới", cover: "hoa-dao", coverMedia: "", music: "" }));
+    expect(publishDraft).toHaveBeenLastCalledWith(
+      expect.anything(), ME.accountId, BOOK, expect.any(Array), null, expect.any(Date),
+      { title: "Tên mới", cover: "hoa-dao", coverMediaId: null, youtubeId: null },
+    );
+  });
+
+  it("che do sach khong di theo muc doi sach: truong thua bi bo, publishDraft van nhan dung bon truong", async () => {
+    readMe.mockResolvedValue(ME);
+    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    publishDraft.mockResolvedValue({ firstPosition: 1, count: 1 });
+    await goi(() => actionPublish(BOOK, [TO], null, { title: "Tên mới", cover: "hoa-dao", coverMedia: "", music: "", mode: "rieng-tu" }));
+    expect(publishDraft.mock.lastCall?.[6]).toEqual({ title: "Tên mới", cover: "hoa-dao", coverMediaId: null, youtubeId: null });
+  });
+
+  it("bia tu tai len khong dung duoc o buoc dang: bao dung cau loi bia, khong hen don rac", async () => {
+    readMe.mockResolvedValue(ME);
+    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    publishDraft.mockResolvedValue("invalid-cover");
+    const r = await goi(() => actionPublish(BOOK, [TO], null, { title: "Tên mới", cover: "nui-xa", coverMedia: BIA, music: "" }));
+    expect(r).toEqual({ error: "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa." });
+    expect(sweepMediaAfterResponse).not.toHaveBeenCalled();
   });
 });
 

@@ -61,6 +61,10 @@ describe("parseBookInput", () => {
       .toEqual({ error: "Tên sách phải từ 1 tới 60 ký tự." });
   });
 
+  it("che do sai duoc bao truoc ten sai: che do la truong rieng cua form sach, kiem truoc bo luat chung", () => {
+    expect(parseBookInput(form({ title: "", mode: "cong-khai", cover: "nui-xa" }))).toEqual({ error: "Chọn một chế độ cho cuốn sách." });
+  });
+
   it("ten co ky tu Postgres khong luu duoc thi bao loi nhu ten sai do dai", () => {
     expect(parseBookInput(form({ title: `A${String.fromCharCode(0)}`, mode: "chia-se", cover: "nui-xa" })))
       .toEqual({ error: `Tên sách phải từ 1 tới ${TITLE_MAX} ký tự.` });
