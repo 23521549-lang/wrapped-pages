@@ -19,7 +19,7 @@ const MAU: DocJson = {
         { type: "text", text: "Mưa ", marks: [{ type: "bold" }] },
         { type: "text", text: "đầu tháng", marks: [{ type: "italic" }, { type: "underline" }] },
         { type: "hardBreak" },
-        { type: "text", text: "chín" },
+        { type: "text", text: "chín", marks: [{ type: "doanKe" }] },
       ],
     },
     {
@@ -41,7 +41,7 @@ const KHOI_CHU = ["blockquote", "bulletList", "doc", "hardBreak", "listItem", "p
 describe("so do cua trinh soan thao khop cleanDoc", () => {
   it("chi co dung cac loai khoi va dinh dang ma cleanDoc chap nhan, ke ca anh va ghi am", () => {
     expect(Object.keys(schema.nodes).sort()).toEqual([...KHOI_CHU, "anh", "ghi-am"].sort());
-    expect(Object.keys(schema.marks).sort()).toEqual(["bold", "italic", "underline"]);
+    expect(Object.keys(schema.marks).sort()).toEqual(["bold", "doanKe", "italic", "underline"]);
   });
 
   it("muc danh sach chi chua dung mot doan", () => {
@@ -76,5 +76,7 @@ describe("so do cua trinh soan thao khop cleanDoc", () => {
     const text = getSchema(TEXT_EXTENSIONS);
     expect(Object.keys(text.nodes).sort()).toEqual(KHOI_CHU);
     expect(text.nodes.doc.spec.content).toBe("block+");
+    // Trang tra loi khong phai to cua sach: khong co dau doan tren ke.
+    expect(Object.keys(text.marks).sort()).toEqual(["bold", "italic", "underline"]);
   });
 });

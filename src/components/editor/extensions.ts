@@ -1,6 +1,7 @@
 import TiptapStarterKit from "@tiptap/starter-kit";
 import { ListItem } from "@tiptap/extension-list";
 import { Node, type Extensions } from "@tiptap/core";
+import { DoanKe } from "./doanKe";
 import { AudioBlockNode, ImageBlockNode } from "./mediaNodes";
 
 /** Phan cua StarterKit khong dung: chi giu doan, chu, dam, nghieng, gach chan, danh sach cham, trich dan, xuong dong, hoan tac. */
@@ -38,13 +39,14 @@ export const TEXT_EXTENSIONS: Extensions = [TiptapStarterKit.configure(KHONG_DUN
 
 /**
  * So do man viet (va man sua luot): dung cac khoi va dinh dang ma cleanDoc chap nhan, gom ca anh va ghi am o cap cao
- * nhat. author la biet danh nguoi viet, cho chu thay the va nhan cua khoi media. Them hay bot o day thi phai sua ca
- * cleanDoc (co test doi chieu trong tests/unit/editor-schema.test.ts).
+ * nhat va gom ca dau doan tren ke. author la biet danh nguoi viet, cho chu thay the va nhan cua khoi media. Them hay
+ * bot o day thi phai sua ca cleanDoc (co test doi chieu trong tests/unit/editor-schema.test.ts).
  */
 export function editorExtensions(author: string): Extensions {
   return [
     TiptapStarterKit.configure({ ...KHONG_DUNG, document: false }),
     MucMotDoan,
+    DoanKe,
     TaiLieuCoMedia,
     ImageBlockNode.configure({ author }),
     AudioBlockNode.configure({ author }),

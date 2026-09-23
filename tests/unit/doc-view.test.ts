@@ -32,6 +32,14 @@ describe("DocView", () => {
       .toBe("<p><strong><em><u>a</u></em></strong></p>");
   });
 
+  it("dau doan tren ke khong ve the nao o man doc, ke ca khi di cung dinh dang khac", () => {
+    const rieng = html({ type: "paragraph", content: [{ type: "text", text: "mưa nhẹ", marks: [{ type: "doanKe" }] }] });
+    expect(rieng).toBe("<p>mưa nhẹ</p>");
+    expect(rieng).not.toContain("doan-ke");
+    expect(html({ type: "paragraph", content: [{ type: "text", text: "mưa nhẹ", marks: [{ type: "doanKe" }, { type: "bold" }] }] }))
+      .toBe("<p><strong>mưa nhẹ</strong></p>");
+  });
+
   it("danh sach, trich dan va doan trong", () => {
     expect(html(
       { type: "bulletList", content: [

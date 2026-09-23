@@ -1,6 +1,13 @@
 import type { MediaNode } from "@/lib/media/node";
 
-export type MarkType = "bold" | "italic" | "underline";
+/**
+ * Dau nguoi viet dat len doan muon hien tren khung sach o Ke sach. Nam trong marks cua nut chu nen di theo to qua
+ * splitDoc, publishDraft, joinSheets va editRound. Ten nay dung ca o so do trinh soan thao va o cau SQL chon to, nen
+ * doi no la doi ca ba noi.
+ */
+export const SHELF_MARK = "doanKe";
+
+export type MarkType = "bold" | "italic" | "underline" | "doanKe";
 export type Mark = { type: MarkType };
 
 export type TextNode = { type: "text"; text: string; marks?: Mark[] };

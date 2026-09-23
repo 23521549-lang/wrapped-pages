@@ -1,4 +1,4 @@
-import type { BlockNode, DocJson, InlineNode } from "./types";
+import { SHELF_MARK, type BlockNode, type DocJson, type InlineNode } from "./types";
 import { isMediaNodeType, type MediaNode, type MediaNodeType } from "@/lib/media/node";
 import { sliceWhole } from "@/lib/storable";
 
@@ -121,6 +121,13 @@ export const BLANK_CODE_POINTS: readonly number[] = [
 export const NOT_BLANK_PATTERN = `[^${String.fromCharCode(...BLANK_CODE_POINTS)}]`;
 
 /**
+ * Gop moi khoang trang lien nhau thanh mot dau cach. Dung dung tap BLANK_CODE_POINTS, tuc tap ma NOT_BLANK_PATTERN
+ * (cau SQL chon to cua ke sach) coi la "khong co chu", nen chu SQL bo di va chu cac ham o day giu lai khong bao gio
+ * lech nhau.
+ */
+const KHOANG_TRANG = new RegExp(`[${String.fromCharCode(...BLANK_CODE_POINTS)}]+`, "g");
+
+/**
  * Doan trich ngan cho the sach: gop khoang trang, cat o ranh gioi tu, them dau ba cham. Tai lieu khong co chu ma co
  * media thi la nhan cua khoi media dau tien. sealTeaser khong dung ham nay, nen to khoa khong bao gio goi y co media.
  */
@@ -128,7 +135,39 @@ export function docExcerpt(doc: DocJson, max = 140): string {
   const chu = docText(doc);
   const media = chu.trim() === "" ? firstMedia(doc) : undefined;
   if (media) return MEDIA_EXCERPT[media.type];
-  return cutAtWord(chu.replace(/\s+/g, " ").trim(), max);
+  return cutAtWord(chu.replace(KHOANG_TRANG, " ").trim(), max);
+}
+
+/** Chu cua mot nut inline neu no mang dau doanKe; nut khong mang dau (va moi xuong dong) khong gop chu nao. */
+function markedText(node: InlineNode): string {
+  return node.type === "text" && (node.marks ?? []).some((m) => m.type === SHELF_MARK) ? node.text : "";
+}
+
+/**
+ * Chu MANG DAU doanKe cua mot khoi, moi doan mot dong. Moi loai khoi mot nhanh nhu blockTexts; khoi media khong co chu.
+ */
+function blockMarkedTexts(block: BlockNode): string[] {
+  switch (block.type) {
+    case "paragraph":
+      return [(block.content ?? []).map(markedText).join("")];
+    case "bulletList":
+      return block.content.flatMap((item) => item.content.flatMap(blockMarkedTexts));
+    case "blockquote":
+      return block.content.flatMap(blockMarkedTexts);
+    case "anh":
+    case "ghi-am":
+      return [];
+  }
+}
+
+/**
+ * Doan nguoi viet da chon lam doan tren ke trong mot to: chu cua cac nut mang dau doanKe, gop khoang trang roi cat o
+ * ranh gioi tu nhu docExcerpt. Khong co dau, hay chu mang dau chi toan khoang trang, thi null - khi do khung sach lui
+ * ve cach chon con lai (bat tham tat dinh theo ngay).
+ */
+export function markedExcerpt(doc: DocJson, max = 140): string | null {
+  const chu = doc.content.flatMap(blockMarkedTexts).join(" ").replace(KHOANG_TRANG, " ").trim();
+  return chu === "" ? null : cutAtWord(chu, max);
 }
 
 /** Bo cac tai lieu trong o cuoi danh sach, vi du cac to chi con doan trong sau khi cat trang. */

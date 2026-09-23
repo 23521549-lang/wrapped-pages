@@ -31,6 +31,8 @@ const FULL: DocJson = {
 
 const doan = (text: string): DocJson => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
 
+const ID_ANH = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
+
 describe("cleanDoc", () => {
   it("nhan du moi loai khoi va dinh dang cho phep, tra lai y nguyen", () => {
     expect(cleanDoc(FULL)).toEqual(FULL);
@@ -52,6 +54,26 @@ describe("cleanDoc", () => {
   it("gop dinh dang trung lap", () => {
     const d = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "bold" }, { type: "bold" }] }] }] };
     expect(cleanDoc(d)).toEqual({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "bold" }] }] }] });
+  });
+
+  it("nhan dau doan tren ke tren nut chu, va bo moi thuoc tinh gan kem no", () => {
+    const sach = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "doanKe" }] }] }] };
+    expect(cleanDoc(sach)).toEqual(sach);
+    const ban = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "doanKe", attrs: { class: "x", style: "color:red" } }] }] }] };
+    expect(cleanDoc(ban)).toEqual(sach);
+  });
+
+  it("dau doan tren ke gan sai cho thi bi bo, khong di tiep vao tai lieu sach", () => {
+    const tren = (extra: object) => ({ type: "doc", content: [{ type: "paragraph", ...extra, content: [{ type: "text", text: "a" }] }] });
+    expect(cleanDoc(tren({ marks: [{ type: "doanKe" }] }))).toEqual(tren({}));
+    const xuongDong = {
+      type: "doc", content: [{ type: "paragraph", content: [{ type: "hardBreak", marks: [{ type: "doanKe" }] }] }],
+    };
+    expect(cleanDoc(xuongDong)).toEqual({ type: "doc", content: [{ type: "paragraph", content: [{ type: "hardBreak" }] }] });
+    const trichDan = {
+      type: "doc", content: [{ type: "blockquote", marks: [{ type: "doanKe" }], content: [{ type: "paragraph" }] }],
+    };
+    expect(cleanDoc(trichDan)).toEqual({ type: "doc", content: [{ type: "blockquote", content: [{ type: "paragraph" }] }] });
   });
 
   it("giu dau noiTiep cua muc danh sach khi la true, bo khi la gia tri khac", () => {
@@ -85,6 +107,12 @@ describe("cleanDoc", () => {
     ["loai khoi la", { type: "doc", content: [{ type: "heading", content: [] }] }],
     ["dinh dang la", { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "link" }] }] }] }],
     ["anh sai thuoc tinh", { type: "doc", content: [{ type: "image", attrs: { src: "x" } }] }],
+    ["dau doan tren ke gan len khoi anh", {
+      type: "doc", content: [{ type: "anh", attrs: { id: ID_ANH, w: 10, h: 10 }, marks: [{ type: "doanKe" }] }],
+    }],
+    ["dau la di kem dau doan tren ke", {
+      type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "doanKe" }, { type: "script" }] }] }],
+    }],
     ["text khong phai chuoi", { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: 5 }] }] }],
     ["tai lieu khong co khoi nao", { type: "doc", content: [] }],
     ["goc khong phai doc", { type: "paragraph" }],

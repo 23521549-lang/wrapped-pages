@@ -1,4 +1,7 @@
-import type { BlockNode, DocJson, InlineNode, ListItemNode, Mark, MarkType, TextBlockNode } from "./types";
+import {
+  SHELF_MARK,
+  type BlockNode, type DocJson, type InlineNode, type ListItemNode, type Mark, type MarkType, type TextBlockNode,
+} from "./types";
 import { docCharCount, hasMediaBlock, roughCharCount } from "./text";
 import { AUDIO_MAX_MS, IMAGE_MAX_HEIGHT_PX, IMAGE_MAX_WIDTH_PX } from "@/lib/media/kinds";
 import { isMediaNodeType, isPeaks, type MediaNode, type MediaNodeType } from "@/lib/media/node";
@@ -32,7 +35,9 @@ export const PUBLISH_TOTAL_MAX_CHARS = 100_000;
  */
 export const MAX_SHEETS_PER_PUBLISH = 40;
 
-const MARKS = new Set<string>(["bold", "italic", "underline"] satisfies MarkType[]);
+// Dau doanKe la mot mark that su cua tai lieu, nen no di qua cong kiem nhu ba kieu chu kia: chi tren nut chu, chi cai
+// ten, khong thuoc tinh nao theo sau (cleanMarks dung lai dung { type }), va man doc khong ve the nao cho no.
+const MARKS = new Set<string>(["bold", "italic", "underline", SHELF_MARK] satisfies MarkType[]);
 
 type Obj = Record<string, unknown>;
 type Budget = { chars: number; media: number };

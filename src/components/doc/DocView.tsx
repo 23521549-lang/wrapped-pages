@@ -6,7 +6,12 @@ import type { BlockNode, DocJson, InlineNode, MarkType } from "@/lib/doc/types";
 import { mediaSrc } from "@/lib/media/node";
 import { sliceWhole } from "@/lib/storable";
 
-const THE: Record<MarkType, "strong" | "em" | "u"> = { bold: "strong", italic: "em", underline: "u" };
+/**
+ * Dau doanKe khong ve gi o man doc: no la viec rieng cua nguoi viet voi khung sach tren ke, khong phai mot dinh dang
+ * cua trang; ve ra se thanh mot vet gach chan khong ai giai thich duoc. Bang nay la Record du loai nen them mot kieu
+ * dinh dang ma quen quyet dinh o day thi tsc bao ngay.
+ */
+const THE: Record<MarkType, "strong" | "em" | "u" | null> = { bold: "strong", italic: "em", underline: "u", doanKe: null };
 
 /**
  * Nghi thuc mo: chi hien shown ky tu dau, dem nhu docCharCount (moi ky tu chu 1, moi hardBreak 1).
@@ -65,7 +70,7 @@ function inline(node: InlineNode, key: number, go: Go | null): ReactNode {
   // Boc tu trong ra ngoai, nen dinh dang dau tien cua mang nam ngoai cung.
   for (let i = marks.length - 1; i >= 0; i--) {
     const Tag = THE[marks[i].type];
-    out = <Tag>{out}</Tag>;
+    if (Tag !== null) out = <Tag>{out}</Tag>;
   }
   return <Fragment key={key}>{out}</Fragment>;
 }
