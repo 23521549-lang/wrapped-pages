@@ -139,6 +139,37 @@
 .nhac-the__chu--loi{ color: var(--color-ink); font-weight: 600; }
 .nhac-the .btn svg{ width: 18px; height: 18px; flex: none; }
 
+/*
+ * Khung Loi hoi dap o cot phai man doc: cung dang the voi .nhac-the de cot phai doc nhu mot cot. Nhan bang chu dam,
+ * khong mang mau. Loi da gui la mot doan trich co vach trai mong, giu nguyen xuong dong cua nguoi viet; KHONG phai
+ * mot the long trong the (khong nen, khong vien, khong bong), de cot phai chi co mot lop the duy nhat.
+ */
+.hoi-dap{
+  display: grid; gap: var(--space-sm); min-width: 0; padding: var(--space-md);
+  border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); box-shadow: var(--shadow-rest);
+}
+.hoi-dap__dau{ display: grid; gap: .15rem; }
+.hoi-dap__t{ font-size: var(--text-base); line-height: 1.3; }
+.hoi-dap__form{ display: grid; gap: var(--space-xs); }
+/* Hai lop la co y: .input--nhieu (seal.css) dat min-height 5.5rem va nam SAU giay.css trong globals.css, cung do dam thi ke sau thang. */
+.hoi-dap__form .hoi-dap__o{ min-height: 7.5rem; }
+.hoi-dap__dem{ justify-self: end; font-size: var(--text-xs); color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
+.hoi-dap__dem--tran{ color: var(--color-ink); font-weight: 600; }
+.hoi-dap__nut{ display: flex; justify-content: flex-end; }
+/*
+ * Hop hoi lai trong cot hep: viet.css chi dat .dang-hoi__chu va .dang-hoi__nut, than hop khong co quy tac nao (o man
+ * viet no nam trong mot hang flex san co). Trong the nay thi tach bang mot duong ke tren nhu .nhap__hoi cua trang Ban
+ * nhap, va xep chong thay vi flex-wrap: long the chi con khoang 256px o be rong 320 nen cau hoi chac chan xuong dong.
+ * Hai nut can phai, vi hop moc ra dung cho nut Gui vua bien mat.
+ */
+.hoi-dap .dang-hoi{ display: grid; gap: var(--space-xs); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule); }
+.hoi-dap .dang-hoi__nut{ justify-content: flex-end; }
+.hoi-dap__loi{ display: grid; gap: var(--space-2xs); margin: 0; }
+.hoi-dap__chu{ margin: 0; padding-left: var(--space-sm); border-left: 2px solid var(--color-rule-ui); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+/* cung dang voi .trang-ghi__khoa (dong khoa duoi to giay): cung o khoa 12px, cung chieu cao dong, nen hai cho noi ve niem phong trong nhu nhau */
+.hoi-dap__trong{ display: inline-flex; align-items: center; gap: .35rem; margin: 0; min-height: 44px; font-size: var(--text-sm); color: var(--color-ink-2); }
+.hoi-dap__trong svg{ width: 12px; height: 12px; flex: none; }
+
 @media (max-width: 980px){
   .doc-luoi{ grid-template-columns: minmax(0, 1fr); }
   .doc-luoi > .nhac-the{ position: static; width: min(520px, 100%); justify-self: center; }

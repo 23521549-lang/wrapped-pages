@@ -256,6 +256,7 @@ const MIEN_TRU: MienTru[] = [
       ".luot-ds",
       ".nhan-cu",
       ".nhac-the",
+      ".hoi-dap", // khung Loi hoi dap (RoundReplyPanel.tsx): the noi dung tinh; o chu va nut ben trong co vien rieng dat nguong
       ".thu-thach",
       ".goi-y",
       ".tai-anh",
@@ -277,6 +278,9 @@ const MIEN_TRU: MienTru[] = [
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
       // phan tren cua chinh the, khong phai vien cua dieu khien nao.
       ".nhap__hoi",
+      // Hop xac nhan gui loi hoi dap trong khung Loi hoi dap (RoundReplyPanel.tsx): cung vai tro voi .nhap__hoi,
+      // duong ke tach hang cau hoi khoi o chu ben tren trong cung mot the, khong phai vien cua dieu khien nao.
+      ".hoi-dap .dang-hoi",
       // Cung mot vai tro nhung vien la mot vong box-shadow 0/0/0 (vd inset 0 0 0 1px), khong phai border.
       ".to-giay", // to giay: khung trang giay trong sach/man viet (PagedSurface.tsx, SealPanel.tsx, Flipbook.tsx)
       ".khoi-ghi-am", // khoi ghi am nhung trong bai (figure, mediaNodes.tsx): khung chua, khong phai nut ben trong
