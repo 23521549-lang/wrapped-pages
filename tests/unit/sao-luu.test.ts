@@ -70,6 +70,8 @@ async function gieo(c: PGlite) {
     insert into sessions (token, account_id, expires_at) values ('tok-1', '${A2}', '2030-06-01 00:00:00.000001+00');
     insert into login_attempts (device_id, at) values ('dev-x', '2026-02-03 04:05:06.654321+00');
     insert into trusted_devices (device_id, account_id, last_login_at) values ('dev-a', '${A1}', '2026-04-05 06:07:08.9+00');
+    insert into moods (account_id, weather, note, set_at, ends_at) values
+      ('${A1}', 'nang-am', 'Vui ghê', '2026-09-10 08:00:00+07', '2026-09-11 08:00:00+07');
     insert into books (id, owner_id, title, mode, cover, youtube_id) values
       ('${B1}', '${A1}', 'Sách của mình', 'chia-se', 'nui-xa', 'dQw4w9WgXcQ'),
       ('${B2}', '${A2}', 'Riêng', 'rieng-tu', 'chim-bay', null);

@@ -9,6 +9,7 @@ import type { DocJson } from "@/lib/doc/types";
 import type { FeedKind } from "@/lib/feed/types";
 import type { MediaKind, MediaMime } from "@/lib/media/kinds";
 import type { SealKind } from "@/lib/seal/types";
+import type { Weather } from "@/lib/tam-trang/troi";
 
 /** Dung hai cho ngoi. Khong co vai dat san. */
 export const accounts = pgTable("accounts", {
@@ -313,4 +314,31 @@ export const mediaSweeps = pgTable("media_sweeps", {
   ranAt: timestamp("ran_at", { withTimezone: true }).notNull(),
 }, (t) => ({
   one: check("media_sweeps_one", sql`${t.id} = 1`),
+}));
+
+/**
+ * Tam trang cua mot nguoi: kieu troi, loi nhan tuy chon, luc tha va luc het. Tam trang hien tai la dong moi nhat con
+ * ends_at > now(). Tha moi chi doi ends_at cua dong cu (van la lich su); thu lai doi ends_at va danh dau withdrawn (lich hoa
+ * bo qua dong do). Khong xoa dong nao.
+ * ends_at khong bao gio qua 24 gio sau set_at va khong som hon set_at. Danh sach trong moods_weather phai khop
+ * WEATHERS cua src/lib/tam-trang/troi.ts, cung thu tu (co test).
+ */
+export const moods = pgTable("moods", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  weather: text("weather").$type<Weather>().notNull(),
+  /** Loi nhan da chuan hoa, 1 toi 80 ky tu; khong nhan thi null. */
+  note: text("note"),
+  setAt: timestamp("set_at", { withTimezone: true }).notNull().defaultNow(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  /** Nguoi tha da thu lai (lay ve) tam trang nay: khong con hien tren lich hoa. Bi thay bang lan tha moi thi van false. */
+  withdrawn: boolean("withdrawn").notNull().default(false),
+}, (t) => ({
+  weatherValue: check(
+    "moods_weather",
+    sql`${t.weather} in ('nang-am', 'troi-trong', 'may-nhe', 'gio-thoang', 'mua-phun', 'mua-rao', 'giong', 'suong-mu', 'cau-vong')`,
+  ),
+  noteLength: check("moods_note", sql`${t.note} is null or char_length(${t.note}) between 1 and 80`),
+  endsAt: check("moods_ends_at", sql`${t.endsAt} >= ${t.setAt} and ${t.endsAt} <= ${t.setAt} + interval '24 hours'`),
+  byAccountSet: index("moods_account_set_idx").on(t.accountId, t.setAt),
 }));
