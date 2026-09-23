@@ -78,10 +78,10 @@ function Dau({ lop = "head", nut = false }: { lop?: string; nut?: boolean }) {
         nut thi bo cuc nhay mot nhip dung luc trang that thay vao - dung cai ma khung giu cho sinh ra de tranh.
       */}
       {nut && (
-        <span className="ke-dau__nut">
+        <div className="ke-dau__nut">
           <V c="vach-cho--nut vach-cho--nut-troi" />
           <V c="vach-cho--nut" />
-        </span>
+        </div>
       )}
     </div>
   );

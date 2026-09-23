@@ -30,8 +30,20 @@ const ve = (dangGiu: DangGiu | null = null) =>
   );
 
 const nutMo = () => screen.getByRole("button", { name: "Thả tâm trạng" });
+const nutTha = () => screen.getByRole("button", { name: "Thả" }) as HTMLButtonElement;
 const oNhan = () => screen.getByLabelText("Lời nhắn") as HTMLInputElement;
 const dem = (c: HTMLElement) => c.querySelector(".nhan__dem");
+
+/**
+ * Doi chieu DANH TINH (Object.is) cua tung nut DOM, khong phai hinh dang: toEqual cua Vitest so sanh nut DOM bang
+ * isEqualNode, tuc mot lan dung lai ca cay voi ma giong het van "bang nhau" - dung no thi bai kiem khong con chung
+ * minh duoc dieu can chung minh.
+ */
+function cungNut(truoc: readonly Element[], sau: readonly Element[], ten: string) {
+  expect(sau.length, `${ten}: so nut`).toBe(truoc.length);
+  expect(truoc.length, `${ten}: khong tim thay nut nao`).toBeGreaterThan(0);
+  truoc.forEach((n, i) => expect(Object.is(n, sau[i]), `${ten} thu ${i} bi thay bang nut khac`).toBe(true));
+}
 
 describe("ThaTamTrang: dong tieu de", () => {
   it("nut dung truoc Sach moi, dong san, tro toi hop chon; chua giu gi thi cham vien dut", () => {
@@ -44,6 +56,7 @@ describe("ThaTamTrang: dong tieu de", () => {
     const hop = container.querySelector("#tha-tam-trang") as HTMLElement;
     expect(hop.hidden).toBe(true);
     expect(container.querySelector(".ke-dau h1")?.textContent).toBe("Kệ sách");
+    expect(container.querySelector(".ke-dau__nut")?.tagName).toBe("DIV");
     expect(container.querySelector(".ke-dau__nut")?.children.length).toBe(2);
   });
 
@@ -76,21 +89,58 @@ describe("ThaTamTrang: hop chon", () => {
 
   // Bo dem theo code point, va o nhap khong bi chan cung: 80 bieu tuong cam xuc phai go duoc du moi cai chiem hai
   // don vi UTF-16 (maxLength cua trinh duyet dem theo don vi UTF-16 nen se cat con mot nua).
-  it("dem theo code point, khong chan cung o nhap, qua 80 thi khong gui", () => {
+  it("dung 80 bieu tuong cam xuc: khong bi chan cung, bo dem day, van gui duoc", async () => {
     const { container } = ve();
     fireEvent.click(nutMo());
     expect(oNhan().hasAttribute("maxlength")).toBe(false);
-    fireEvent.change(oNhan(), { target: { value: "🌸".repeat(NOTE_MAX) } });
+    const hoa = "🌸".repeat(NOTE_MAX);
+    fireEvent.change(oNhan(), { target: { value: hoa } });
     expect(oNhan().value.length).toBe(NOTE_MAX * 2);
     expect(dem(container)?.textContent).toBe("80/80");
     expect(dem(container)?.getAttribute("class")).toBe("nhan__dem nhan__dem--day");
     expect(oNhan().getAttribute("aria-invalid")).toBe(null);
+    expect(container.querySelector(".nhan__qua")).toBeNull();
+    expect(nutTha().disabled).toBe(false);
+    fireEvent.click(screen.getByRole("radio", { name: "Mây nhẹ" }));
+    fireEvent.click(nutTha());
+    await waitFor(() => expect(actionSetMood).toHaveBeenCalledWith("may-nhe", hoa));
+  });
+
+  // Vuot gioi han phai thay duoc NGAY trong luc go, khong doi toi luc bam "Tha": bo dem doi kieu, o nhap thanh
+  // aria-invalid, mot dong ly do hien ra, va nut "Tha" bi tat chung nao con vuot.
+  it("81 code point: bo dem bao loi, co dong ly do, nut Tha bi tat; xoa bot thi bat lai", () => {
+    const { container } = ve();
+    fireEvent.click(nutMo());
+    fireEvent.click(screen.getByRole("radio", { name: "Mây nhẹ" }));
     fireEvent.change(oNhan(), { target: { value: "a".repeat(NOTE_MAX + 1) } });
     expect(dem(container)?.textContent).toBe("81/80");
+    expect(dem(container)?.getAttribute("class")).toBe("nhan__dem nhan__dem--day nhan__dem--qua");
     expect(oNhan().getAttribute("aria-invalid")).toBe("true");
-    fireEvent.click(screen.getByRole("radio", { name: "Mây nhẹ" }));
-    fireEvent.click(screen.getByRole("button", { name: "Thả" }));
-    expect(screen.getByRole("alert").textContent).toBe(NHAN_DAI);
+    const ly = container.querySelector(".nhan__qua") as HTMLElement;
+    expect(ly.textContent).toBe(NHAN_DAI);
+    // Ca o nhap va nut "Tha" deu tro toi dong ly do, nen trinh doc man hinh nghe duoc vi sao chua tha duoc.
+    expect(oNhan().getAttribute("aria-describedby")?.includes(ly.id)).toBe(true);
+    expect(nutTha().getAttribute("aria-describedby")).toBe(ly.id);
+    expect(nutTha().disabled).toBe(true);
+    fireEvent.click(nutTha());
+    expect(actionSetMood).not.toHaveBeenCalled();
+    fireEvent.change(oNhan(), { target: { value: "a".repeat(NOTE_MAX) } });
+    expect(nutTha().disabled).toBe(false);
+    expect(container.querySelector(".nhan__qua")).toBeNull();
+    expect(oNhan().getAttribute("aria-invalid")).toBe(null);
+  });
+
+  // Nguong tu choi som cua parseMoodInput (320 don vi UTF-16 truoc khi chuan hoa): o giao dien, nguoi dung gap no
+  // duoi dang cung mot trang thai vuot gioi han, khong bao gio go xong roi moi bi may chu tu choi.
+  it("chuoi rat dai (tren nguong 320 ky tu) cung bi chan ngay o hop chon", () => {
+    const { container } = ve();
+    fireEvent.click(nutMo());
+    fireEvent.click(screen.getByRole("radio", { name: "Giông" }));
+    fireEvent.change(oNhan(), { target: { value: "a".repeat(NOTE_MAX * 5) } });
+    expect(dem(container)?.textContent).toBe("400/80");
+    expect(container.querySelector(".nhan__qua")?.textContent).toBe(NHAN_DAI);
+    expect(nutTha().disabled).toBe(true);
+    fireEvent.click(nutTha());
     expect(actionSetMood).not.toHaveBeenCalled();
   });
 
@@ -178,16 +228,18 @@ describe("ThaTamTrang: chon o troi khong dung lai cay DOM", () => {
     const oTroi = [...container.querySelectorAll(".o")];
     const nen = [...container.querySelectorAll(".o__troi")];
     const hoa = [...container.querySelectorAll(".o__troi use")];
+    const o = oNhan();
     const radio = screen.getAllByRole("radio") as HTMLInputElement[];
     radio[4].focus();
     fireEvent.click(radio[4]);
     expect(radio[4].checked).toBe(true);
     expect(document.activeElement).toBe(radio[4]);
     expect(container.querySelector("#tha-tam-trang")).toBe(hop);
-    expect([...container.querySelectorAll(".o")]).toEqual(oTroi);
-    expect([...container.querySelectorAll(".o__troi")]).toEqual(nen);
-    expect([...container.querySelectorAll(".o__troi use")]).toEqual(hoa);
-    expect(screen.getAllByRole("radio")).toEqual(radio);
+    expect(oNhan()).toBe(o);
+    cungNut(oTroi, [...container.querySelectorAll(".o")], "nhan o troi");
+    cungNut(nen, [...container.querySelectorAll(".o__troi")], "nen o troi");
+    cungNut(hoa, [...container.querySelectorAll(".o__troi use")], "bong hoa trong o");
+    cungNut(radio, screen.getAllByRole("radio"), "radio");
     expect(actionSetMood).not.toHaveBeenCalled();
   });
 
@@ -195,11 +247,15 @@ describe("ThaTamTrang: chon o troi khong dung lai cay DOM", () => {
     const { container } = ve({ weather: "may-nhe", conLai: "còn 2 giờ" });
     fireEvent.click(nutMo());
     const nen = [...container.querySelectorAll(".o__troi")];
+    const hoa = [...container.querySelectorAll(".o__troi use")];
+    const giu = container.querySelector(".tha__giu") as HTMLElement;
     const o = oNhan();
     fireEvent.click(screen.getByRole("radio", { name: "Giông" }));
     fireEvent.click(screen.getByRole("radio", { name: "Sương mù" }));
     fireEvent.change(o, { target: { value: "Nhớ cậu" } });
-    expect([...container.querySelectorAll(".o__troi")]).toEqual(nen);
+    cungNut(nen, [...container.querySelectorAll(".o__troi")], "nen o troi");
+    cungNut(hoa, [...container.querySelectorAll(".o__troi use")], "bong hoa trong o");
+    expect(container.querySelector(".tha__giu")).toBe(giu);
     expect(oNhan()).toBe(o);
     expect((screen.getByRole("radio", { name: "Giông" }) as HTMLInputElement).checked).toBe(false);
     expect((screen.getByRole("radio", { name: "Sương mù" }) as HTMLInputElement).checked).toBe(true);
@@ -219,8 +275,11 @@ describe("ke sach va khung giu cho", () => {
   });
 
   // Hang tieu de ke sach tu mot nut thanh hai; khung giu cho phai co du hai cho, khong thi bo cuc nhay luc tai xong.
-  it("khung giu cho ke sach co hai cho nut o dong tieu de", () => {
+  it("khung giu cho ke sach co hai cho nut o dong tieu de, cung the voi markup that", () => {
     const { container } = render(<ChoKeSach />);
-    expect(container.querySelectorAll(".ke-dau .ke-dau__nut .vach-cho--nut").length).toBe(2);
+    const nhom = container.querySelector(".ke-dau .ke-dau__nut") as HTMLElement;
+    // Cung the voi nhom nut that cua ThaTamTrang (div), khong thi bo cuc flex ben trong khong giong nhau.
+    expect(nhom.tagName).toBe("DIV");
+    expect(nhom.querySelectorAll(".vach-cho--nut").length).toBe(2);
   });
 });

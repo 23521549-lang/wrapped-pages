@@ -277,6 +277,9 @@
 .nhan__dau label{ font-weight: 600; }
 .nhan__dem{ color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
 .nhan__dem--day{ color: var(--color-ink); font-weight: 600; }
+/* da vuot 80: bo dem gach chan, va mot dong ly do ngay duoi o nhap, de nguoi go thay lien chu khong doi toi luc bam "Tha" */
+.nhan__dem--qua{ text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: .25em; }
+.nhan__qua{ font-size: var(--text-sm); color: var(--color-ink); font-weight: 600; }
 .nhan__goi{ font-size: var(--text-sm); color: var(--color-ink-3); }
 .tha__cuoi{ display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-sm); margin-top: var(--space-xs); }
 .tha__han{ font-size: var(--text-sm); color: var(--color-ink-3); display: inline-flex; align-items: center; gap: 6px; }

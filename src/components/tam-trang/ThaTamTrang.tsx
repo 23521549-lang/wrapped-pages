@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { actionSetMood, actionWithdrawMood } from "@/app/actions/mood";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
-import { NOTE_MAX, parseMoodInput } from "@/lib/tam-trang/input";
+import { NHAN_DAI, NOTE_MAX, parseMoodInput } from "@/lib/tam-trang/input";
 import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 import { Hoa } from "./HoaEp";
 
@@ -24,8 +24,10 @@ export type DangGiu = { weather: Weather; conLai: string };
  * boc them gi, nen React chi sua thuoc tinh checked tren dung mot the input. Khong the nao bi ve lai ca man, khong lan
  * dung lai DOM, nen hoat anh cua cac o khong khoi dong lai, khong xo dich, khong nhay cuon, va focus o yen tren o vua
  * bam. Bo dem loi nhan dem theo CODE POINT va o nhap khong dat maxLength: maxLength cua trinh duyet dem theo don vi
- * UTF-16 nen se cat 80 bieu tuong cam xuc con mot nua. Dai qua thi chinh parseMoodInput (luat dung chung voi may chu)
- * tra ve cau bao, khong goi may chu.
+ * UTF-16 nen se cat 80 bieu tuong cam xuc con mot nua. Doi lai, gioi han phai thay duoc NGAY trong luc go: bo dem doi
+ * sang kieu bao loi, o nhap thanh aria-invalid, mot dong ly do hien ra ngay duoi o (ca o nhap va nut "Tha" deu tro
+ * toi no bang aria-describedby) va nut "Tha" bi tat chung nao con vuot. parseMoodInput trong tha() la lop chan cuoi
+ * cung (dung luat voi may chu: chua chon troi, loi nhan qua dai, ca nguong 320 ky tu truoc khi chuan hoa).
  */
 export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   dau: ReactNode;
@@ -42,6 +44,9 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   const nutRef = useRef<HTMLButtonElement>(null);
   const hopRef = useRef<HTMLElement>(null);
   const soChu = [...nhan].length;
+  const qua = soChu > NOTE_MAX;
+  // Bo dem: dam khi vua day, them kieu bao loi khi da vuot. Mot chuoi lop thay vi ba nhanh dieu kieu long nhau.
+  const lopDem = `nhan__dem${soChu >= NOTE_MAX ? " nhan__dem--day" : ""}${qua ? " nhan__dem--qua" : ""}`;
 
   // Esc dong hop tu bat ky dieu khien nao ben trong, focus ve nut mo. Nghe tren chinh hop chi khi hop dang mo.
   useEffect(() => {
@@ -179,21 +184,31 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
           <div className="nhan">
             <div className="nhan__dau">
               <label htmlFor={`${HOP}-nhan`}>Lời nhắn</label>
-              <span className={soChu >= NOTE_MAX ? "nhan__dem nhan__dem--day" : "nhan__dem"} id={`${HOP}-dem`}>{`${soChu}/${NOTE_MAX}`}</span>
+              <span className={lopDem} id={`${HOP}-dem`}>{`${soChu}/${NOTE_MAX}`}</span>
             </div>
             <input
               className="input"
               id={`${HOP}-nhan`}
               value={nhan}
               onChange={(e) => setNhan(e.target.value)}
-              aria-invalid={soChu > NOTE_MAX || undefined}
+              aria-invalid={qua || undefined}
               autoComplete="off"
               placeholder="Nhớ cậu một chút thôi."
-              aria-describedby={`${HOP}-dem ${HOP}-goi`}
+              aria-describedby={qua ? `${HOP}-dem ${HOP}-qua ${HOP}-goi` : `${HOP}-dem ${HOP}-goi`}
             />
+            {qua && <p className="nhan__qua" id={`${HOP}-qua`}>{NHAN_DAI}</p>}
             <p className="nhan__goi" id={`${HOP}-goi`}>{`Không bắt buộc. ${tenKia} sẽ thấy dưới bầu trời.`}</p>
             <div className="tha__cuoi">
-              <button type="button" className="btn" onClick={tha} disabled={dangGui} aria-busy={dangGui || undefined}>Thả</button>
+              <button
+                type="button"
+                className="btn"
+                onClick={tha}
+                disabled={dangGui || qua}
+                aria-describedby={qua ? `${HOP}-qua` : undefined}
+                aria-busy={dangGui || undefined}
+              >
+                Thả
+              </button>
               <button type="button" className="btn btn--quiet" onClick={thoi}>Thôi</button>
               <span className="tha__han">
                 <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
