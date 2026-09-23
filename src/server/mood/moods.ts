@@ -20,7 +20,12 @@ const ketThucLuc = (now: Date) => sql`greatest(${moods.setAt}, ${now.toISOString
 /** Cac dong con hieu luc tai now cua mot nguoi. */
 const conHieuLuc = (accountId: string, now: Date) => and(eq(moods.accountId, accountId), gt(moods.endsAt, now));
 
-/** Ngay theo gio Viet Nam cua luc tha, cung ranh gioi voi dayKey cua src/lib/when.ts. */
+/**
+ * Ngay theo gio Viet Nam cua luc tha, cung ranh gioi voi dayKey cua src/lib/when.ts.
+ * Ranh gioi ngay Viet Nam duoc dien dat HAI NOI va phai luon khop nhau: o day (khoa ngay cua tung dong, nho
+ * 'Asia/Ho_Chi_Minh' cua Postgres) va o khoangThang cua src/lib/tam-trang/lich.ts (khoang [from, to) cua thang,
+ * bang UTC+7 co dinh). Sua mot ben thi phai sua ben kia, khong thi ngay dau va ngay cuoi thang se lech nhau.
+ */
 const NGAY_VN = sql<string>`to_char(${moods.setAt} at time zone 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')`;
 
 /**
@@ -29,15 +34,30 @@ const NGAY_VN = sql<string>`to_char(${moods.setAt} at time zone 'Asia/Ho_Chi_Min
  * (SELECT ... FOR UPDATE, giong lockOwnBook cua library/remove.ts), moods di sau va khong bao gio bi khoa truoc.
  * Khoa nay lam hai lan tha cung luc cua mot nguoi xep hang, nen khong bao gio con hai dong cung hieu luc.
  * Tai khoan khong co thi tra null, va duong tra ve som do nam truoc moi lenh ghi.
+ *
+ * Moc tha la moc tien (monotonic) cua RIENG nguoi do, giong cach editRound day edited_at o library/edit-round.ts:
+ * lay greatest(now, lan tha gan nhat + 1 ms). Vi CHECK moods_ends_at cam ends_at som hon set_at, neu dong ho may
+ * chu lui ve truoc thi dong cu khong the ket thuc som hon set_at cua no; khong keo moc len thi dong cu van hieu luc
+ * va lai xep TRUOC dong moi theo set_at, nen currentMoods se tra ve dung tam trang vua bi thay. Keo moc len 1 ms
+ * bao dam dong cu luon ket thuc dung luc thay va dong moi luon xep sau cung: moi nguoi chi con mot bau troi.
  */
 export async function setMood(db: AnyDb, accountId: string, weather: Weather, note: string | null, now: Date = new Date()): Promise<Mood | null> {
   return db.transaction(async (tx) => {
     const [ai] = await tx.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).for("update");
     if (!ai) return null;
-    await tx.update(moods).set({ endsAt: ketThucLuc(now) }).where(conHieuLuc(accountId, now));
+    // Doc sau khi da khoa dong tai khoan nen khong ai chen them dong cua nguoi nay giua chung; di theo chi muc
+    // moods_account_set_idx (account_id, set_at) nen chi la mot lan tim tren chi muc.
+    const [truoc] = await tx
+      .select({ setAt: moods.setAt })
+      .from(moods)
+      .where(eq(moods.accountId, accountId))
+      .orderBy(desc(moods.setAt))
+      .limit(1);
+    const luc = truoc && truoc.setAt.getTime() >= now.getTime() ? new Date(truoc.setAt.getTime() + 1) : now;
+    await tx.update(moods).set({ endsAt: ketThucLuc(luc) }).where(conHieuLuc(accountId, luc));
     const [moi] = await tx
       .insert(moods)
-      .values({ accountId, weather, note, setAt: now, endsAt: new Date(now.getTime() + MOOD_TTL_MS) })
+      .values({ accountId, weather, note, setAt: luc, endsAt: new Date(luc.getTime() + MOOD_TTL_MS) })
       .returning(COT);
     return moi;
   });
@@ -57,12 +77,16 @@ export async function withdrawMood(db: AnyDb, accountId: string, now: Date = new
   return r.length > 0;
 }
 
-/** Tam trang hien tai cua moi nguoi: dong moi nhat con ends_at > now, moi nguoi toi da mot dong. */
+/**
+ * Tam trang hien tai cua moi nguoi: dong moi nhat con ends_at > now, moi nguoi toi da mot dong.
+ * Bo luon dong da thu lai: thu lai chi ha ends_at xuong bang set_at (CHECK moods_ends_at khong cho thap hon), nen
+ * khi dong ho lui ve truoc, moc do van nam o tuong lai va dong da lay ve se lai hien len neu chi loc theo ends_at.
+ */
 export async function currentMoods(db: AnyDb, now: Date = new Date()): Promise<Mood[]> {
   return db
     .selectDistinctOn([moods.accountId], COT)
     .from(moods)
-    .where(gt(moods.endsAt, now))
+    .where(and(gt(moods.endsAt, now), eq(moods.withdrawn, false)))
     .orderBy(moods.accountId, desc(moods.setAt), desc(moods.id));
 }
 

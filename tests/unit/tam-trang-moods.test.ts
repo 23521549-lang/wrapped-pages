@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { moods } from "@/server/db/schema";
 import { currentMoods, moodCalendar, setMood, withdrawMood } from "@/server/mood/moods";
 import { chiaTamTrang, MOOD_TTL_MS } from "@/lib/tam-trang/lich";
@@ -39,6 +39,27 @@ describe("tha tam trang", () => {
     expect(hienTai).toHaveLength(2);
     expect(chiaTamTrang(hienTai, seat1.id)).toEqual({ minh: a, kia: b });
     expect(chiaTamTrang(hienTai, seat2.id)).toEqual({ minh: b, kia: a });
+    // Tha de thay tam trang cua chinh minh khong duoc cham mot cot nao cua dong nguoi kia.
+    const truocKhiThay = await db.select().from(moods).where(eq(moods.accountId, seat2.id));
+    await setMood(db, seat1.id, "giong", null, SAU(3 * PHUT));
+    expect(await db.select().from(moods).where(eq(moods.accountId, seat2.id))).toEqual(truocKhiThay);
+  });
+
+  it("dong ho lui ve truoc: van chi mot tam trang hien tai va la lan tha moi nhat", async () => {
+    const { db, seat1 } = await seedHai();
+    const cu = await setMood(db, seat1.id, "nang-am", null, T);
+    // Moc tha bi keo len sau lan tha gan nhat mot mili giay: CHECK moods_ends_at khong cho dong cu ket thuc som hon
+    // set_at cua no, nen day la cach duy nhat de dong cu thuc su ket thuc va dong moi luon xep sau.
+    const moi = await setMood(db, seat1.id, "giong", null, SAU(-10 * PHUT));
+    expect(moi?.setAt).toEqual(SAU(1));
+    expect(moi?.endsAt).toEqual(SAU(1 + MOOD_TTL_MS));
+    const rows = await db.select().from(moods).orderBy(asc(moods.setAt));
+    expect(rows.map((r) => [r.id, r.endsAt.toISOString()])).toEqual([
+      [cu?.id, SAU(1).toISOString()],
+      [moi?.id, SAU(1 + MOOD_TTL_MS).toISOString()],
+    ]);
+    expect((await currentMoods(db, SAU(-10 * PHUT))).map((m) => m.id)).toEqual([moi?.id]);
+    expect((await currentMoods(db, SAU(2))).map((m) => m.id)).toEqual([moi?.id]);
   });
 
   it("het han dung 24 gio: truoc do mot mili giay con, dung moc thi het", async () => {
@@ -89,6 +110,8 @@ describe("thu lai", () => {
     const [dong] = await db.select().from(moods);
     expect(dong.endsAt).toEqual(T);
     expect(await currentMoods(db, T)).toEqual([]);
+    // ends_at khong xuong duoi set_at duoc nen no van o tuong lai so voi now: dong da thu lai van phai bien mat.
+    expect(await currentMoods(db, SAU(-5 * PHUT))).toEqual([]);
   });
 });
 
