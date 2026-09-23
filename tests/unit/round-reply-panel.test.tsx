@@ -118,6 +118,23 @@ describe("RoundReplyPanel: nguoi doc", () => {
     // Lat sang luot khac: cau bao cua luot truoc phai tat, khong thi trinh doc man hinh doc lai no o luot moi.
     act(() => dat({ first: 3, last: 3 }));
     expect(baoChu()).toBe("");
+    // Lat quay lai luot vua gui: cau bao da bi bo han, khong doc lai lan nua.
+    act(() => dat({ first: 1, last: 2 }));
+    expect(baoChu()).toBe("");
+  });
+
+  it("bam doi hay Enter hai lan tren nut Gui cua hop hoi lai: chi mot lan gui", async () => {
+    vi.mocked(actionSubmitRoundReply).mockResolvedValue({ ok: true });
+    ve();
+    go("Thương ghê.");
+    fireEvent.click(nut("Gửi"));
+    const guiThat = within(hoi()!).getByRole("button", { name: "Gửi" });
+    // Hai lan bam lien nhau, truoc khi lan ve voi pending kip hien len: nut chua kip mo ma van khong duoc gui hai lan.
+    await act(async () => {
+      fireEvent.click(guiThat);
+      fireEvent.click(guiThat);
+    });
+    expect(actionSubmitRoundReply).toHaveBeenCalledTimes(1);
   });
 
   it("may chu tu choi hay mat mang: bao loi, dong hop hoi, giu nguyen chu", async () => {
@@ -137,6 +154,11 @@ describe("RoundReplyPanel: nguoi doc", () => {
       fireEvent.click(within(hoi()!).getByRole("button", { name: "Gửi" }));
     });
     expect(within(khung()).getByRole("alert").textContent).toBe("Chưa gửi được, thử lại nhé.");
+    expect(o().value).toBe("Thương ghê.");
+    // Lat di roi lat ve: loi cu khong con, chu dang go thi con. role="alert" doc lai la lan bao thu hai cho mot lan hong.
+    act(() => dat({ first: 3, last: 3 }));
+    act(() => dat({ first: 1, last: 2 }));
+    expect(within(khung()).queryByRole("alert")).toBeNull();
     expect(o().value).toBe("Thương ghê.");
   });
 

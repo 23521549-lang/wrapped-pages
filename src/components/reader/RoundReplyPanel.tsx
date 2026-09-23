@@ -22,6 +22,17 @@ export type RoundReplyPanelProps = {
 const DA_GUI = "Đã gửi lời hồi đáp.";
 const MAT_MANG = "Chưa gửi được, thử lại nhé.";
 
+/**
+ * Dua focus toi mot phan tu cua khung roi keo no ra khoi cho the nhac dang dinh che (le cuon o giay.css). Trinh duyet
+ * KHONG tinh le cuon khi tu cuon theo focus (do that o 1280x720: o chu van nam sau the nhac), nhung co tinh khi trang
+ * goi scrollIntoView, nen goi them mot lan; "nearest" nen phan tu dang hien du cho thi khong cuon gi. jsdom khong co
+ * ham nay, vi vay goi co dieu kien.
+ */
+function hienRa(el: HTMLElement | null): void {
+  el?.focus();
+  el?.scrollIntoView?.({ block: "nearest" });
+}
+
 type FormProps = {
   roundId: string;
   chu: string;
@@ -42,6 +53,9 @@ function ReplyForm({ roundId, chu, onChu, onSent, onLoi }: FormProps) {
   const [pending, startTransition] = useTransition();
   const oRef = useRef<HTMLTextAreaElement>(null);
   const xemLaiRef = useRef<HTMLButtonElement>(null);
+  // Khoa mot lan gui: hai lan bam lien nhau (bam doi, hay Enter hai lan) den truoc khi lan ve voi pending kip hien
+  // len, nen nut chua kip mo. Khoa mo lai khi lan gui do hong; gui duoc thi o chu bien mat cung khung.
+  const dangGui = useRef(false);
   const dem = replyLength(normalizeReplyBody(chu));
   const tran = dem > REPLY_MAX;
 
@@ -54,7 +68,7 @@ function ReplyForm({ roundId, chu, onChu, onSent, onLoi }: FormProps) {
     const loi = dem === 0 ? "Viết vài chữ rồi hãy gửi nhé." : tran ? `Dài quá ${REPLY_MAX} ký tự rồi, bớt một chút nhé.` : null;
     onLoi(loi);
     if (loi !== null) {
-      oRef.current?.focus();
+      hienRa(oRef.current);
       return;
     }
     setHoi(true);
@@ -62,16 +76,19 @@ function ReplyForm({ roundId, chu, onChu, onSent, onLoi }: FormProps) {
 
   function xemLai() {
     setHoi(false);
-    oRef.current?.focus();
+    hienRa(oRef.current);
   }
 
   function hong(loi: string) {
+    dangGui.current = false;
     onLoi(loi);
     setHoi(false);
-    oRef.current?.focus();
+    hienRa(oRef.current);
   }
 
   function gui() {
+    if (dangGui.current) return;
+    dangGui.current = true;
     startTransition(async () => {
       try {
         const r = await actionSubmitRoundReply(roundId, chu);
@@ -130,8 +147,8 @@ function ReplyForm({ roundId, chu, onChu, onSent, onLoi }: FormProps) {
  * Khung "Loi hoi dap" o cot phai man doc, theo luot cua to dang hien (to ben phai khi hai trang thuoc hai luot).
  * Nguoi doc: o chu, hoi lai truoc khi gui; luot con niem phong thi mot dong nhac; da gui thi loi cua minh kem gio.
  * Chu sach: loi hoi dap kem gio, hoac "Chua co loi hoi dap.". Loi cua may chu va cau bao cho trinh doc man hinh deu
- * mang theo ma luot: lat sang luot khac thi cho do tro ve rong, khong ai doc nham loi cua luot truoc. Vung aria-live
- * co tu lan ve dau nen trinh doc man hinh doc duoc cau bao gui xong.
+ * mang theo ma luot va bi bo han khi lat sang luot khac: cho do tro ve rong ngay trong lan ve doi luot, va lat quay
+ * lai cung khong doc lai cau cu. Vung aria-live co tu lan ve dau nen trinh doc man hinh doc duoc cau bao gui xong.
  */
 export function RoundReplyPanel({ rounds, mine, replierName, now }: RoundReplyPanelProps) {
   const tieuDe = useId();
@@ -140,6 +157,8 @@ export function RoundReplyPanel({ rounds, mine, replierName, now }: RoundReplyPa
   const [nhap, setNhap] = useState<Record<string, string>>({});
   const [loi, setLoi] = useState<{ roundId: string; text: string } | null>(null);
   const [bao, setBao] = useState<{ roundId: string; text: string } | null>(null);
+  // Luot cua lan ve truoc, chi de biet luc nao vua doi luot (React goi lai ngay, khong ve them mot lan ra man hinh).
+  const [luotTruoc, setLuotTruoc] = useState<string | null>(null);
   const loiRef = useRef<HTMLElement>(null);
   // Luot vua gui: refresh() cua action mang loi hoi dap ve thi dua focus toi loi do, vi nut Gui da roi khoi DOM.
   const vuaGui = useRef<string | null>(null);
@@ -147,8 +166,17 @@ export function RoundReplyPanel({ rounds, mine, replierName, now }: RoundReplyPa
   useEffect(() => {
     if (vuaGui.current === null || luot?.id !== vuaGui.current || luot.reply === null) return;
     vuaGui.current = null;
-    loiRef.current?.focus();
+    hienRa(loiRef.current);
   }, [luot]);
+
+  // Lat sang luot khac thi bo han cau bao va loi cua luot truoc, khong chi giau di theo ma luot: lat quay lai luot vua
+  // gui ma chu con trong vung aria-live thi trinh doc man hinh doc lai no, nghe nhu vua gui them mot lan nua.
+  const luotId = luot?.id ?? null;
+  if (luotTruoc !== luotId) {
+    setLuotTruoc(luotId);
+    setLoi(null);
+    setBao(null);
+  }
 
   if (!luot) return null;
   const id = luot.id;

@@ -19,7 +19,8 @@ test.afterEach(async () => {
  * be rong tren moi man cua web. Bon man chinh (ke sach, man doc, man viet, cai dat)
  * di qua doMoiManChinh; cac man con lai di qua doMan: tao sach, sua sach, sua luot (luot thuong va luot niem phong),
  * ban nhap, cho, trang 404,
- * trang tra loi, dang nhap (context moi, chua co phien), o test rieng tren web trong: khoi tao va man da xong o ca
+ * trang tra loi, man doc cua nguoi doc (co khung Loi hoi dap dang mo o chu), dang nhap (context moi, chua co phien),
+ * o test rieng tren web trong: khoi tao va man da xong o ca
  * hai luot, va o test rieng tren may chu co database khong toi duoc (may-hong.ts): trang loi. /viet khong co man rieng: no chi chuyen huong. Mot cuon co it nhat mot trang da dang
  * (dangToThang) de "Mot trang trong sach" xuat hien tren ke sach - khong co no thi doMoiManChinh khong
  * tim duoc duong toi man doc/man viet, va mot cong chay tren ke rong la mot cong luon xanh.
@@ -125,6 +126,13 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
       await expect(p.getByRole("heading", { level: 1, name: "Trang trả lời" })).toBeVisible();
       await expect(p.locator(".viet-chu .ProseMirror")).toBeVisible();
     },
+  }, MIEN_TRU_VUNG_BAM);
+
+  // Man doc cua nguoi doc: cuon co to da dang nen co khung Loi hoi dap dang mo o chu va nut Gui.
+  await doMan(b, {
+    ten: "man doc, khung hoi dap",
+    duong: `/sach/${id}`,
+    daVe: (p) => expect(p.getByRole("region", { name: "Lời hồi đáp" }).getByLabel("Viết lời hồi đáp")).toBeVisible(),
   }, MIEN_TRU_VUNG_BAM);
 
   // Context moi, chua co phien: nguoi da vao mo /dang-nhap se bi day ve ke sach.

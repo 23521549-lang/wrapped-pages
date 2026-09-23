@@ -167,6 +167,17 @@ Luật của việc sửa:
 
 **Màn sửa lượt** (`/sach/[id]/sua-luot/[luot]`, `?trang=N` mở tờ thứ N của lượt) dùng lại khung màn viết: tiêu đề "Sửa lượt 2", dòng phụ "Tên sách, đăng 18.09", số tờ, bộ đếm chữ khi gần trần 20 000, nút chính "Lưu thay đổi", nút viền "Hủy", "Thêm ảnh", "Ghi âm". Số in dưới tờ là số trang thật trong cuốn. "Hủy" hay "Về sách" khi đã đổi thì hiện hộp xác nhận nội tuyến, focus ở "Sửa tiếp", Esc trả focus về chỗ đã mở hộp. Chữ đang sửa được giữ tạm trong phiên trình duyệt; bản tạm quá 24 giờ của lượt khác bị dọn mỗi lần mở màn sửa. Lượt còn niêm phong không có trình soạn thảo: chỉ tiêu đề "Không sửa được", một câu giải thích và nút "Về trang N".
 
-## 13. Việc còn lại
+## 13. Lời hồi đáp theo lượt đăng
+
+Người đọc gửi được đúng một lời hồi đáp cho mỗi lượt đăng của sách đang chia sẻ. Lời hồi đáp bất biến: không sửa, không xóa.
+
+- **Chỗ đứng.** Cột phải của màn đọc: dưới thẻ "Nhạc nền" khi sách có nhạc (chỉ gắn sau "Mở sách"), đứng một mình khi sách không có nhạc. Dưới 980px cột phải xuống dưới cuốn sách. Sách riêng tư và sách chưa có tờ nào không có khung. Thẻ nhạc luôn là con đầu của cột phải, khung hồi đáp chèn sau nó, nên trình phát không bao giờ đổi chỗ trong DOM. Ở màn rộng chỉ thẻ nhạc dính, khung hồi đáp cuộn theo trang: nút "Gửi" luôn tới được dù lời dài tới đâu, còn trình phát thì không rời khỏi màn hình. Khi cuộn, khung trượt ra sau thẻ nhạc như một thẻ ghim quen thuộc và không bao giờ đè lên trình phát.
+- **Theo tờ đang hiện.** Khung theo lượt của tờ đang hiện; hai trang thuộc hai lượt thì theo trang bên phải. Chữ đang gõ được giữ theo từng lượt khi lật qua lại; câu báo cho trình đọc màn hình và lời nhắc lỗi thì bỏ hẳn khi đổi lượt, lật về cũng không đọc lại.
+- **Người đọc.** Ô chữ "Viết lời hồi đáp", bộ đếm "0/1000" đếm đúng như máy chủ (bỏ khoảng trắng hai đầu, gộp dòng trống còn tối đa hai, đếm theo ký tự), nút "Gửi". Gửi thì hỏi lại ngay trong khung "Gửi rồi sẽ không sửa được." với "Gửi" và "Xem lại" (focus sẵn ở "Xem lại", Esc cũng là "Xem lại"). Bấm đôi hay Enter hai lần chỉ gửi đúng một lời. Lượt còn niêm phong: "Mở niêm phong để hồi đáp.". Đã gửi: lời của mình kèm "Bạn gửi hôm nay, 07:41".
+- **Người viết.** Lời hồi đáp kèm "Linh gửi hôm nay, 07:41", hoặc "Chưa có lời hồi đáp.".
+- **Hình dáng.** Cùng dáng thẻ với "Nhạc nền"; lời đã gửi là một đoạn trích có vạch trái mảnh, giữ xuống dòng của người viết. Không mảng màu, không hoạt ảnh.
+- **Dòng Hoạt động.** "Linh đã hồi đáp trang 6 tới 11 của <tên sách>", bấm vào mở màn đọc tại tờ đầu của lượt. Không kèm chip niêm phong.
+
+## 14. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của form tạo và sửa sách. Khi màn form được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
