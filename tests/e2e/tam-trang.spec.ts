@@ -28,10 +28,10 @@ const BE_RONG_DO_BAM = new Set([320, BE_RONG_CHAM]);
  *   tiet ben duoi. Van do: o nao hep hon O_NGAY_MIN la loi.
  */
 const MIEN_TRU_HOP: MienTru[] = [{ phanTu: ".o input", vungBam: "label.o" }];
-const O_NGAY = new RegExp('^button "[0-9]{1,2} tháng [0-9]{1,2}[.]');
+const O_NGAY = /^button "[0-9]{1,2} tháng [0-9]{1,2}[.]/;
 /** Nguong be ngang cua o ngay: so do that la ~37px o 320 va ~39px o 375; duoi nguong nay la CSS lich da hong. */
 const O_NGAY_MIN = 36;
-const canhNgan = (dong: string) => Number(new RegExp("canh ngan ([0-9.]+)px").exec(dong)?.[1] ?? "0");
+const canhNgan = (dong: string) => Number(/canh ngan ([0-9.]+)px/.exec(dong)?.[1] ?? "0");
 
 /** Tha mot tam trang qua hop chon tren Ke sach, doi loi bao cua vung aria-live. */
 async function tha(p: Page, w: Weather, nhan = ""): Promise<void> {
@@ -80,7 +80,48 @@ async function demXoDich(p: Page): Promise<void> {
   });
 }
 
-const xoDich = (p: Page) => p.evaluate(() => (window as unknown as { xoDich?: number }).xoDich ?? -1);
+/**
+ * Tong xo dich da dem duoc. Doi mot khung hinh roi mot vong microtask truoc khi doc: tay nghe cua PerformanceObserver
+ * chay sau khi trinh duyet ve xong, doc ngay co the doc truoc mot ban ghi vua sinh ra.
+ */
+const xoDich = (p: Page) => p.evaluate(async () => {
+  await new Promise((xong) => requestAnimationFrame(() => setTimeout(() => xong(null), 0)));
+  return (window as unknown as { xoDich?: number }).xoDich ?? -1;
+});
+
+/**
+ * Doi vong song chinh lan duoc it nhat `mocMs` cua chinh no. Day la moc "dang giua luc song lan" do chinh trang bao,
+ * khong phai mot khoang cho dem gio: neu song khong chay thi ham nay do chu khong lang le cho qua.
+ */
+async function choSongLanToi(p: Page, mocMs: number): Promise<void> {
+  await p.waitForFunction((moc) => {
+    const el = document.querySelector(".troi-cua-so .troi--dang-song");
+    return el !== null && el.getAnimations().some((a) => Number(a.currentTime ?? 0) >= moc);
+  }, mocMs, { timeout: 10_000 });
+}
+
+/**
+ * Doi vong song tan han: cac lop tam da bi go va troi vua hien khong con o trang thai dang lan. Moc nay do chinh
+ * song.ts dat ra (don dep o SONG_HET), nen phep do sau no la phep do tren trang thai nghi that su.
+ */
+async function choSongTan(p: Page): Promise<void> {
+  await expect(p.locator(".song-vong")).toHaveCount(0, { timeout: 10_000 });
+  await expect(p.locator(".troi--dang-song")).toHaveCount(0, { timeout: 10_000 });
+}
+
+/**
+ * Doi lan do bo cuc "luc ranh" cua dai troi chay xong: font tai xong (dai troi do lai sau moc do), roi xep mot viec
+ * ranh cua rieng minh - viec ranh chay theo thu tu xep hang nen viec cua dai troi chac chan da chay truoc.
+ */
+async function choDoLucRanh(p: Page): Promise<void> {
+  await p.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise((xong) => {
+      if (typeof requestIdleCallback === "function") requestIdleCallback(() => xong(null), { timeout: 1000 });
+      else setTimeout(() => xong(null), 200);
+    });
+  });
+}
 
 /**
  * Doi toi khi tay nghe cua dai troi da gan xong (trang hydrate xong): pointerover vao dung o cua so bat lop
@@ -137,7 +178,7 @@ test("tha tam trang: nguoi kia thay bau troi voi tho co; nguoi tha thay troi cua
   await expect(troi.locator(".troi__giai")).toHaveText(TROI["mua-phun"].giai ?? "");
   await expect(troi.locator(".troi__nguon")).toHaveText("Đỗ Phủ, Xuân dạ hỉ vũ");
   await expect(troi.locator(".troi__nhan")).toHaveText("Nhớ cậu một chút thôi.");
-  await expect(troi.locator(".troi__gio")).toHaveText(new RegExp("^Thả lúc [0-9]{2}:[0-9]{2}$"));
+  await expect(troi.locator(".troi__gio")).toHaveText(/^Thả lúc [0-9]{2}:[0-9]{2}$/);
   expect(await tho.evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Lexend");
   expect(await troi.locator(".troi__giai").evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Be Vietnam Pro");
   await expect(b.getByRole("button", { name: "Thả tâm trạng" }).locator(".o-mau")).toHaveClass("o-mau o-mau--trong");
@@ -152,7 +193,7 @@ test("tha tam trang moi thay tam trang cu; thu lai lam troi bien mat va bo bong 
   const { a, b, tenCuaA, tenCuaB } = await haiNguoiDaVao(browser);
   await tha(a, "nang-am");
   await a.getByRole("button", { name: "Thả tâm trạng" }).click();
-  await expect(a.locator(".tha__giu")).toContainText(new RegExp("Bạn đang giữ Nắng ấm, còn (23|24) giờ[.]"));
+  await expect(a.locator(".tha__giu")).toContainText(/Bạn đang giữ Nắng ấm, còn (23|24) giờ[.]/);
   await a.locator("label.o", { hasText: "Giông" }).click();
   await a.getByRole("button", { name: "Thả", exact: true }).click();
   await expect(a.getByText("Đã thả Giông. Giữ trong 24 giờ.")).toBeAttached();
@@ -259,7 +300,7 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
   expect(dau.ms, "song hien cham hon mot khung hinh").toBeLessThan(50);
 
   const troiMinh = b.getByRole("region", { name: "Tâm trạng của bạn" });
-  await expect(troiMinh).toHaveClass(new RegExp("troi--nang-am troi--cua-so"));
+  await expect(troiMinh).toHaveClass(/troi--nang-am troi--cua-so/);
   await expect(troiMinh.locator(".troi__ai")).toHaveText("Bạn");
   await expect(troiMinh.getByRole("link", { name: "Xem lịch hoa" })).toHaveCount(0);
   const oLai = b.getByRole("button", { name: `Xem trời của ${tenCuaA}` });
@@ -270,15 +311,14 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
   await b.keyboard.press("Tab");
   await expect(b.locator(".cua-so--im")).toHaveCount(0);
 
-  // Khong xo dich: do giua luc song lan va sau khi song tan.
-  await b.waitForTimeout(700);
+  // Khong xo dich: do giua luc song lan (moc do chinh vong song bao) va sau khi song tan (moc do song.ts don dep).
+  await choSongLanToi(b, 600);
   expect((await moc.boundingBox())?.y ?? -1).toBeCloseTo(mocTruoc, 2);
   expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoTruoc, 2);
-  await b.waitForTimeout(3000);
+  await choSongTan(b);
   expect((await moc.boundingBox())?.y ?? -1).toBeCloseTo(mocTruoc, 2);
   expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoTruoc, 2);
   expect(await xoDich(b), "co xo dich bo cuc").toBe(0);
-  await expect(b.locator(".song-vong")).toHaveCount(0);
 
   await b.emulateMedia({ reducedMotion: "reduce" });
   await oLai.click();
@@ -318,7 +358,7 @@ test("do cua may cham: khung hinh dau tien, gia nhan ban o kinh, va duong chua k
   expect(gia.net).toBeGreaterThan(50);
 
   // So do bo cuc da lam san luc ranh (requestIdleCallback timeout 400ms): lan bam chi bat song.
-  await b.waitForTimeout(800);
+  await choDoLucRanh(b);
   const moc = b.getByRole("heading", { level: 1, name: "Kệ sách" });
   const mocTruoc = (await moc.boundingBox())?.y ?? -1;
   await choTayNghe(b);
@@ -330,9 +370,9 @@ test("do cua may cham: khung hinh dau tien, gia nhan ban o kinh, va duong chua k
   expect(dau.ms, "may cham 4 lan: song van phai hien trong khoang mot khung hinh cua may do").toBeLessThan(200);
 
   // Suot ca vong song tren may cham: tieu de Ke sach khong nhuc nhich, khong mot don vi xo dich nao.
-  await b.waitForTimeout(700);
+  await choSongLanToi(b, 600);
   expect((await moc.boundingBox())?.y ?? -1).toBeCloseTo(mocTruoc, 2);
-  await b.waitForTimeout(3000);
+  await choSongTan(b);
   expect((await moc.boundingBox())?.y ?? -1).toBeCloseTo(mocTruoc, 2);
   expect(await xoDich(b), "co xo dich bo cuc khi may cham").toBe(0);
 
@@ -352,7 +392,7 @@ test("do cua may cham: khung hinh dau tien, gia nhan ban o kinh, va duong chua k
   expect(chuaDo.song, "khung hinh dau tien chua co lop song").toBe(4);
   expect(chuaDo.lan).toBe(1);
   expect(chuaDo.ms, "duong du phong: do bo cuc ngay trong tay nghe van phai kip mot khung hinh cua may do").toBeLessThan(200);
-  await b.waitForTimeout(3500);
+  await choSongTan(b);
   expect(await xoDich(b), "co xo dich bo cuc o duong du phong").toBe(0);
 
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
@@ -397,7 +437,7 @@ test("CSP: ke sach co bau troi va lich hoa khong vi pham chinh sach nao", async 
   });
   const dongCsp: string[] = [];
   b.on("console", (m) => {
-    if (new RegExp("Content Security Policy|Refused to (load|execute|apply|connect|frame)", "i").test(m.text())) dongCsp.push(m.text());
+    if (/Content Security Policy|Refused to (load|execute|apply|connect|frame)/i.test(m.text())) dongCsp.push(m.text());
   });
   for (const duong of ["/ke-sach", "/tam-trang"]) {
     await b.goto(duong);
@@ -443,9 +483,10 @@ test("anh chup chin bau troi, hop chon va lich hoa de cham giao dien", async ({ 
     await a.emulateMedia({ reducedMotion: "no-preference" });
     await a.goto("/ke-sach");
     await a.locator(".cua-so").first().click();
-    await a.waitForTimeout(900);
+    // Chup dung pha cua song (moc do chinh vong song bao), roi chup lai sau khi song tan han.
+    await choSongLanToi(a, 900);
     await a.screenshot({ path: `test-results/tam-trang/cua-so-song-${width}.png` });
-    await a.waitForTimeout(2600);
+    await choSongTan(a);
     await a.screenshot({ path: `test-results/tam-trang/cua-so-doi-${width}.png` });
   }
 });
