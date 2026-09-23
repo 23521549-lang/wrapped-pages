@@ -63,8 +63,8 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   });
   const [s] = await niemPhongCua(id);
 
-  // Reader cua nguoi kia gui moc da doc sau khi to 1 hien (server action). Doi dung response do, khong doi gio.
-  const daGuiMoc = b.waitForResponse((r) => r.request().method() === "POST" && "next-action" in r.request().headers());
+  // Reader cua nguoi kia gui khung to dang hien sau khi to 1 hien (server action). Doi dung response do, khong doi gio.
+  const daGuiKhung = b.waitForResponse((r) => r.request().method() === "POST" && "next-action" in r.request().headers());
   await b.goto(`/sach/${id}`);
   await expect(b.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   await expect(b.locator(".sach .giay-noi-dung p").first()).toHaveText(HE_LO);
@@ -73,8 +73,9 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await expect(khung.locator(".con-lan")).toHaveText("Còn 5 lần");
   await khongLo(b, BI_MAT, DAI, "quan may", GOI_Y_1, GOI_Y_2);
 
-  // Da mo sach ma to khoa van la trang moi: markRead khong cho moc vuot to khoa. Doan trich la dong he lo.
-  await daGuiMoc;
+  // Da mo sach ma to khoa van la trang moi: markRead khong bao gio ghi to nam trong luot con khoa voi nguoi xem.
+  // Doan trich la dong he lo.
+  await daGuiKhung;
   await b.goto("/ke-sach");
   const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
   const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });

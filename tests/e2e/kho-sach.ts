@@ -22,7 +22,7 @@ export const CHO_ARGON2_MS = 20_000;
 
 /**
  * Context do haiNguoiDaVao mo trong test dang chay. Dong sau moi test, truoc resetDb cua test sau: trang cu con mo
- * se ban moc da doc va lam moi sang database vua bi xoa cua test sau. Moi spec goi dongContextCu trong
+ * se ban to da xem va lam moi sang database vua bi xoa cua test sau. Moi spec goi dongContextCu trong
  * test.afterEach cua chinh no; hook khai o muc module cua file nay chi gan vao spec dau tien nap no, vi module
  * chi chay mot lan moi tien trinh.
  */

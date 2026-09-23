@@ -50,7 +50,7 @@ function IconLoa({ dangPhat }: { dangPhat: boolean }) {
  * dung sach, cot kia (.doc-luoi__phu) la the Nhac nen chua trinh phat YouTube that, roi khung hoi dap neu co. The nhac
  * khong bao gio doi cho trong DOM, vi doi cho iframe la tai lai video; chuyen tu bia sang sach va moi lan redirect doi
  * ?trang chi thay cot chinh.
- * Con cong thi noi dung sach chua gan: chua co phim mui ten, chua day moc da doc, chua chay nghi thuc.
+ * Con cong thi noi dung sach chua gan: chua co phim mui ten, chua ghi to da xem, chua chay nghi thuc.
  * Chi phat bang script khi hon nua khung trinh phat dang nam trong khung nhin (Required Minimum Functionality).
  */
 export function MusicRoom({ videoId, initialMuted, gate, cover, children, side }: MusicRoomProps) {

@@ -84,7 +84,7 @@ test("nguoi doc gui loi hoi dap sau khi hoi lai; bam doi chi gui mot loi; nguoi 
   await expect(caption).toHaveText(/^Bạn gửi hôm nay, [0-9]{2}:[0-9]{2}$/);
   await expect(khung(b).locator(".hoi-dap__loi")).toBeFocused();
 
-  // Tai lai khong kem ?trang: man doc mo o to chua doc (luot hai), nen khung la o chu con trong cua luot do.
+  // Tai lai khong kem ?trang: man doc mo o to nho nhat chua thay (to 3, luot hai), nen khung la o chu con trong cua luot do.
   await b.reload();
   await expect(khung(b).getByText("Dành cho trang 3")).toBeVisible();
   await expect(khung(b).getByLabel("Viết lời hồi đáp")).toHaveValue("");

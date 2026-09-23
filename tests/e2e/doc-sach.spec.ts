@@ -10,7 +10,7 @@ test.afterEach(async () => {
   await dongContextCu();
 });
 
-test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi het dau trang moi", async ({ browser }) => {
+test("nguoi kia: the co trang moi, mo o to dau chua thay, lat het, quay lai thi het dau trang moi", async ({ browser }) => {
   const { a, b, tenCuaA } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangToThang(id, "Tờ một", "Tờ hai", "Tờ ba");
@@ -44,7 +44,7 @@ test("nguoi kia: the co trang moi, mo o to dau chua doc, lat het, quay lai thi h
   await b.keyboard.press("ArrowRight");
   await expect(dem).toHaveText("Trang 3 / 3");
 
-  // Quay lai ngay, khi moc con dang hen: Reader gui moc luc roi man roi lam moi ke.
+  // Quay lai ngay, khi lenh ghi con dang hen: Reader gui cac to vua thay luc roi man roi lam moi ke.
   await b.goBack();
   await expect(b).toHaveURL(new RegExp("/ke-sach$"));
   await expect(the.locator(".dh--moi")).toHaveCount(0);
