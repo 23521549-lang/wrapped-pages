@@ -86,11 +86,15 @@ function MotTroi({ m, an }: { m: Mat; an: boolean }) {
  */
 export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien | null; minh: TroiHien | null }) {
   const dai = useRef<HTMLDivElement>(null);
+  const caHai = kia !== null && minh !== null;
 
+  // Phu thuoc caHai chu khong phai mang rong: dai co o cua so chi ton tai khi ca hai cung giu tam trang, va so nguoi
+  // dang giu tam trang doi ngay trong lan song lai (sau khi tha hay thu lai) ma thanh phan khong bi dung lai. Gan mot
+  // lan duy nhat luc vao cay thi di tu mot troi sang hai troi se de nut o cua so khong co tay nghe nao, bam khong an.
   useEffect(() => {
     const w = dai.current;
-    return w === null ? undefined : ganSong(w);
-  }, []);
+    return w === null || !caHai ? undefined : ganSong(w);
+  }, [caHai]);
 
   if (kia === null && minh === null) return null;
   const matKia: Mat | null = kia === null ? null : {

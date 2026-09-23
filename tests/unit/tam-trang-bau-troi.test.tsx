@@ -3,6 +3,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
+import { doHinh } from "@/components/tam-trang/song";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { netTroi } from "@/lib/tam-trang/net-troi";
 import { CHU_MS, SONG_HET, SONG_MS } from "@/lib/tam-trang/song-nhip";
@@ -13,7 +14,7 @@ import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
  * onfinish nhu khi song lan xong. Moi bo cuc trong jsdom la 0 nen bai nay kiem cau truc, lop, thu tu va nhip, con hinh
  * that duoc kiem o trinh duyet that.
  */
-type LanGoi = { el: Element; keyframes: unknown; ken: { duration?: number; delay?: number; easing?: string } };
+type LanGoi = { el: Element; keyframes: unknown; ken: { duration?: number; delay?: number; easing?: string }; daHuy: boolean };
 const daGoi: LanGoi[] = [];
 const ketThuc: (() => void)[] = [];
 /** Mo ta goc cua Element.prototype.animate (jsdom khong co: undefined), de tra lai nguyen trang sau moi bai. */
@@ -23,8 +24,12 @@ beforeEach(() => {
   daGoi.length = 0;
   ketThuc.length = 0;
   Element.prototype.animate = function (this: Element, keyframes: unknown, ken: { duration?: number; delay?: number; easing?: string } = {}) {
-    daGoi.push({ el: this, keyframes, ken });
-    const a = { addEventListener: (ten: string, f: () => void) => { if (ten === "finish") ketThuc.push(f); } };
+    const ghi: LanGoi = { el: this, keyframes, ken, daHuy: false };
+    daGoi.push(ghi);
+    const a = {
+      addEventListener: (ten: string, f: () => void) => { if (ten === "finish") ketThuc.push(f); },
+      cancel: () => { ghi.daHuy = true; },
+    };
     return a as unknown as Animation;
   } as unknown as typeof Element.prototype.animate;
 });
@@ -248,6 +253,79 @@ describe("BauTroi: o cua so khi ca hai cung giu tam trang", () => {
     expect(container.querySelector(".song-vong")).toBeNull();
     expect(daGoi).toHaveLength(0);
     expect(container.querySelector(".troi-cua-so__bao")?.textContent).toBe("Đang xem trời của bạn.");
+    vi.unstubAllGlobals();
+  });
+
+  it("do bo cuc luc ranh cung nhan ban san o kinh: lan bam khong phai nhan ban 100 phan tu", () => {
+    const { container } = ve(KIA, MINH);
+    const h = doHinh(container.querySelector(".troi-cua-so") as HTMLElement);
+    expect(Object.keys(h.kinh)).toEqual(["kia", "minh"]);
+    // O kinh cua mat "kia" mang troi thu nho cua nguoi xem, va nguoc lai; ban sao de roi, chua gan vao trang.
+    expect(h.kinh.kia.className).toBe("cua-so__kinh troi--nang-am song-kinh-cu");
+    expect(h.kinh.minh.className).toBe("cua-so__kinh troi--mua-phun song-kinh-cu");
+    expect(h.kinh.kia.isConnected).toBe(false);
+    expect(h.kinh.kia.querySelector(".cua-so__nen")?.children).toHaveLength(SO_NET["nang-am"]);
+  });
+
+  it("song lan xong thi nha khoa: bam tiep doi cho nguoc lai duoc", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    act(() => {
+      for (const f of ketThuc) f();
+      vi.advanceTimersByTime(SONG_HET);
+    });
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
+    fireEvent.pointerDown(container.querySelectorAll(".cua-so")[1], { button: 0, isPrimary: true });
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--dang-song");
+  });
+
+  it("roi trang giua luc song dang lan: huy sach hoat hinh, hen gio va khung hinh dang cho", () => {
+    vi.useFakeTimers();
+    const { unmount } = ve(KIA, MINH);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    expect(daGoi.length).toBeGreaterThan(10);
+    expect(daGoi.some((g) => g.daHuy)).toBe(false);
+    unmount();
+    expect(daGoi.every((g) => g.daHuy)).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("tu mot troi thanh hai troi ma khong dung lai thanh phan: nut o cua so van bam duoc", () => {
+    vi.useFakeTimers();
+    // Sau khi nguoi xem tha tam trang, trang song lai voi hai troi nhung thanh phan khong bi dung lai.
+    const { container, rerender } = render(<BauTroi tenKia="Linh" kia={KIA} minh={null} />);
+    expect(container.querySelector(".cua-so")).toBeNull();
+    rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH} />);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    expect(container.querySelector(".song-vong")).not.toBeNull();
+    expect(container.querySelectorAll(".troi[data-mat]")[1].className).toBe("troi troi--nang-am troi--cua-so troi--dang-song");
+  });
+
+  it("chi lam nong troi an khi con tro vao dung o cua so, roi o thi thoi", () => {
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    const nut = screen.getByRole("button", { name: "Xem trời của bạn" });
+    // Quet chuot ngang qua dai troi khong duoc danh thuc gan hai tram hoat hinh cua troi dang an.
+    fireEvent.pointerOver(dai);
+    expect(dai.classList.contains("troi-cua-so--san")).toBe(false);
+    fireEvent.pointerOver(nut);
+    expect(dai.classList.contains("troi-cua-so--san")).toBe(true);
+    fireEvent.pointerOut(nut, { relatedTarget: dai });
+    expect(dai.classList.contains("troi-cua-so--san")).toBe(false);
+  });
+
+  it("giam chuyen dong: mot lan cham (pointerdown roi click detail 0) chi doi cho mot lan", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true }) as unknown as MediaQueryList));
+    const { container } = ve(KIA, MINH);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    // Tren man cam ung, click di sau pointerdown cung mang detail = 0 y nhu click cua ban phim.
+    fireEvent.click(container.querySelectorAll(".cua-so")[1], { detail: 0 });
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--an");
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
     vi.unstubAllGlobals();
   });
 
