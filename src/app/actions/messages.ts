@@ -18,3 +18,6 @@ export const CHUA_BAT_KHO_MEDIA = "Chưa bật kho lưu ảnh và ghi âm.";
 
 /** Chu sach luu mot luot ma luot do vua duoc luu o the khac: man sua nhan ra cau nay de moi tai lai. */
 export const LUOT_VUA_SUA_NOI_KHAC = "Lượt này vừa được sửa ở nơi khác. Tải lại để xem bản mới nhất.";
+
+/** Tha hay thu lai tam trang khong xong vi action nem loi (mat mang): hop chon hien cau nay, giu nguyen lua chon. */
+export const CHUA_THA_DUOC = "Chưa lưu được tâm trạng. Thử lại nhé.";
