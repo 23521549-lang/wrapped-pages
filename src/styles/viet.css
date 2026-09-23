@@ -123,6 +123,10 @@
   visibility: hidden; pointer-events: none;
 }
 
+/* Doan nguoi viet chon hien tren khung sach o Ke sach. CHI mau nen va bo goc: dem, vien, co chu hay line-height deu
+   doi hinh hoc cua dong chu, tuc doi diem ngat trang giua man viet va man doc. Man doc khong ve dau nay. */
+.giay-noi-dung .doan-ke{ background-color: var(--blue-2); color: var(--color-ink); border-radius: 3px; }
+
 /*
  * Khoi media dang chon. ProseMirror them ProseMirror-selectednode vao node view khi khoi duoc chon
  * bang chuot hay phim mui ten. Vong mau focus vi day dung la cho ban phim dang dung. Nut Bo chi hien khi dang chon, nen

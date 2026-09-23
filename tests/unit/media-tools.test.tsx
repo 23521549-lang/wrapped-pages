@@ -189,11 +189,11 @@ afterEach(() => {
 });
 
 describe("thanh cong cu man viet", () => {
-  it("ten Cong cu viet, nhom Them vao trang dung giua nam nut dinh dang va Tap trung", async () => {
+  it("ten Cong cu viet, nhom Them vao trang dung giua nam nut dinh dang va Chon doan, Tap trung", async () => {
     await veEditor();
     const thanh = screen.getByRole("toolbar", { name: "Công cụ viết" });
     expect(within(thanh).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent))
-      .toEqual(["Đậm", "Nghiêng", "Gạch chân", "Danh sách", "Trích dẫn", "Thêm ảnh", "Ghi âm", "Tập trung"]);
+      .toEqual(["Đậm", "Nghiêng", "Gạch chân", "Danh sách", "Trích dẫn", "Thêm ảnh", "Ghi âm", "Chọn làm đoạn trên kệ", "Tập trung"]);
     const nhom = within(thanh).getByRole("group", { name: "Thêm vào trang" });
     expect(within(nhom).getAllByRole("button").map((b) => b.textContent)).toEqual(["Thêm ảnh", "Ghi âm"]);
     expect(screen.getByRole("button", { name: "Ghi âm" }).getAttribute("aria-expanded")).toBe("false");

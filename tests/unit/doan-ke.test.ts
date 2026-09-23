@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
 import { getSchema, type Editor } from "@tiptap/core";
 import { Node as PMNode } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
@@ -7,6 +8,7 @@ import { editorExtensions } from "@/components/editor/extensions";
 import { markedExcerpt } from "@/lib/doc/text";
 import type { DocJson } from "@/lib/doc/types";
 import { cleanDoc } from "@/lib/doc/validate";
+import { boComment, THU_MUC_CSS } from "../helpers/bang-token";
 
 const schema = getSchema(editorExtensions("Mạnh"));
 const ID = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
@@ -89,5 +91,39 @@ describe("dau doan tren ke", () => {
   it("tai lieu mang dau van qua duoc cong kiem cua may chu", () => {
     const state = chon(doc(p("Hôm ấy mưa")), 1, 7);
     expect(cleanDoc(sau(state))).toEqual(sau(state));
+  });
+});
+
+/*
+ * Kieu to cua doan da chon. Bai kiem nay canh giu dieu kien nang nhat cua CLAUDE.md muc 1: diem ngat trang phai tinh
+ * ra giong het truoc. Chu mang dau nam ngay trong dong van, nen bat ky thuoc tinh nao dung toi hinh hoc cua dong
+ * (dem, le, vien, co chu, gian cach, chieu cao dong, cach hien) deu doi cho ngat trang giua man viet va man doc. Vi
+ * vay bai kiem chan theo danh sach TRANG, khong phai danh sach den: chi ba khai bao duoi day duoc phep.
+ */
+describe("kieu to cua doan tren ke", () => {
+  const DUOC_PHEP = ["background-color", "border-radius", "color"];
+
+  /** Moi quy tac trong src/styles co bo chon cham toi lop .doan-ke, kem danh sach ten thuoc tinh cua no. */
+  function quyTacDoanKe(): { selector: string; props: string[] }[] {
+    const ra: { selector: string; props: string[] }[] = [];
+    for (const ten of readdirSync(THU_MUC_CSS).filter((f) => f.endsWith(".css"))) {
+      const css = boComment(readFileSync(`${THU_MUC_CSS}/${ten}`, "utf8"));
+      for (const m of css.matchAll(/([^{}]*\.doan-ke[^{}]*)\{([^{}]*)\}/g)) {
+        const props = m[2].split(";").map((s) => s.split(":")[0].trim()).filter((s) => s.length > 0);
+        ra.push({ selector: m[1].trim(), props: props.sort() });
+      }
+    }
+    return ra;
+  }
+
+  it("chi mot quy tac, chi mau nen, bo goc va mau chu: khong gi dung toi hinh hoc cua dong chu", () => {
+    expect(quyTacDoanKe()).toEqual([{ selector: ".giay-noi-dung .doan-ke", props: DUOC_PHEP }]);
+  });
+
+  it("nen lay tu tong xanh co san va chu giu mau muc, khong them token moi", () => {
+    const css = boComment(readFileSync(`${THU_MUC_CSS}/viet.css`, "utf8"));
+    const than = /\.giay-noi-dung \.doan-ke\{([^{}]*)\}/.exec(css)?.[1] ?? "";
+    expect(than).toContain("background-color: var(--blue-2)");
+    expect(than).toContain("color: var(--color-ink)");
   });
 });

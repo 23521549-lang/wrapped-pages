@@ -11,6 +11,7 @@ import { toPlainJson } from "@/lib/doc/plain";
 import type { DocJson } from "@/lib/doc/types";
 import { createAutosave, type SaveStatus } from "./autosave";
 import { cutSheets } from "./cutSheets";
+import { DoanKeButton } from "./DoanKeButton";
 import { editorExtensions } from "./extensions";
 import { FocusMode } from "./focusMode";
 import { MediaTools } from "./MediaTools";
@@ -187,9 +188,12 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
           mediaEnabled={mediaEnabled}
           announce={setLoiDoc}
           extra={
-            <button type="button" className="nut-dinh-dang nut-dinh-dang--chu" aria-pressed={focus} onClick={doiTapTrung}>
-              Tập trung
-            </button>
+            <>
+              <DoanKeButton editor={editor} announce={setLoiDoc} />
+              <button type="button" className="nut-dinh-dang nut-dinh-dang--chu" aria-pressed={focus} onClick={doiTapTrung}>
+                Tập trung
+              </button>
+            </>
           }
         />
       </div>

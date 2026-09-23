@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import { RoundEditor, type RoundEditorProps } from "@/components/editor/RoundEditor";
 import { ROUND_EDIT_TEMP_MAX_MS, roundEditKey, roundEditTemp } from "@/components/editor/roundEdit";
+import { markedExcerpt } from "@/lib/doc/text";
 import type { DocJson } from "@/lib/doc/types";
 import { PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 
@@ -128,6 +129,22 @@ describe("RoundEditor", () => {
     expect(document.activeElement).toBe(vung);
     expect([...document.querySelectorAll(".to-giay__so")].map((x) => x.textContent)).toEqual(["6", "7", "8"]);
     expect(screen.getByRole("link", { name: "Về sách" }).getAttribute("href")).toBe(VE_SACH);
+  });
+
+  it("chon duoc doan tren ke ngay trong man sua luot, va bo lai duoc", async () => {
+    const { container } = await ve();
+    const nut = () => screen.getByRole("button", { name: /đoạn trên kệ$/ });
+    expect([nut().textContent, nut().getAttribute("aria-disabled")]).toEqual(["Chọn làm đoạn trên kệ", "true"]);
+    await act(async () => {
+      soanThao().commands.setTextSelection({ from: 1, to: 7 });
+    });
+    await bam("Chọn làm đoạn trên kệ");
+    expect(markedExcerpt(soanThao().getJSON() as DocJson)).toBe("Chiều");
+    expect([nut().textContent, nut().getAttribute("aria-pressed")]).toEqual(["Bỏ đoạn trên kệ", "true"]);
+    expect(container.querySelector("p.sr-only[aria-live]")?.textContent).toBe("Đã chọn đoạn trên kệ.");
+    await bam("Bỏ đoạn trên kệ");
+    expect(markedExcerpt(soanThao().getJSON() as DocJson)).toBeNull();
+    expect(container.querySelector("p.sr-only[aria-live]")?.textContent).toBe("Đã bỏ đoạn trên kệ.");
   });
 
   it("da sua hom qua: dong phu noi them", async () => {

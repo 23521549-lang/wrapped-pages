@@ -15,6 +15,7 @@ import type { DocJson } from "@/lib/doc/types";
 import { checkRoundInput, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
 import { dateLabel, timeAgo } from "@/lib/when";
 import { cutSheets } from "./cutSheets";
+import { DoanKeButton } from "./DoanKeButton";
 import { editorExtensions } from "./extensions";
 import { MediaTools } from "./MediaTools";
 import { NONCE_TAI_LIEU } from "./nonce";
@@ -375,6 +376,7 @@ export function RoundEditor({
           author={author}
           mediaEnabled={mediaEnabled}
           announce={setLoiDoc}
+          extra={<DoanKeButton editor={editor} announce={setLoiDoc} />}
           locked={pending}
           onBusyChange={setMediaBan}
         />
