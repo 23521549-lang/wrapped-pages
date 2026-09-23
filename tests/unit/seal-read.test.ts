@@ -371,13 +371,14 @@ describe("listShelf voi to khoa", () => {
     expect(await khoaCua(s, s.seat2.id, NOW)).toMatchObject({ excerptLocked: false, excerptPosition: 3, excerpt: "mo sau", lockedCount: 1 });
     expect(JSON.stringify(await listShelf(s.db, s.seat2.id, NOW))).not.toContain(biMat(2));
 
-    // Moi to deu khoa: khong co ung vien, doan trich la dong he lo cua to cuoi. Dat cuoi ca vi haiCuon() xoa sach du lieu.
+    // Cuon chi co dung mot luot va luot do con khoa: khung khong doc mot chu nao cua no, chi dung dong he lo. Dat cuoi
+    // ca vi haiCuon() xoa sach du lieu.
     const tatCa = await haiCuon();
     await dangTo(tatCa, henGio(phut(60)), toKhoa("He T", biMat(2)));
     expect(await khoaCua(tatCa, tatCa.seat2.id, NOW)).toMatchObject({ excerptLocked: true, excerptPosition: 1, excerpt: "He T" });
   });
 
-  it("chi lo cuoi bi niem phong: doan trich la mot to mo, to sau cua niem phong la doan trong", async () => {
+  it("chi lo cuoi bi niem phong: doan trich la dong he lo, to sau cua niem phong la doan trong", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "mo mot", "mo hai");
     await dangTo(s, CAU_DO, toKhoa("He lo A", biMat(3)), toKhoa("Sau A", biMat(4)));

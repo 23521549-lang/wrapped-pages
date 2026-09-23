@@ -63,12 +63,15 @@ function newestRounds(tx: AnyDb, ids: string[]) {
 }
 
 /**
- * To mang dau doan tren ke trong cac luot dang xet, moi cuon mot dong. Dau co the nam tren hai to lien nhau (bo xep
- * trang cat ngang doan da chon), khi do lay to co vi tri nho nhat. Chi duoc goi voi cac luot DA MO voi nguoi xem.
+ * MOI to mang dau doan tren ke trong cac luot dang xet, sap theo (cuon, vi tri). Dau co the nam tren nhieu to lien nhau
+ * (bo xep trang cat ngang doan da chon) va to dau co the chi om duoc khoang trang - keo chon theo tu trong trinh duyet
+ * thuong om ca dau cach dau doan - nen khong loc san mot to moi cuon o day: noi goi duyet theo thu tu va lay to dau
+ * tien co chu mang dau khong rong. Phep do rong de nguyen o markedExcerpt, nguon that duy nhat, de SQL va JS khong the
+ * lech nhau; mot luot chi co vai to mang dau nen tai ve het van re. Chi duoc goi voi cac luot DA MO voi nguoi xem.
  */
 function markedSheets(tx: AnyDb, roundIds: string[]) {
   return tx
-    .selectDistinctOn([pages.bookId], { bookId: pages.bookId, position: pages.position, content: pages.content })
+    .select({ bookId: pages.bookId, position: pages.position, content: pages.content })
     .from(pages)
     .where(and(inArray(pages.roundId, roundIds), CO_DAU_KE))
     .orderBy(pages.bookId, pages.position);
@@ -78,9 +81,12 @@ function markedSheets(tx: AnyDb, roundIds: string[]) {
  * Bat tham tat dinh cua ngay hom nay trong mot tap ung vien, moi cuon mot dong. To duoc chon la ung vien thu k theo vi
  * tri, k = md5("cuon:nguoi xem:ngay Viet Nam") lay 32 bit dau, du theo so ung vien cua chinh cuon do. Chay tron trong
  * SQL, khong tai moi to ve may chu ung dung. Cung ngay thi cung to, sang ngay thi doi; moi nguoi xem mot chuoi rieng.
- * Cuon khong co ung vien nao thi khong co dong. `loc` la dieu kien chon ung vien, chay tren pages da noi books.
+ * Cuon khong co ung vien nao thi khong co dong. `loc` la dieu kien chon ung vien, chay tren pages da noi books, va bat
+ * buoc phai co: thieu no thi truy van khong con menh de where nao, tuc lay moi to cua moi cuon khong loc niem phong.
+ * Vi the kieu la SQL chu khong phai SQL | undefined; and(...) cua drizzle luon mang them | undefined nen noi goi phai
+ * khang dinh bang dau ! - moi dieu kien truyen vao deu la SQL that.
  */
-function drawOfDay(tx: AnyDb, loc: SQL | undefined, viewerId: string, now: Date) {
+function drawOfDay(tx: AnyDb, loc: SQL, viewerId: string, now: Date) {
   const candidates = tx
     .select({
       bookId: pages.bookId,
@@ -123,7 +129,7 @@ function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
     HAS_TEXT,
     notExists(lockedSealOf(tx, viewerId, now)),
     or(eq(books.ownerId, viewerId), daXemSql(viewerId)),
-  ), viewerId, now);
+  )!, viewerId, now);
 }
 
 /**
@@ -132,12 +138,13 @@ function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
  * phong lan nua. Dung chung phep bat tham voi pickedSheets qua drawOfDay, chi khac bo loc ung vien.
  */
 function pickedInRounds(tx: AnyDb, roundIds: string[], viewerId: string, now: Date) {
-  return drawOfDay(tx, and(inArray(pages.roundId, roundIds), HAS_TEXT), viewerId, now);
+  return drawOfDay(tx, and(inArray(pages.roundId, roundIds), HAS_TEXT)!, viewerId, now);
 }
 
 /**
- * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem): du phong khi
- * pickedSheets khong co ung vien. Moi to deu khoa thi khong co dong.
+ * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem): nhanh cuoi
+ * cung cua doanCua, dung khi luot moi nhat khong cho doan nao va ca hai phep bat tham deu khong co ung vien; cung la
+ * vi tri mo man doc khi khung khong co doan trich. Moi to deu khoa thi khong co dong.
  * - Cuon cua chinh nguoi xem: khong bi gioi han gi, uu tien to co chu roi moi toi vi tri (nhu truoc).
  * - Cuon cua nguoi kia: uu tien cac to doc duoc MA NGUOI XEM CHUA TUNG THAY, lay to nho nhat trong so do - ke ca khi to
  *   do khong co chu; khong duoc bo qua no de tim to co chu o xa hon, vi bam vao khung phai mo dung cho nguoi doc dang
@@ -209,33 +216,49 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     const firstOf = new Map(firsts.map((p) => [p.bookId, p]));
     const roundOf = new Map(newest.map((r) => [r.bookId, r.roundId]));
 
+    // Cuon co luot moi nhat con niem phong voi nguoi xem. Tinh DUNG MOT LAN roi dung cho ca hai noi can no (chon luot
+    // duoc phep doc noi dung o duoi, va chon doan cua tung khung): hai noi tu tinh lay theo hai duong thi chi can lech
+    // nhau mot ly la khung lang le rot xuong duong lui.
+    const khoaMoi = new Set(
+      visible
+        .filter((b) => {
+          const rid = roundOf.get(b.id);
+          return rid !== undefined
+            && (rangesOf.get(b.id) ?? []).some((r) => r.roundId === rid && isLockedFor(r, b.ownerId === viewerId, now));
+        })
+        .map((b) => b.id),
+    );
     // Chi doc noi dung cua luot moi nhat khi luot do da mo voi nguoi xem: luot con niem phong khong duoc lo mot chu nao,
     // ke ca vao bo nho may chu. Cung mot anh chup voi cac cau tren (readSnapshot), nen khong co khe nao de mot lan mo
     // khoa chen vao giua.
     const luotMo = visible.flatMap((b) => {
       const rid = roundOf.get(b.id);
-      if (rid === undefined) return [];
-      const khoa = (rangesOf.get(b.id) ?? []).some((r) => r.roundId === rid && isLockedFor(r, b.ownerId === viewerId, now));
-      return khoa ? [] : [rid];
+      return rid === undefined || khoaMoi.has(b.id) ? [] : [rid];
     });
     const [marked, pickedNew] = await Promise.all([
       luotMo.length > 0 ? markedSheets(tx, luotMo) : [],
       luotMo.length > 0 ? pickedInRounds(tx, luotMo, viewerId, now) : [],
     ]);
-    const markedOf = new Map(marked.map((p) => [p.bookId, p]));
+    // Doan nguoi viet chon cua moi cuon: to mang dau co vi tri NHO NHAT ma chu mang dau khong rong. To chi om duoc
+    // khoang trang khong duoc lam mat doan da chon nam o to sau no. marked da sap theo vi tri nen to dau tien duoc ghi
+    // vao map chinh la to can lay.
+    const markedOf = new Map<string, { position: number; excerpt: string }>();
+    for (const p of marked) {
+      const chu = markedExcerpt(p.content);
+      if (chu !== null && !markedOf.has(p.bookId)) markedOf.set(p.bookId, { position: p.position, excerpt: chu });
+    }
     const pickedNewOf = new Map(pickedNew.map((p) => [p.bookId, p]));
 
     /**
      * Doan cua khung sach theo dung thu tu cua spec: luot moi nhat con khoa thi khong co doan (noi goi dung dong he lo);
-     * co to mang dau chon va chu duoc danh dau khong rong thi lay to do; khong thi lay to bat tham cua ngay trong chinh
+     * co to mang dau chon voi chu khong rong thi lay to do (markedOf); khong thi lay to bat tham cua ngay trong chinh
      * luot moi nhat; luot moi nhat khong co to nao co chu thi lui ve duong cu (bat tham trong cac to doc duoc va da xem,
      * roi to doc duoc dau tien co chu).
      */
-    const doanCua = (bookId: string, khoaMoi: boolean): { position: number; excerpt: string } | undefined => {
-      if (khoaMoi) return undefined;
+    const doanCua = (bookId: string, khoa: boolean): { position: number; excerpt: string } | undefined => {
+      if (khoa) return undefined;
       const dau = markedOf.get(bookId);
-      const chuDau = dau === undefined ? null : markedExcerpt(dau.content);
-      if (dau !== undefined && chuDau !== null) return { position: dau.position, excerpt: chuDau };
+      if (dau !== undefined) return dau;
       const tham = pickedNewOf.get(bookId) ?? pickedOf.get(bookId);
       if (tham !== undefined) return { position: tham.position, excerpt: docExcerpt(tham.content) };
       const dauTien = firstOf.get(bookId);
@@ -249,8 +272,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
         const mine = b.ownerId === viewerId;
         const locked = (rangesOf.get(b.id) ?? []).filter((r) => isLockedFor(r, mine, now));
         const first = firstOf.get(b.id);
-        const luotMoi = roundOf.get(b.id);
-        const doan = doanCua(b.id, luotMoi !== undefined && locked.some((r) => r.roundId === luotMoi));
+        const doan = doanCua(b.id, khoaMoi.has(b.id));
         // Khong co doan: giu cach cu - dong he lo cua niem phong phu to cuoi neu con khoa, khong thi khong co doan van;
         // man doc van mo o to doc duoc dau tien (moi to deu khoa thi to cuoi).
         const lastSeal = doan ? undefined : locked.find((r) => r.firstPosition <= last && last <= r.lastPosition);

@@ -120,6 +120,17 @@ describe("listShelf chon to cua doan trich", () => {
     }
   });
 
+  it("duong lui khong nhay qua to chua xem de toi to co chu o xa hon", async () => {
+    const s = await haiCuon();
+    // Luot moi nhat (to 4) chi co anh nen khong co doan trich tu no. Voi nguoi kia: to 1 (anh) da xem, to 2 (anh) chua
+    // xem, to 3 co chu nhung cung chua xem - mo khung o to 3 se am tham danh dau to 2 la da doc, nen duong lui phai
+    // dung lai o to 2, va vi to 2 khong co chu nen khong co doan trich (spec muc 7).
+    await themLuot(s.db, s.chung, 1, [khoiAnh, khoiAnh, to("Xa hơn")]);
+    await themLuot(s.db, s.chung, 4, [khoiAnh], new Date("2026-09-02T00:00:00.000Z"));
+    await docToi(s.db, s.seat2.id, s.chung, 1);
+    expect(await cuaCuon(s.db, s.seat2.id, s.chung, SANG)).toMatchObject({ excerpt: null, excerptPosition: 2 });
+  });
+
   it("to trong niem phong: loai dung theo luat isLockedFor voi tung nguoi xem va tung thoi diem", async () => {
     const s = await haiCuon();
     await chenTo(s.db, s.chung, khoiAnh, to("Chữ trong niêm phong"));
@@ -203,6 +214,26 @@ describe("listShelf lay doan tu luot moi nhat", () => {
     const s = await haiCuon();
     await themLuot(s.db, s.chung, 1, [toDau("Có chữ hẳn hoi", String.fromCharCode(32, 160), "")]);
     expect(await cuaCuon(s.db, s.seat1.id, s.chung, SANG)).toMatchObject({ excerpt: "Có chữ hẳn hoi", excerptPosition: 1 });
+  });
+
+  it("to mang dau dau tien chi co khoang trang: lay to mang dau ke tiep, khong lui ve bat tham", async () => {
+    const s = await haiCuon();
+    // Keo chon theo tu trong trinh duyet thuong om luon dau cach dau doan: bo xep trang cat ngay sau dau cach, nen to 1
+    // chi mang " " va khoang trang khong ngat co dau, con cau that nam o to 2. Khung phai hien dung cau that.
+    await themLuot(s.db, s.chung, 1, [
+      toDau("", String.fromCharCode(32, 160), ""),
+      toDau("", "câu em thật sự chọn", ""),
+      to("Tờ ba"),
+      to("Tờ bốn"),
+    ]);
+    for (const ai of [s.seat1.id, s.seat2.id]) {
+      for (let d = 0; d < 20; d++) {
+        const luc = new Date(Date.UTC(2026, 8, 1 + d, 3));
+        expect(await cuaCuon(s.db, ai, s.chung, luc), dayKey(luc)).toMatchObject({
+          excerpt: "câu em thật sự chọn", excerptPosition: 2, excerptLocked: false,
+        });
+      }
+    }
   });
 
   it("luot moi nhat khong giu doan cua luot cu, ke ca khi luot cu co dau chon", async () => {
