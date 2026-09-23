@@ -65,7 +65,7 @@ function Khung({ ten, current, sticky = true, lop = "shell man", children }: {
   );
 }
 
-/** Dau man chung (.head / .ke-dau): tieu de, dong phu, co the kem mot nut. */
+/** Dau man chung (.head / .ke-dau): tieu de, dong phu, co the kem nhom nut. */
 function Dau({ lop = "head", nut = false }: { lop?: string; nut?: boolean }) {
   return (
     <div className={lop}>
@@ -73,7 +73,16 @@ function Dau({ lop = "head", nut = false }: { lop?: string; nut?: boolean }) {
         <V c="vach-cho--tieu-de" />
         <V c="vach-cho--phu" />
       </div>
-      {nut && <V c="vach-cho--nut" />}
+      {/*
+        Dong tieu de ke sach co HAI nut: "Tha tam trang" (rong hon vi co cham mau) roi "Sach moi". Giu cho thieu mot
+        nut thi bo cuc nhay mot nhip dung luc trang that thay vao - dung cai ma khung giu cho sinh ra de tranh.
+      */}
+      {nut && (
+        <span className="ke-dau__nut">
+          <V c="vach-cho--nut vach-cho--nut-troi" />
+          <V c="vach-cho--nut" />
+        </span>
+      )}
     </div>
   );
 }

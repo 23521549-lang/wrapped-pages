@@ -69,8 +69,8 @@
 .head h1{ font-size: var(--text-xl); line-height: 1.2; overflow-wrap: anywhere; min-width: 0; }
 .head__sub{ color: var(--color-ink-2); margin-top: .3rem; }
 
-/* dau ke sach: tieu de, dong dem va nut vien Sach moi */
-.ke-dau{ display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-sm) var(--space-md); padding-block: var(--space-2xl) var(--space-xl); }
+/* dau ke sach: tieu de, dong dem, nut Tha tam trang va nut vien Sach moi */
+.ke-dau{ display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-sm) var(--space-md); padding-block: var(--space-2xl) var(--space-xl); }
 .ke-dau h1{ font-size: var(--text-xl); line-height: 1.15; overflow-wrap: anywhere; min-width: 0; }
 .ke-dau__phu{ color: var(--color-ink-2); margin-top: .3rem; }
 

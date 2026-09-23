@@ -236,3 +236,64 @@
   .song-vong, .song-kinh-cu, .song-kinh-vong{ display: none; }
   .cua-so__kinh{ transition: none; }
 }
+
+/* ---------- dau ke sach: nut Tha tam trang canh Sach moi, hop chon (ThaTamTrang.tsx) ---------- */
+.ke-dau__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.ke-dau__nut .btn[aria-expanded="true"]{ background: var(--color-paper-2); }
+/* cham mau troi: nen la chuyen sac cua troi, vien mo la muc cua troi do (currentColor tu lop troi--*, san do la
+   tests/unit/tam-trang-mau.test.ts nhu moi vien ve bang currentColor o tep nay) */
+.o-mau{ width: 18px; height: 18px; border-radius: 50%; flex: none; background: linear-gradient(180deg, var(--t1), var(--t2)); box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 30%, transparent); }
+.o-mau--trong{ background: none; box-shadow: none; border: 1.5px dashed var(--color-rule-ui); }
+
+/* hop chon; giam chuyen dong: globals.css tat hoat anh mo, hop hien ngay */
+.tha{ border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); padding: var(--space-lg); margin-bottom: var(--space-2xl); animation: tha-mo var(--dur-short) var(--ease-out) both; }
+@keyframes tha-mo{ from{ opacity: 0; transform: translateY(-6px); } to{ opacity: 1; transform: none; } }
+.tha__dau{ display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-md); }
+.tha__dau h2{ font-size: var(--text-md); line-height: 1.3; }
+.tha__hoi{ color: var(--color-ink-2); margin-top: 2px; }
+.tha__giu{ display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0 var(--space-sm); margin-top: var(--space-md); padding: var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-sm); border-radius: var(--radius-sm); background: var(--color-paper-2); font-size: var(--text-sm); color: var(--color-ink-2); }
+.tha__giu b{ color: var(--color-ink); font-weight: 600; }
+.tha__giu .btn--chu{ padding-inline: var(--space-xs); }
+.tha__lich{ margin-top: var(--space-md); padding-top: var(--space-xs); border-top: 1px solid var(--color-rule); display: flex; justify-content: flex-end; }
+.tha__than{ display: grid; gap: var(--space-lg); margin-top: var(--space-lg); }
+.tha fieldset{ border: 0; padding: 0; margin: 0; min-width: 0; }
+.o-troi{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); }
+/* o chon: radio that an sau nhan; ca nhan la vung bam, o troi mang vong focus cua radio */
+.o{ position: relative; display: grid; gap: 4px; cursor: pointer; min-width: 0; }
+.o input{ position: absolute; opacity: 0; width: 1px; height: 1px; }
+.o__troi{ position: relative; display: grid; place-items: center; height: 64px; border-radius: var(--radius-sm); background: linear-gradient(180deg, var(--t1), var(--t2)); border: 1px solid color-mix(in oklch, currentColor 12%, transparent); transition: border-color var(--dur-micro) var(--ease-out); }
+.o__troi .hoa{ width: 46px; height: 46px; }
+.o__ten{ font-size: var(--text-sm); color: var(--color-ink-2); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.o:hover .o__troi{ border-color: color-mix(in oklch, currentColor 35%, transparent); }
+.o input:checked + .o__troi{ border: 1.5px solid currentColor; }
+/* dau tick cua o dang chon: SVG noi tuyen mang mau muc cua troi, khong phai anh data: trong CSS (CSP) */
+.o__dau{ display: none; position: absolute; top: 6px; right: 6px; width: 14px; height: 14px; place-items: center; border-radius: 50%; background: var(--color-paper); box-shadow: inset 0 0 0 1px currentColor; }
+.o__dau svg{ width: 10px; height: 10px; }
+.o input:checked + .o__troi .o__dau{ display: grid; }
+.o input:checked ~ .o__ten{ color: var(--color-ink); font-weight: 600; }
+.o input:focus-visible + .o__troi{ outline: 2.5px solid var(--color-focus); outline-offset: 2px; }
+.nhan{ display: grid; gap: 6px; align-content: start; }
+.nhan__dau{ display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); font-size: var(--text-sm); }
+.nhan__dau label{ font-weight: 600; }
+.nhan__dem{ color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
+.nhan__dem--day{ color: var(--color-ink); font-weight: 600; }
+.nhan__goi{ font-size: var(--text-sm); color: var(--color-ink-3); }
+.tha__cuoi{ display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-sm); margin-top: var(--space-xs); }
+.tha__han{ font-size: var(--text-sm); color: var(--color-ink-3); display: inline-flex; align-items: center; gap: 6px; }
+.tha__han svg{ width: 15px; height: 15px; }
+.tha__loi{ font-size: var(--text-sm); color: var(--color-ink); font-weight: 600; width: 100%; }
+
+@media (min-width: 820px){
+  .tha__than{ grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--space-xl); }
+  .o__troi{ height: 72px; }
+}
+@media (max-width: 600px){
+  .tha{ padding: var(--space-md); }
+}
+@media (max-width: 360px){
+  .o-troi{ gap: 6px; }
+  .o__troi{ height: 58px; }
+  .o__troi .hoa{ width: 42px; height: 42px; }
+  .o__ten{ font-size: var(--text-xs); }
+  .ke-dau__nut .btn{ padding-inline: .9rem; }
+}

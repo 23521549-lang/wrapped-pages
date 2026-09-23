@@ -275,6 +275,10 @@ const MIEN_TRU: MienTru[] = [
       ".niem__form",
       ".niem__cuoi",
       ".niem__chon, .niem__form",
+      // Hop Tha tam trang (ThaTamTrang.tsx): khung bao va vach chia truoc dong "Xem lich hoa". Moi dieu khien ben
+      // trong (o troi da chon, o nhap, nut) co vien va trang thai rieng dat nguong.
+      ".tha",
+      ".tha__lich",
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
       // phan tren cua chinh the, khong phai vien cua dieu khien nao.
       ".nhap__hoi",

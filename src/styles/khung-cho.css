@@ -19,6 +19,8 @@
 .vach-cho--tieu-de{ height: 2.1rem; width: min(15rem, 70vw); border-radius: 4px; }
 .vach-cho--phu{ height: .95rem; width: min(12rem, 55vw); margin-top: .7rem; }
 .vach-cho--nut{ height: 44px; width: 7.5rem; border-radius: var(--radius-nut); }
+/* nut "Tha tam trang" o dau ke sach: rong hon nut thuong vi mang them cham mau troi */
+.vach-cho--nut-troi{ width: 10rem; }
 .vach-cho--ngan{ height: 1.2rem; width: min(9rem, 50%); }
 .vach-cho--nhan{ height: .85rem; width: 6rem; }
 .vach-cho--o{ height: 44px; width: 100%; border-radius: var(--radius-sm); }
