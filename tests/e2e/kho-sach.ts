@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import postgres from "postgres";
 import type { DocJson } from "@/lib/doc/types";
+import type { Weather } from "@/lib/tam-trang/troi";
 import { assertE2eDatabase } from "./db";
 import { e2eUrls } from "./env";
 import { rethrowSafely } from "./safe-error";
@@ -351,6 +352,27 @@ export async function veCachCatCu(bookId: string): Promise<void> {
     for (const r of rows) await sql`update pages set content = ${sql.json(bo(r.content) as never)} where id = ${r.id}`;
   } catch (e) {
     if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Ghi thang mot tam trang da het han (ends_at = set_at) cua nguoi co biet danh ai vao database e2e, de dung lich hoa
+ * nhung ngay truoc ma khong phai doi. Cung rao mqce_e2e voi datNhac.
+ */
+export async function ghiTamTrang(ai: string, weather: Weather, luc: Date, note: string | null = null): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const r = await sql`
+      insert into moods (account_id, weather, note, set_at, ends_at)
+      select id, ${weather}, ${note}, ${luc}, ${luc} from accounts where nickname = ${ai}`;
+    if (r.count !== 1) throw new Error("ghiTamTrang: khong tim thay nguoi tha");
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("ghiTamTrang:"))) throw e;
     rethrowSafely(e);
   } finally {
     await sql.end();

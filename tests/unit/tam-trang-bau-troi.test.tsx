@@ -47,6 +47,12 @@ const MINH: TroiHien = { weather: "nang-am", note: null, tha: "Thả lúc 08:15"
 
 const ve = (kia: TroiHien | null, minh: TroiHien | null) => render(<BauTroi tenKia="Linh" kia={kia} minh={minh} />);
 
+/**
+ * Phai khop KHOA_TINH_MS cua src/components/tam-trang/song.ts: o nhanh giam chuyen dong khong co vong song nao giu
+ * khoa, nen khoa tay dung khoang nay de mot lan cham khong doi cho hai lan. Doi so trong song.ts thi bai duoi bao ngay.
+ */
+const KHOA_TINH_MS = 500;
+
 /** So net moi bau troi, dem tu chinh bo ve cua ban mau da duyet. */
 const SO_NET: Record<Weather, number> = {
   "nang-am": 12, "troi-trong": 4, "may-nhe": 5, "gio-thoang": 12, "mua-phun": 70, "mua-rao": 92, giong: 74, "suong-mu": 5, "cau-vong": 6,
@@ -326,6 +332,30 @@ describe("BauTroi: o cua so khi ca hai cung giu tam trang", () => {
     const mat = [...container.querySelectorAll(".troi[data-mat]")];
     expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--an");
     expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
+    vi.unstubAllGlobals();
+  });
+
+  it("giam chuyen dong: nha khoa sau 500ms roi bam tiep thi doi cho nguoc lai duoc", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true }) as unknown as MediaQueryList));
+    const { container } = ve(KIA, MINH);
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
+
+    // Van con trong khoang khoa tay (KHOA_TINH_MS = 500 cua song.ts): lan bam thu hai chua duoc doi cho.
+    act(() => { vi.advanceTimersByTime(KHOA_TINH_MS - 1); });
+    fireEvent.pointerDown(container.querySelectorAll(".cua-so")[1], { button: 0, isPrimary: true });
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--an");
+
+    // Dung moc 500ms thi khoa nha: bam tiep doi cho nguoc lai, van khong co lop song nao.
+    act(() => { vi.advanceTimersByTime(1); });
+    fireEvent.pointerDown(container.querySelectorAll(".cua-so")[1], { button: 0, isPrimary: true });
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so");
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so troi--an");
+    expect(container.querySelector(".song-vong")).toBeNull();
+    expect(daGoi).toHaveLength(0);
+    expect(container.querySelector(".troi-cua-so__bao")?.textContent).toBe("Đang xem trời của Linh.");
     vi.unstubAllGlobals();
   });
 
