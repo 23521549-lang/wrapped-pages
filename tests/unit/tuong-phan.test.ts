@@ -279,6 +279,10 @@ const MIEN_TRU: MienTru[] = [
       // trong (o troi da chon, o nhap, nut) co vien va trang thai rieng dat nguong.
       ".tha",
       ".tha__lich",
+      // Lich hoa (LichHoa.tsx): vach chia giua cac tuan va khung chi tiet ngay. O ngay la nut that, vien trang thai
+      // dang chon cua no dung --blue-line tren --blue-1 va dat nguong.
+      ".tuan",
+      ".chi-tiet",
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
       // phan tren cua chinh the, khong phai vien cua dieu khien nao.
       ".nhap__hoi",
@@ -343,6 +347,17 @@ const MIEN_TRU: MienTru[] = [
       "55%, transparent)) de o tron noi len khoi bau troi lon: trang tri, khong phai ranh gioi. Ranh gioi cua o la vien 1px " +
       "mau muc cua troi trong o (currentColor, muc do da qua 4.5 tren troi, tam-trang-mau.test.ts), va trang thai focus la vong " +
       "2.5px --color-focus bam hinh tron (.cua-so:focus-visible .cua-so__kinh). Phan tu .cua-so__kinh an voi trinh doc man hinh.",
+  },
+  {
+    ten: "o-trong-lich-hoa",
+    loai: "vien",
+    fgToken: "--blue-3",
+    selector: ".hoa-trong",
+    lyDo:
+      "Vong cham tron cua lan chua tha tam trang tren Lich hoa (LichHoa.tsx): <span> nam trong nut ngay hoac trong khung chi " +
+      "tiet, an voi trinh doc man hinh (aria-hidden, nhan cua nut ngay da noi 'chua tha'), khong tuong tac va khong mang " +
+      "trang thai. Ban mau da duyet co y ve no rat nhat de ngay trong khong tranh mat voi bong hoa; WCAG 1.4.11 khong doi " +
+      "tuong phan cho hinh trang tri khong phai thanh phan giao dien.",
   },
 ];
 

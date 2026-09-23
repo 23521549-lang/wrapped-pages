@@ -31,7 +31,7 @@ function Dong({ n, c = "" }: { n: number; c?: string }) {
 }
 
 /** Thanh dieu huong cung hinh voi AppNav trong luc cho: chi de trang khong nhay khi AppNav that thay vao. */
-function NavCho({ current, sticky }: { current: NavSection; sticky: boolean }) {
+function NavCho({ current, sticky }: { current: NavSection | null; sticky: boolean }) {
   return (
     <div className={sticky ? "nav" : "nav nav--tinh"} aria-hidden="true">
       <div className="nav__in shell">
@@ -49,7 +49,7 @@ function NavCho({ current, sticky }: { current: NavSection; sticky: boolean }) {
 
 function Khung({ ten, current, sticky = true, lop = "shell man", children }: {
   ten: string;
-  current: NavSection;
+  current: NavSection | null;
   sticky?: boolean;
   lop?: string;
   children: React.ReactNode;
@@ -204,6 +204,22 @@ export function KhungViet({ ten }: { ten: string }) {
       </div>
       <div className="viet-mat">
         <span className="giay-cho giay-cho--don"><Dong n={6} /></span>
+      </div>
+    </Khung>
+  );
+}
+
+/** Lich hoa: dau man, dong thang, luoi tuan, khung chi tiet. Nhu trang that, khong muc nao cua thanh dieu huong duoc danh dau. */
+export function KhungLichHoa() {
+  return (
+    <Khung ten="lịch hoa" current={null}>
+      <Dau />
+      <div className="lich-trang">
+        <div>
+          <div className="thang"><V c="vach-cho--ngan" /></div>
+          <Dong n={6} />
+        </div>
+        <div className="phu"><Dong n={3} /></div>
       </div>
     </Khung>
   );

@@ -8,6 +8,7 @@ import ChoDoc from "@/app/sach/[id]/(doc)/loading";
 import ChoViet from "@/app/sach/[id]/viet/loading";
 import ChoSua from "@/app/sach/[id]/sua/loading";
 import ChoSuaLuot from "@/app/sach/[id]/sua-luot/[luot]/loading";
+import ChoLichHoa from "@/app/tam-trang/loading";
 
 afterEach(cleanup);
 
@@ -19,6 +20,7 @@ const KHUNG = [
   { ten: "man viet", C: ChoViet, chu: "Đang mở trang viết…", muc: "Kệ sách" },
   { ten: "sua sach", C: ChoSua, chu: "Đang mở sách…", muc: "Kệ sách" },
   { ten: "sua luot", C: ChoSuaLuot, chu: "Đang mở lượt…", muc: "Kệ sách" },
+  { ten: "lich hoa", C: ChoLichHoa, chu: "Đang mở lịch hoa…", muc: null },
 ];
 
 describe("khung giu cho (loading.tsx)", () => {
@@ -42,7 +44,7 @@ describe("khung giu cho (loading.tsx)", () => {
     const { container } = render(<C />);
     const nav = container.querySelector(".nav");
     expect(nav?.getAttribute("aria-hidden")).toBe("true");
-    expect(nav?.querySelector("[aria-current]")?.textContent).toBe(muc);
+    expect(nav?.querySelector("[aria-current]")?.textContent ?? null).toBe(muc);
     expect(nav?.querySelector(".who")).toBeNull();
   });
 
