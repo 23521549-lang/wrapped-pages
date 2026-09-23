@@ -130,7 +130,7 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children, side }
         )}
       </div>
       {/* Cot phai luon co mat va the nhac luon la con dau cua no: side chen SAU the nhac, nen iframe khong doi cho. */}
-      <div className={coPhu ? "doc-luoi__phu doc-luoi__phu--nhac doc-luoi__phu--dai" : "doc-luoi__phu doc-luoi__phu--nhac"}>
+      <div className="doc-luoi__phu doc-luoi__phu--nhac">
         <aside className="nhac-the" aria-labelledby={tieuDe}>
           <h2 className="d nhac-the__t" id={tieuDe}>Nhạc nền</h2>
           <div ref={mayRef} className="nhac-the__may" />

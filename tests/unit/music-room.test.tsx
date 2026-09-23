@@ -422,7 +422,9 @@ describe("MusicRoom", () => {
     const khung = container.querySelector(".nhac-the__may iframe");
     fireEvent.click(screen.getByRole("button", { name: "Mở sách" }));
     expect(phu?.lastElementChild?.textContent).toBe("Khung hồi đáp");
-    expect(phu?.className).toBe("doc-luoi__phu doc-luoi__phu--nhac doc-luoi__phu--dai");
+    expect(phu?.children).toHaveLength(2);
+    // Lop cua cot khong doi khi gan them khung: chinh the nhac dinh, khong phai ca cot (giay.css).
+    expect(phu?.className).toBe("doc-luoi__phu doc-luoi__phu--nhac");
     expect(container.querySelector(".nhac-the__may iframe")).toBe(khung);
     expect(cacMay).toHaveLength(1);
   });

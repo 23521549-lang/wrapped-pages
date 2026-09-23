@@ -335,10 +335,8 @@ test("khong gi de len trinh phat o moi be rong: 768x600 dinh trinh phat sat mep 
   expect(Math.abs(hep.dinh), "768: dinh trinh phat sat mep tren").toBeLessThanOrEqual(1);
   expect(hep.goc, "768: khong gi de len hai goc tren trinh phat").toEqual(["IFRAME", "IFRAME"]);
 
-  // 1280px: the nhac dinh o cot phai; cuon 300px thi nav da troi di, the nhac dung cach mep tren mot khoang. Cot phai
-  // co them khung Loi hoi dap nen chi dinh tu khung nhin cao 820px (luat o giay.css): thap hon the thi cot cuon theo
-  // trang de nut Gui toi duoc.
-  await a.setViewportSize({ width: 1280, height: 820 });
+  // 1280px: the nhac dinh o cot phai; cuon 300px thi nav da troi di, the nhac dung cach mep tren mot khoang.
+  await a.setViewportSize({ width: 1280, height: 600 });
   await a.evaluate(() => window.scrollTo(0, 300));
   const rong = await gocTren(a);
   expect(rong.cuon, "1280: da cuon 300px").toBe(300);
