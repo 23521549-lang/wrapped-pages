@@ -3,7 +3,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
-import { doHinh } from "@/components/tam-trang/song";
+import { doHinh, soHoatDangGiu } from "@/components/tam-trang/song";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { netTroi } from "@/lib/tam-trang/net-troi";
 import { CHU_MS, SONG_HET, SONG_MS } from "@/lib/tam-trang/song-nhip";
@@ -123,7 +123,8 @@ describe("BauTroi: o cua so khi ca hai cung giu tam trang", () => {
   it("ca hai bau troi ve san, xep chong trong mot o luoi; troi an bi cat va tro nang, troi hien binh thuong", () => {
     const { container } = ve(KIA, MINH);
     const dai = container.querySelector(".troi-cua-so");
-    expect(dai?.children).toHaveLength(3);
+    // Hai bau troi, vung bao cua lan doi cho, vung bao cua nut tam dung.
+    expect(dai?.children).toHaveLength(4);
     const mat = [...(dai?.querySelectorAll(".troi[data-mat]") ?? [])];
     expect(mat.map((s) => s.getAttribute("data-mat"))).toEqual(["kia", "minh"]);
     expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so");
@@ -365,5 +366,168 @@ describe("BauTroi: o cua so khi ca hai cung giu tam trang", () => {
     // Co that su tim thay phan tu mang style (neu khong, khang dinh every() duoi day dat gia tren mang rong).
     expect(co.length).toBeGreaterThan(0);
     expect(co.every((el) => el.classList.contains("m"))).toBe(true);
+  });
+});
+
+describe("BauTroi: khong ro ri hoat hinh khi doi cho nhieu lan", () => {
+  const bamOHien = (container: HTMLElement) => fireEvent.pointerDown(
+    container.querySelector(".troi[data-mat]:not(.troi--an) .cua-so") as Element,
+    { button: 0, isPrimary: true },
+  );
+
+  it("bam qua lai nhieu lan: so hoat hinh dai troi giu khong lon dan, moi vong song don sach cua no", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    const choTan = () => act(() => {
+      for (const f of ketThuc) f();
+      vi.advanceTimersByTime(SONG_HET);
+    });
+
+    bamOHien(container);
+    const lan1 = soHoatDangGiu(dai);
+    // Mot vong song ghi khoang 27 Animation (song chinh, cac dong chu, hai lup bong, tam vong, ba toe, nut, kinh...).
+    expect(lan1).toBeGreaterThan(20);
+    choTan();
+    expect(soHoatDangGiu(dai), "vong song tan ma hoat hinh van con trong so").toBe(0);
+
+    bamOHien(container);
+    choTan();
+    expect(soHoatDangGiu(dai)).toBe(0);
+
+    // Lan thu ba lap lai DUNG chieu cua lan mot: so phai bang het lan mot, khong phai ba lan lan mot.
+    bamOHien(container);
+    expect(soHoatDangGiu(dai)).toBe(lan1);
+    choTan();
+    expect(soHoatDangGiu(dai)).toBe(0);
+  });
+
+  it("vong song moi huy va bo han hoat hinh con sot cua vong truoc", () => {
+    vi.useFakeTimers();
+    // Ban gia nay bao moi hoat hinh van dang chay (trinh duyet khong bao finish, vd tab bi an dung luc song lan): chung
+    // o lai trong so chung sau SONG_HET de con huy duoc, nhung khong duoc cong don qua tung lan bam.
+    type Gia = { playState: string; daHuy: boolean; addEventListener: () => void; cancel: () => void };
+    const gia: Gia[] = [];
+    Element.prototype.animate = function () {
+      const a: Gia = { playState: "running", daHuy: false, addEventListener: () => undefined, cancel: () => { a.daHuy = true; } };
+      gia.push(a);
+      return a as unknown as Animation;
+    } as unknown as typeof Element.prototype.animate;
+
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    bamOHien(container);
+    const lan1 = soHoatDangGiu(dai);
+    expect(lan1).toBeGreaterThan(20);
+
+    act(() => {
+      vi.advanceTimersByTime(SONG_HET);
+    });
+    expect(soHoatDangGiu(dai), "hoat hinh chua chay xong thi chua duoc bo (con phai huy duoc)").toBe(lan1);
+    expect(gia.some((a) => a.daHuy)).toBe(false);
+
+    bamOHien(container);
+    expect(gia.slice(0, lan1).every((a) => a.daHuy), "vong song moi phai huy sach hoat hinh con sot").toBe(true);
+    expect(soHoatDangGiu(dai)).toBe(gia.length - lan1);
+    expect(soHoatDangGiu(dai)).toBeLessThan(lan1 * 2);
+  });
+});
+
+/** Vung bao rieng cua nut tam dung: the sr-only tran nam ngay duoi dai troi (khong phai .troi-cua-so__bao). */
+const baoDung = (dai: Element) => [...dai.children].find((el) => el.className === "sr-only")?.textContent;
+
+describe("BauTroi: nut tam dung bau troi (WCAG SC 2.2.2)", () => {
+  afterEach(() => {
+    try {
+      localStorage.clear();
+    } catch {
+      // Ban gia cua bai kiem co the khong co clear: khong sao, moi bai tu dat lai gia tri no can.
+    }
+  });
+
+  it("bam tam dung: dai troi mang lop troi-dung, nhan doi o ca hai mat, co loi bao lich su", () => {
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    const nut = [...container.querySelectorAll<HTMLButtonElement>(".nut-dung")];
+    expect(nut).toHaveLength(2);
+    expect(nut.map((n) => n.textContent)).toEqual(["Tạm dừng bầu trời", "Tạm dừng bầu trời"]);
+    expect(dai.classList.contains("troi-dung")).toBe(false);
+    expect(baoDung(dai)).toBe("");
+
+    fireEvent.click(nut[0]);
+    expect(dai.classList.contains("troi-dung")).toBe(true);
+    // Ca hai mat doi nhan cung luc: doi cho xong thi nhan tren mat vua hien van dung.
+    expect(nut.map((n) => n.textContent)).toEqual(["Cho bầu trời chạy", "Cho bầu trời chạy"]);
+    expect(baoDung(dai)).toBe("Bầu trời đã tạm dừng.");
+
+    fireEvent.click(nut[0]);
+    expect(dai.classList.contains("troi-dung")).toBe(false);
+    expect(nut[0].textContent).toBe("Tạm dừng bầu trời");
+    expect(baoDung(dai)).toBe("Bầu trời chạy lại rồi.");
+  });
+
+  it("nho lua chon: ghi vao localStorage, va lan ve sau dai troi dung san tu luc vao cay", () => {
+    const { container, unmount } = ve(KIA, MINH);
+    fireEvent.click(container.querySelector(".nut-dung") as Element);
+    expect(localStorage.getItem("troi-tam-dung")).toBe("dung");
+    unmount();
+
+    const lai = ve(KIA, MINH);
+    expect((lai.container.querySelector(".troi-cua-so") as HTMLElement).classList.contains("troi-dung")).toBe(true);
+    expect(lai.container.querySelector(".nut-dung")?.textContent).toBe("Cho bầu trời chạy");
+
+    // Cho chay lai thi lan sau cung chay lai, khong phai chi xoa khoa di.
+    fireEvent.click(lai.container.querySelector(".nut-dung") as Element);
+    expect(localStorage.getItem("troi-tam-dung")).toBe("chay");
+  });
+
+  it("trinh duyet cam luu tru: ca doc lan ghi deu nem loi ma nut van doi duoc", () => {
+    const nem = () => {
+      throw new Error("khong cho luu tru");
+    };
+    vi.stubGlobal("localStorage", { getItem: nem, setItem: nem });
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    expect(dai.classList.contains("troi-dung")).toBe(false);
+    fireEvent.click(container.querySelector(".nut-dung") as Element);
+    expect(dai.classList.contains("troi-dung")).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("lop tam dung dat bang classList nen khong ghi de lop cua song.ts, va nguoc lai", () => {
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    fireEvent.pointerOver(screen.getByRole("button", { name: "Xem trời của bạn" }));
+    expect(dai.classList.contains("troi-cua-so--san")).toBe(true);
+    fireEvent.click(container.querySelector(".nut-dung") as Element);
+    expect(dai.className).toBe("troi-cua-so troi-cua-so--san troi-dung");
+  });
+
+  it("dang tam dung van doi cho duoc: vong song chay nhu thuong va lop tam dung o lai", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so") as HTMLElement;
+    fireEvent.click(container.querySelector(".nut-dung") as Element);
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    expect(container.querySelectorAll(".song-vong")).toHaveLength(1);
+    act(() => {
+      for (const f of ketThuc) f();
+      vi.advanceTimersByTime(SONG_HET);
+    });
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--an");
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
+    expect(dai.classList.contains("troi-dung")).toBe(true);
+  });
+
+  it("chi mot bau troi: nut va vung bao nam TRONG the troi, khong chen the nao giua dai troi va .shell", () => {
+    const { container } = ve(KIA, null);
+    // Quy tac ".troi + .shell .ke-dau" doi dai troi la anh em lien ke ngay truoc .shell: dai troi phai la con duy nhat.
+    expect(container.children).toHaveLength(1);
+    const troi = container.querySelector(".troi") as HTMLElement;
+    expect(troi.querySelector(".nut-dung")?.textContent).toBe("Tạm dừng bầu trời");
+    fireEvent.click(troi.querySelector(".nut-dung") as Element);
+    expect(troi.classList.contains("troi-dung")).toBe(true);
+    expect(troi.querySelector(".troi__noi > .sr-only[aria-live]")?.textContent).toBe("Bầu trời đã tạm dừng.");
   });
 });

@@ -130,7 +130,7 @@ export default async function KeSach() {
                 )}
                 {hoatDong}
               </div>
-  
+
               <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." when={when} />
               <Ngan
                 ten={`Kệ của ${me.partnerNickname}`}
@@ -138,7 +138,7 @@ export default async function KeSach() {
                 trong={`${me.partnerNickname} chưa chia sẻ cuốn nào.`}
                 when={when}
               />
-  
+
               <footer className="foot">
                 <ul className="legend" aria-label="Chú giải">
                   <li><span className="dh dh--moi"><span className="cham" aria-hidden="true" />Trang mới</span> chưa đọc</li>

@@ -259,12 +259,30 @@ test("giam chuyen dong: bau troi dung yen, chop va vet sang an, hat mua nam rai 
   await expect(troi.locator(".m-hat").first()).toHaveCSS("animation-name", "roi");
   await expect(troi.locator(".m-set")).toHaveCSS("display", "block");
 
+  // Nut tam dung bau troi (WCAG SC 2.2.2): dung han moi net ve, nho lua chon qua lan tai lai, va cho chay lai duoc.
+  const hat = troi.locator(".m-hat").first();
+  const nutDung = b.getByRole("button", { name: "Tạm dừng bầu trời" });
+  const hopNut = await nutDung.boundingBox();
+  expect(Math.min(hopNut?.width ?? 0, hopNut?.height ?? 0), "vung bam nut tam dung").toBeGreaterThanOrEqual(44);
+  await expect(hat).toHaveCSS("animation-play-state", "running");
+  await nutDung.click();
+  await expect(troi).toHaveClass(/troi-dung/);
+  await expect(hat).toHaveCSS("animation-play-state", "paused");
+  await expect(b.getByText("Bầu trời đã tạm dừng.")).toBeAttached();
+  await b.reload();
+  await expect(hat).toHaveCSS("animation-play-state", "paused");
+  await b.getByRole("button", { name: "Cho bầu trời chạy" }).click();
+  await expect(hat).toHaveCSS("animation-play-state", "running");
+  await expect(b.getByText("Bầu trời chạy lại rồi.")).toBeAttached();
+
   await b.emulateMedia({ reducedMotion: "reduce" });
   await b.reload();
   await expect(troi.locator(".m-hat").first()).toHaveCSS("animation-name", "none");
   await expect(troi.locator(".m-set")).toHaveCSS("display", "none");
   await expect(troi.locator(".m-chop")).toHaveCSS("display", "none");
   expect(await troi.locator(".m-hat").first().evaluate((el) => getComputedStyle(el).top)).not.toBe("-30px");
+  // Khong con gi chay de ma dung: nut bien han, khong de lai mot cong tac vo nghia trong hang cuoi.
+  await expect(b.locator(".nut-dung")).toBeHidden();
   await b.getByRole("button", { name: "Thả tâm trạng" }).click();
   await expect(b.locator(".tha")).toHaveCSS("animation-name", "none");
 });

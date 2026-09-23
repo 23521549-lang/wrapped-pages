@@ -102,6 +102,11 @@ describe("nhan thoi gian cua tam trang", () => {
     expect(goc.every((g) => Number.isInteger(g) && g >= -11 && g <= 11)).toBe(true);
     expect(new Set(goc).size).toBeGreaterThan(10);
     expect(xoayHoa("abc")).toBe(xoayHoa("abc"));
+    // Gia tri ghim: "abc" va "m1" chay qua FNV-1a 32 bit (hat giong 2166136261, nhan 16777619) roi lay du cho 23 va lui
+    // 11. Khang dinh tu tham chieu o tren van dung ke ca khi ai do doi hang so FNV - luc do moi bong hoa lich su se xoay
+    // khac di ma bo kiem van xanh. Hai so nay chi doi khi cong thuc doi, va do la mot thay doi phai duoc nhin thay.
+    expect(xoayHoa("abc")).toBe(-7);
+    expect(xoayHoa("m1")).toBe(-1);
   });
 });
 

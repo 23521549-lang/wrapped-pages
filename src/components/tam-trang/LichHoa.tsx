@@ -126,6 +126,8 @@ export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMi
       </div>
 
       <div className="phu">
+        {/* Nguoc voi tieu de thang o dong 77: khung nay doi TAI CHO khi bam mot o ngay (setChon, khong tai lai trang) va
+            focus o yen tren o vua bam, nen khong co gi doc noi dung moi ra neu khong phai vung live. */}
         <section className="chi-tiet" aria-live="polite">
           <div className="chi-tiet__dau">
             <h2 className="d">{tenNgay(thang, chon, now)}</h2>

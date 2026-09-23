@@ -26,6 +26,19 @@ describe("parseMoodInput", () => {
     expect(parseMoodInput("nang-am", "a".repeat(10_000))).toEqual({ error: NHAN_DAI });
   });
 
+  it("bien cua tran tho NOTE_MAX * 4: 320 ky tu qua duoc buoc chan som, 321 bi chan ngay", () => {
+    // Tran tho chi chan chuoi CUC DAI truoc khi chuan hoa; dung 320 don vi UTF-16 phai di tiep toi buoc dem code point
+    // (va o day bi chan vi 320 > 80), con 321 bi chan ngay o buoc dau. Hai duong deu ra cung mot cau bao, nen phan biet
+    // chung bang chinh chuanNhan: chuoi 320 ky tu dieu khien duoc gom thanh mot dau cach roi cat sach, tuc no DA di qua
+    // chuan hoa va ra loi nhan rong; neu tran tho bi ha xuong duoi 320 thi dong nay doi thanh NHAN_DAI va bai kiem do.
+    const dieuKhien = String.fromCodePoint(9).repeat(320);
+    expect(parseMoodInput("nang-am", dieuKhien)).toEqual({ weather: "nang-am", note: null });
+    expect(parseMoodInput("nang-am", `${dieuKhien}${String.fromCodePoint(9)}`)).toEqual({ error: NHAN_DAI });
+    // Cung hai do dai voi chu that: ca hai deu qua 80 code point nen deu bi tu choi, chi khac cho bi tu choi.
+    expect(parseMoodInput("nang-am", "a".repeat(320))).toEqual({ error: NHAN_DAI });
+    expect(parseMoodInput("nang-am", "a".repeat(321))).toEqual({ error: NHAN_DAI });
+  });
+
   it("chuan hoa: ky tu dieu khien thanh dau cach, gop dau cach, cat hai dau", () => {
     const xuongDong = String.fromCodePoint(10);
     const tab = String.fromCodePoint(9);
