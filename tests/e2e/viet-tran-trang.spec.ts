@@ -37,6 +37,53 @@ async function soToOnDinh(page: Page): Promise<number> {
   return soTo;
 }
 
+/**
+ * Hinh hoc cua tai lieu dang soan, doc bang SO KY TU chu khong bang toa do (toa do doi theo thu phong va cuon
+ * trang, con "cho nay nam truoc ky tu thu bao nhieu" la dung cai bo xep trang quyet dinh):
+ * - `ngat`: moi cho ngat trang nam truoc ky tu thu bao nhieu cua ca tai lieu;
+ * - `dong`: trong tung doan, ky tu dau moi dong xuong hang nam o vi tri nao.
+ *
+ * `dong` la phep do nhay hon `ngat`: bo xep trang dung dung danh sach dau dong nay (xem measure.ts dauDong) de
+ * tinh cho ngat, nen mot thay doi lam dich MOT dong o giua tai lieu bi bat ngay ca khi no chua du de day mot
+ * cho ngat sang ky tu khac.
+ */
+async function hinhHocChu(page: Page): Promise<{ ngat: number[]; dong: number[][] }> {
+  return page.evaluate(() => {
+    const goc = document.querySelector(".viet-chu .ProseMirror");
+    if (!goc) return { ngat: [], dong: [] };
+    const ngat = Array.from(document.querySelectorAll(".viet-chu .ngat-trang"), (el) => {
+      const khoang = document.createRange();
+      khoang.setStart(goc, 0);
+      khoang.setEndBefore(el);
+      return khoang.toString().length;
+    });
+    const khoang = document.createRange();
+    const dong = Array.from(goc.querySelectorAll("p"), (p) => {
+      const chu: Text[] = [];
+      const di = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+      for (let n = di.nextNode(); n; n = di.nextNode()) if ((n as Text).length > 0) chu.push(n as Text);
+      const dau: number[] = [];
+      let truoc: number | null = null;
+      let viTri = 0;
+      for (const n of chu) {
+        for (let i = 0; i < n.length; i++, viTri++) {
+          khoang.setStart(n, i);
+          khoang.setEnd(n, i + 1);
+          const hop = khoang.getClientRects();
+          if (hop.length === 0) continue;
+          const dinh = hop[hop.length - 1].top;
+          if (truoc === null || dinh > truoc + 0.5) {
+            dau.push(viTri);
+            truoc = dinh;
+          }
+        }
+      }
+      return dau;
+    });
+    return { ngat, dong };
+  });
+}
+
 test("viet qua mot to thi chu tran sang to sau, dung o dinh vung chu", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
   await taoSach(a, "Chuyện chưa kể", "chia-se");
@@ -92,4 +139,40 @@ test("dang ghep chu thi hoan xep trang lai; xep xong luc bo go ket thuc", async 
 
   const soTo = await soToOnDinh(a);
   await expect(ngat).toHaveCount(soTo - 1);
+});
+
+/*
+ * Dau "doan tren ke" khong duoc dich cho ngat trang di mot ly nao. Man viet ve dau nay bang mot
+ * <span class="doan-ke"> nam ngay trong dong van, con man doc bo han dau (DocView khong boc mark nay), nen neu
+ * cai span do cham toi hinh hoc cua dong chu thi hai man se ngat trang khac cho nhau - dieu CLAUDE.md muc 1 cam.
+ * Bai kiem CSS o tests/unit/doan-ke.test.ts chi canh duoc danh sach thuoc tinh trong tep .css; chi trinh duyet
+ * that moi tra loi duoc cau hoi "them mot phan tu inline vao giua dong chu co lam xuong dong khac di khong".
+ * Danh dau CA tai lieu de moi to deu mang dau, ke ca chu nam hai ben tung cho ngat.
+ */
+test("danh dau doan tren ke khong doi so to va khong doi cho ngat trang", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  await taoSach(a, "Chuyện chưa kể", "chia-se");
+  const giay = a.locator(".viet-chu .ProseMirror");
+  await giay.click();
+  for (let i = 0; i < 10; i++) {
+    await a.keyboard.insertText(DOAN.repeat(2).trim());
+    await a.keyboard.press("Enter");
+  }
+
+  const soTruoc = await soToOnDinh(a);
+  const truoc = await hinhHocChu(a);
+  expect(truoc.ngat).toHaveLength(soTruoc - 1);
+  // Chu phai that su xuong dong nhieu lan, neu khong thi phep so sanh ben duoi khong chung minh dieu gi.
+  expect(truoc.dong.filter((d) => d.length > 1).length).toBeGreaterThanOrEqual(10);
+  await expect(giay.locator("span.doan-ke")).toHaveCount(0);
+
+  await giay.click();
+  await a.keyboard.press("Control+a");
+  await a.getByRole("button", { name: "Chọn làm đoạn trên kệ" }).click();
+  await expect(a.getByRole("button", { name: "Bỏ đoạn trên kệ" })).toHaveAttribute("aria-pressed", "true");
+  // Dau nam that tren chu cua ca tai lieu, khong phai mot goc: it nhat mot vet to cho moi doan da go.
+  expect(await giay.locator("span.doan-ke").count()).toBeGreaterThanOrEqual(10);
+
+  expect(await soToOnDinh(a)).toBe(soTruoc);
+  expect(await hinhHocChu(a)).toEqual(truoc);
 });
