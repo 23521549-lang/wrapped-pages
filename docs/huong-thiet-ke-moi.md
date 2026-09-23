@@ -178,6 +178,24 @@ Người đọc gửi được đúng một lời hồi đáp cho mỗi lượt 
 - **Hình dáng.** Cùng dáng thẻ với "Nhạc nền"; lời đã gửi là một đoạn trích có vạch trái mảnh, giữ xuống dòng của người viết. Không mảng màu, không hoạt ảnh.
 - **Dòng Hoạt động.** "Linh đã hồi đáp trang 6 tới 11 của <tên sách>", bấm vào mở màn đọc tại tờ đầu của lượt. Không kèm chip niêm phong.
 
-## 14. Việc còn lại
+## 14. Đoạn hiện trên kệ
+
+Khung sách trên Kệ sách luôn lấy đoạn từ lượt đăng mới nhất của cuốn.
+
+- **Người viết chọn.** Bôi đen một câu trong màn viết (hoặc màn sửa lượt) rồi bấm "Chọn làm đoạn trên kệ" trên thanh công cụ. Đoạn đã chọn được tô một vệt xanh nhạt ngay trong trang đang viết. Chọn lại là thay chỗ cũ, mỗi cuốn chỉ một đoạn; bấm lần nữa là bỏ. Dấu chọn nằm trong tài liệu của tờ nên đi theo tờ khi đăng và khi sửa lượt. Màn đọc không vẽ dấu này.
+- **Không chọn gì.** Khung lấy ngẫu nhiên một đoạn có chữ trong chính lượt mới nhất, tất định theo cuốn, người xem và ngày Việt Nam: cùng ngày tải lại vẫn là đoạn đó, sang ngày thì đổi.
+- **Lượt mới nhất còn niêm phong.** Không hiện chữ nào, chỉ dòng hé lộ như trước.
+- **Trang mới.** Bấm khung mở thẳng tới tờ chứa đoạn, và chỉ những tờ thật sự lật qua mới tính là đã đọc; các tờ bị nhảy cóc vẫn là trang mới trên kệ.
+
+## 15. Đổi bìa, tên, nhạc ngay ở bước đăng
+
+Bước xác nhận đăng trang của cuốn đã có tờ có thêm mục gập "Đổi bìa, tên, nhạc", dưới hai nút "Đăng" và "Để sau".
+
+- Đóng lại thì bước đăng dài đúng như cũ. Mở ra là các ô quen thuộc của trang Sửa sách, điền sẵn giá trị hiện tại: tên sách, bảng bìa (kể cả bìa tự tải lên), nhạc nền YouTube.
+- Không mở thì không gửi gì. Mở ra thì đăng và đổi sách nằm trong cùng một giao dịch: hỏng một phần là không phần nào được ghi.
+- Chế độ chia sẻ hay riêng tư không nằm ở đây: đổi chế độ có hệ quả riêng tư riêng, vẫn làm ở trang Sửa sách.
+- Dòng Hoạt động vẫn chỉ ghi sự kiện đăng trang.
+
+## 16. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của form tạo và sửa sách. Khi màn form được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.

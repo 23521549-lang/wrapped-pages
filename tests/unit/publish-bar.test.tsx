@@ -13,6 +13,7 @@ const { actionPublish } = vi.hoisted(() => ({
   actionPublish: vi.fn(async (..._args: unknown[]) => ({ error: "Chưa đăng được." })),
 }));
 vi.mock("@/app/actions/library", () => ({ actionPublish }));
+vi.mock("@/app/actions/media", () => ({ actionUploadMedia: vi.fn() }));
 vi.mock("next/navigation", () => ({ unstable_rethrow: () => {} }));
 
 const SHEET: DocJson = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Mot" }] }] };
@@ -41,7 +42,7 @@ function moHop(partnerNickname: string | null) {
     beforePublish: vi.fn(async () => {}),
     afterFail: vi.fn(),
   };
-  render(<Khung bookId="b" partnerNickname={partnerNickname} {...p} />);
+  render(<Khung bookId="b" partnerNickname={partnerNickname} bookNow={null} mediaEnabled={false} {...p} />);
   fireEvent.click(screen.getByRole("button", { name: "Đăng trang" }));
   return p;
 }
@@ -99,7 +100,7 @@ describe("PublishBar kem niem phong", () => {
     fireEvent.change(o("Câu hỏi"), { target: { value: "Hôm đó em nghĩ gì?" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
-    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" });
+    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" }, null);
     expect(p.beforePublish).toHaveBeenCalledTimes(1);
     expect(p.beforePublish.mock.invocationCallOrder[0]).toBeLessThan(actionPublish.mock.invocationCallOrder[0]);
     expect(p.prepare).toHaveBeenCalledTimes(2);
@@ -214,6 +215,6 @@ describe("PublishBar kem niem phong", () => {
     expect(cauXacNhan()).toBe("Đăng 2 trang vào Chuyện chưa kể, Linh đọc được ngay.");
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
-    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null);
+    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null, null);
   });
 });

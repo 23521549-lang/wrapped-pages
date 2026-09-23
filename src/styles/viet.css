@@ -198,6 +198,18 @@
 .dang-hoi__chu b{ color: var(--color-ink); font-weight: 600; }
 .dang-hoi__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 
+/* Muc gap "Doi bia, ten, nhac" trong khung xac nhan dang trang. Dong lai thi trong khung chi them dung mot nut chu, va
+   khong them vien hay khoang nao khac; mo ra thi cac o hien ngay tai cho duoi mot vach mong, khong hoat anh. Vach,
+   khoang tren va khoang duoi deu dat o phan gap (.doi-sach__o), khong dat o vo, de khung khong cao them khi dong.
+   Vach dung --color-rule-ui chu khong --color-rule: no ngan mot vung dieu khien that (ba o nhap) khoi hai nut ben tren,
+   nen phai dat nguong tuong phan cua ranh gioi thanh phan giao dien. */
+.doi-sach{ display: grid; }
+.doi-sach__mo{ justify-self: start; }
+.doi-sach__o{
+  display: grid; gap: var(--space-md);
+  margin-top: var(--space-sm); padding-top: var(--space-md); border-top: 1px solid var(--color-rule-ui);
+}
+
 /* cot giua: cac o cua loai dang chon; truot vao nhe moi lan doi loai (chi transform, opacity) */
 .niem__form{
   display: grid; align-content: start; gap: var(--space-lg); min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;

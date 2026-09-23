@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type Ref } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type Ref } from "react";
 import { flushSync } from "react-dom";
 import { unstable_rethrow } from "next/navigation";
 import { actionPublish } from "@/app/actions/library";
+import { BookEditFields, useBookEdit, type BookNow } from "@/components/book/BookEditFields";
+import { parseBookEdit } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
 import { parseSealInput } from "@/lib/seal/input";
 import { luaChon, SealFields, SealKinds } from "./SealPicker";
@@ -12,6 +14,10 @@ import { blankAnswerIds, emptySeal, localInputValue, sealPayload, type SealChoic
 export type PublishDeps = {
   bookId: string;
   partnerNickname: string | null;
+  /** Gia tri hien tai cua cuon cho muc "Doi bia, ten, nhac"; null la cuon chua co to nao (khong co muc do). */
+  bookNow: BookNow;
+  /** Kho media dang bat: tat thi khong tai bia moi len duoc, bia anh cu van hien. */
+  mediaEnabled: boolean;
   /** Do va xep trang lan cuoi, cat tai lieu thanh cac to (da bo to trong o cuoi). */
   prepare: () => { sheets: DocJson[] } | { error: string };
   /** Khoa vung soan thao, luu nhap lan cuoi va tat hen gio tu luu. */
@@ -50,7 +56,7 @@ export function cauXacNhan(kind: SealChoice, partnerNickname: string | null): { 
  * chon niem phong; so to tinh lai qua refresh() moi lan xep trang, va lop an toan thuc su van la prepare() chay
  * lai sau beforePublish() trong publish().
  */
-export function usePublish({ bookId, partnerNickname, prepare, beforePublish, afterFail }: PublishDeps) {
+export function usePublish({ bookId, partnerNickname, bookNow, mediaEnabled, prepare, beforePublish, afterFail }: PublishDeps) {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState<SanSang>({ count: 0 });
   const [seal, setSeal] = useState<SealDraft>(emptySeal);
@@ -58,6 +64,9 @@ export function usePublish({ bookId, partnerNickname, prepare, beforePublish, af
   const [invalid, setInvalid] = useState<ReadonlySet<number>>(KHONG_LOI);
   const [minMo, setMinMo] = useState("");
   const [pending, startTransition] = useTransition();
+  const [doiMo, setDoiMo] = useState(false);
+  // Trang thai cua ba o luon duoc dung (hook khong duoc goi co dieu kien); chi khi bookNow khac null moi co muc gap.
+  const doi = useBookEdit(bookNow);
 
   /** Hien mot loi chung (null la xoa) va bo moi dong dang bi danh dau loi. */
   function baoLoi(msg: string | null) {
@@ -131,6 +140,16 @@ export function usePublish({ bookId, partnerNickname, prepare, beforePublish, af
       baoLoi(checked.error);
       return;
     }
+    // Muc gap khong mo thi khong gui gi ve sach (spec). Mo thi kiem tai cho bang dung bo luat cua may chu.
+    const doiGi = doiMo && bookNow !== null ? doi.payload() : null;
+    if (doiGi !== null) {
+      if (!doi.check()) return;
+      const daKiem = parseBookEdit(doiGi);
+      if ("error" in daKiem) {
+        baoLoi(daKiem.error);
+        return;
+      }
+    }
     baoLoi(null);
     startTransition(async () => {
       await beforePublish();
@@ -144,7 +163,7 @@ export function usePublish({ bookId, partnerNickname, prepare, beforePublish, af
           afterFail();
           return;
         }
-        const r = await actionPublish(bookId, fresh.sheets, payload.seal);
+        const r = await actionPublish(bookId, fresh.sheets, payload.seal, doiGi);
         if (r && "error" in r) {
           setError(r.error);
           afterFail();
@@ -160,7 +179,10 @@ export function usePublish({ bookId, partnerNickname, prepare, beforePublish, af
     });
   }
 
-  return { open, ready, seal, error, invalid, minMo, pending, start, cancel, refresh, changeSeal, publish };
+  return {
+    bookId, mediaEnabled, open, ready, seal, error, invalid, minMo, pending, start, cancel, refresh, changeSeal, publish,
+    doi: bookNow === null ? null : doi, doiMo, toggleDoi: () => setDoiMo((x) => !x),
+  };
 }
 
 export type PublishFlow = ReturnType<typeof usePublish>;
@@ -202,6 +224,7 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
   onCancel: () => void;
 }) {
   const hopRef = useRef<HTMLDivElement>(null);
+  const doiId = useId();
   const { seal, ready, error, pending } = flow;
   const cau = cauXacNhan(seal.kind, partnerNickname);
   const loai = luaChon(partnerNickname).find((c) => c.kind === seal.kind);
@@ -239,6 +262,25 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
             <button type="button" className="btn" disabled={pending} onClick={() => flow.publish(hopRef.current)}>Đăng</button>
             <button type="button" className="btn btn--line" disabled={pending} onClick={onCancel}>Để sau</button>
           </div>
+          {flow.doi !== null && (
+            <div className="doi-sach">
+              <button
+                type="button"
+                className="btn btn--chu doi-sach__mo"
+                aria-expanded={flow.doiMo}
+                aria-controls={doiId}
+                disabled={pending}
+                onClick={flow.toggleDoi}
+              >
+                Đổi bìa, tên, nhạc
+              </button>
+              {flow.doiMo && (
+                <div className="doi-sach__o" id={doiId}>
+                  <BookEditFields state={flow.doi} bookId={flow.bookId} mediaEnabled={flow.mediaEnabled} disabled={pending} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       {seal.kind !== "khong" && (

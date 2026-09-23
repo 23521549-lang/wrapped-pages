@@ -85,6 +85,8 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
     const hoi = a.getByRole("group", { name: "Xác nhận đăng trang" });
     await hoi.getByRole("radio", { name: "Câu đố" }).check();
     await hoi.getByRole("button", { name: "Thêm gợi ý" }).click();
+    await hoi.getByRole("button", { name: "Đổi bìa, tên, nhạc" }).click();
+    await expect(a.getByLabel("Tên sách")).toBeVisible();
     if (width === BE_RONG_CHAM) expect(await vungBamNho(a, MIEN_TRU_VUNG_BAM), "khung niem phong: vung bam").toEqual([]);
     expect(await tranNgang(a), `khung niem phong o ${width}px: tran ngang`).toEqual([]);
   }

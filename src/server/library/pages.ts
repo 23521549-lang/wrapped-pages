@@ -1,4 +1,4 @@
-import { and, asc, eq, max } from "drizzle-orm";
+import { and, asc, count, eq, max } from "drizzle-orm";
 import { books, pages, readSheets } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -127,4 +127,14 @@ export async function markRead(
     if (rows.length === 0) return;
     await tx.insert(readSheets).values(rows).onConflictDoNothing();
   });
+}
+
+/**
+ * Cuon da co to nao chua. Buoc dang trang cua cuon DA CO to moi co muc "Doi bia, ten, nhac" (spec): cuon chua co to thi
+ * nguoi viet vua qua man tao sach xong, khong can hoi lai. Chi dem, khong doc noi dung.
+ */
+export async function bookHasPages(db: AnyDb, bookId: string): Promise<boolean> {
+  if (!isUuid(bookId)) return false;
+  const [row] = await db.select({ n: count() }).from(pages).where(eq(pages.bookId, bookId));
+  return (row?.n ?? 0) > 0;
 }
