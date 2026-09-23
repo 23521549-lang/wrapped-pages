@@ -90,12 +90,12 @@ function datKhung(container: HTMLElement, khung: KhungChuNhat, sauCuon: KhungChu
   return cuon;
 }
 
-type Phong = { gate?: boolean; initialMuted?: boolean; videoId?: string; children?: ReactNode };
+type Phong = { gate?: boolean; initialMuted?: boolean; videoId?: string; side?: ReactNode; children?: ReactNode };
 
 /** MusicRoom voi tam bia gia; noi dung sach mac dinh la mot vung sach gia. */
-function phong({ gate = true, initialMuted = false, videoId = ID, children }: Phong = {}) {
+function phong({ gate = true, initialMuted = false, videoId = ID, side, children }: Phong = {}) {
   return (
-    <MusicRoom videoId={videoId} initialMuted={initialMuted} gate={gate} cover={<p>Tranh bìa</p>}>
+    <MusicRoom videoId={videoId} initialMuted={initialMuted} gate={gate} cover={<p>Tranh bìa</p>} side={side}>
       {children ?? <button type="button" className="doc__khung">Trang sách</button>}
     </MusicRoom>
   );
@@ -409,6 +409,29 @@ describe("MusicRoom", () => {
     act(() => theoDoi[0].goi([{ contentRect: { width: 632 } } as unknown as ResizeObserverEntry], {} as ResizeObserver));
     const k = Number(container.querySelector<HTMLElement>(".doc__khung")?.style.getPropertyValue("--k"));
     expect(k).toBeCloseTo(632 / 720, 5);
+  });
+
+  it("cot phai: the nhac la con dau cua .doc-luoi__phu; side chi gan sau Mo sach, nam sau the nhac, iframe giu nguyen", async () => {
+    const { container } = await ve({ side: <p>Khung hồi đáp</p> });
+    san();
+    const phu = container.querySelector(".doc-luoi__phu");
+    expect(phu?.parentElement?.classList.contains("doc-luoi")).toBe(true);
+    expect(phu?.firstElementChild?.classList.contains("nhac-the")).toBe(true);
+    expect(screen.queryByText("Khung hồi đáp")).toBeNull();
+    expect(phu?.className).toBe("doc-luoi__phu doc-luoi__phu--nhac");
+    const khung = container.querySelector(".nhac-the__may iframe");
+    fireEvent.click(screen.getByRole("button", { name: "Mở sách" }));
+    expect(phu?.lastElementChild?.textContent).toBe("Khung hồi đáp");
+    expect(phu?.className).toBe("doc-luoi__phu doc-luoi__phu--nhac doc-luoi__phu--dai");
+    expect(container.querySelector(".nhac-the__may iframe")).toBe(khung);
+    expect(cacMay).toHaveLength(1);
+  });
+
+  it("khong co side: cot phai chi co the nhac, ke ca sau Mo sach", async () => {
+    const { container } = await ve({ gate: false });
+    const phu = container.querySelector(".doc-luoi__phu");
+    expect(phu?.children).toHaveLength(1);
+    expect(phu?.className).toBe("doc-luoi__phu doc-luoi__phu--nhac");
   });
 });
 

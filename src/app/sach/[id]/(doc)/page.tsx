@@ -11,9 +11,13 @@ import { CoverImage } from "@/components/book/CoverImage";
 import { BookCover } from "@/components/music/BookCover";
 import { MusicRoom } from "@/components/music/MusicRoom";
 import { Reader } from "@/components/reader/Reader";
+import { ReaderColumns } from "@/components/reader/ReaderColumns";
+import { RoundReplyPanel } from "@/components/reader/RoundReplyPanel";
+import { ShownSheetsProvider } from "@/components/reader/ShownSheets";
 import { musicGate } from "@/lib/music-gate";
 import { startSheet } from "@/lib/reading";
 import { roundEditPath } from "@/lib/round";
+import { replyRounds } from "@/lib/round-reply";
 import { revealTarget, sheetLooks } from "@/lib/seal/reader";
 
 export default async function DocSach({ params, searchParams }: {
@@ -27,7 +31,7 @@ export default async function DocSach({ params, searchParams }: {
   // Lua chon tat nhac la cua chinh nguoi xem, khong phu thuoc cuon sach, nen doc song song; chi dung khi sach co nhac.
   const [view, tatNhac] = await Promise.all([readBook(db, me.accountId, id, now), readMusicMuted(db, me.accountId)]);
   if (!view) notFound();
-  const { book, mine, sheets, seals, rounds, mark } = view;
+  const { book, mine, sheets, seals, rounds, replies, mark } = view;
   const count = sheets.length;
   // Nut "Sua trang N" chi cho chu sach: tro toi man sua luot chua to do, mo ngay to do. Luot con niem phong voi nguoi kia
   // (hay nguoi xem khong phai chu sach) thi null.
@@ -36,6 +40,13 @@ export default async function DocSach({ params, searchParams }: {
     const r = luotCua.get(s.roundId);
     return mine && r && !r.sealed ? roundEditPath(book.id, r.ordinal, s.position - r.first + 1) : null;
   });
+  const start = startSheet(query.trang, count, mark, mine);
+  // Nguoi doc la nguoi khong phai chu sach: cung la nguoi hoi dap.
+  const nguoiDoc = mine ? me.partnerNickname : me.nickname;
+  // Khung Loi hoi dap chi co voi sach dang chia se va da co to; sach rieng tu khong co (readBook cung khong doc loi).
+  const hoiDap = book.mode === "chia-se" && count > 0
+    ? <RoundReplyPanel rounds={replyRounds(rounds, replies)} mine={mine} replierName={nguoiDoc} now={now} />
+    : null;
   const locked = sheets.filter((s) => s.locked).length;
   // Doc duoc thi hoac la sach cua minh, hoac la sach chia se cua nguoi kia.
   const owner = mine ? me.nickname : me.partnerNickname;
@@ -78,9 +89,9 @@ export default async function DocSach({ params, searchParams }: {
           looks={sheetLooks(sheets, seals)}
           seals={seals}
           ownerName={owner}
-          readerName={mine ? me.partnerNickname : me.nickname}
+          readerName={nguoiDoc}
           now={now}
-          start={startSheet(query.trang, count, mark, mine)}
+          start={start}
           revealAt={revealTarget(sheets, seals, query.mo)}
           mark={mark}
           trackRead={!mine}
@@ -97,20 +108,27 @@ export default async function DocSach({ params, searchParams }: {
       {/* Sach co nhac: nav khong dinh, de khong gi (ke ca nav) de len trinh phat YouTube o moi be rong. */}
       <AppNav me={me} current="ke-sach" subpage sticky={book.youtubeId === null} />
       <main className="shell man">
-        {book.youtubeId === null ? (
-          noiDung
-        ) : (
-          <MusicRoom
-            // Doi nhac (chu sach sua o tab khac roi man nay lam moi) thi gan lai the nhac voi trinh phat moi.
-            key={book.youtubeId}
-            videoId={book.youtubeId}
-            initialMuted={muted}
-            gate={musicGate(muted, query)}
-            cover={<BookCover title={book.title} cover={book.cover} coverMediaId={book.coverMediaId} owner={owner} />}
-          >
-            {noiDung}
-          </MusicRoom>
-        )}
+        {/*
+         * Mot provider cho ca cot sach lan cot phai, luon co mat: dat theo dieu kien thi doi che do chia se hay dang to
+         * dau o tab khac roi lam moi se gan lai MusicRoom, tuc tai lai trinh phat.
+         */}
+        <ShownSheetsProvider start={start}>
+          {book.youtubeId === null ? (
+            hoiDap === null ? noiDung : <ReaderColumns side={hoiDap}>{noiDung}</ReaderColumns>
+          ) : (
+            <MusicRoom
+              // Doi nhac (chu sach sua o tab khac roi man nay lam moi) thi gan lai the nhac voi trinh phat moi.
+              key={book.youtubeId}
+              videoId={book.youtubeId}
+              initialMuted={muted}
+              gate={musicGate(muted, query)}
+              cover={<BookCover title={book.title} cover={book.cover} coverMediaId={book.coverMediaId} owner={owner} />}
+              side={hoiDap}
+            >
+              {noiDung}
+            </MusicRoom>
+          )}
+        </ShownSheetsProvider>
       </main>
     </>
   );

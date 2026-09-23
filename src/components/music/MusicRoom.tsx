@@ -21,6 +21,11 @@ export type MusicRoomProps = {
   cover: ReactNode;
   /** Dau man doc va man doc (Reader co key). Con cong thi chua gan. */
   children: ReactNode;
+  /**
+   * Phan duoi the nhac trong cot phai (khung Loi hoi dap). Chi gan khi da qua cong, nhu noi dung sach: con tam bia thi
+   * nguoi xem chua doc to nao.
+   */
+  side?: ReactNode;
 };
 
 function dongTrangThai(state: MusicState, tat: boolean, conBia: boolean): string {
@@ -42,12 +47,13 @@ function IconLoa({ dangPhat }: { dangPhat: boolean }) {
 
 /**
  * Man doc cua sach co nhac. Mot cau truc DOM co dinh: luoi hai cot, cot chinh la tam bia hoac noi
- * dung sach, cot kia la the Nhac nen chua trinh phat YouTube that. The nhac khong bao gio doi cho trong DOM, vi
- * doi cho iframe la tai lai video; chuyen tu bia sang sach va moi lan redirect doi ?trang chi thay cot chinh.
+ * dung sach, cot kia (.doc-luoi__phu) la the Nhac nen chua trinh phat YouTube that, roi khung hoi dap neu co. The nhac
+ * khong bao gio doi cho trong DOM, vi doi cho iframe la tai lai video; chuyen tu bia sang sach va moi lan redirect doi
+ * ?trang chi thay cot chinh.
  * Con cong thi noi dung sach chua gan: chua co phim mui ten, chua day moc da doc, chua chay nghi thuc.
  * Chi phat bang script khi hon nua khung trinh phat dang nam trong khung nhin (Required Minimum Functionality).
  */
-export function MusicRoom({ videoId, initialMuted, gate, cover, children }: MusicRoomProps) {
+export function MusicRoom({ videoId, initialMuted, gate, cover, children, side }: MusicRoomProps) {
   const tieuDe = useId();
   const chinhRef = useRef<HTMLDivElement>(null);
   const mayRef = useRef<HTMLDivElement>(null);
@@ -59,6 +65,7 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children }: Musi
   const [daMo, setDaMo] = useState(false);
   const [loiLuu, setLoiLuu] = useState<string | null>(null);
   const conBia = coCong && !daMo;
+  const coPhu = !conBia && side !== undefined && side !== null;
 
   /** Hon nua khung trinh phat dang nam trong khung nhin, dieu kien de phat bang script. */
   function mayHienQuaNua(): boolean {
@@ -122,23 +129,27 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children }: Musi
           children
         )}
       </div>
-      <aside className="nhac-the" aria-labelledby={tieuDe}>
-        <h2 className="d nhac-the__t" id={tieuDe}>Nhạc nền</h2>
-        <div ref={mayRef} className="nhac-the__may" />
-        <div className="nhac-the__dk">
-          <p className={state === "loi" ? "nhac-the__chu nhac-the__chu--loi" : "nhac-the__chu"} aria-live="polite">
-            {state === "loi" && <span className="dau-loi" aria-hidden="true">!</span>}
-            {dongTrangThai(state, tat, conBia)}
-          </p>
-          {state !== "loi" && (
-            <button type="button" className="btn btn--quiet" aria-disabled={state === "tai"} onClick={bamNut}>
-              <IconLoa dangPhat={state === "phat"} />
-              <span>{state === "phat" ? "Tắt nhạc" : "Bật nhạc"}</span>
-            </button>
-          )}
-        </div>
-        {loiLuu !== null && <p className="meta">{loiLuu}</p>}
-      </aside>
+      {/* Cot phai luon co mat va the nhac luon la con dau cua no: side chen SAU the nhac, nen iframe khong doi cho. */}
+      <div className={coPhu ? "doc-luoi__phu doc-luoi__phu--nhac doc-luoi__phu--dai" : "doc-luoi__phu doc-luoi__phu--nhac"}>
+        <aside className="nhac-the" aria-labelledby={tieuDe}>
+          <h2 className="d nhac-the__t" id={tieuDe}>Nhạc nền</h2>
+          <div ref={mayRef} className="nhac-the__may" />
+          <div className="nhac-the__dk">
+            <p className={state === "loi" ? "nhac-the__chu nhac-the__chu--loi" : "nhac-the__chu"} aria-live="polite">
+              {state === "loi" && <span className="dau-loi" aria-hidden="true">!</span>}
+              {dongTrangThai(state, tat, conBia)}
+            </p>
+            {state !== "loi" && (
+              <button type="button" className="btn btn--quiet" aria-disabled={state === "tai"} onClick={bamNut}>
+                <IconLoa dangPhat={state === "phat"} />
+                <span>{state === "phat" ? "Tắt nhạc" : "Bật nhạc"}</span>
+              </button>
+            )}
+          </div>
+          {loiLuu !== null && <p className="meta">{loiLuu}</p>}
+        </aside>
+        {coPhu && side}
+      </div>
     </div>
   );
 }
