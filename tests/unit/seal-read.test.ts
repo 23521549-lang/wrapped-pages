@@ -211,16 +211,12 @@ describe("readBook che to khoa", () => {
 
 describe("markRead khong ghi to dang khoa", () => {
   it("to trong luot khoa khong duoc ghi, mo roi thi ghi duoc", async () => {
-    const { db, seat2, chung, sealId } = await sachCoKhoa(CAU_DO);
-    const moc = async () =>
-      (await db.select({ p: readSheets.position }).from(readSheets)
-        .where(and(eq(readSheets.accountId, seat2.id), eq(readSheets.bookId, chung)))
-        .orderBy(asc(readSheets.position))).map((r) => r.p);
-    await markRead(db, seat2.id, chung, 1, 2, NOW);
-    expect(await moc()).toEqual([1]);
-    await db.update(seals).set({ openedAt: phut(-1) }).where(eq(seals.id, sealId));
-    await markRead(db, seat2.id, chung, 2, 3, NOW);
-    expect(await moc()).toEqual([1, 2, 3]);
+    const s = await sachCoKhoa(CAU_DO);
+    await markRead(s.db, s.seat2.id, s.chung, 1, 2, NOW);
+    expect(await mocCua(s)).toEqual([1]);
+    await s.db.update(seals).set({ openedAt: phut(-1) }).where(eq(seals.id, s.sealId));
+    await markRead(s.db, s.seat2.id, s.chung, 2, 3, NOW);
+    expect(await mocCua(s)).toEqual([1, 2, 3]);
   });
 
   it("vi tri vuot to cuoi bi bo, ghi lai cung khong sinh dong thua", async () => {

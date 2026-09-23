@@ -16,7 +16,10 @@ export type ReaderView = {
   book: Book; mine: boolean; sheets: ReaderSheet[]; seals: ReaderSeal[]; rounds: ReaderRound[]; replies: ReaderReply[];
   /** Vi tri cac to nguoi xem da tung thay, tang dan. Chu sach khong co dong nao. */
   seen: number[];
-  /** To nho nhat nguoi xem chua thay, tinh tu 1; 0 khi da thay het hoac cuon chua co to nao. */
+  /**
+   * To nho nhat nguoi xem chua thay, tinh tu 1; 0 khi da thay het hoac cuon chua co to nao. Chu sach khong co dong da
+   * xem nao nen voi ho luon la to 1: man doc cua chinh minh khong dung so nay (startSheet chi doc no khi mine sai).
+   */
   firstUnread: number;
 };
 
@@ -32,8 +35,7 @@ function teaserDoc(teaser: string | null): DocJson {
  * Moi to cua mot cuon theo thu tu, neu viewer duoc doc cuon do, kem cac luot dang. seen la cac to viewer da tung thay
  * va firstUnread la to nho nhat chua thay. To nam trong niem phong con khoa voi viewer duoc thay content bang teaserDoc:
  * noi dung that duoc doc len may chu nhung khong bao gio duoc dat vao doi tuong tra ve. Moi cau lenh doc chung mot anh
- * chup, nen mot publishDraft
- * hay editRound commit giua chung khong the de lo to vua dang ma thieu niem phong cua no.
+ * chup, nen mot publishDraft hay editRound commit giua chung khong the de lo to vua dang ma thieu niem phong cua no.
  * replies: loi hoi dap cua cac luot, chi voi sach dang chia se (sach rieng tu khong co khung hoi dap, nen khong doc bang
  * round_replies).
  */
@@ -82,7 +84,8 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     }));
     const seen = daXem.map((r) => r.position);
     const coRoi = new Set(seen);
-    // To nho nhat chua thay: man doc mo o day khi duong dan khong kem ?trang (src/lib/reading.ts).
+    // To nho nhat chua thay: man doc mo o day khi duong dan khong kem ?trang (src/lib/reading.ts). Chu sach khong co
+    // dong da xem nao nen ra to 1, va startSheet bo qua so nay voi cuon cua chinh minh.
     const firstUnread = rows.find((r) => !coRoi.has(r.position))?.position ?? 0;
     return { book, mine, sheets, seals, rounds, replies, seen, firstUnread };
   });

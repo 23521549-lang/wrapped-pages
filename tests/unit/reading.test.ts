@@ -26,4 +26,10 @@ describe("startSheet", () => {
   it("chu sach luon mo o to 1", () => {
     expect(startSheet(undefined, 5, 4, true)).toBe(0);
   });
+
+  // readBook khong con tra ra so nay (firstUnread luon la mot vi tri co that), nhung startSheet la ham thuan nhan so
+  // tu ben ngoai: rao chuaDoc <= count o lai de mot cuon ngan di dung khong day duoc man doc ra ngoai mang to.
+  it("to chua thay vuot so to thi ve to 1", () => {
+    expect(startSheet(undefined, 5, 9, false)).toBe(0);
+  });
 });

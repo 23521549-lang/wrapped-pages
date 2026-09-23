@@ -102,6 +102,9 @@ export function Reader({
     const khung = pending.current;
     pending.current = null;
     if (khung === null) return;
+    // Chi khung THAT SU gui di moi duoc ghi nho. Ghi luc vua hien thi to lat nhanh qua (khung bi khung sau de len,
+    // khong bao gio gui) se bi coi la da ghi, quay lai doc that cung khong gui nua.
+    for (let p = khung.first; p <= khung.last; p++) daGui.current.add(p);
     inflight.current = actionMarkRead(bookId, khung.first, khung.last).catch(() => {});
   }, [bookId]);
 
@@ -112,10 +115,7 @@ export function Reader({
         // Chi to that su hien moi duoc ghi. Khung nao cung da ghi roi thi thoi: lat qua lat lai khong goi lai may chu.
         let moi = false;
         for (let p = first; p <= last; p++) {
-          if (!daGui.current.has(p)) {
-            daGui.current.add(p);
-            moi = true;
-          }
+          if (!daGui.current.has(p)) moi = true;
         }
         if (moi) {
           pending.current = { first, last };

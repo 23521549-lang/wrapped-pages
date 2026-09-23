@@ -36,8 +36,10 @@ const A1 = "11111111-1111-4111-8111-111111111111";
 const A2 = "22222222-2222-4222-8222-222222222222";
 const B1 = "33333333-3333-4333-8333-333333333333";
 const B2 = "44444444-4444-4444-8444-444444444444";
+const B3 = "77777777-7777-4777-8777-777777777777";
 const R1 = "55555555-5555-4555-8555-555555555555";
 const R2 = "66666666-6666-4666-8666-666666666666";
+const R3 = "88888888-8888-4888-8888-888888888888";
 
 const DOC = (chu: string) => JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: chu }] }] });
 
@@ -57,16 +59,20 @@ async function gieoCu(c: PGlite): Promise<void> {
       ('${A1}', 1, 'Manh', 'x', 'y', 'd1'), ('${A2}', 2, 'Linh', 'x', 'y', 'd2');
     insert into books (id, owner_id, title, mode, cover) values
       ('${B1}', '${A1}', 'Chuyen chua ke', 'chia-se', 'nui-xa'),
-      ('${B2}', '${A2}', 'Cuon hai', 'chia-se', 'chim-bay');
+      ('${B2}', '${A2}', 'Cuon hai', 'chia-se', 'chim-bay'),
+      ('${B3}', '${A2}', 'Cuon ba', 'chia-se', 'nui-xa');
     insert into rounds (id, book_id, published_at) values
-      ('${R1}', '${B1}', '2026-09-01 00:00:00+00'), ('${R2}', '${B2}', '2026-09-02 00:00:00+00');
+      ('${R1}', '${B1}', '2026-09-01 00:00:00+00'), ('${R2}', '${B2}', '2026-09-02 00:00:00+00'),
+      ('${R3}', '${B3}', '2026-09-03 00:00:00+00');
     insert into pages (book_id, round_id, position, content, published_at) values
       ('${B1}', '${R1}', 1, '${DOC("mot")}'::jsonb, '2026-09-01 00:00:00+00'),
       ('${B1}', '${R1}', 2, '${DOC("hai")}'::jsonb, '2026-09-01 00:00:00+00'),
       ('${B1}', '${R1}', 3, '${DOC("ba")}'::jsonb, '2026-09-01 00:00:00+00'),
-      ('${B2}', '${R2}', 1, '${DOC("x")}'::jsonb, '2026-09-02 00:00:00+00');
+      ('${B2}', '${R2}', 1, '${DOC("x")}'::jsonb, '2026-09-02 00:00:00+00'),
+      ('${B3}', '${R3}', 1, '${DOC("y")}'::jsonb, '2026-09-03 00:00:00+00'),
+      ('${B3}', '${R3}', 2, '${DOC("z")}'::jsonb, '2026-09-03 00:00:00+00');
     insert into read_marks (account_id, book_id, position) values
-      ('${A2}', '${B1}', 2), ('${A1}', '${B2}', 0), ('${A1}', '${B1}', 9);
+      ('${A2}', '${B1}', 2), ('${A1}', '${B2}', 0), ('${A1}', '${B3}', 9), ('${A1}', '${B1}', 3);
   `);
 }
 
@@ -75,14 +81,14 @@ async function hang<T>(c: PGlite, cau: string): Promise<T[]> {
 }
 
 describe("migration to da xem: moc cu thanh tung to", () => {
-  it("moc p thanh dung cac to 1 toi p co that; moc 0 khong sinh dong; moc vuot to cuoi chi lay to co that", async () => {
+  it("moc p thanh dung cac to 1 toi p co that; moc 0 khong sinh dong; moc vuot to cuoi chi lay to co that; moc cua chinh chu sach khong chuyen", async () => {
     const c = await dbToi0011();
     await gieoCu(c);
     await len0013(c);
     const rows = await hang<{ account_id: string; book_id: string; position: number }>(
       c, "select account_id, book_id, position from read_sheets order by account_id, book_id, position");
     expect(rows.map((r) => [r.account_id, r.book_id, r.position])).toEqual([
-      [A1, B1, 1], [A1, B1, 2], [A1, B1, 3], [A2, B1, 1], [A2, B1, 2],
+      [A1, B3, 1], [A1, B3, 2], [A2, B1, 1], [A2, B1, 2],
     ]);
     await c.close();
   });
