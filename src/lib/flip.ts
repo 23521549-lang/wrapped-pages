@@ -4,6 +4,12 @@
  */
 export type FlipMode = "mot" | "doi";
 
+/**
+ * So to nhieu nhat mot khung cua sach lat hien cung luc (che do "doi" mo hai trang ghep). markRead tu choi khoang rong
+ * hon con so nay: mot khoang rong hon khong the la mot khung nguoi doc that su nhin thay.
+ */
+export const MAX_SHOWN_SHEETS = 2;
+
 export function viewCount(mode: FlipMode, n: number): number {
   if (n <= 0) return 1;
   return mode === "mot" ? n : Math.ceil(n / 2);
@@ -18,11 +24,6 @@ export function viewSheets(mode: FlipMode, v: number, n: number): (number | null
 /** Khung nhin chua to i. */
 export function viewOf(mode: FlipMode, i: number): number {
   return mode === "mot" ? i : Math.floor(i / 2);
-}
-
-/** Chi so to xa nhat dang hien trong khung v, -1 neu khung trong. */
-export function lastVisible(mode: FlipMode, v: number, n: number): number {
-  return Math.max(-1, ...viewSheets(mode, v, n).filter((i): i is number => i !== null));
 }
 
 /** Nhan kieu "Trang 3 / 12" hoac "Trang 2-3 / 12". */

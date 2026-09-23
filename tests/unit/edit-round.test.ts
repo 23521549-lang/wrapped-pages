@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
-import { activity, pages, readMarks, rounds } from "@/server/db/schema";
+import { activity, pages, readSheets, rounds } from "@/server/db/schema";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
 import {
   editRound, listRoundsForEdit, ownRoundExists, readRoundForEdit, roundOfPosition, type RoundEditResult,
@@ -69,19 +69,18 @@ async function sua(s: Bo, ordinal: number, chu: string[], now: Date = T): Promis
   return editRound(s.db, s.seat1.id, s.chung, id, chu.map(to), base, now);
 }
 
-/** Moc doc cua mot nguoi tren cuon chung. Loc ca accountId: cuon co the co moc cua ca hai nguoi. */
-async function mocDoc(s: Bo, ai: string = s.seat2.id): Promise<number | undefined> {
-  const [row] = await s.db
-    .select({ position: readMarks.position })
-    .from(readMarks)
-    .where(and(eq(readMarks.bookId, s.chung), eq(readMarks.accountId, ai)));
-  return row?.position;
-}
+/** Cac to mot nguoi da xem tren cuon chung, tang dan. Loc ca accountId: cuon co the co dong cua ca hai nguoi. */
+const daXem = async (s: Bo, ai: string = s.seat2.id) =>
+  (await s.db
+    .select({ p: readSheets.position })
+    .from(readSheets)
+    .where(and(eq(readSheets.bookId, s.chung), eq(readSheets.accountId, ai)))
+    .orderBy(asc(readSheets.position))).map((r) => r.p);
 
-/** Dat moc doc cua mot nguoi tren cuon chung. */
-async function datMoc(s: Bo, ai: string, position: number): Promise<void> {
-  await s.db.insert(readMarks).values({ accountId: ai, bookId: s.chung, position });
-}
+/** Danh dau mot nguoi da xem cac to cho san cua cuon chung (khong qua markRead). */
+const datDaXem = async (s: Bo, ai: string, ...vi: number[]) => {
+  await s.db.insert(readSheets).values(vi.map((position) => ({ accountId: ai, bookId: s.chung, position })));
+};
 
 /** Moi dong pages va rounds, theo id: de chung minh khong ghi gi. */
 async function chup(db: TestDb) {
@@ -89,59 +88,65 @@ async function chup(db: TestDb) {
 }
 
 describe("editRound: doi so to", () => {
-  it("tang so to cua luot giua: to sau doi theo, moc doc sau luot cong theo, niem phong phu dung luot, Hoat dong khong doi", async () => {
+  it("tang so to cua luot giua: to sau doi theo, to da xem sau luot cong theo, niem phong phu dung luot, Hoat dong khong doi", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "A");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
     await dangNiemPhong(s.db, s.seat1.id, s.chung, CAU_DO, "C1", "C2");
-    // Moc doc nam SAU luot sap dai them: nhanh "position > last thi cong delta" voi delta duong chay o day.
-    await datMoc(s, s.seat2.id, 6);
+    // To 4 va 5 nam SAU luot sap dai them: nhanh "position > last thi cong delta" voi delta duong chay o day. To 1 nam
+    // truoc luot nen phai dung yen.
+    await datDaXem(s, s.seat2.id, 1, 4, 5);
     const hoatDong = await s.db.select().from(activity).orderBy(asc(activity.id));
     expect(await sua(s, 2, ["B1", "B2", "B3", "B4"])).toEqual({ status: "saved", first: 2 });
     expect(await banDo(s.db, s.chung)).toEqual([
       [1, 1, "A"], [2, 2, "B1"], [3, 2, "B2"], [4, 2, "B3"], [5, 2, "B4"], [6, 3, "C1"], [7, 3, "C2"],
     ]);
-    expect(await mocDoc(s)).toBe(8);
+    expect(await daXem(s)).toEqual([1, 6, 7]);
     const [niem] = await sealsOfBook(s.db, s.chung);
     expect([niem.firstPosition, niem.lastPosition]).toEqual([6, 7]);
     expect(await s.db.select().from(activity).orderBy(asc(activity.id))).toEqual(hoatDong);
   });
 
-  it("giam so to cua luot dau: to sau lui lai, moc doc sau luot tru theo", async () => {
+  it("giam so to cua luot dau: to sau lui lai, to da xem sau luot tru theo", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "A1", "A2", "A3");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
-    await datMoc(s, s.seat2.id, 5);
+    await datDaXem(s, s.seat2.id, 4, 5);
     expect(await sua(s, 1, ["A"])).toEqual({ status: "saved", first: 1 });
     expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "A"], [2, 2, "B1"], [3, 2, "B2"]]);
-    expect(await mocDoc(s)).toBe(3);
+    expect(await daXem(s)).toEqual([2, 3]);
   });
 
-  it("moc doc trong luot bi thu gon kep ve to cuoi moi cua luot; moc truoc luot khong doi", async () => {
+  it("to da xem trong luot bi cat bot thi mat, to sau luot lui dung delta", async () => {
+    const s = await haiCuon();
+    await dang(s.db, s.seat1.id, s.chung, "A1", "A2", "A3");
+    await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
+    await datDaXem(s, s.seat2.id, 1, 2, 3, 5);
+    expect(await sua(s, 1, ["Gọn"])).toEqual({ status: "saved", first: 1 });
+    expect(await daXem(s, s.seat2.id)).toEqual([1, 3]);
+  });
+
+  it("to da xem cua luot bi thu gon chi mat nhung to khong con; to truoc luot khong doi", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "A");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2", "B3");
-    await datMoc(s, s.seat2.id, 4);
+    await datDaXem(s, s.seat2.id, 1, 2, 3, 4);
     await sua(s, 2, ["B"]);
-    expect(await mocDoc(s)).toBe(2);
-    await s.db
-      .update(readMarks)
-      .set({ position: 1 })
-      .where(and(eq(readMarks.bookId, s.chung), eq(readMarks.accountId, s.seat2.id)));
+    expect(await daXem(s)).toEqual([1, 2]);
     await sua(s, 2, ["B", "C", "D"]);
-    expect(await mocDoc(s)).toBe(1);
+    expect(await daXem(s)).toEqual([1, 2]);
   });
 
-  it("moc doc cua ca hai nguoi: moc sau luot doi theo delta, moc trong luot kep ve to cuoi moi", async () => {
+  it("to da xem cua ca hai nguoi: to sau luot lui theo delta, to trong phan bi cat thi mat", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "A1", "A2", "A3");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
-    // seat2 doc toi to cuoi cuon (sau luot 1); seat1 dung o to 2, nam trong chinh luot sap thu gon.
-    await datMoc(s, s.seat2.id, 5);
-    await datMoc(s, s.seat1.id, 2);
+    // seat2 da xem hai to cuoi cuon (sau luot 1); seat1 da xem to 1 va to 2, to 2 nam trong phan sap bi cat.
+    await datDaXem(s, s.seat2.id, 4, 5);
+    await datDaXem(s, s.seat1.id, 1, 2);
     expect(await sua(s, 1, ["A"])).toEqual({ status: "saved", first: 1 });
-    expect(await mocDoc(s, s.seat2.id)).toBe(3);
-    expect(await mocDoc(s, s.seat1.id)).toBe(1);
+    expect(await daXem(s, s.seat2.id)).toEqual([2, 3]);
+    expect(await daXem(s, s.seat1.id)).toEqual([1]);
   });
 
   it("giu so to o luot cuoi: vi tri giu nguyen, edited_at cua luot la now", async () => {
@@ -153,16 +158,16 @@ describe("editRound: doi so to", () => {
     expect((await roundsOfBook(s.db, s.chung)).map((r) => r.editedAt)).toEqual([null, T]);
   });
 
-  it("giu so to: moc doc cua ca hai nguoi khong doi, ke ca moc nam sau luot hay trong luot", async () => {
+  it("giu so to: cac to da xem cua ca hai nguoi khong mat va khong xe dich dong nao", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "A");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
     await dang(s.db, s.seat1.id, s.chung, "C");
-    await datMoc(s, s.seat2.id, 4);
-    await datMoc(s, s.seat1.id, 2);
+    await datDaXem(s, s.seat2.id, 1, 2, 3, 4);
+    await datDaXem(s, s.seat1.id, 2);
     expect(await sua(s, 2, ["B1 đã sửa", "B2"])).toEqual({ status: "saved", first: 2 });
     expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "A"], [2, 2, "B1 đã sửa"], [3, 2, "B2"], [4, 3, "C"]]);
-    expect([await mocDoc(s, s.seat2.id), await mocDoc(s, s.seat1.id)]).toEqual([4, 2]);
+    expect([await daXem(s, s.seat2.id), await daXem(s, s.seat1.id)]).toEqual([[1, 2, 3, 4], [2]]);
   });
 
   it("to moi mang round_id va published_at cua luot; dau noi tiep o to dau bi bo", async () => {

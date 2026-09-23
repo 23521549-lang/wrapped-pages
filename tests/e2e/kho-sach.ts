@@ -316,14 +316,14 @@ export async function cacToCua(bookId: string): Promise<{ position: number; roun
   }
 }
 
-/** Moc da doc cua nguoi kia tren mot cuon (chu sach khong co moc), hoac null. */
-export async function mocDocCua(bookId: string): Promise<number | null> {
+/** Cac to nguoi kia da xem tren mot cuon (chu sach khong co dong nao), tang dan. */
+export async function toDaXemCua(bookId: string): Promise<number[]> {
   const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
   try {
     const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
     assertE2eDatabase(ten);
-    const rows = await sql<{ position: number }[]>`select position from read_marks where book_id = ${bookId}`;
-    return rows[0]?.position ?? null;
+    const rows = await sql<{ position: number }[]>`select position from read_sheets where book_id = ${bookId} order by position`;
+    return rows.map((r) => r.position);
   } catch (e) {
     if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
     rethrowSafely(e);

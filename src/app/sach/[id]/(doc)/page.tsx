@@ -31,7 +31,7 @@ export default async function DocSach({ params, searchParams }: {
   // Lua chon tat nhac la cua chinh nguoi xem, khong phu thuoc cuon sach, nen doc song song; chi dung khi sach co nhac.
   const [view, tatNhac] = await Promise.all([readBook(db, me.accountId, id, now), readMusicMuted(db, me.accountId)]);
   if (!view) notFound();
-  const { book, mine, sheets, seals, rounds, replies, mark } = view;
+  const { book, mine, sheets, seals, rounds, replies, seen, firstUnread } = view;
   const count = sheets.length;
   // Nut "Sua trang N" chi cho chu sach: tro toi man sua luot chua to do, mo ngay to do. Luot con niem phong voi nguoi kia
   // (hay nguoi xem khong phai chu sach) thi null.
@@ -40,7 +40,7 @@ export default async function DocSach({ params, searchParams }: {
     const r = luotCua.get(s.roundId);
     return mine && r && !r.sealed ? roundEditPath(book.id, r.ordinal, s.position - r.first + 1) : null;
   });
-  const start = startSheet(query.trang, count, mark, mine);
+  const start = startSheet(query.trang, count, firstUnread, mine);
   // Nguoi doc la nguoi khong phai chu sach: cung la nguoi hoi dap.
   const nguoiDoc = mine ? me.partnerNickname : me.nickname;
   // Khung Loi hoi dap chi co voi sach dang chia se va da co to; sach rieng tu khong co (readBook cung khong doc loi).
@@ -93,7 +93,7 @@ export default async function DocSach({ params, searchParams }: {
           now={now}
           start={start}
           revealAt={revealTarget(sheets, seals, query.mo)}
-          mark={mark}
+          seen={seen}
           trackRead={!mine}
           mine={mine}
           editedAt={sheets.map((s) => s.editedAt)}

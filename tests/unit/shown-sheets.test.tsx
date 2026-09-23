@@ -45,7 +45,7 @@ function props(start = 0): ReaderProps {
   return {
     bookId: "b1", title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
     looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }], seals: [],
-    ownerName: "Linh", readerName: "Mạnh", now: NOW, start, revealAt: null, mark: 0, trackRead: false,
+    ownerName: "Linh", readerName: "Mạnh", now: NOW, start, revealAt: null, seen: [], trackRead: false,
     mine: false, editedAt: [null, null, null], editHref: [null, null, null],
   };
 }

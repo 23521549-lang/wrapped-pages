@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { flipPlan, lastVisible, pageLabel, viewCount, viewOf, viewSheets, type FlipMode } from "@/lib/flip";
+import { flipPlan, MAX_SHOWN_SHEETS, pageLabel, viewCount, viewOf, viewSheets, type FlipMode } from "@/lib/flip";
 
 describe("khung nhin", () => {
   it("so khung nhin theo so to", () => {
@@ -16,18 +16,16 @@ describe("khung nhin", () => {
     expect(viewSheets("mot", 2, 5)).toEqual([2]);
   });
 
+  it("khung nao cung hien nhieu nhat MAX_SHOWN_SHEETS to", () => {
+    for (const mode of ["mot", "doi"] as const) {
+      for (let v = 0; v < 6; v++) expect(viewSheets(mode, v, 7).length).toBeLessThanOrEqual(MAX_SHOWN_SHEETS);
+    }
+  });
+
   it("viewOf tim dung khung chua to", () => {
     for (const mode of ["mot", "doi"] as FlipMode[]) {
       for (let i = 0; i < 7; i++) expect(viewSheets(mode, viewOf(mode, i), 7)).toContain(i);
     }
-  });
-
-  it("to xa nhat dang hien, de day moc da doc", () => {
-    expect(lastVisible("doi", 1, 12)).toBe(3);
-    expect(lastVisible("doi", 0, 12)).toBe(1);
-    expect(lastVisible("doi", 2, 5)).toBe(4);
-    expect(lastVisible("mot", 4, 12)).toBe(4);
-    expect(lastVisible("mot", 0, 0)).toBe(-1);
   });
 
   it("nhan so trang", () => {

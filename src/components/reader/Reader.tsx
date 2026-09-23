@@ -16,7 +16,7 @@ import { Flipbook, SheetText } from "./Flipbook";
 import { LockedSheet, SealMark } from "./LockedSheet";
 import { useShownSheets } from "./ShownSheets";
 
-/** Dung lat bao lau thi moi gui moc, de lat nhanh qua nhieu to chi gui mot lan. */
+/** Dung lat bao lau thi moi gui khung dang hien, de lat nhanh qua nhieu to chi gui khung dung lai that su. */
 const CHO_MS = 600;
 
 export type ReaderProps = {
@@ -36,9 +36,9 @@ export type ReaderProps = {
   start: number;
   /** Noi chay nghi thuc mo (revealTarget: may chu tra ritual true cho niem phong trong ?mo=): chi so to va ma niem phong, hoac null. */
   revealAt: RevealTarget | null;
-  /** Moc da doc luc mo man; chi gui khi to xa nhat vuot moc nay. */
-  mark: number;
-  /** Chi sach cua nguoi kia moi day moc (chu sach khong co moc). */
+  /** Vi tri cac to nguoi xem da tung thay, de khong gui lai mot khung da ghi. */
+  seen: readonly number[];
+  /** Chi sach cua nguoi kia moi ghi to da xem (chu sach khong co dong nao). */
   trackRead: boolean;
   /** Nguoi xem la chu sach: to chua sua duoc co dong "Dang niem phong" thay cho nut sua. */
   mine: boolean;
@@ -54,14 +54,15 @@ export type ReaderProps = {
 /** Nghi thuc mo cua man doc nay: niem phong nao, va chu con dang hien dan tren to dau cua no khong. */
 type NghiThuc = { sealId: string; dangGo: boolean };
 
-/** Man doc phia trinh duyet: sach lat duoc, to niem phong, nghi thuc mo, khung thu thach, day moc da doc cua nguoi kia. */
+/** Man doc phia trinh duyet: sach lat duoc, to niem phong, nghi thuc mo, khung thu thach, ghi cac to nguoi kia da thay. */
 export function Reader({
-  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, mark, trackRead, mine, editedAt, editHref,
+  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, seen, trackRead, mine, editedAt, editHref,
 }: ReaderProps) {
   const router = useRouter();
   const moId = useId();
-  const best = useRef(mark);
-  const pending = useRef<number | null>(null);
+  // Cac to da ghi (tu may chu, cong cac khung vua gui trong tab nay): khung nao cung da ghi thi khong goi nua.
+  const daGui = useRef(new Set(seen));
+  const pending = useRef<{ first: number; last: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inflight = useRef<Promise<void> | null>(null);
   // To dang hien song o ShownSheetsProvider (neu co) de cot phai cua man doc cung theo; khung thu thach van doc no.
@@ -98,35 +99,39 @@ export function Reader({
   const flush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    const position = pending.current;
+    const khung = pending.current;
     pending.current = null;
-    if (position === null) return;
-    inflight.current = actionMarkRead(bookId, position).catch(() => {});
+    if (khung === null) return;
+    inflight.current = actionMarkRead(bookId, khung.first, khung.last).catch(() => {});
   }, [bookId]);
-
-  const onReach = useCallback(
-    (position: number) => {
-      if (!trackRead || position <= best.current) return;
-      best.current = position;
-      pending.current = position;
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(flush, CHO_MS);
-    },
-    [trackRead, flush],
-  );
 
   const onShow = useCallback(
     (first: number, last: number) => {
       setShown({ first, last });
+      if (trackRead) {
+        // Chi to that su hien moi duoc ghi. Khung nao cung da ghi roi thi thoi: lat qua lat lai khong goi lai may chu.
+        let moi = false;
+        for (let p = first; p <= last; p++) {
+          if (!daGui.current.has(p)) {
+            daGui.current.add(p);
+            moi = true;
+          }
+        }
+        if (moi) {
+          pending.current = { first, last };
+          if (timer.current) clearTimeout(timer.current);
+          timer.current = setTimeout(flush, CHO_MS);
+        }
+      }
       // Khung dung yen ma khong con to dang go thi thoi: quay lai thi to do hien thang, khong go lai tu dau.
       if (moIndex !== null && (moIndex + 1 < first || moIndex + 1 > last)) stopReveal();
     },
-    [moIndex, stopReveal, setShown],
+    [moIndex, stopReveal, setShown, trackRead, flush],
   );
 
   useEffect(
     () => () => {
-      // Roi man doc: gui ngay moc con dang hen, DOI lenh ghi moc gan nhat xong roi moi lam moi trang vua toi.
+      // Roi man doc: gui ngay khung con dang hen, DOI lenh ghi gan nhat xong roi moi lam moi trang vua toi.
       // Khong dua vao thu tu hang doi cua router: bam quay lai (ACTION_RESTORE) go server action dang chay
       // khoi hang doi (app-router-instance.js, dispatchAction), refresh se chay song song voi no.
       flush();
@@ -190,7 +195,7 @@ export function Reader({
 
   return (
     <>
-      <Flipbook title={title} sheets={sheets} author={ownerName} start={start} onReach={onReach} renderSheet={renderSheet} onShow={onShow} renderFoot={renderFoot} />
+      <Flipbook title={title} sheets={sheets} author={ownerName} start={start} renderSheet={renderSheet} onShow={onShow} renderFoot={renderFoot} />
       {/* Vung live co mat tu lan ve dau, nen khung chen vao sau hydrate duoc trinh doc man hinh doc len. */}
       <div aria-live="polite">
         {moSeal && (

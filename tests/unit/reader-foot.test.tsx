@@ -48,7 +48,7 @@ function props(p: Partial<ReaderProps> = {}): ReaderProps {
   return {
     bookId: BOOK, title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
     looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }], seals: [],
-    ownerName: "Linh", readerName: "Mạnh", now: NOW, start: 0, revealAt: null, mark: 0, trackRead: false,
+    ownerName: "Linh", readerName: "Mạnh", now: NOW, start: 0, revealAt: null, seen: [], trackRead: false,
     mine: true, editedAt: [null, null, null], editHref: [SUA_1, null, SUA_3], ...p,
   };
 }

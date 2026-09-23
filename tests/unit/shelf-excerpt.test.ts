@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { readMarks, seals } from "@/server/db/schema";
+import { readSheets, seals } from "@/server/db/schema";
 import { listShelf } from "@/server/library/shelf";
 import { isLockedFor } from "@/server/seal/seals";
 import type { DocJson } from "@/lib/doc/types";
@@ -26,10 +26,12 @@ async function chenTo(db: TestDb, bookId: string, ...docs: DocJson[]) {
   for (const [i, content] of docs.entries()) await themLuot(db, bookId, i + 1, [content]);
 }
 
-/** Dat thang dau doc cua mot nguoi tren mot cuon (khong qua markRead), de dung dung tinh huong can kiem. */
+/** Danh dau nguoi nay da xem cac to 1 toi position cua cuon (khong qua markRead), de dung dung tinh huong can kiem. */
 async function docToi(db: TestDb, accountId: string, bookId: string, position: number) {
-  await db.delete(readMarks).where(and(eq(readMarks.accountId, accountId), eq(readMarks.bookId, bookId)));
-  await db.insert(readMarks).values({ accountId, bookId, position });
+  await db.delete(readSheets).where(and(eq(readSheets.accountId, accountId), eq(readSheets.bookId, bookId)));
+  if (position >= 1) {
+    await db.insert(readSheets).values(Array.from({ length: position }, (_, i) => ({ accountId, bookId, position: i + 1 })));
+  }
 }
 
 const khoiAnh: DocJson = { type: "doc", content: [{ type: "anh", attrs: { id: randomUUID(), w: 1, h: 1 } }] };

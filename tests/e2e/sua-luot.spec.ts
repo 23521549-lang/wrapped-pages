@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { resetDb } from "./db";
 import {
-  cacToCua, dangToThang, dangTrang, dongContextCu, haiNguoiDaVao, mocDocCua, taoSach, toDaDang, veCachCatCu, veCuoiTaiLieu, vietTranTrang,
+  cacToCua, dangToThang, dangTrang, dongContextCu, haiNguoiDaVao, taoSach, toDaDang, toDaXemCua, veCachCatCu, veCuoiTaiLieu, vietTranTrang,
 } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo } from "./niem-phong";
 
@@ -109,7 +109,7 @@ test("sua luot lam tang so to: to sau doi theo, nguoi kia doc dung thu tu, Da su
   expect((await b.goto(`/sach/${id}/sua-luot/1`))?.status()).toBe(404);
 });
 
-test("sua luot lam giam so to: to sau lui lai, moc doc cua nguoi kia doi theo", async ({ browser }) => {
+test("sua luot lam giam so to: to sau lui lai, to da xem cua nguoi kia doi theo", async ({ browser }) => {
   test.setTimeout(240_000);
   const { a, b } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
@@ -118,7 +118,7 @@ test("sua luot lam giam so to: to sau lui lai, moc doc cua nguoi kia doi theo", 
   await b.setViewportSize({ width: 375, height: 900 });
   await b.goto(`/sach/${id}?trang=5`);
   await expect(b.locator(".doc__dem")).toHaveText("Trang 5 / 5");
-  await expect.poll(() => mocDocCua(id), { timeout: 10_000 }).toBe(5);
+  await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([5]);
 
   await moManSua(a, id, 1);
   await thayChu(a, "Gọn lại một trang.");
@@ -127,7 +127,7 @@ test("sua luot lam giam so to: to sau lui lai, moc doc cua nguoi kia doi theo", 
   await expect(a).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
 
   expect((await cacToCua(id)).map((t) => doanCua(t.content))).toEqual([["Gọn lại một trang."], [TO_4], ["Hết."]]);
-  expect(await mocDocCua(id)).toBe(3);
+  expect(await toDaXemCua(id)).toEqual([3]);
   await b.goto(`/sach/${id}?trang=2`);
   await expect(b.locator(".doc__dem")).toHaveText("Trang 2 / 3");
   await expect(b.locator(".sach")).toContainText(TO_4);

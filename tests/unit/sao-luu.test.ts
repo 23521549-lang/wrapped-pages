@@ -90,7 +90,7 @@ async function gieo(c: PGlite) {
       ('${B1}', '${R2}', 2, '{"type":"doc","content":[]}', '2026-09-03 00:00:00+00'),
       ('${B1}', '${R3}', 3, '{"type":"doc","content":[]}', '2026-09-04 00:00:00+00');
     insert into drafts (book_id, content, sheet_count) values ('${B2}', '${DOC}', 3);
-    insert into read_marks (account_id, book_id, position) values ('${A2}', '${B1}', 2);
+    insert into read_sheets (account_id, book_id, position) values ('${A2}', '${B1}', 1), ('${A2}', '${B1}', 2);
     insert into seals (id, book_id, round_id, kind, question, answers, hints, teaser) values
       ('${S1}', '${B1}', '${R1}', 'cau-do', 'Mình gặp nhau ở đâu?', '["hồ tây","Hồ Tây"]', '["nước"]', 'Ngày ấy...');
     insert into seals (id, book_id, round_id, kind, question) values

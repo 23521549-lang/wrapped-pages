@@ -65,14 +65,14 @@ export async function actionUpdateBook(bookId: string, formData: FormData) {
 }
 
 /**
- * Day moc da doc cua nguoi dang dang nhap. Moi luat (khong lui, khong vuot to cuoi, bo qua sach cua minh
- * va sach khong duoc doc) nam o markRead. Khong goi refresh(): lam vay thi moi lan danh dau, man doc bi
- * render lai va gui lai toan bo cac to.
+ * Ghi lai cac to nguoi dang dang nhap vua thay: khoang to cua khung sach dang dung yen. Moi luat (khong ghi to trong
+ * luot con khoa, khong ghi to khong co that, bo qua sach cua minh va sach khong duoc doc) nam o markRead. Khong goi
+ * refresh(): lam vay thi moi lan danh dau, man doc bi render lai va gui lai toan bo cac to.
  */
-export async function actionMarkRead(bookId: string, position: number) {
+export async function actionMarkRead(bookId: string, from: number, to: number) {
   const me = await readMe();
   if (!me) return;
-  await markRead(db, me.accountId, bookId, position);
+  await markRead(db, me.accountId, bookId, from, to);
 }
 
 /**

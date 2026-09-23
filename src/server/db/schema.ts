@@ -133,13 +133,20 @@ export const drafts = pgTable("drafts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Moc "da doc toi dau" cua mot nguoi trong mot cuon: vi tri to lon nhat da doc. */
-export const readMarks = pgTable("read_marks", {
+/**
+ * Cac to mot nguoi DA THUC SU THAY tren man doc, moi to mot dong. Thay cho mot so "da doc toi dau": mo man doc thang
+ * toi mot to xa khong duoc bien cac to bi nhay coc thanh da doc. Khong co dong la chua thay; to nam trong luot con
+ * niem phong voi nguoi xem khong bao gio duoc ghi (markRead), nen no van la trang moi cho toi khi mo ra va lat that.
+ * Chu sach khong co dong nao trong cuon cua chinh minh.
+ */
+export const readSheets = pgTable("read_sheets", {
   accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
-  position: integer("position").notNull().default(0),
+  position: integer("position").notNull(),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.accountId, t.bookId] }),
+  pk: primaryKey({ columns: [t.accountId, t.bookId, t.position] }),
+  positionFromOne: check("read_sheets_position", sql`${t.position} >= 1`),
+  byBook: index("read_sheets_book_idx").on(t.bookId, t.position),
 }));
 
 /**

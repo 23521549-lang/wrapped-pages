@@ -1,5 +1,5 @@
-import { and, asc, count, eq, gt, gte, sql } from "drizzle-orm";
-import { books, pages, readMarks, rounds, seals } from "@/server/db/schema";
+import { and, asc, count, eq, gt, gte, lte, sql } from "drizzle-orm";
+import { books, pages, readSheets, rounds, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { normalizeSheets } from "@/lib/doc/continuation";
@@ -118,8 +118,8 @@ export async function ownRoundExists(db: AnyDb, ownerId: string, bookId: string,
  * - cac to moi y het cac to cu (so bang phep bang cua jsonb, khong giu thu tu khoa) thi "unchanged", khong ghi gi; chi
  *   hoi cau nay khi so to khong doi, vi doi so to thi khong the y het;
  * - xoa cac to cu, doi cac to sau luot di delta qua khoang dem, chen cac to moi lien nhau tu to dau cu, cung round_id va
- *   published_at cua luot; khi so to doi: moc doc sau luot doi theo delta, moc doc trong luot kep ve to cuoi moi cua
- *   luot (so to khong doi thi phep doi nay la dong nhat nen khong chay);
+ *   published_at cua luot; khi so to doi: cac to da xem sau luot doi theo delta, cac to da xem cua chinh luot chi mat
+ *   khi to do khong con (so to khong doi thi phep doi nay la dong nhat nen khong chay);
  * - edited_at tinh ngay trong cau UPDATE: now (mac dinh gio database, test truyen moc co dinh) nhung khong som hon
  *   published_at, va sau moc phien ban cu it nhat 1 ms, nen CHECK rounds_edited_at khong vo va tab giu moc cu luon nhan
  *   "stale", khong ghi de im lang.
@@ -192,13 +192,23 @@ export async function editRound(
       bookId: book, roundId: round.id, position: first + i, content, publishedAt: round.publishedAt,
     })));
     if (delta !== 0) {
-      // delta = 0 thi phep bien doi nay la dong nhat (first + n - 1 = last): khong ghi vao bang cua nguoi kia cho vui.
+      // Luot ngan lai: cac to o cuoi luot khong con ton tai, nen dong "da xem" cua chung mat theo - de lai thi chung se
+      // bam nham vao to cua luot sau khi cac to do lui ve.
+      if (delta < 0) {
+        await tx
+          .delete(readSheets)
+          .where(and(eq(readSheets.bookId, book), gte(readSheets.position, first + n), lte(readSheets.position, last)));
+      }
+      // Hai buoc qua vung dem y het cach doi cho cua pages o tren: khoa chinh (account_id, book_id, position) khong
+      // vuong giua chung. Moc loc la last + DEM chu khong phai DEM, de khong dua vao gia thiet "khong cuon nao toi DEM to".
       await tx
-        .update(readMarks)
-        .set({
-          position: sql`case when ${readMarks.position} > ${last} then ${readMarks.position} + ${delta} else least(${readMarks.position}, ${first + n - 1}) end`,
-        })
-        .where(and(eq(readMarks.bookId, book), gte(readMarks.position, first)));
+        .update(readSheets)
+        .set({ position: sql`${readSheets.position} + ${DEM}` })
+        .where(and(eq(readSheets.bookId, book), gt(readSheets.position, last)));
+      await tx
+        .update(readSheets)
+        .set({ position: sql`${readSheets.position} - ${DEM - delta}` })
+        .where(and(eq(readSheets.bookId, book), gt(readSheets.position, last + DEM)));
     }
     await tx
       .update(rounds)

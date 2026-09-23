@@ -51,7 +51,7 @@ const ve = (start: number) => (
     now={T0}
     start={start}
     revealAt={null}
-    mark={0}
+    seen={[]}
     trackRead={false}
     mine={false}
     editedAt={[null, null, null]}

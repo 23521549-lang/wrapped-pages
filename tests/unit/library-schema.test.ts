@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { viPham } from "../helpers/db";
 import { taoLuot } from "../helpers/round";
 import { seedHai } from "../helpers/seed";
-import { accounts, books, drafts, pages, readMarks, rounds } from "@/server/db/schema";
+import { accounts, books, drafts, pages, readSheets, rounds } from "@/server/db/schema";
 import { COVERS, MODES } from "@/lib/book";
 import { YOUTUBE_ID } from "@/lib/youtube";
 import type { DocJson } from "@/lib/doc/types";
@@ -114,16 +114,16 @@ describe("bang sach, to, ban nhap va moc doc", () => {
     await expect(db.insert(drafts).values({ bookId: book.id, content: DOC })).rejects.toThrow();
   });
 
-  it("xoa cuon thi mat luon to, ban nhap va moc doc cua cuon do", async () => {
+  it("xoa cuon thi mat luon to, ban nhap va cac to da xem cua cuon do", async () => {
     const { db, book, seat2 } = await motCuon();
     const roundId = await taoLuot(db, book.id);
     await db.insert(pages).values({ bookId: book.id, roundId, position: 1, content: DOC });
     await db.insert(drafts).values({ bookId: book.id, content: DOC });
-    await db.insert(readMarks).values({ accountId: seat2.id, bookId: book.id, position: 1 });
+    await db.insert(readSheets).values({ accountId: seat2.id, bookId: book.id, position: 1 });
     await db.delete(books).where(eq(books.id, book.id));
     expect(await db.select().from(pages)).toHaveLength(0);
     expect(await db.select().from(rounds)).toHaveLength(0);
     expect(await db.select().from(drafts)).toHaveLength(0);
-    expect(await db.select().from(readMarks)).toHaveLength(0);
+    expect(await db.select().from(readSheets)).toHaveLength(0);
   });
 });

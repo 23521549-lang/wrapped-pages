@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { DocJson } from "@/lib/doc/types";
-import { flipPlan, lastVisible, pageLabel, viewOf, viewSheets, type FlipMode, type FlipPlan } from "@/lib/flip";
+import { flipPlan, pageLabel, viewOf, viewSheets, type FlipMode, type FlipPlan } from "@/lib/flip";
 import { SHEET } from "@/lib/sheet";
 import { DocView } from "@/components/doc/DocView";
 import { useFitScale } from "@/components/sheet/useFitScale";
@@ -87,8 +87,6 @@ export type FlipbookProps = {
   author: string;
   /** To mo dau, tinh tu 0. */
   start: number;
-  /** Goi moi khi khung dung yen, voi vi tri (tu 1) cua to xa nhat dang hien. */
-  onReach?: (position: number) => void;
   /**
    * Ve rieng phan ben trong mot to thay cho vung chu mac dinh, vd to dang niem phong. Tra undefined thi to
    * do ve nhu thuong. Duoc goi cho moi mat giay dang hien, ke ca hai mat cua la dang lat.
@@ -108,7 +106,7 @@ export type FlipbookProps = {
  * cu dau tren trang, vuot ngang tren man cam ung. Moi chi so lay tu src/lib/flip.ts; o day chi ve va chay
  * chuyen dong (chi transform va opacity).
  */
-export function Flipbook({ title, sheets, author, start, onReach, renderSheet, onShow, renderFoot }: FlipbookProps) {
+export function Flipbook({ title, sheets, author, start, renderSheet, onShow, renderFoot }: FlipbookProps) {
   const n = sheets.length;
   const [mode, setMode] = useState<FlipMode | null>(null);
   // To dau cua khung dang hien. Giu to chu khong giu khung, nen doi che do van mo dung cho dang doc.
@@ -226,12 +224,6 @@ export function Flipbook({ title, sheets, author, start, onReach, renderSheet, o
     queued.current = 0;
     goRef.current(dir);
   }, [turn]);
-
-  useEffect(() => {
-    if (mode === null || turn) return;
-    const last = lastVisible(mode, v, n);
-    if (last >= 0) onReach?.(last + 1);
-  }, [mode, v, n, turn, onReach]);
 
   // Bao cac to dang hien moi khi khung dung yen, de khung thu thach duoi sach theo dung to nguoi doc dang xem.
   useEffect(() => {

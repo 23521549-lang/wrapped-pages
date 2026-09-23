@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { dang, haiCuon, to } from "../helpers/library";
-import { books, drafts, pages, readMarks, rounds } from "@/server/db/schema";
+import { books, drafts, pages, readSheets, rounds } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
 import { listDrafts, listUnwrittenBooks, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
@@ -129,14 +129,14 @@ describe("dang trang", () => {
   });
 });
 
-describe("doc sach va moc da doc", () => {
-  it("readBook tra cac to theo thu tu va moc cua nguoi doc", async () => {
+describe("doc sach va cac to da xem", () => {
+  it("readBook tra cac to theo thu tu va cac to nguoi doc da xem", async () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await dang(db, seat1.id, chung, "một", "hai", "ba");
-    await markRead(db, seat2.id, chung, 2);
+    await markRead(db, seat2.id, chung, 1, 2);
     const v = (await readBook(db, seat2.id, chung))!;
     expect(v.mine).toBe(false);
-    expect(v.mark).toBe(2);
+    expect([v.seen, v.firstUnread]).toEqual([[1, 2], 3]);
     expect(v.sheets.map((s) => s.position)).toEqual([1, 2, 3]);
     expect(v.sheets[2].content).toEqual(to("ba"));
   });
@@ -148,24 +148,27 @@ describe("doc sach va moc da doc", () => {
     expect((await readBook(db, seat1.id, rieng))?.mine).toBe(true);
   });
 
-  it("moc khong lui, khong vuot to cuoi, bo qua gia tri khong hop le", async () => {
+  it("chi ghi to co that, bo qua gia tri khong hop le va khoang qua rong", async () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await dang(db, seat1.id, chung, "một", "hai");
-    await markRead(db, seat2.id, chung, 99);
-    await markRead(db, seat2.id, chung, 1);
-    await markRead(db, seat2.id, chung, 0);
-    await markRead(db, seat2.id, chung, 1.5);
-    expect((await readBook(db, seat2.id, chung))?.mark).toBe(2);
+    await markRead(db, seat2.id, chung, 2, 3);
+    await markRead(db, seat2.id, chung, 0, 1);
+    await markRead(db, seat2.id, chung, 1.5, 2);
+    await markRead(db, seat2.id, chung, 1, 3);
+    expect((await readBook(db, seat2.id, chung))?.seen).toEqual([2]);
+    await markRead(db, seat2.id, chung, 1, 2);
+    const v = (await readBook(db, seat2.id, chung))!;
+    expect([v.seen, v.firstUnread]).toEqual([[1, 2], 0]);
   });
 
-  it("chu sach khong co moc; sach rieng tu cua nguoi kia va sach chua co to thi bo qua", async () => {
+  it("chu sach khong co dong nao; sach rieng tu cua nguoi kia va sach chua co to thi bo qua", async () => {
     const { db, seat1, seat2, chung, rieng } = await haiCuon();
-    await markRead(db, seat2.id, chung, 1);
+    await markRead(db, seat2.id, chung, 1, 1);
     await dang(db, seat1.id, rieng, "riêng");
     await dang(db, seat1.id, chung, "một");
-    await markRead(db, seat1.id, chung, 1);
-    await markRead(db, seat2.id, rieng, 1);
-    const rows = await db.select().from(readMarks);
+    await markRead(db, seat1.id, chung, 1, 1);
+    await markRead(db, seat2.id, rieng, 1, 1);
+    const rows = await db.select().from(readSheets);
     expect(rows).toHaveLength(0);
   });
 });
