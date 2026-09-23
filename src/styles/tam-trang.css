@@ -1,0 +1,35 @@
+/*
+ * Tha tam trang: hoa ep, bau troi tren dau ke sach, hop chon, lich hoa. Hinh chep tu ban mau da duyet
+ * (.superpowers/sdd/dot-cap-nhat-hai/mockup-tam-trang-da-duyet.html). Mau chi qua token trong tokens.css.
+ * Container query cua ban mau doi thanh media query cung moc: khung cua ban mau rong dung bang cua so.
+ */
+
+/* hoa ep: net ve la currentColor nen bong hoa mang mau cua chinh the svg */
+.hoa{ display: block; flex: none; overflow: visible; }
+/* moi bong hoa mang muc chinh cua troi cua no, o moi noi (lich, hop chon, chu giai, o cua so); khong co nut doi mau */
+.hoa--nang-am{ color: var(--troi-nang-am-ink); }
+.hoa--troi-trong{ color: var(--troi-troi-trong-ink); }
+.hoa--may-nhe{ color: var(--troi-may-nhe-ink); }
+.hoa--gio-thoang{ color: var(--troi-gio-thoang-ink); }
+.hoa--mua-phun{ color: var(--troi-mua-phun-ink); }
+.hoa--mua-rao{ color: var(--troi-mua-rao-ink); }
+.hoa--giong{ color: var(--troi-giong-ink); }
+.hoa--suong-mu{ color: var(--troi-suong-mu-ink); }
+.hoa--cau-vong{ color: var(--troi-cau-vong-ink); }
+
+/*
+ * Moi kieu troi chi dat bien cho nen (--t1, --t2), net ve (--tnet), va color la muc chinh cua troi do. Vien va chu
+ * ben trong dung currentColor thay vi mot bien mau: cong tuong phan (tests/unit/tuong-phan.test.ts) chi doc duoc
+ * token that, nen MOI VIEN VE BANG currentColor DEU KHONG DUOC CONG DO. San cho nhung vien do la
+ * tests/unit/tam-trang-mau.test.ts: bai do khang dinh muc chinh cua moi troi dat >= 3 tren ca --troi-X-1 va
+ * --troi-X-2 (vai tro vien) va >= 4.5 cho vai tro chu, tren ca hai dau chuyen sac.
+ */
+.troi--nang-am{ --t1: var(--troi-nang-am-1); --t2: var(--troi-nang-am-2); --tnet: var(--troi-nang-am-net); color: var(--troi-nang-am-ink); }
+.troi--troi-trong{ --t1: var(--troi-troi-trong-1); --t2: var(--troi-troi-trong-2); --tnet: var(--troi-troi-trong-net); color: var(--troi-troi-trong-ink); }
+.troi--may-nhe{ --t1: var(--troi-may-nhe-1); --t2: var(--troi-may-nhe-2); --tnet: var(--troi-may-nhe-net); color: var(--troi-may-nhe-ink); }
+.troi--gio-thoang{ --t1: var(--troi-gio-thoang-1); --t2: var(--troi-gio-thoang-2); --tnet: var(--troi-gio-thoang-net); color: var(--troi-gio-thoang-ink); }
+.troi--mua-phun{ --t1: var(--troi-mua-phun-1); --t2: var(--troi-mua-phun-2); --tnet: var(--troi-mua-phun-net); color: var(--troi-mua-phun-ink); }
+.troi--mua-rao{ --t1: var(--troi-mua-rao-1); --t2: var(--troi-mua-rao-2); --tnet: var(--troi-mua-rao-net); color: var(--troi-mua-rao-ink); }
+.troi--giong{ --t1: var(--troi-giong-1); --t2: var(--troi-giong-2); --tnet: var(--troi-giong-net); color: var(--troi-giong-ink); }
+.troi--suong-mu{ --t1: var(--troi-suong-mu-1); --t2: var(--troi-suong-mu-2); --tnet: var(--troi-suong-mu-net); color: var(--troi-suong-mu-ink); }
+.troi--cau-vong{ --t1: var(--troi-cau-vong-1); --t2: var(--troi-cau-vong-2); --tnet: var(--troi-cau-vong-net); color: var(--troi-cau-vong-ink); }

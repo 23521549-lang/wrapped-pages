@@ -3,6 +3,7 @@
 @import "./giay.css";
 @import "./viet.css";
 @import "./seal.css";
+@import "./tam-trang.css";
 @import "./khung-cho.css";
 
 html, body { overflow-x: clip; }

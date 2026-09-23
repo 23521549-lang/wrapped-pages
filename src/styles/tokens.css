@@ -98,4 +98,29 @@
   --radius-tranh: 2px;
   --bong-tranh: 0 0 0 1px oklch(24% 0.012 250 / .07), 0 1px 2px oklch(24% 0.012 250 / .06), 0 10px 18px -12px oklch(24% 0.012 250 / .28);
   --tranh-nghieng: -1.8deg;
+
+  /* Chin bau troi cua Tha tam trang: mot tong nhat moi troi. -1, -2 la dau va cuoi chuyen sac cua nen, -net la net
+     ve (mat troi, may, hat mua), -ink va -ink2 la muc chinh va muc phu cua chu dung tren troi do
+     (tests/unit/tam-trang-mau.test.ts do tren ca hai dau chuyen sac). */
+  --troi-nang-am-1: oklch(97.8% 0.016 82);  --troi-nang-am-2: oklch(94.6% 0.036 70);
+  --troi-nang-am-net: oklch(98.6% 0.045 88); --troi-nang-am-ink: oklch(40% 0.07 58); --troi-nang-am-ink2: oklch(46% 0.06 58);
+  --troi-troi-trong-1: oklch(97.4% 0.018 228); --troi-troi-trong-2: oklch(93.4% 0.042 234);
+  --troi-troi-trong-net: oklch(62% 0.06 240); --troi-troi-trong-ink: oklch(38% 0.075 245); --troi-troi-trong-ink2: oklch(45% 0.06 245);
+  --troi-may-nhe-1: oklch(97.6% 0.009 255); --troi-may-nhe-2: oklch(93.8% 0.022 258);
+  --troi-may-nhe-net: oklch(99.4% 0.004 255); --troi-may-nhe-ink: oklch(38% 0.04 262); --troi-may-nhe-ink2: oklch(46% 0.03 262);
+  --troi-gio-thoang-1: oklch(97.8% 0.014 168); --troi-gio-thoang-2: oklch(94.2% 0.032 172);
+  --troi-gio-thoang-net: oklch(80% 0.05 172); --troi-gio-thoang-ink: oklch(38% 0.06 176); --troi-gio-thoang-ink2: oklch(45% 0.05 176);
+  --troi-mua-phun-1: oklch(96.8% 0.011 214); --troi-mua-phun-2: oklch(93.2% 0.022 218);
+  --troi-mua-phun-net: oklch(70% 0.04 222); --troi-mua-phun-ink: oklch(37% 0.045 226); --troi-mua-phun-ink2: oklch(45% 0.035 226);
+  --troi-mua-rao-1: oklch(96% 0.02 244);  --troi-mua-rao-2: oklch(91.6% 0.038 248);
+  --troi-mua-rao-net: oklch(64% 0.07 250); --troi-mua-rao-ink: oklch(36% 0.07 256); --troi-mua-rao-ink2: oklch(44% 0.06 256);
+  --troi-giong-1: oklch(96.4% 0.018 292); --troi-giong-2: oklch(92.4% 0.036 294);
+  --troi-giong-net: oklch(68% 0.07 294); --troi-giong-ink: oklch(38% 0.08 296); --troi-giong-ink2: oklch(46% 0.06 296);
+  --troi-giong-may: oklch(89.5% 0.03 294); --troi-giong-chop: oklch(99.6% 0.006 294);
+  --troi-suong-mu-1: oklch(97.6% 0.004 230); --troi-suong-mu-2: oklch(94.6% 0.008 232);
+  --troi-suong-mu-net: oklch(99.6% 0.002 230); --troi-suong-mu-ink: oklch(38% 0.016 240); --troi-suong-mu-ink2: oklch(46% 0.014 240);
+  --troi-cau-vong-1: oklch(97.8% 0.012 350); --troi-cau-vong-2: oklch(94.8% 0.026 356);
+  --troi-cau-vong-net: oklch(99.5% 0.01 350); --troi-cau-vong-ink: oklch(40% 0.07 356); --troi-cau-vong-ink2: oklch(47% 0.055 356);
+  /* Cau vong: nam dai pastel rat nhat, chroma thap, de khong thanh bang mau on ao. */
+  --cv-1: oklch(88% 0.05 20); --cv-2: oklch(92% 0.05 75); --cv-3: oklch(91% 0.045 145); --cv-4: oklch(89% 0.045 225); --cv-5: oklch(87% 0.045 290);
 }
