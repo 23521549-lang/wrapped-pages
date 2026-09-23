@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
 import { Hoa } from "./HoaEp";
@@ -115,7 +115,7 @@ function MotTroi({ m, an, goc, dung, doiDung, bao }: {
  * Chuyen dong nen cua bau troi tu bat dau, keo dai qua 5 giay va o song song voi noi dung khac - dung ba dieu kien cua
  * WCAG SC 2.2.2, ma ngoai le "essential" khong dung duoc o day (chinh nhanh giam chuyen dong chung minh: bau troi dung
  * yen van dep va van du nghia). Nut bat lop `troi-dung` tren dai troi, lop do dung MOI net ve cua ca hai mat. Lua chon
- * duoc nho trong localStorage va doc lai luc mount (khong doc luc render: may chu khong co localStorage). Khi nguoi dung
+ * duoc nho trong localStorage va doc lai trong layout effect luc mount (truoc khi ve, xem chu thich tai cho). Khi nguoi dung
  * xin giam chuyen dong thi khong con gi chay, nen nut duoc giau han bang CSS (tam-trang.css, nhanh prefers-reduced-motion).
  */
 export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien | null; minh: TroiHien | null }) {
@@ -135,17 +135,31 @@ export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien |
     return w === null || !caHai ? undefined : ganSong(w);
   }, [caHai]);
 
-  useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- Dong bo voi he thong ngoai (localStorage): doc lua chon tam dung cua lan truoc ngay sau khi mount, khong the doc luc render vi may chu khong co localStorage (HTML may chu gui xuong se lech).
-    if (docDaDung()) setDung(true);
-  }, []);
-
+  /*
+   * Hai layout effect duoi day, KHONG phai passive effect (useEffect), va do la ca van de: passive effect chi chay sau
+   * khi trinh duyet ve xong, nen nguoi da chon tam dung se thay dung mot khung hinh bau troi CHAY va nhan "Tam dung bau
+   * troi" truoc khi trang nhay ve trang thai dung - mot nhap nhay ngay tren chinh thu ho da tat. Layout effect chay
+   * trong lan commit, truoc khi ve. Van khong doc localStorage luc render duoc: may chu khong co localStorage, doc luc
+   * render la HTML may chu gui xuong lech voi lan ve dau cua trinh duyet.
+   *
+   * Thu tu khai bao o day co nghia: layout effect chay theo dung thu tu khai bao, nen cai dat lop phai dung TRUOC cai
+   * doc lua chon da luu - doc truoc thi cai dat lop (o lan commit ay van thay dung = false) se xoa ngay lop vua dat.
+   */
   // Dat lop bang classList chu khong qua className cua JSX: song.ts cung sua lop cua CHINH phan tu nay
   // (troi-cua-so--san, troi--an), ma React ghi de ca thuoc tinh class moi lan gia tri className doi - tuc mot lan bam
   // tam dung se xoa mat lop do song.ts vua dat.
-  useEffect(() => {
+  useLayoutEffect(() => {
     dai.current?.classList.toggle("troi-dung", dung);
   }, [dung]);
+
+  useLayoutEffect(() => {
+    if (!docDaDung()) return;
+    // Dat lop ngay tai day chu khong cho vong ve lai cua setDung: lop moi la thu quyet dinh bau troi co chay hay khong,
+    // va no khong di qua React nen dat duoc som nhat co the. setDung chi de nhan cua nut doi theo.
+    dai.current?.classList.add("troi-dung");
+    // oxlint-disable-next-line react/set-state-in-effect -- Dung dung viec ma chinh luat nay cho phep: dong bo voi mot he thong ngoai (localStorage). Khong "khoi tao thang trang thai" duoc, vi may chu khong co localStorage nen doc luc render la HTML may chu gui xuong lech voi lan ve dau cua trinh duyet; cung khong "cap nhat tu su kien gay ra thay doi" duoc, vi thay doi nay den tu mot phien truoc chu khong tu su kien nao trong phien nay. Dung mot vong ve lai, ngay trong lan commit dau tien va truoc khi trinh duyet ve.
+    setDung(true);
+  }, []);
 
   function doiDung() {
     const moi = !dung;

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useEffect, useLayoutEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
@@ -464,6 +464,40 @@ describe("BauTroi: nut tam dung bau troi (WCAG SC 2.2.2)", () => {
     expect(dai.classList.contains("troi-dung")).toBe(false);
     expect(nut[0].textContent).toBe("Tạm dừng bầu trời");
     expect(baoDung(dai)).toBe("Bầu trời chạy lại rồi.");
+  });
+
+  /*
+   * Bai nay do THU TU chu khong do ket qua cuoi cung: ket qua cuoi giong nhau o ca hai cach viet, nen bai "nho lua chon"
+   * ben duoi van xanh ke ca khi viec khoi phuc chay sau khi trinh duyet da ve.
+   *
+   * Cach do: mot thanh phan do dat NGAY SAU BauTroi trong cung mot cay. React chay HET layout effect cua ca cay (theo
+   * thu tu cay) roi moi chay passive effect. Nen tai thoi diem layout effect cua thanh phan do:
+   *  - BauTroi dung useLayoutEffect  -> lop troi-dung DA co (do duoc: true)
+   *  - BauTroi dung useEffect        -> chua co gi chay ca (do duoc: false) - va do dung la mot khung hinh bau troi
+   *    chay lai truoc mat nguoi da tat no. Doi mot trong hai useLayoutEffect cua BauTroi ve useEffect la dong
+   *    khang dinh dau tien duoi day do ngay.
+   * Nhan cua nut chi doi o vong ve lai sau do (React khong the doi HTML may chu da gui xuong), vi vay lop duoc dat
+   * thang bang classList trong chinh layout effect: lop moi la thu quyet dinh bau troi co chay hay khong.
+   */
+  it("khoi phuc lua chon da luu chay TRUOC khi ve, khong phai sau (layout effect, khong phai passive effect)", () => {
+    localStorage.setItem("troi-tam-dung", "dung");
+    const daDung = () => document.querySelector(".troi-cua-so")?.classList.contains("troi-dung") ?? null;
+    const moc: Record<string, boolean | null> = {};
+    function ThanhPhanDo() {
+      useLayoutEffect(() => {
+        moc.layout = daDung();
+      }, []);
+      useEffect(() => {
+        moc.passive = daDung();
+      }, []);
+      return null;
+    }
+    render(<><BauTroi tenKia="Linh" kia={KIA} minh={MINH} /><ThanhPhanDo /></>);
+
+    expect(moc.layout, "lua chon tam dung duoc khoi phuc sau khi trinh duyet da ve mot khung hinh").toBe(true);
+    expect(moc.passive).toBe(true);
+    expect(daDung()).toBe(true);
+    expect(document.querySelector(".nut-dung")?.textContent).toBe("Cho bầu trời chạy");
   });
 
   it("nho lua chon: ghi vao localStorage, va lan ve sau dai troi dung san tu luc vao cay", () => {
