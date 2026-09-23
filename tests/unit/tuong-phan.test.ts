@@ -329,6 +329,17 @@ const MIEN_TRU: MienTru[] = [
       "box-shadow 3px --blue-1 chi la hieu ung phu (hao quang mem quanh o), khong phai dau hieu DUY NHAT " +
       "cua trang thai, nen WCAG 1.4.11 da duoc dieu vien no dap ung du vong sang nay khong tu no dat 3:1.",
   },
+  {
+    ten: "quang-giay-o-cua-so",
+    loai: "vien",
+    fgToken: "--color-paper",
+    selector: ".cua-so__kinh",
+    lyDo:
+      "Lop box-shadow thu hai cua o cua so tren dai troi (BauTroi.tsx) la quang giay 4px (color-mix(in oklch, var(--color-paper) " +
+      "55%, transparent)) de o tron noi len khoi bau troi lon: trang tri, khong phai ranh gioi. Ranh gioi cua o la vien 1px " +
+      "mau muc cua troi trong o (currentColor, muc do da qua 4.5 tren troi, tam-trang-mau.test.ts), va trang thai focus la vong " +
+      "2.5px --color-focus bam hinh tron (.cua-so:focus-visible .cua-so__kinh). Phan tu .cua-so__kinh an voi trinh doc man hinh.",
+  },
 ];
 
 function timMienTru(loai: LoaiDo, fgToken: string, selector: string): MienTru | undefined {

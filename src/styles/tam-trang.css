@@ -33,3 +33,206 @@
 .troi--giong{ --t1: var(--troi-giong-1); --t2: var(--troi-giong-2); --tnet: var(--troi-giong-net); color: var(--troi-giong-ink); }
 .troi--suong-mu{ --t1: var(--troi-suong-mu-1); --t2: var(--troi-suong-mu-2); --tnet: var(--troi-suong-mu-net); color: var(--troi-suong-mu-ink); }
 .troi--cau-vong{ --t1: var(--troi-cau-vong-1); --t2: var(--troi-cau-vong-2); --tnet: var(--troi-cau-vong-net); color: var(--troi-cau-vong-ink); }
+
+/* ---------- bau troi tren dau ke sach (BauTroi.tsx, NetTroi.tsx) ---------- */
+/* clip (khong phai hidden): net ve tran ra ngoai bi cat ma khong tao vung cuon, va bai tran ngang nhan ra to tien clip */
+.troi{ position: relative; isolation: isolate; overflow: clip; }
+/*
+ * mask-image chi doc do trong suot cua tung diem, khong doc sac: giu nguyen tu khoa mau cua ban mau thay vi doi sang
+ * mot token, vi o day no khong phai "mau cua thu gi" ma la cong tac trong/duc, va viet bang token mau giay se lam
+ * nguoi doc sau tuong day la mau nen. Ket qua nhin thay: nen troi nhat dan vao mat giay o nua duoi.
+ */
+.troi__nen{
+  position: absolute; inset: 0; z-index: -1; overflow: clip; background: linear-gradient(180deg, var(--t1), var(--t2) 70%);
+  -webkit-mask-image: linear-gradient(to bottom, black 58%, transparent 100%); mask-image: linear-gradient(to bottom, black 58%, transparent 100%);
+}
+.troi__chu{ position: relative; padding-block: var(--space-xl) var(--space-2xl); max-width: 1120px; }
+.troi__dong{ font-size: var(--text-lg); line-height: 1.25; font-weight: 400; overflow-wrap: anywhere; }
+.troi__tho{ font-weight: 400; line-height: 1.55; }
+.troi__giai{ margin: 4px 0 0; font-size: 13px; }
+.troi__nguon{ margin: 4px 0 0; font-size: 12px; }
+.troi__nhan{ margin-top: var(--space-xs); font-size: var(--text-base); font-weight: 450; max-width: 32rem; overflow-wrap: anywhere; }
+.troi__cuoi{ margin-top: var(--space-sm); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-md); }
+.troi__gio{ font-size: var(--text-sm); }
+.troi .btn--chu{ color: inherit; padding-inline: 0; text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); }
+.troi .btn--chu:hover{ text-decoration-color: currentColor; }
+.troi .btn--chu .hoa{ width: 32px; height: 32px; margin: -6px 0; }
+/* muc phu cua tung troi: giai nghia, nguon, luc tha */
+.troi--nang-am .troi__phu{ color: var(--troi-nang-am-ink2); }
+.troi--troi-trong .troi__phu{ color: var(--troi-troi-trong-ink2); }
+.troi--may-nhe .troi__phu{ color: var(--troi-may-nhe-ink2); }
+.troi--gio-thoang .troi__phu{ color: var(--troi-gio-thoang-ink2); }
+.troi--mua-phun .troi__phu{ color: var(--troi-mua-phun-ink2); }
+.troi--mua-rao .troi__phu{ color: var(--troi-mua-rao-ink2); }
+.troi--giong .troi__phu{ color: var(--troi-giong-ink2); }
+.troi--suong-mu .troi__phu{ color: var(--troi-suong-mu-ink2); }
+.troi--cau-vong .troi__phu{ color: var(--troi-cau-vong-ink2); }
+/* Dai troi dung ngay tren dau ke: keo dong tieu de len sat bau troi. Quy tac nay chua cham toi phan tu nao cho toi khi
+   dau ke sach doc tam trang va dat dai troi ngay truoc .shell chua .ke-dau; viet ngay tai day de no nam cung cho voi
+   quy tac song doi ".troi-cua-so + .shell .ke-dau" cua che do hai troi, khong de hai che do lech nhau mot nua. */
+.troi + .shell .ke-dau{ padding-top: 0; margin-top: calc(var(--space-lg) * -1); }
+
+/* hai cau tho moi cau mot khoi, can doi khi xuong dong */
+.troi__cau{ display: block; text-wrap: balance; }
+/* nhan chu nho "Ban" khi troi lon la cua chinh nguoi xem */
+.troi__ai{ display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: var(--text-xs); font-weight: 500; letter-spacing: .04em; line-height: 1.4; }
+.troi__ai::before{ content: ""; width: 14px; height: 1px; background: currentColor; opacity: .45; }
+
+/*
+ * O cua so: khi ca hai cung giu tam trang, troi cua nguoi con lai thu vao mot o tron. Dien thoai: o tha noi goc tren ben
+ * phai, chu tho chay vong quanh, khong bao gio bi che. May tinh (tu 768px): o dung cot rieng ben phai, giua chieu cao.
+ * Vien 1px mang muc cua chu troi trong o (currentColor tu lop troi--* cua .cua-so__kinh). Vong focus doi tu nut sang
+ * chinh o tron: van dung --color-focus 2.5px, chi bam dung hinh tron thay vi khung chu nhat cua nut.
+ *
+ * Moi vien va net ve bang currentColor tu day tro xuong (vien o cua so, vong song, vong toe) KHONG duoc cong tuong phan
+ * (tests/unit/tuong-phan.test.ts) do: cong do chi doc duoc token that. San cho chung la tests/unit/tam-trang-mau.test.ts,
+ * bai do khang dinh muc chinh cua moi troi (--troi-X-ink, chinh la currentColor o day) dat >= 3 tren ca --troi-X-1 va
+ * --troi-X-2 o vai tro vien.
+ */
+.troi--cua-so .troi__chu{ display: flow-root; }
+.cua-so{ float: right; display: grid; justify-items: center; gap: 6px; margin: 2px 0 var(--space-xs) var(--space-md); padding: 4px; min-width: 44px; min-height: 44px; border: 0; border-radius: var(--radius-sm); background: none; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cua-so__kinh{
+  position: relative; display: grid; place-items: center; width: 72px; aspect-ratio: 1; border-radius: 50%; overflow: clip; isolation: isolate;
+  background: linear-gradient(180deg, var(--t1), var(--t2) 80%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, currentColor 55%, transparent), 0 0 0 4px color-mix(in oklch, var(--color-paper) 55%, transparent), 0 8px 18px -12px color-mix(in oklch, currentColor 45%, transparent);
+  transition: transform var(--dur-short) var(--ease-out);
+}
+/* troi thu nho: mot khung 240px ve nhu dai troi that roi thu lai vua o kinh */
+.cua-so__nen{ position: absolute; left: 50%; top: 50%; z-index: -1; width: 240px; height: 240px; overflow: clip; transform: translate(-50%, -50%) scale(.3); }
+.cua-so .cua-so__hoa{ width: 42px; height: 42px; }
+.cua-so__chu{ display: grid; justify-items: center; font-size: var(--text-xs); font-weight: 500; line-height: 1.35; letter-spacing: .02em; white-space: nowrap; }
+.cua-so__gio{ font-weight: 400; font-variant-numeric: tabular-nums; }
+.cua-so:hover .cua-so__kinh{ transform: scale(1.04); }
+.cua-so:focus-visible{ outline: none; }
+.cua-so:focus-visible .cua-so__kinh{ outline: 2.5px solid var(--color-focus); outline-offset: 4px; }
+@media (max-width: 600px){
+  .troi--cua-so .troi__dong{ font-size: 1.125rem; }
+}
+@media (min-width: 768px){
+  .troi--cua-so .troi__chu{ display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-xl); }
+  .troi--cua-so .troi__noi{ grid-area: 1 / 1; }
+  .cua-so{ float: none; grid-area: 1 / 2; margin: 0; gap: 8px; }
+  .cua-so__kinh{ width: 108px; }
+  .cua-so__nen{ transform: translate(-50%, -50%) scale(.45); }
+  .cua-so .cua-so__hoa{ width: 58px; height: 58px; }
+}
+/*
+ * Doi cho bang song nuoc. Ca hai bau troi duoc ve san va xep chong trong CUNG mot o luoi, nen chieu cao dai troi luon
+ * bang troi cao hon va khong bao gio doi khi doi cho: khong gi ben duoi bi xo dich. Troi dang xem nam tren, troi kia bi
+ * cat ve 0 va tro nang (inert). Doi cho chi la bat/tat lop va chay hoat hinh clip-path lan tu tam o cua so.
+ */
+/* nut o cua so phai nam tren cac doan chu de ca nut deu bam duoc */
+.cua-so{ position: relative; z-index: 1; touch-action: manipulation; }
+.troi-cua-so{ position: relative; isolation: isolate; overflow: clip; display: grid; grid-template-columns: minmax(0, 1fr); }
+.troi-cua-so > .troi{ grid-area: 1 / 1; display: flex; flex-direction: column; z-index: 1; }
+.troi-cua-so > .troi > .troi__chu{ flex: 1 0 auto; }
+/* troi dang an: cat ve 0 bang clip-path chu khong phai visibility, nen bo an chi la hoat hinh clip-path cua dung mot
+   phan tu, khong phai tinh lai style ke thua cho hang tram net ve ben trong (do duoc: visibility ton 11 toi 90ms ngay
+   luc bam, CPU cham gap bon) */
+.troi-cua-so > .troi--an{ clip-path: circle(0px at 50% 50%); pointer-events: none; z-index: 0; }
+/* troi an khong can chay net ve: tam dung cho luong chinh ranh. Con tro hay focus toi gan o cua so thi cho chay lai
+   truoc (.troi-cua-so--san), de luc bam khong con viec danh thuc hang chuc net ve */
+.troi-cua-so:not(.troi-cua-so--san) > .troi--an:not(.troi--dang-song) .m{ animation-play-state: paused; }
+/* chu bam dinh, o cua so (may tinh) nam giua chieu cao chung: hai troi dat o cua so dung cung mot cho */
+.troi-cua-so .troi__noi{ align-self: start; }
+.troi-cua-so + .shell .ke-dau{ padding-top: 0; margin-top: calc(var(--space-lg) * -1); }
+/* bam chuot thi khong hien vong focus (nhu luat :focus-visible cua ca web); go bang phim thi hien lai */
+.cua-so--im:focus-visible .cua-so__kinh{ outline: none; }
+
+.troi-cua-so > .troi--dang-song{ background: var(--color-paper); will-change: clip-path; z-index: 2; }
+.song-vong{ position: absolute; inset: 0; z-index: 3; overflow: clip; pointer-events: none; }
+.song-vong__o{ position: absolute; border-radius: 50%; border: 1px solid color-mix(in oklch, currentColor 34%, transparent); transform: scale(0); opacity: 0; will-change: transform, opacity; }
+/* gon song o mep: mot dai sang toi ve len canh ben duoi bang soft-light, nhu anh sang bi mat nuoc be cong. Khong dung
+   backdrop-filter hay feDisplacementMap: tren Chromium ca hai ve ra chu lat nguoc va gay tac nghen dai (da thu va bo) */
+.song-lup{
+  position: absolute; border-radius: 50%; transform: scale(0); opacity: 0; will-change: transform, opacity; mix-blend-mode: soft-light;
+  background: radial-gradient(circle closest-side, transparent 88%, color-mix(in oklch, currentColor 10%, transparent) 93.5%, transparent 96%, color-mix(in oklch, var(--color-paper) 80%, transparent) 98.7%, transparent 100.5%);
+}
+/* anh sang mong tren dinh song */
+.song-bong{
+  position: absolute; border-radius: 50%; transform: scale(0); opacity: 0; will-change: transform, opacity;
+  background: radial-gradient(circle closest-side, transparent 94%, color-mix(in oklch, var(--color-paper) 60%, transparent) 98.6%, color-mix(in oklch, var(--color-paper) 20%, transparent) 99.6%, transparent 100.4%);
+}
+/* vong toe ra tu tam o cua so */
+.song-giot{ position: absolute; border-radius: 50%; border: 1px solid color-mix(in oklch, currentColor 40%, transparent); transform: scale(0); opacity: 0; will-change: transform, opacity; }
+/* trong o cua so: kinh cu nam duoi, va mot vong nuoc nho lan ra */
+.song-kinh-cu{ position: absolute; z-index: 0; pointer-events: none; }
+.song-kinh-vong{ position: absolute; z-index: 2; border-radius: 50%; border: 1px solid color-mix(in oklch, currentColor 45%, transparent); opacity: 0; pointer-events: none; will-change: transform, opacity; }
+.troi--dang-song .cua-so__kinh{ will-change: clip-path; }
+.troi--dang-song .cua-so:hover .cua-so__kinh{ transform: none; }
+
+/*
+ * Net ve bau troi. Mau net di qua fill/stroke/background (nen troi --tnet, --t1, --t2), khong qua color: day la trang
+ * tri an voi trinh doc man hinh, khong phai chu.
+ */
+.m{ position: absolute; display: block; pointer-events: none; }
+.m-nang{ width: 220px; aspect-ratio: 1; right: 6%; top: -70px; border-radius: 50%; background: radial-gradient(circle, var(--tnet) 0 22%, color-mix(in oklch, var(--tnet) 55%, transparent) 38%, transparent 68%); animation: tho 7s var(--ease-in-out) infinite alternate; }
+.m-hao{ width: 460px; aspect-ratio: 1; right: calc(6% - 120px); top: -190px; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklch, var(--tnet) 50%, transparent) 0, transparent 62%); animation: tho 11s var(--ease-in-out) -3s infinite alternate; }
+.m-sang{ inset: -20% auto -20% 0; width: 45%; background: linear-gradient(100deg, transparent, color-mix(in oklch, var(--color-paper) 45%, transparent), transparent); animation: sang 16s var(--ease-in-out) infinite alternate; }
+.m-bui{ width: 5px; height: 5px; border-radius: 50%; background: var(--tnet); opacity: .9; animation: bui var(--d) var(--ease-in-out) var(--tre) infinite alternate; }
+.m-chim{ width: 46px; animation: chim var(--d) var(--ease-in-out) var(--tre) infinite alternate; }
+.m-chim path{ fill: none; stroke: var(--tnet); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.m-soi{ height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--color-paper) 85%, transparent), transparent); animation: troi-ngang var(--d) var(--ease-in-out) var(--tre) infinite alternate; }
+.m-may{ animation: troi-ngang var(--d) var(--ease-in-out) var(--tre) infinite alternate; }
+.m-may .than{ fill: var(--tnet); }
+.m-may--nen .than{ fill: var(--t1); }
+.m .bong{ fill: var(--t2); }
+.m-gio{ animation: gio var(--d) var(--ease-out) var(--tre) infinite; }
+.m-gio path{ fill: none; stroke: var(--tnet); stroke-width: 1.5; stroke-linecap: round; }
+.m-la{ width: 9px; height: 5px; border-radius: 9px 1px 9px 1px; background: var(--tnet); opacity: .8; animation: la var(--d) var(--ease-in-out) var(--tre) infinite; }
+.m-hat{ top: -30px; width: 1.2px; height: var(--len); border-radius: 1px; background: linear-gradient(to bottom, transparent, var(--tnet)); rotate: var(--nghieng, 0deg); opacity: var(--o, .7); animation: roi var(--d) linear var(--tre) infinite; }
+.m-maygiong{ animation: troi-ngang var(--d) var(--ease-in-out) var(--tre) infinite alternate; }
+.m-maygiong .than{ fill: var(--troi-giong-may); }
+.m-set{ width: 34px; opacity: 0; animation: set 9s linear var(--tre) infinite; }
+.m-set path{ fill: none; stroke: var(--troi-giong-chop); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.m-chop{ inset: 0; background: var(--troi-giong-chop); opacity: 0; animation: chop 9s linear infinite; }
+.m-suong{ height: var(--h); left: -30%; width: 160%; border-radius: 50%; background: radial-gradient(ellipse at center, var(--tnet) 0, color-mix(in oklch, var(--tnet) 60%, transparent) 40%, transparent 70%); opacity: var(--o); animation: suong var(--d) var(--ease-in-out) var(--tre) infinite alternate; }
+.m-cv{ width: min(520px, 70%); right: 3%; top: 16px; opacity: .75; transform-origin: 50% 100%; animation: cv-hien 2.4s var(--ease-out) both, cv-tho 9s var(--ease-in-out) 2.4s infinite alternate; }
+.m-cv path{ fill: none; stroke-width: 7; stroke-linecap: round; }
+.m-cv__1{ stroke: var(--cv-1); }
+.m-cv__2{ stroke: var(--cv-2); }
+.m-cv__3{ stroke: var(--cv-3); }
+.m-cv__4{ stroke: var(--cv-4); }
+.m-cv__5{ stroke: var(--cv-5); }
+.m-sao{ width: 10px; animation: sao var(--d) var(--ease-in-out) var(--tre) infinite; }
+.m-sao path{ fill: var(--tnet); }
+
+@keyframes tho{ from{ transform: scale(1); opacity: .85; } to{ transform: scale(1.08); opacity: 1; } }
+@keyframes sang{ from{ transform: translateX(-60%); } to{ transform: translateX(210%); } }
+@keyframes bui{ from{ transform: translate(0, 0); opacity: .25; } to{ transform: translate(14px, -26px); opacity: .95; } }
+@keyframes chim{ from{ transform: translate(0, 0); } to{ transform: translate(60px, -10px); } }
+@keyframes troi-ngang{ from{ transform: translateX(calc(var(--x, 40px) * -1)); } to{ transform: translateX(var(--x, 40px)); } }
+@keyframes gio{ 0%{ transform: translateX(-50px); opacity: 0; } 30%{ opacity: .9; } 70%{ opacity: .7; } 100%{ transform: translateX(80px); opacity: 0; } }
+@keyframes la{ 0%{ transform: translate(-40px, -10px) rotate(0deg); opacity: 0; } 20%{ opacity: .85; } 80%{ opacity: .7; } 100%{ transform: translate(170px, 50px) rotate(260deg); opacity: 0; } }
+@keyframes roi{ from{ transform: translate(0, 0); } to{ transform: translate(var(--lech, 0px), 290px); } }
+@keyframes set{ 0%, 60%{ opacity: 0; } 61%{ opacity: .95; } 64%{ opacity: .2; } 66%{ opacity: .8; } 74%, 100%{ opacity: 0; } }
+@keyframes chop{ 0%, 60%{ opacity: 0; } 61%{ opacity: .5; } 64%{ opacity: .1; } 66%{ opacity: .35; } 78%, 100%{ opacity: 0; } }
+@keyframes suong{ from{ transform: translateX(-7%); } to{ transform: translateX(7%); } }
+@keyframes cv-hien{ from{ opacity: 0; transform: scale(.96); } to{ opacity: .75; transform: scale(1); } }
+@keyframes cv-tho{ from{ opacity: .75; } to{ opacity: .5; } }
+@keyframes sao{ 0%, 100%{ opacity: 0; transform: scale(.6); } 50%{ opacity: .95; transform: scale(1); } }
+
+@media (max-width: 600px){
+  .troi__chu{ padding-block: var(--space-lg) var(--space-2xl); }
+  .troi__dong{ font-size: var(--text-md); }
+  .m-nang{ width: 170px; top: -60px; right: -4%; }
+  .m-cv{ width: 88%; right: -6%; top: 26px; }
+}
+
+/*
+ * Giam chuyen dong: globals.css da tat moi animation (ca troi thu nho trong o cua so, ca hieu ung doi cho). O day bau troi
+ * dung yen o mot khoanh khac dep: hat mua nam rai rac thay vi cho o mep tren, chop va vet sang an han, net con lai giu do
+ * dam nghi; doi cho thi doi ngay, khong con lop nen cu.
+ */
+@media (prefers-reduced-motion: reduce){
+  .m-hat{ top: var(--y); }
+  .m-cv{ opacity: .7; }
+  .m-set, .m-chop, .m-sang{ display: none; }
+  .m-sao{ opacity: .7; }
+  .m-gio{ opacity: .75; }
+  .m-la{ opacity: .7; transform: translate(var(--lx, 0px), 0) rotate(30deg); }
+  .m-bui{ opacity: .6; }
+  /* doi cho troi: doi ngay, khong lop song nao (song.ts cung khong tao lop khi nguoi dung xin giam chuyen dong) */
+  .song-vong, .song-kinh-cu, .song-kinh-vong{ display: none; }
+  .cua-so__kinh{ transition: none; }
+}

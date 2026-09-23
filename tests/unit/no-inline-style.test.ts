@@ -11,6 +11,7 @@ const CHO_PHEP: Record<string, string> = {
   "src/components/reader/LockedSheet.tsx": "bien CSS --dai: do dai tung vach nhoe sinh luc chay",
   "src/components/reader/Flipbook.tsx": "bien CSS --so-to, --k cua khung sach va goc xoay rotateY cua to dang lat, tinh luc chay",
   "src/components/seal/SealPanel.tsx": "bien CSS --k: he so thu phong cua to trong khung thu thach, do luc chay",
+  "src/components/tam-trang/NetTroi.tsx": "vi tri, kich thuoc va bien nhip, do tre (--d, --tre, --len, ...) cua tung net ve bau troi, sinh tu ham thuan co hat giong theo kieu troi (src/lib/tam-trang/net-troi.ts); toi 90 hat mot troi, viet thanh quy tac CSS la vai tram dong chep tay",
 };
 
 /** Moi file .tsx trong src, duong dan dung "/" de doc duoc tren moi he dieu hanh. */

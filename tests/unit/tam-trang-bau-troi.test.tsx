@@ -1,0 +1,261 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { BauTroi } from "@/components/tam-trang/BauTroi";
+import type { TroiHien } from "@/lib/tam-trang/lich";
+import { netTroi } from "@/lib/tam-trang/net-troi";
+import { CHU_MS, SONG_HET, SONG_MS } from "@/lib/tam-trang/song-nhip";
+import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
+
+/*
+ * jsdom khong co Web Animations API: thay bang mot ban ghi lai moi lan goi animate (de kiem nhip), va cho phep goi tay
+ * onfinish nhu khi song lan xong. Moi bo cuc trong jsdom la 0 nen bai nay kiem cau truc, lop, thu tu va nhip, con hinh
+ * that duoc kiem o trinh duyet that.
+ */
+type LanGoi = { el: Element; keyframes: unknown; ken: { duration?: number; delay?: number; easing?: string } };
+const daGoi: LanGoi[] = [];
+const ketThuc: (() => void)[] = [];
+/** Mo ta goc cua Element.prototype.animate (jsdom khong co: undefined), de tra lai nguyen trang sau moi bai. */
+const ANIMATE_GOC = Object.getOwnPropertyDescriptor(Element.prototype, "animate");
+
+beforeEach(() => {
+  daGoi.length = 0;
+  ketThuc.length = 0;
+  Element.prototype.animate = function (this: Element, keyframes: unknown, ken: { duration?: number; delay?: number; easing?: string } = {}) {
+    daGoi.push({ el: this, keyframes, ken });
+    const a = { addEventListener: (ten: string, f: () => void) => { if (ten === "finish") ketThuc.push(f); } };
+    return a as unknown as Animation;
+  } as unknown as typeof Element.prototype.animate;
+});
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  // Tra lai Element.prototype.animate: khong de ban va cho cac tep kiem thu khac chay sau trong cung moi truong.
+  if (ANIMATE_GOC === undefined) delete (Element.prototype as Partial<Element>).animate;
+  else Object.defineProperty(Element.prototype, "animate", ANIMATE_GOC);
+});
+
+const KIA: TroiHien = { weather: "mua-phun", note: "Nhớ cậu một chút thôi.", tha: "Thả lúc 21:40", gio: "21:40" };
+const MINH: TroiHien = { weather: "nang-am", note: null, tha: "Thả lúc 08:15", gio: "08:15" };
+
+const ve = (kia: TroiHien | null, minh: TroiHien | null) => render(<BauTroi tenKia="Linh" kia={kia} minh={minh} />);
+
+/** So net moi bau troi, dem tu chinh bo ve cua ban mau da duyet. */
+const SO_NET: Record<Weather, number> = {
+  "nang-am": 12, "troi-trong": 4, "may-nhe": 5, "gio-thoang": 12, "mua-phun": 70, "mua-rao": 92, giong: 74, "suong-mu": 5, "cau-vong": 6,
+};
+
+describe("BauTroi: mot bau troi", () => {
+  it("khong ai giu tam trang: khong ve gi", () => {
+    const { container } = ve(null, null);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("chi nguoi kia: tho moi cau mot khoi (khong ten nguoi), giai nghia, nguon, loi nhan, luc tha, loi vao lich hoa, khong o cua so", () => {
+    const { container } = ve(KIA, null);
+    const vung = screen.getByRole("region", { name: "Tâm trạng của Linh" });
+    expect(vung.className).toBe("troi troi--mua-phun");
+    const tho = container.querySelector(".troi__tho");
+    expect([...(tho?.querySelectorAll(".troi__cau") ?? [])].map((c) => c.textContent)).toEqual(["Tùy phong tiềm nhập dạ", "Nhuận vật tế vô thanh"]);
+    expect(tho?.classList.contains("d")).toBe(true);
+    expect(tho?.textContent).not.toContain("Linh");
+    expect(container.querySelector(".troi__giai")?.textContent).toBe(TROI["mua-phun"].giai);
+    expect(container.querySelector(".troi__nguon")?.textContent).toBe("Đỗ Phủ, Xuân dạ hỉ vũ");
+    expect(container.querySelector(".troi__nhan")?.textContent).toBe("Nhớ cậu một chút thôi.");
+    expect(container.querySelector(".troi__gio")?.textContent).toBe("Thả lúc 21:40");
+    expect(container.querySelector(".troi__noi .sr-only")?.textContent).toBe("Linh: Mưa phùn.");
+    expect(container.querySelector(".troi__ai")).toBeNull();
+    const lien = screen.getByRole("link", { name: "Xem lịch hoa" });
+    expect(lien.getAttribute("href")).toBe("/tam-trang");
+    expect(lien.querySelector("svg.hoa use")?.getAttribute("href")).toBe("#hoa-hue-mua");
+    expect(container.querySelector(".cua-so")).toBeNull();
+    expect(container.querySelector(".troi-cua-so")).toBeNull();
+  });
+
+  it("chi chinh minh: troi lon mang nhan Ban, khong loi vao lich hoa, khong o cua so; tho Nom khong co giai nghia", () => {
+    const { container } = ve(null, MINH);
+    const vung = screen.getByRole("region", { name: "Tâm trạng của bạn" });
+    expect(vung.className).toBe("troi troi--nang-am");
+    expect(container.querySelector(".troi__ai")?.textContent).toBe("Bạn");
+    expect(container.querySelector(".troi__noi .sr-only")?.textContent).toBe("Bạn: Nắng ấm.");
+    expect(container.querySelector(".troi__giai")).toBeNull();
+    expect(container.querySelector(".troi__nhan")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(container.querySelector(".cua-so")).toBeNull();
+  });
+
+  it.each(WEATHERS)("%s: nen troi an voi trinh doc man hinh, dung so net cua ban mau, moi net mang lop m", (w) => {
+    const { container } = ve({ ...KIA, weather: w }, null);
+    const nen = container.querySelector(".troi__nen");
+    expect(nen?.getAttribute("aria-hidden")).toBe("true");
+    expect(nen?.children).toHaveLength(SO_NET[w]);
+    expect([...(nen?.children ?? [])].every((el) => el.classList.contains("m"))).toBe(true);
+  });
+
+  it("net ve tat dinh, gia tri la chuoi, khong co mau viet thang; cau vong nam dai moi dai mot lop", () => {
+    for (const w of WEATHERS) {
+      const a = netTroi(w);
+      expect(netTroi(w)).toEqual(a);
+      for (const n of a) for (const v of Object.values(n.bien)) {
+        expect(typeof v).toBe("string");
+        expect(v).not.toMatch(/oklch|rgb|#/);
+      }
+    }
+    const { container } = ve({ ...KIA, weather: "cau-vong" }, null);
+    expect([...container.querySelectorAll(".troi__nen .m-cv path")].map((p) => p.getAttribute("class"))).toEqual(["m-cv__1", "m-cv__2", "m-cv__3", "m-cv__4", "m-cv__5"]);
+  });
+});
+
+describe("BauTroi: o cua so khi ca hai cung giu tam trang", () => {
+  it("ca hai bau troi ve san, xep chong trong mot o luoi; troi an bi cat va tro nang, troi hien binh thuong", () => {
+    const { container } = ve(KIA, MINH);
+    const dai = container.querySelector(".troi-cua-so");
+    expect(dai?.children).toHaveLength(3);
+    const mat = [...(dai?.querySelectorAll(".troi[data-mat]") ?? [])];
+    expect(mat.map((s) => s.getAttribute("data-mat"))).toEqual(["kia", "minh"]);
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so");
+    expect(mat[0].hasAttribute("inert")).toBe(false);
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so troi--an");
+    expect(mat[1].hasAttribute("inert")).toBe(true);
+    expect(mat[1].getAttribute("aria-hidden")).toBe("true");
+    expect(dai?.querySelector(".troi-cua-so__bao")?.getAttribute("aria-live")).toBe("polite");
+    expect(mat.map((s) => s.getAttribute("data-bao"))).toEqual(["Đang xem trời của Linh.", "Đang xem trời của bạn."]);
+  });
+
+  it("o cua so cua troi dang xem mang troi thu nho cua minh, bong hoa va gio tha", () => {
+    const { container } = ve(KIA, MINH);
+    const nut = screen.getByRole("button", { name: "Xem trời của bạn" });
+    expect(nut.className).toBe("cua-so");
+    const kinh = nut.querySelector(".cua-so__kinh");
+    expect(kinh?.getAttribute("class")).toBe("cua-so__kinh troi--nang-am");
+    expect(kinh?.querySelector(".cua-so__nen")?.children).toHaveLength(SO_NET["nang-am"]);
+    expect(kinh?.querySelector("svg.hoa use")?.getAttribute("href")).toBe("#hoa-cuc");
+    expect(nut.querySelector(".cua-so__chu")?.textContent).toBe("Trời của bạn08:15");
+    expect(container.querySelector(".troi__chu")?.firstElementChild).toBe(nut);
+  });
+
+  it("an xuong o cua so: khung hinh dau tien chi bat song, viec nang doi sang sau do", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+
+    // Ngay trong khung hinh dau: troi moi da bat dau lo ra, lop song da co, troi cu chua bi danh dau inert.
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so troi--dang-song");
+    expect(container.querySelectorAll(".song-vong .song-lup")).toHaveLength(1);
+    expect(container.querySelectorAll(".song-vong .song-bong")).toHaveLength(1);
+    expect(container.querySelectorAll(".song-vong .song-vong__o")).toHaveLength(4);
+    expect(container.querySelectorAll(".song-vong .song-giot")).toHaveLength(3);
+    expect(container.querySelector(".song-kinh-cu")).not.toBeNull();
+    expect(container.querySelector(".song-kinh-vong")).not.toBeNull();
+    expect(mat[0].hasAttribute("inert")).toBe(false);
+    expect(container.querySelector(".troi-cua-so__bao")?.textContent).toBe("");
+
+    // Sau khung hinh dau: doi inert, aria-hidden, focus va loi bao.
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(mat[0].getAttribute("aria-hidden")).toBe("true");
+    expect(mat[0].hasAttribute("inert")).toBe(true);
+    expect(mat[1].hasAttribute("inert")).toBe(false);
+    const nutMoi = screen.getByRole("button", { name: "Xem trời của Linh" });
+    expect(document.activeElement).toBe(nutMoi);
+    // Bam chuot thi khong hien vong focus (lop cua-so--im); bam phim thi co.
+    expect(nutMoi.classList.contains("cua-so--im")).toBe(true);
+    expect(container.querySelector(".troi-cua-so__bao")?.textContent).toBe("Đang xem trời của bạn.");
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(nutMoi.classList.contains("cua-so--im")).toBe(false);
+
+    // Song lan xong: troi cu bi cat, lop tam bi go.
+    act(() => {
+      for (const f of ketThuc) f();
+      vi.advanceTimersByTime(SONG_HET);
+    });
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--an");
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
+    expect(container.querySelector(".song-vong")).toBeNull();
+    expect(container.querySelector(".song-kinh-cu")).toBeNull();
+  });
+
+  it("nhip song dung ban mau: song chinh 2600ms, ba vong phu tre dan, chu hien 750ms theo khoang cach", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    const vao = container.querySelectorAll(".troi[data-mat]")[1];
+
+    const songChinh = daGoi.find((g) => g.el === vao);
+    expect(songChinh?.ken.duration).toBe(SONG_MS);
+    expect(songChinh?.ken.easing).toBe("cubic-bezier(0.33, 0.02, 0.3, 1)");
+    expect(String(JSON.stringify(songChinh?.keyframes))).toContain("circle(");
+
+    const chu = daGoi.filter((g) => g.el.parentElement?.classList.contains("troi__noi"));
+    expect(chu.length).toBeGreaterThan(3);
+    // Moi hinh chu nhat trong jsdom deu la 0 nen ban kinh song do duoc cung bang 0: tre cua moi dong dung bang 0.
+    // Nhip tre theo khoang cach that duoc kiem rieng o tests/unit/tam-trang-song.test.ts (ham thuan treChu).
+    expect(chu.every((g) => g.ken.duration === CHU_MS && g.ken.delay === 0)).toBe(true);
+
+    const vongPhu = daGoi.filter((g) => (g.el as Element).classList.contains("song-vong__o"));
+    expect(vongPhu.map((g) => g.ken.delay)).toEqual([0, 0, 380, 380, 860, 860, 1400, 1400]);
+    const toe = daGoi.filter((g) => (g.el as Element).classList.contains("song-giot"));
+    expect(toe.map((g) => g.ken.duration)).toEqual([1500, 1500, 1500]);
+    const nut = daGoi.find((g) => (g.el as Element).classList.contains("cua-so"));
+    expect(nut?.ken.duration).toBe(1200);
+  });
+
+  it("bam lan hai trong luc song dang lan bi bo qua", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    const nut = screen.getByRole("button", { name: "Xem trời của bạn" });
+    fireEvent.pointerDown(nut, { button: 0, isPrimary: true });
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    const soLop = container.querySelectorAll(".song-vong").length;
+    const lopTruoc = mat.map((s) => s.className);
+    fireEvent.pointerDown(container.querySelectorAll(".cua-so")[1], { button: 0, isPrimary: true });
+    expect(container.querySelectorAll(".song-vong")).toHaveLength(soLop);
+    // Khong chi khong co vong song thu hai: hai bau troi cung KHONG doi cho lan nua (lan bam bi bo qua han).
+    expect(mat.map((s) => s.className)).toEqual(lopTruoc);
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so");
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so troi--dang-song");
+    act(() => {
+      vi.advanceTimersByTime(SONG_MS + 100);
+    });
+  });
+
+  it("bam bang ban phim: doi cho va vong focus van hien", () => {
+    vi.useFakeTimers();
+    const { container } = ve(KIA, MINH);
+    // Ban phim gui click voi detail = 0, khong co pointerdown truoc do.
+    fireEvent.click(screen.getByRole("button", { name: "Xem trời của bạn" }), { detail: 0 });
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    const nutMoi = screen.getByRole("button", { name: "Xem trời của Linh" });
+    expect(nutMoi.classList.contains("cua-so--im")).toBe(false);
+    expect(container.querySelector(".troi-cua-so__bao")?.textContent).toBe("Đang xem trời của bạn.");
+  });
+
+  it("giam chuyen dong: doi ngay, khong lop song nao", () => {
+    vi.useFakeTimers();
+    const matchMedia = vi.fn(() => ({ matches: true }) as unknown as MediaQueryList);
+    vi.stubGlobal("matchMedia", matchMedia);
+    const { container } = ve(KIA, MINH);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    const mat = [...container.querySelectorAll(".troi[data-mat]")];
+    expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so troi--an");
+    expect(mat[1].className).toBe("troi troi--nang-am troi--cua-so");
+    expect(container.querySelector(".song-vong")).toBeNull();
+    expect(daGoi).toHaveLength(0);
+    expect(container.querySelector(".troi-cua-so__bao")?.textContent).toBe("Đang xem trời của bạn.");
+    vi.unstubAllGlobals();
+  });
+
+  it("khong co style noi tuyen nao trong JSX: chi net ve bau troi va lop song do ham tao ra moi co style", () => {
+    const { container } = ve(KIA, MINH);
+    const co = [...container.querySelectorAll("[style]")];
+    // Co that su tim thay phan tu mang style (neu khong, khang dinh every() duoi day dat gia tren mang rong).
+    expect(co.length).toBeGreaterThan(0);
+    expect(co.every((el) => el.classList.contains("m"))).toBe(true);
+  });
+});
