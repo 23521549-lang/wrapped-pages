@@ -34,3 +34,6 @@ export type BlockquoteNode = { type: "blockquote"; noiTiep?: boolean; content: T
 export type BlockNode = TextBlockNode | MediaNode;
 
 export type DocJson = { type: "doc"; content: BlockNode[] };
+
+/** Tai lieu cua mot to trang: mot doan rong. Man viet mo cuon chua co nhap bang chinh tai lieu nay. */
+export const TRANG_TRONG: DocJson = { type: "doc", content: [{ type: "paragraph" }] };

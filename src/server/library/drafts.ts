@@ -1,18 +1,21 @@
 import { and, desc, eq, max, notExists, sql } from "drizzle-orm";
 import { books, drafts, pages, rounds } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
-import type { BookMode, CoverKey } from "@/lib/book";
+import { COVERS, type BookMode, type CoverKey } from "@/lib/book";
 import { normalizeSheets } from "@/lib/doc/continuation";
-import type { DocJson } from "@/lib/doc/types";
+import { TRANG_TRONG, type DocJson } from "@/lib/doc/types";
 import { docExcerpt, trimTrailingBlank } from "@/lib/doc/text";
 import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
 import { isUuid } from "@/lib/uuid";
+import { YOUTUBE_ID } from "@/lib/youtube";
 import { sealTeaser } from "@/lib/seal/teaser";
 import type { SealInput } from "@/lib/seal/types";
 import { recordActivity } from "@/server/feed/record";
 import { bindMedia } from "@/server/media/access";
+import { attachCover, lockCover } from "@/server/media/cover";
 import { insertSeal } from "@/server/seal/seals";
 import { findOwnBook } from "./books";
+import { lockOwnBook } from "./remove";
 
 /**
  * Luu (hoac ghi de) ban nhap duy nhat cua mot cuon. Chi chu sach. Tai lieu qua bindMedia truoc khi ghi: khoi media
@@ -44,6 +47,55 @@ export async function saveDraft(
       .values({ bookId: book.id, content: bound, sheetCount: n, updatedAt: now })
       .onConflictDoUpdate({ target: drafts.bookId, set: { content: bound, sheetCount: n, updatedAt: now } });
     return now;
+  });
+}
+
+/** Hai o ma nguoi viet chon o trang Viet tiep, chua thanh o that: chung chi thanh o luc dang. */
+export type DraftTrim = {
+  /** null la luot nay khong them o bia nao. */
+  cover: CoverKey | null;
+  /** Chi co nghia khi cover khac null. */
+  coverMediaId: string | null;
+  /** Ma video cua o nhac; null cong dropTrack false la luot nay khong them o nhac nao. */
+  youtubeId: string | null;
+  /** Luot nay la o GO NHAC. Khong di cung mot ma video. */
+  dropTrack: boolean;
+};
+
+export type DraftTrimResult = "saved" | "not-found" | "invalid" | "invalid-cover";
+
+/**
+ * Ghi lua chon bia va nhac cua LUOT SAP DANG vao chinh dong drafts cua cuon. Mot o chi ton tai khi co luot, ma luot chi
+ * sinh ra luc dang, nen ban nhap (luot dang soan) la cho tu nhien nhat de giu ba gia tri nay; dung round_id null la
+ * khong duoc vi cho do da la o mo dau.
+ * KHONG cham content va sheet_count: nhap dang co chu khong duoc bi xoa. Cuon chua co nhap thi tao dong nhap voi
+ * TRANG_TRONG, dung tai lieu man viet dung lam trang trong; tu luc do cuon roi muc "chua viet" sang muc ban nhap.
+ * Chay trong giao dich va khoa dong sach (FOR UPDATE) nhu saveDraft va publishDraft, roi moi lockCover: giu dung thu tu
+ * khoa thuong truc cua du an. Tra "invalid" khi gia tri tu no da sai, "invalid-cover" khi anh bia khong dung duoc cho
+ * cuon nay.
+ */
+export async function setDraftTrim(
+  db: AnyDb, ownerId: string, bookId: string, trim: DraftTrim, now: Date = new Date(),
+): Promise<DraftTrimResult> {
+  if (!isUuid(bookId)) return "not-found";
+  const { cover, coverMediaId, youtubeId, dropTrack } = trim;
+  if (cover !== null && !(COVERS as readonly string[]).includes(cover)) return "invalid";
+  if (coverMediaId !== null && (cover === null || !isUuid(coverMediaId))) return "invalid";
+  if (youtubeId !== null && !YOUTUBE_ID.test(youtubeId)) return "invalid";
+  if (dropTrack && youtubeId !== null) return "invalid";
+  return db.transaction(async (tx): Promise<DraftTrimResult> => {
+    // Hai duong tra ve som deu nam truoc lenh ghi dau tien (insert o duoi); truoc do chi co lenh doc:
+    // lockOwnBook la SELECT ... FOR UPDATE, lockCover cung vay.
+    const id = await lockOwnBook(tx, ownerId, bookId);
+    if (!id) return "not-found";
+    if (coverMediaId !== null && !(await lockCover(tx, ownerId, id, coverMediaId))) return "invalid-cover";
+    await tx
+      .insert(drafts)
+      .values({ bookId: id, content: TRANG_TRONG, cover, coverMediaId, youtubeId, dropTrack, updatedAt: now })
+      .onConflictDoUpdate({ target: drafts.bookId, set: { cover, coverMediaId, youtubeId, dropTrack, updatedAt: now } });
+    // Gan anh vao cuon ngay: tu day no la tai san cua cuon, nen buoc don rac khong bao gio cham toi no nua.
+    if (coverMediaId !== null) await attachCover(tx, id, coverMediaId);
+    return "saved";
   });
 }
 

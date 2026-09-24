@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { books, media, seals } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
+import { setDraftTrim } from "@/server/library/drafts";
 import { bindMedia, canViewMedia, recordUpload, type UploadRecord } from "@/server/media/access";
 import type { ParagraphNode } from "@/lib/doc/types";
 import { mediaStoreKey } from "@/lib/media/key";
@@ -261,6 +262,16 @@ describe("canViewMedia", () => {
     expect(await aiThay(s, biaRieng)).toEqual([biaRieng, null]);
     expect(await aiThay(s, biaCu)).toEqual([biaCu, null]);
     expect(await aiThay(s, choGan)).toEqual([choGan, null]);
+  });
+
+  // setDraftTrim gan anh bia vao cuon NGAY luc nguoi viet chon, tu truoc khi dang: day la duong duy nhat cho mot anh
+  // thuoc ve cuon ma chua thuoc ve o bia nao. Phai kin voi nguoi kia cho toi luc no thanh o that.
+  it("bia moi chon cho luot sap dang: da thuoc cuon nhung chua vao o nao, chi chu sach thay", async () => {
+    const s = await haiCuon();
+    const choGan = bia(s.seat1.id, null);
+    await tai(s.db, choGan);
+    expect(await setDraftTrim(s.db, s.seat1.id, s.chung, { cover: "nui-xa", coverMediaId: choGan.id, youtubeId: null, dropTrack: false })).toBe("saved");
+    expect(await aiThay(s, choGan.id)).toEqual([choGan.id, null]);
   });
 
   it("cover_media_id tro toi mot dong khong phai bia (cot khong co CHECK rang buoc kind): khong duoc loi tat, van xet to/niem phong nhu binh thuong, nen ca chu sach cung null khi to con khoa", async () => {

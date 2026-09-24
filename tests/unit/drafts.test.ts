@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
+import { randomUUID } from "node:crypto";
 import { asc, eq } from "drizzle-orm";
 import { dang, haiCuon, to } from "../helpers/library";
-import { activity, books, drafts, pages, readSheets, rounds } from "@/server/db/schema";
+import { activity, books, drafts, media, pages, readSheets, rounds } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
-import { listDrafts, listUnwrittenBooks, publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
+import { listDrafts, listUnwrittenBooks, publishDraft, readDraft, saveDraft, setDraftTrim } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
-import type { DocJson } from "@/lib/doc/types";
+import { discardDraft } from "@/server/library/remove";
+import { recordUpload } from "@/server/media/access";
+import { TRANG_TRONG, type DocJson } from "@/lib/doc/types";
 import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
 
 describe("ban nhap", () => {
@@ -71,6 +74,87 @@ describe("ban nhap", () => {
     const con = await listUnwrittenBooks(db, seat1.id);
     expect(con).toEqual([expect.objectContaining({ bookId: moi, title: "Sổ mới tinh", mode: "chia-se", cover: "nui-xa", coverMediaId: null })]);
     expect(con[0].createdAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("setDraftTrim", () => {
+  it("cuon chua co nhap thi tao nhap rong mot doan, va ghi dung hai o", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: "5qap5aO4i9A", dropTrack: false })).toBe("saved");
+    expect(await db.select({ c: drafts.content, n: drafts.sheetCount, bia: drafts.cover, nhac: drafts.youtubeId, go: drafts.dropTrack }).from(drafts))
+      .toEqual([{ c: TRANG_TRONG, n: 1, bia: "hoa-dao", nhac: "5qap5aO4i9A", go: false }]);
+  });
+
+  it("khong cham content va sheet_count cua nhap dang co", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await saveDraft(db, seat1.id, chung, to("Đang viết dở"), 3)).toBeInstanceOf(Date);
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: "cau-go", coverMediaId: null, youtubeId: null, dropTrack: false })).toBe("saved");
+    expect(await db.select({ c: drafts.content, n: drafts.sheetCount, bia: drafts.cover }).from(drafts))
+      .toEqual([{ c: to("Đang viết dở"), n: 3, bia: "cau-go" }]);
+  });
+
+  it("o go nhac ghi duoc, va ghi de lua chon cu cua chinh lan truoc", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: "5qap5aO4i9A", dropTrack: false });
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: null, dropTrack: true })).toBe("saved");
+    expect(await db.select({ nhac: drafts.youtubeId, go: drafts.dropTrack }).from(drafts)).toEqual([{ nhac: null, go: true }]);
+  });
+
+  it("de trong het cung duoc: luot nay khong them o nao", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: null, dropTrack: false })).toBe("saved");
+    expect(await db.select({ bia: drafts.cover, nhac: drafts.youtubeId, go: drafts.dropTrack }).from(drafts))
+      .toEqual([{ bia: null, nhac: null, go: false }]);
+  });
+
+  it("gia tri khong hop le thi tu choi va khong ghi gi", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    const xau = [
+      { cover: null, coverMediaId: randomUUID(), youtubeId: null, dropTrack: false },
+      { cover: "khong-co-that" as never, coverMediaId: null, youtubeId: null, dropTrack: false },
+      { cover: null, coverMediaId: null, youtubeId: "qua-ngan", dropTrack: false },
+      { cover: null, coverMediaId: null, youtubeId: "5qap5aO4i9A", dropTrack: true },
+    ];
+    for (const t of xau) expect(await setDraftTrim(db, seat1.id, chung, t), JSON.stringify(t)).toBe("invalid");
+    expect(await db.select().from(drafts)).toEqual([]);
+  });
+
+  it("cuon cua nguoi khac hay ma sach sai dang: not-found, khong ghi gi", async () => {
+    const { db, seat2, chung } = await haiCuon();
+    const t = { cover: "nui-xa" as const, coverMediaId: null, youtubeId: null, dropTrack: false };
+    expect(await setDraftTrim(db, seat2.id, chung, t)).toBe("not-found");
+    expect(await setDraftTrim(db, seat2.id, "khong-phai-uuid", t)).toBe("not-found");
+    expect(await db.select().from(drafts)).toEqual([]);
+  });
+
+  it("anh bia cua nguoi khac hay khong co that: invalid-cover, khong ghi gi", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: "nui-xa", coverMediaId: randomUUID(), youtubeId: null, dropTrack: false })).toBe("invalid-cover");
+    expect(await db.select().from(drafts)).toEqual([]);
+  });
+
+  it("anh bia dung duoc thi duoc gan vao cuon ngay, de no thuoc kho anh cua cuon", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    const bia = randomUUID();
+    expect(await recordUpload(db, { id: bia, ownerId: seat1.id, bookId: null, kind: "bia", mime: "image/webp", bytes: 1024, width: 1200, height: 720 })).toBe(true);
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: "nui-xa", coverMediaId: bia, youtubeId: null, dropTrack: false })).toBe("saved");
+    expect(await db.select({ b: media.bookId }).from(media).where(eq(media.id, bia))).toEqual([{ b: chung }]);
+  });
+
+  it("bo ban nhap thi hai o cua luot dang soan mat theo", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: "5qap5aO4i9A", dropTrack: false });
+    expect(await discardDraft(db, seat1.id, chung)).toBe("discarded");
+    expect(await db.select().from(drafts)).toEqual([]);
+  });
+
+  // Chon bia hay nhac la da co dong drafts, nen cuon roi muc "chua viet" sang muc ban nhap cua /ban-nhap voi doan trich
+  // rong. Van xoa duoc ca cuon tu do (hasPages false), nen khong mat duong nao.
+  it("chon bia thoi la cuon roi muc chua viet, sang muc ban nhap", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false });
+    expect((await listUnwrittenBooks(db, seat1.id)).map((b) => b.bookId)).not.toContain(chung);
+    expect((await listDrafts(db, seat1.id)).find((d) => d.bookId === chung)).toMatchObject({ excerpt: "", hasPages: false });
   });
 });
 

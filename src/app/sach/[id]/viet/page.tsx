@@ -7,9 +7,7 @@ import { sachCuaToi } from "@/server/web/cong";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { Editor } from "@/components/editor/Editor";
-import type { DocJson } from "@/lib/doc/types";
-
-const TRANG_TRONG: DocJson = { type: "doc", content: [{ type: "paragraph" }] };
+import { TRANG_TRONG } from "@/lib/doc/types";
 
 export default async function VietSach({ params }: { params: Promise<{ id: string }> }) {
   await connection();
