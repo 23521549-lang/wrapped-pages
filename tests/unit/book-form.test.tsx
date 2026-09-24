@@ -83,7 +83,12 @@ describe("BookForm o nhac nen", () => {
     expect(actionCreateBook.mock.calls[0][0].get("music")).toBe(link);
   });
 
-  it("sua sach co nhac: dien link ngan kem chip; xoa trong roi luu thi gui music rong", async () => {
+  /*
+   * Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen han xuong hai muc danh sach.
+   * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Nen form sua chi con ten sach va Ai doc duoc; form tao
+   * van hoi ca ba, vi ca ba deu di thang vao hai o mo dau cua cuon moi.
+   */
+  it("form sua chi con ten sach va Ai doc duoc; form tao van co ca bang bia lan o nhac", async () => {
     render(
       <BookForm
         book={{ id: "b1", title: "Chuyện chưa kể", mode: "chia-se", cover: "nui-xa", youtubeId: MA, coverMediaId: null }}
@@ -92,13 +97,19 @@ describe("BookForm o nhac nen", () => {
         mediaEnabled={false}
       />,
     );
-    expect(oNhac().value).toBe(`https://youtu.be/${MA}`);
-    expect(dongDuoi().querySelector(".chip--key")?.textContent).toBe("Đã nhận video");
-    fireEvent.change(oNhac(), { target: { value: "" } });
-    expect(dongDuoi().textContent).toBe(GOI_Y);
+    expect(screen.getByLabelText("Tên sách")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Ai đọc được" })).toBeTruthy();
+    expect(screen.queryByLabelText("Nhạc nền")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Bìa" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
-    expect(actionUpdateBook.mock.calls[0][0]).toBe("b1");
-    expect(actionUpdateBook.mock.calls[0][1].get("music")).toBe("");
+    const gui = actionUpdateBook.mock.calls[0][1];
+    expect([gui.get("title"), gui.get("mode"), gui.get("cover"), gui.get("coverMedia"), gui.get("music")])
+      .toEqual(["Chuyện chưa kể", "chia-se", null, null, null]);
+
+    cleanup();
+    formMoi();
+    expect(screen.getByLabelText("Nhạc nền")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Bìa" })).toBeTruthy();
   });
 });

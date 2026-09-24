@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { COVERS, TITLE_MAX, type CoverKey } from "@/lib/book";
 import { parseYoutubeLink, youtubeLink, type YoutubeLink } from "@/lib/youtube";
-import { CoverPicker, type CoverValue } from "./CoverPicker";
+import type { CoverValue } from "./CoverPicker";
 
 const TEN_TRONG = "Sách cần có tên. Viết vài chữ, đổi lại sau cũng được.";
 const GOI_Y = "Tên hiện trên kệ. Đổi lại được sau.";
@@ -72,82 +72,73 @@ export function useBookEdit(book: BookNow) {
 }
 
 /**
- * Ba o quen thuoc cua mot cuon: ten sach, bang bia (ke ca bia tu tai len), nhac nen. Cac o mang thuoc tinh name nhu cu,
- * nen form sach van gui duoc bang FormData ma khong doi gi.
+ * O ten sach. Tach rieng vi man Sua sach chi con o nay, con bang bia va o nhac chi hien o form tao (phan quyet B2).
+ * O mang thuoc tinh name nhu cu, nen form van gui duoc bang FormData ma khong doi gi.
  */
-export function BookEditFields({ state, bookId, mediaEnabled, disabled }: {
-  state: BookEditState;
-  /** Cuon dang sua; null la sach moi, bia cho gan toi khi tao sach. */
-  bookId: string | null;
-  mediaEnabled: boolean;
-  disabled: boolean;
-}) {
+export function TitleField({ state, disabled }: { state: BookEditState; disabled: boolean }) {
   const id = useId();
   // Rut cac truong ra bien cuc bo mot lan roi JSX doc bien: doc thang state.x trong JSX bi cong lint react/refs coi
   // la doc ref luc render, vi state mang ca hai ref o duoi.
-  const { title, bia, music, musicCheck, touched, musicTouched, setTitle, setBia, setMusic, setTouched, setMusicTouched, setBusy, titleRef, musicRef } = state;
+  const { title, touched, setTitle, setTouched, titleRef } = state;
   const titleError = touched && title.trim() === "";
+  return (
+    <div className="field">
+      <label className="field__label" htmlFor={`${id}-ten`}>Tên sách</label>
+      <div className="field__o">
+        <input
+          ref={titleRef}
+          className="input"
+          id={`${id}-ten`}
+          name="title"
+          type="text"
+          value={title}
+          maxLength={TITLE_MAX}
+          autoComplete="off"
+          aria-invalid={titleError}
+          aria-describedby={`${id}-ten-help`}
+          disabled={disabled}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={() => setTouched(true)}
+        />
+        {titleError && <span className="field__dau dau-loi" aria-hidden="true">!</span>}
+      </div>
+      <p className={titleError ? "field__help field__help--loi" : "field__help"} id={`${id}-ten-help`}>
+        {titleError ? TEN_TRONG : GOI_Y}
+      </p>
+    </div>
+  );
+}
+
+/** O nhac nen. Man Sua sach khong co no nua; ai can ca ba o thi dat TitleField, CoverPicker va o nay canh nhau. */
+export function MusicField({ state, disabled }: { state: BookEditState; disabled: boolean }) {
+  const id = useId();
+  // Cung ly do voi TitleField: JSX chi doc bien cuc bo, khong doc thang state.x.
+  const { music, musicCheck, musicTouched, setMusic, setMusicTouched, musicRef } = state;
   const musicError = musicTouched && !musicCheck.ok;
   return (
-    <>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-ten`}>Tên sách</label>
-        <div className="field__o">
-          <input
-            ref={titleRef}
-            className="input"
-            id={`${id}-ten`}
-            name="title"
-            type="text"
-            value={title}
-            maxLength={TITLE_MAX}
-            autoComplete="off"
-            aria-invalid={titleError}
-            aria-describedby={`${id}-ten-help`}
-            disabled={disabled}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => setTouched(true)}
-          />
-          {titleError && <span className="field__dau dau-loi" aria-hidden="true">!</span>}
-        </div>
-        <p className={titleError ? "field__help field__help--loi" : "field__help"} id={`${id}-ten-help`}>
-          {titleError ? TEN_TRONG : GOI_Y}
-        </p>
+    <div className="field">
+      <label className="field__label" htmlFor={`${id}-nhac`}>Nhạc nền</label>
+      <div className="field__o">
+        <input
+          ref={musicRef}
+          className="input"
+          id={`${id}-nhac`}
+          name="music"
+          type="url"
+          inputMode="url"
+          value={music}
+          placeholder="https://youtu.be/..."
+          autoComplete="off"
+          spellCheck={false}
+          aria-invalid={musicError}
+          aria-describedby={`${id}-nhac-help`}
+          disabled={disabled}
+          onChange={(e) => setMusic(e.target.value)}
+          onBlur={() => setMusicTouched(true)}
+        />
+        {musicError && <span className="field__dau dau-loi" aria-hidden="true">!</span>}
       </div>
-
-      <CoverPicker
-        value={bia}
-        onChange={setBia}
-        bookId={bookId}
-        mediaEnabled={mediaEnabled}
-        disabled={disabled}
-        onBusyChange={setBusy}
-      />
-
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-nhac`}>Nhạc nền</label>
-        <div className="field__o">
-          <input
-            ref={musicRef}
-            className="input"
-            id={`${id}-nhac`}
-            name="music"
-            type="url"
-            inputMode="url"
-            value={music}
-            placeholder="https://youtu.be/..."
-            autoComplete="off"
-            spellCheck={false}
-            aria-invalid={musicError}
-            aria-describedby={`${id}-nhac-help`}
-            disabled={disabled}
-            onChange={(e) => setMusic(e.target.value)}
-            onBlur={() => setMusicTouched(true)}
-          />
-          {musicError && <span className="field__dau dau-loi" aria-hidden="true">!</span>}
-        </div>
-        <MusicHelp id={`${id}-nhac-help`} check={musicCheck} touched={musicTouched} />
-      </div>
-    </>
+      <MusicHelp id={`${id}-nhac-help`} check={musicCheck} touched={musicTouched} />
+    </div>
   );
 }

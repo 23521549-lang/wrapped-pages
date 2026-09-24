@@ -2,7 +2,7 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
-import type { BookInput, CoverKey } from "@/lib/book";
+import type { BookInput, BookSettings, CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { attachCover, lockCover } from "@/server/media/cover";
 import { newestCover, newestTrack } from "./timeline";
@@ -15,8 +15,8 @@ export type Book = typeof books.$inferSelect;
  */
 export type BookView = Book & { cover: CoverKey; coverMediaId: string | null; youtubeId: string | null };
 
-/** Ket qua sua sach. "invalid-cover": bia tu tai len khong dung duoc cho cuon nay (xem lockCover). */
-export type BookUpdate = "saved" | "not-found" | "invalid-cover";
+/** Ket qua sua sach. Bia va nhac khong di qua day nua, nen khong con nhanh "invalid-cover". */
+export type BookUpdate = "saved" | "not-found";
 
 /**
  * Luat "viewer duoc doc cuon nay" viet bang SQL tren bang books: cua chinh minh, hoac cuon o che do chia se (web chi
@@ -84,22 +84,18 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput): 
 }
 
 /**
- * Doi ten, che do, bia, nhac nen. Chi chu sach sua duoc; cuon cua nguoi khac la "not-found" nhu cuon khong ton tai.
- * Bia tu tai len phai la bia cua chinh chu, dang cho gan hoac da thuoc cuon nay (lockCover); bia cho gan duoc gan vao
- * cuon trong cung giao dich. coverMediaId null la bo bia tu tai len, ve lai tranh ve san.
+ * Doi ten va che do cua mot cuon. Chi chu sach sua duoc; cuon cua nguoi khac la "not-found" nhu cuon khong ton tai.
+ * Bia va nhac KHONG o day: chung song o hai dong thoi gian va chi doi qua setCoverEntry / setTrackEntry, de mot gia tri
+ * khong co hai duong ghi.
  */
-export async function updateBook(db: AnyDb, ownerId: string, bookId: string, input: BookInput): Promise<BookUpdate> {
+export async function updateBook(db: AnyDb, ownerId: string, bookId: string, input: BookSettings): Promise<BookUpdate> {
   if (!isUuid(bookId)) return "not-found";
-  const { coverMediaId } = input;
   return db.transaction(async (tx): Promise<BookUpdate> => {
-    // Nhu createBook: return trong giao dich la COMMIT chu khong phai ROLLBACK, nen hai duong return duoi day chi dung
-    // chung nao truoc chung chi con lenh doc - findOwnBook la SELECT, lockCover la SELECT ... FOR UPDATE. Lenh ghi dau
-    // tien (tx.update) nam sau ca hai, va phai giu nguyen thu tu do.
+    // Nhu createBook: return trong giao dich la COMMIT chu khong phai ROLLBACK, nen duong return duoi day chi dung chung
+    // nao truoc no chi con lenh doc - findOwnBook la SELECT. Lenh ghi duy nhat (tx.update) nam sau no.
     const book = await findOwnBook(tx, ownerId, bookId);
     if (!book) return "not-found";
-    if (coverMediaId !== null && !(await lockCover(tx, ownerId, book.id, coverMediaId))) return "invalid-cover";
     await tx.update(books).set({ ...input, updatedAt: new Date() }).where(and(eq(books.id, book.id), eq(books.ownerId, ownerId)));
-    if (coverMediaId !== null) await attachCover(tx, book.id, coverMediaId);
     return "saved";
   });
 }

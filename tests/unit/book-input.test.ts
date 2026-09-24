@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { COVERS, MODES, TITLE_MAX, parseBookInput } from "@/lib/book";
+import { COVERS, MODES, TITLE_MAX, parseBookInput, parseBookSettings } from "@/lib/book";
 import { YOUTUBE_LINK_ERROR } from "@/lib/youtube";
 
 function form(fields: Record<string, string>): FormData {
@@ -68,5 +68,30 @@ describe("parseBookInput", () => {
   it("ten co ky tu Postgres khong luu duoc thi bao loi nhu ten sai do dai", () => {
     expect(parseBookInput(form({ title: `A${String.fromCharCode(0)}`, mode: "chia-se", cover: "nui-xa" })))
       .toEqual({ error: `Tên sách phải từ 1 tới ${TITLE_MAX} ký tự.` });
+  });
+});
+
+/*
+ * Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen han xuong hai muc danh sach.
+ * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Form Sua sach chi con hai truong, va bo luat cua ten phai y
+ * het form tao, neu khong thi cung mot cai ten duoc nhan o man nay va bi tu choi o man kia.
+ */
+describe("parseBookSettings", () => {
+  it("chi lay ten va che do, bo qua moi truong thua con sot lai tren form", () => {
+    expect(parseBookSettings(form({ title: "  Chuyện   chưa kể ", mode: "chia-se", cover: "hoa-dao", coverMedia: "x", music: "sai" })))
+      .toEqual({ title: "Chuyện chưa kể", mode: "chia-se" });
+  });
+
+  it("che do ngoai danh sach hoac thieu thi bao loi, va bao truoc ten sai", () => {
+    expect(parseBookSettings(form({ title: "A", mode: "cong-khai" }))).toEqual({ error: "Chọn một chế độ cho cuốn sách." });
+    expect(parseBookSettings(form({ title: "" }))).toEqual({ error: "Chọn một chế độ cho cuốn sách." });
+  });
+
+  it("ten rong, qua tran, hay co ky tu Postgres khong luu duoc: cung mot cau nhu form tao", () => {
+    const sai = { error: `Tên sách phải từ 1 tới ${TITLE_MAX} ký tự.` };
+    expect(parseBookSettings(form({ title: "   ", mode: "rieng-tu" }))).toEqual(sai);
+    expect(parseBookSettings(form({ title: "a".repeat(TITLE_MAX + 1), mode: "rieng-tu" }))).toEqual(sai);
+    expect(parseBookSettings(form({ title: `A${String.fromCharCode(0)}`, mode: "rieng-tu" }))).toEqual(sai);
+    expect(parseBookSettings(form({ title: "a".repeat(TITLE_MAX), mode: "rieng-tu" }))).not.toHaveProperty("error");
   });
 });

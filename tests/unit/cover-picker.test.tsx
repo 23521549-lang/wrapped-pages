@@ -30,10 +30,6 @@ vi.mock("next/link", () => ({
 }));
 
 const BIA = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
-const CU = "7a2e4c6b-8d0f-4a1c-9e3b-5d7f9b1d3f5a";
-const SACH: NonNullable<BookFormProps["book"]> = {
-  id: "b1", title: "Những bữa sáng", mode: "chia-se", cover: "chim-bay", youtubeId: null, coverMediaId: CU,
-};
 
 /** Anh nguon 2000x1500 da xoay theo EXIF. */
 const bitmap = { width: 2000, height: 1500, close: vi.fn() };
@@ -94,10 +90,7 @@ function formMoi(props: Partial<BookFormProps> = {}) {
   fireEvent.change(screen.getByLabelText("Tên sách"), { target: { value: "Chuyện chưa kể" } });
 }
 
-const formSua = (mediaEnabled = true) =>
-  render(<BookForm book={SACH} nickname="Manh" partnerNickname="Linh" mediaEnabled={mediaEnabled} />);
-
-const oTep = () => screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa") as HTMLInputElement;
+const oTep =() => screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa") as HTMLInputElement;
 const oTen = () => screen.getByLabelText("Tên sách") as HTMLInputElement;
 const oAnh = () => screen.getByRole("radio", { name: "Ảnh của bạn" }) as HTMLInputElement;
 const tranh = (ten: string) => screen.getByRole("radio", { name: ten }) as HTMLInputElement;
@@ -457,86 +450,13 @@ describe("BookForm bia tu tai len: tai len", () => {
   });
 });
 
-describe("BookForm bia tu tai len: sua sach", () => {
-  it("bia anh dang dung: o Anh cua ban dang chon; chon tranh ve thi bo anh, chon lai anh thi gui lai id, tranh chon sau cung la du phong", async () => {
-    formSua();
-    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([oAnh()]);
-    expect(oAnh().closest(".swatch")?.className).toBe("swatch bia--chim-bay");
-    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Chim bay qua bờ nước.")).toBeTruthy();
-
-    fireEvent.click(tranh("Bìa trăng trên nước"));
-    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([tranh("Bìa trăng trên nước")]);
-    expect(screen.queryByText(/Ảnh chưa tải được/)).toBeNull();
-    expect(xemTruoc().querySelector("img")).toBeNull();
-    expect(xemTruoc().querySelector(".book__cover")?.className).toContain("bia--trang-nuoc");
-    expect(nut("Đổi ảnh")).toBeTruthy();
-
-    fireEvent.click(oAnh());
-    expect(oAnh().closest(".swatch")?.className).toBe("swatch bia--trang-nuoc");
-    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Trăng trên nước.")).toBeTruthy();
-    expect(xemTruoc().querySelector(".book__cover.bia--trang-nuoc img")?.getAttribute("src")).toBe(`/m/${CU}`);
-    fireEvent.click(nut("Lưu"));
-    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
-    expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["trang-nuoc"], CU]);
-
-    fireEvent.click(tranh("Bìa núi xa"));
-    fireEvent.click(nut("Lưu"));
-    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(2));
-    expect([actionUpdateBook.mock.calls[1][1].getAll("cover"), actionUpdateBook.mock.calls[1][1].get("coverMedia")]).toEqual([["nui-xa"], ""]);
-  });
-
-  it("Doi anh mo chon tep va buoc cat; Huy tra focus ve Doi anh; tai anh moi thi gui book la id cuon va thay bia", async () => {
-    formSua();
-    const oAn = document.querySelector<HTMLInputElement>('input[type="file"]')!;
-    const bam = vi.spyOn(oAn, "click");
-    fireEvent.click(nut("Đổi ảnh"));
-    expect(bam).toHaveBeenCalledTimes(1);
-    await chon(oAn);
-    fireEvent.click(nut("Hủy"));
-    expect(document.activeElement).toBe(nut("Đổi ảnh"));
-
-    await chon(oAn);
-    fireEvent.click(nut("Dùng ảnh này"));
-    await waitFor(() => expect(oAnh().closest(".swatch")?.querySelector("img")?.getAttribute("src")).toBe(`/m/${BIA}`));
-    expect(actionUploadMedia.mock.calls[0][0].get("book")).toBe("b1");
-    // Focus dat trong layout effect, cung lan commit dua anh vao DOM: thay anh la focus da toi, khong con cuoc dua.
-    expect(document.activeElement).toBe(oAnh());
-  });
-
-  it("kho chua bat: khong tai duoc bia moi, nhung bia anh cu van hien dang chon va van duoc gui lai de khong mat khi sua ten", async () => {
-    formSua(false);
-    expect(document.querySelector('input[type="file"]')).toBeNull();
-    expect(screen.queryByRole("button", { name: "Đổi ảnh" })).toBeNull();
-    expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([oAnh()]);
-    expect(tranh("Bìa chim bay qua bờ nước").checked).toBe(false);
-    expect(oAnh().closest(".swatch")?.querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${CU}`);
-    expect(xemTruoc().querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${CU}`);
-    expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Chim bay qua bờ nước.")).toBeTruthy();
-    fireEvent.click(nut("Lưu"));
-    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
-    expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["chim-bay"], CU]);
-  });
-
-  /*
-   * Kho tat ma cuon da co bia anh: truoc khi sua, o anh bien mat nen mot
-   * TRANH VE hien la dang chon, trong khi truong an coverMedia van gui id anh cu len - cai nguoi dung nhin thay va cai
-   * form gui di la hai thu khac nhau. Giu bia anh la dung (sua ten khong duoc lam mat bia), nen cach sua la hien
-   * dung no. Test nay do o dong dau tien truoc khi sua.
-   */
-  it("kho chua bat: cai dang hien la dang chon va cai form gui len luon la mot", () => {
-    formSua(false);
-    expect(COVER_RADIOS().filter((r) => r.checked).map((r) => r.getAttribute("aria-label"))).toEqual(["Ảnh của bạn"]);
-    expect(document.querySelector<HTMLInputElement>('input[name="coverMedia"]')?.value).toBe(CU);
-  });
-
-  it("kho chua bat: chon mot tranh ve khac moi bo bia anh cu (khong doi gi thi bia anh con nguyen o test truoc)", async () => {
-    formSua(false);
-    fireEvent.click(tranh("Bìa trăng trên nước"));
-    fireEvent.click(nut("Lưu"));
-    await waitFor(() => expect(actionUpdateBook).toHaveBeenCalledTimes(1));
-    expect([actionUpdateBook.mock.calls[0][1].getAll("cover"), actionUpdateBook.mock.calls[0][1].get("coverMedia")]).toEqual([["trang-nuoc"], ""]);
-  });
-
+/*
+ * Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen han xuong hai muc danh sach.
+ * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Bang bia chi con o form TAO, nen nam bai dung tren form SUA
+ * (bia anh dang dung va cach bo no, nut Doi anh gui book la id cuon, kho chua bat ma cuon da co bia anh) khong con man
+ * nao de chay. Chung phai duoc dung lai tren hai muc danh sach khi hai muc do ra doi.
+ */
+describe("BookForm bia tu tai len: kho chua bat", () => {
   it("sach moi khi kho chua bat: chi tranh ve san, gui coverMedia rong", async () => {
     formMoi({ mediaEnabled: false });
     expect(COVER_RADIOS().map((r) => r.value)).toEqual([

@@ -6,6 +6,7 @@ import { seedHai } from "../helpers/seed";
 import { bookCovers, books, bookTracks, media } from "@/server/db/schema";
 import { createBook, findOwnBook, findReadableBook, updateBook } from "@/server/library/books";
 import { listShelf } from "@/server/library/shelf";
+import { newestCover, newestTrack } from "@/server/library/timeline";
 import { markRead } from "@/server/library/pages";
 import { recordUpload } from "@/server/media/access";
 import { isUuid } from "@/lib/uuid";
@@ -37,29 +38,36 @@ describe("quyen tren mot cuon sach", () => {
     const { db, seat1 } = await haiCuon();
     expect(await findReadableBook(db, seat1.id, "khong-phai-uuid")).toBeNull();
     expect(await findOwnBook(db, seat1.id, "' or 1=1 --")).toBeNull();
-    expect(await updateBook(db, seat1.id, "x", { title: "A", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: null })).toBe("not-found");
+    expect(await updateBook(db, seat1.id, "x", { title: "A", mode: "chia-se" })).toBe("not-found");
   });
 
   it("nguoi kia khong sua duoc sach, sach giu nguyen", async () => {
     const { db, seat2, chung } = await haiCuon();
-    expect(await updateBook(db, seat2.id, chung, { title: "Bị sửa", mode: "rieng-tu", cover: "khom-truc", youtubeId: "5qap5aO4i9A", coverMediaId: null })).toBe("not-found");
+    expect(await updateBook(db, seat2.id, chung, { title: "Bị sửa", mode: "rieng-tu" })).toBe("not-found");
     const [row] = await db.select().from(books).where(eq(books.id, chung));
-    expect(row).toMatchObject({ title: "Chuyện chưa kể", mode: "chia-se", cover: "nui-xa", youtubeId: null });
+    expect(row).toMatchObject({ title: "Chuyện chưa kể", mode: "chia-se" });
   });
 
-  it("chu sach doi duoc ten, che do, bia va nhac nen", async () => {
+  it("chu sach doi duoc ten va che do", async () => {
     const { db, seat1, chung } = await haiCuon();
-    expect(await updateBook(db, seat1.id, chung, { title: "Mưa đầu tháng chín", mode: "rieng-tu", cover: "trang-nuoc", youtubeId: "5qap5aO4i9A", coverMediaId: null })).toBe("saved");
+    expect(await updateBook(db, seat1.id, chung, { title: "Mưa đầu tháng chín", mode: "rieng-tu" })).toBe("saved");
     const [row] = await db.select().from(books).where(eq(books.id, chung));
-    expect(row).toMatchObject({ title: "Mưa đầu tháng chín", mode: "rieng-tu", cover: "trang-nuoc", youtubeId: "5qap5aO4i9A" });
+    expect(row).toMatchObject({ title: "Mưa đầu tháng chín", mode: "rieng-tu" });
   });
 
-  it("tao sach kem nhac nen, sua voi youtubeId null thi bo nhac", async () => {
-    const { db, seat1 } = await haiCuon();
+  /*
+   * Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen han xuong hai muc danh sach.
+   * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Vi vay updateBook chi con ten va che do; bia va nhac chi
+   * doi qua setCoverEntry va setTrackEntry.
+   */
+  it("updateBook khong cham hai dong thoi gian", async () => {
+    const { db, seat1 } = await seedHai();
     const id = await createBook(db, seat1.id, { title: "Có nhạc", mode: "chia-se", cover: "nui-xa", youtubeId: "5qap5aO4i9A", coverMediaId: null });
-    expect((await findOwnBook(db, seat1.id, id))?.youtubeId).toBe("5qap5aO4i9A");
-    expect(await updateBook(db, seat1.id, id, { title: "Có nhạc", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: null })).toBe("saved");
-    expect((await findOwnBook(db, seat1.id, id))?.youtubeId).toBeNull();
+    expect(await updateBook(db, seat1.id, id, { title: "Tên mới", mode: "rieng-tu" })).toBe("saved");
+    expect(await newestCover(db, id)).toEqual({ cover: "nui-xa", coverMediaId: null });
+    expect(await newestTrack(db, id)).toBe("5qap5aO4i9A");
+    const [b] = await db.select({ t: books.title, m: books.mode }).from(books).where(eq(books.id, id));
+    expect(b).toEqual({ t: "Tên mới", m: "rieng-tu" });
   });
 });
 

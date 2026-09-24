@@ -10,7 +10,7 @@ import { markRead } from "@/server/library/pages";
 import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
-import { parseBookInput } from "@/lib/book";
+import { parseBookInput, parseBookSettings } from "@/lib/book";
 import { groupThousands } from "@/lib/doc/counter";
 import {
   checkDraftInput, checkPublishInput, checkRoundInput, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS,
@@ -49,18 +49,15 @@ export async function actionCreateBook(formData: FormData) {
 }
 
 /**
- * Doi ten, che do hoac bia. Chi chu sach sua duoc; cuon cua nguoi khac tra loi nhu cuon khong ton tai. Sua xong hen don
- * rac media sau phan hoi, vi bia vua bi thay thanh rac.
+ * Doi ten hoac che do cua mot cuon. Chi chu sach; cuon cua nguoi khac tra loi nhu cuon khong ton tai. Khong hen don rac
+ * media: doi ten hay che do khong bo mot anh bia nao ra khoi cuon, nen khong sinh rac.
  */
 export async function actionUpdateBook(bookId: string, formData: FormData) {
   const me = await readMe();
   if (!me) return { error: CAN_DANG_NHAP };
-  const input = parseBookInput(formData);
+  const input = parseBookSettings(formData);
   if ("error" in input) return input;
-  const result = await updateBook(db, me.accountId, bookId, input);
-  if (result === "not-found") return { error: KHONG_THAY_SACH };
-  if (result === "invalid-cover") return { error: BIA_KHONG_DUNG_DUOC };
-  sweepMediaAfterResponse();
+  if ((await updateBook(db, me.accountId, bookId, input)) === "not-found") return { error: KHONG_THAY_SACH };
   redirect(`/sach/${bookId}`);
 }
 

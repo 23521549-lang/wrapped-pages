@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { books, drafts, media, pages, sealReplies, seals } from "@/server/db/schema";
-import { createBook, updateBook } from "@/server/library/books";
+import { createBook } from "@/server/library/books";
 import { publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { bindMedia, recordUpload, type UploadRecord } from "@/server/media/access";
 import { submitReply } from "@/server/seal/unlock";
@@ -124,6 +124,16 @@ const BIA_MUON: [string, (s: Bo) => Promise<string>][] = [
   ["id khong phai uuid", async () => "khong-phai-uuid"],
 ];
 
+/*
+ * Chi con duong TAO SACH o day. Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen
+ * han xuong hai muc danh sach. Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." updateBook khong nhan bia nua,
+ * nen ba bai cu doi bia qua updateBook (gan bia cho gan, bo bia bang null, bia muon, nguoi kia sua sach cua chu) khong
+ * con duong nao de chay. Ca bon luat do da co ban tuong duong tren duong ghi duy nhat con lai, trong
+ * tests/unit/timeline-write.test.ts: "anh bia cua nguoi khac", "anh bia da thuoc cuon khac cua chinh chu", "dong media
+ * khong phai loai bia", "ma anh khong co that la invalid-cover, ma anh sai dang la invalid", "anh bia dung duoc thi vao
+ * o va duoc gan vao cuon", "anh da thuoc dung cuon nay thi dung lai duoc cho o khac", "bo anh khoi mot o" va "nguoi khac
+ * khong gan duoc anh bia cua chinh minh vao cuon nguoi ta".
+ */
 describe("bia tu tai len", () => {
   it("tao sach voi bia cho gan: gan vao cuon moi trong cung giao dich", async () => {
     const s = await haiCuon();
@@ -141,35 +151,6 @@ describe("bia tu tai len", () => {
     expect(await createBook(s.db, s.seat1.id, { ...SACH, coverMediaId: id })).toBeNull();
     expect(await s.db.select({ id: books.id }).from(books)).toHaveLength(2);
     expect(await s.db.select().from(media)).toEqual(truoc);
-  });
-
-  it("sua sach: gan bia cho gan, doi sang bia cua cuon, giu bia hien tai, bo bia bang null", async () => {
-    const s = await haiCuon();
-    const cho = await taiBia(s.db, s.seat1.id, null);
-    expect(await updateBook(s.db, s.seat1.id, s.chung, { ...SACH, coverMediaId: cho })).toBe("saved");
-    expect([await biaCuaSach(s.db, s.chung), await sachCuaMedia(s.db, cho)]).toEqual([cho, s.chung]);
-    const cuaCuon = await taiBia(s.db, s.seat1.id, s.chung);
-    expect(await updateBook(s.db, s.seat1.id, s.chung, { ...SACH, coverMediaId: cuaCuon })).toBe("saved");
-    expect(await updateBook(s.db, s.seat1.id, s.chung, { ...SACH, coverMediaId: cuaCuon })).toBe("saved");
-    expect(await biaCuaSach(s.db, s.chung)).toBe(cuaCuon);
-    expect(await updateBook(s.db, s.seat1.id, s.chung, SACH)).toBe("saved");
-    expect(await biaCuaSach(s.db, s.chung)).toBeNull();
-  });
-
-  it.each(BIA_MUON)("sua sach voi bia muon (%s): invalid-cover, sach va media khong doi", async (_ten, muon) => {
-    const s = await haiCuon();
-    const id = await muon(s);
-    const [sachTruoc, mediaTruoc] = [await s.db.select().from(books), await s.db.select().from(media)];
-    expect(await updateBook(s.db, s.seat1.id, s.chung, { ...SACH, coverMediaId: id })).toBe("invalid-cover");
-    expect(await s.db.select().from(books)).toEqual(sachTruoc);
-    expect(await s.db.select().from(media)).toEqual(mediaTruoc);
-  });
-
-  it("nguoi kia sua sach cua chu voi bia cho gan cua chinh ho: not-found, bia van cho gan", async () => {
-    const s = await haiCuon();
-    const bia = await taiBia(s.db, s.seat2.id, null);
-    expect(await updateBook(s.db, s.seat2.id, s.chung, { ...SACH, coverMediaId: bia })).toBe("not-found");
-    expect([await biaCuaSach(s.db, s.chung), await sachCuaMedia(s.db, bia)]).toEqual([null, null]);
   });
 });
 

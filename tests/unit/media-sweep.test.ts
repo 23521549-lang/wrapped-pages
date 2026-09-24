@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { books, media, mediaObjects, mediaSweeps } from "@/server/db/schema";
-import { updateBook } from "@/server/library/books";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
+import { setCoverEntry } from "@/server/library/timeline";
 import type { UploadRecord } from "@/server/media/access";
 import { MemoryStore } from "@/server/media/memory";
 import { saveUpload } from "@/server/media/save-upload";
@@ -134,9 +134,10 @@ describe("sweepMedia", () => {
     const daDang = await taiAnh(s.db, store, s.seat1.id, s.rieng);
     expect(await publishDraft(s.db, s.seat1.id, s.rieng, [khoiAnh(daDang.id)])).not.toBeNull();
     const bia = await taiBia(s.db, store, s.seat1.id, s.chung);
-    expect(await updateBook(s.db, s.seat1.id, s.chung, {
-      title: "Chuyện chưa kể", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: bia.id,
-    })).toBe("saved");
+    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "nui-xa", coverMediaId: bia.id })).toBe("saved");
+    // Neo TAM: luat don rac con hoi cot bia cu cua books, trong khi duong ghi bia that su chi con la o cua dong thoi
+    // gian. Xoa dong nay ngay khi luat don rac doc book_covers.
+    await s.db.update(books).set({ coverMediaId: bia.id }).where(eq(books.id, s.chung));
     const rac = await taiAnh(s.db, store, s.seat1.id, s.chung);
     expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 1, objects: 1 });
     for (const giu of [trongNhap, daDang, bia]) expect(await conLai(s.db, store, giu)).toEqual([true, true]);

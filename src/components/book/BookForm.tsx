@@ -6,8 +6,8 @@ import { actionCreateBook, actionUpdateBook } from "@/app/actions/library";
 import type { BookMode, CoverKey } from "@/lib/book";
 import { Button } from "@/components/Button";
 import { BookCard } from "./BookCard";
-import { BookEditFields, useBookEdit } from "./BookEditFields";
-import { chosenCoverMedia } from "./CoverPicker";
+import { MusicField, TitleField, useBookEdit } from "./BookEditFields";
+import { chosenCoverMedia, CoverPicker } from "./CoverPicker";
 
 type Ket = { error: string } | null;
 
@@ -55,7 +55,14 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled }: Book
   return (
     <div className="tao">
       <form className="form" onSubmit={submit} noValidate>
-        <BookEditFields state={doi} bookId={book?.id ?? null} mediaEnabled={mediaEnabled} disabled={pending} />
+        <TitleField state={doi} disabled={pending} />
+        {/* Bia va nhac chi co o form TAO: khi sua, hai thu do nam o hai muc dong thoi gian (phan quyet B2). */}
+        {book === null && (
+          <>
+            <CoverPicker value={doi.bia} onChange={doi.setBia} bookId={null} mediaEnabled={mediaEnabled} disabled={pending} onBusyChange={doi.setBusy} />
+            <MusicField state={doi} disabled={pending} />
+          </>
+        )}
 
         <fieldset className="chon">
           <legend>Ai đọc được</legend>

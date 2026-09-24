@@ -23,7 +23,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
         <div className="head">
           <div>
             <h1 className="d">Sửa sách</h1>
-            <p className="head__sub">Đổi tên, ai đọc được, bìa, nhạc nền, hay sửa nội dung từng lượt.</p>
+            <p className="head__sub">Đổi tên, ai đọc được, hay sửa nội dung từng lượt.</p>
           </div>
         </div>
         <BookForm

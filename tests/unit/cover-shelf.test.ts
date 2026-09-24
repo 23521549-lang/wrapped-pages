@@ -56,7 +56,7 @@ describe("bia tu tai len tren ke, man doc va ban nhap", () => {
   it("cuon chuyen rieng tu: nguoi kia mat ca the sach lan bia ngay lan doc sau", async () => {
     const s = await haiCuon();
     const bia = await datBia(s.db, s.seat1.id, s.chung, CHUNG);
-    expect(await updateBook(s.db, s.seat1.id, s.chung, { ...CHUNG, mode: "rieng-tu", coverMediaId: bia })).toBe("saved");
+    expect(await updateBook(s.db, s.seat1.id, s.chung, { title: CHUNG.title, mode: "rieng-tu" })).toBe("saved");
     expect(await listShelf(s.db, s.seat2.id)).toEqual([]);
     expect(await readBook(s.db, s.seat2.id, s.chung)).toBeNull();
     expect(await canViewMedia(s.db, s.seat2.id, bia, new Date())).toBeNull();

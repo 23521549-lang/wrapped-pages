@@ -4,10 +4,9 @@ import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "@/app/act
 import { DOC_LIMITS } from "@/lib/doc/validate";
 
 /*
- * Hai day noi cua don rac media o src/app/actions/library.ts: sua sach xong va dang trang xong deu phai hen
- * sweepMediaAfterResponse. Hai cho goi do truoc day khong co test nao chay qua - book-form.test.tsx va
- * publish-bar.test.tsx deu vi.mock ca mo dun action, nen than cua action khong bao gio chay va xoa han mot trong hai
- * dong cung khong lam do test nao. Thieu don rac thi nguoi chi doi bia ma khong tai gi them se tich rac mai mai.
+ * Day noi cua don rac media o src/app/actions/library.ts: dang trang xong phai hen sweepMediaAfterResponse. Cho goi do
+ * truoc day khong co test nao chay qua - book-form.test.tsx va publish-bar.test.tsx deu vi.mock ca mo dun action, nen
+ * than cua action khong bao gio chay va xoa han dong do cung khong lam do test nao.
  *
  * Nhu media-action.test.ts: mo dun that (guard, books, drafts, kho, don rac) deu la ham gia, o day chi kiem THU TU -
  * ghi thanh cong truoc, roi moi hen don - va kiem rang moi duong that bai khong hen don.
@@ -80,35 +79,39 @@ afterEach(() => {
   });
 });
 
-describe("actionUpdateBook hen don rac media", () => {
-  it("sua xong: ghi truoc, hen don sau, roi moi chuyen trang", async () => {
+/*
+ * Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen han xuong hai muc danh sach.
+ * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Nen action chi chuyen tiep ten va che do, va khong con hen
+ * don rac: doi ten hay che do khong bao gio bien mot anh bia thanh rac.
+ */
+describe("actionUpdateBook", () => {
+  it("sua xong: chi chuyen tiep ten va che do, khong hen don rac, roi chuyen trang", async () => {
     readMe.mockResolvedValue(ME);
     updateBook.mockResolvedValue("saved");
     expect(await goi(() => actionUpdateBook(BOOK, form()))).toEqual({ di: `/sach/${BOOK}` });
-    expect(updateBook).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, BOOK, expect.objectContaining({ coverMediaId: BIA }));
-    expect(sweepMediaAfterResponse).toHaveBeenCalledTimes(1);
-    expect(truoc(updateBook, sweepMediaAfterResponse)).toBe(true);
-    expect(truoc(sweepMediaAfterResponse, redirect)).toBe(true);
+    // form() van mang cover va coverMedia: hai truong do phai bi bo qua, khong di theo xuong updateBook.
+    expect(updateBook).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, BOOK, { title: "Những bữa sáng", mode: "chia-se" });
+    expect(sweepMediaAfterResponse).not.toHaveBeenCalled();
+    expect(truoc(updateBook, redirect)).toBe(true);
   });
 
-  it("chua dang nhap: khong ghi va khong hen don", async () => {
+  it("chua dang nhap: khong ghi", async () => {
     readMe.mockResolvedValue(null);
     expect(await goi(() => actionUpdateBook(BOOK, form()))).toEqual({ error: CAN_DANG_NHAP });
-    expect([updateBook.mock.calls.length, sweepMediaAfterResponse.mock.calls.length]).toEqual([0, 0]);
+    expect(updateBook).not.toHaveBeenCalled();
   });
 
-  it("form sai: khong ghi va khong hen don", async () => {
+  it("form sai: khong ghi", async () => {
     readMe.mockResolvedValue(ME);
     expect(await goi(() => actionUpdateBook(BOOK, form({ title: "" })))).toMatchObject({ error: expect.stringContaining("Tên sách") });
-    expect([updateBook.mock.calls.length, sweepMediaAfterResponse.mock.calls.length]).toEqual([0, 0]);
+    expect(updateBook).not.toHaveBeenCalled();
   });
 
-  it("cuon khong phai cua minh hay bia khong dung duoc: bao loi, khong hen don", async () => {
+  it("cuon khong phai cua minh: bao khong thay sach", async () => {
     readMe.mockResolvedValue(ME);
-    updateBook.mockResolvedValueOnce("not-found").mockResolvedValueOnce("invalid-cover");
+    updateBook.mockResolvedValue("not-found");
     expect(await goi(() => actionUpdateBook(BOOK, form()))).toEqual({ error: KHONG_THAY_SACH });
-    expect(await goi(() => actionUpdateBook(BOOK, form()))).toEqual({ error: "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa." });
-    expect(sweepMediaAfterResponse).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
   });
 });
 

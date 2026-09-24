@@ -83,32 +83,28 @@ test("sach rieng tu chi chu thay; chi chu sua duoc; Trang moi mo cuon vua sua", 
   await expect(a).toHaveURL(new RegExp(`/sach/${chung}/viet$`));
 });
 
-test("bia moi: chon khi tao, doi khi sua, giu sau khi tai lai, ve tren ke; ca muoi o bia deu chon duoc", async ({ browser }) => {
+/*
+ * Phan quyet B2 cua dot 24.09: "o bia va o nhac ROI KHOI phan tren cua Sua sach, chuyen han xuong hai muc danh sach.
+ * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Vi vay bai nay khong con nua doi bia o man Sua sach; tam
+ * bia chon luc tao phai theo cuon qua ke, man doc va sau khi tai lai trang.
+ */
+test("bia moi: chon khi tao, giu sau khi tai lai, ve tren ke; ca muoi o bia deu chon duoc", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
   await a.goto("/sach/moi");
   await a.getByLabel("Tên sách").fill("Mái nhà cũ");
   await a.getByRole("radio", { name: "Chia sẻ", exact: true }).check();
-  await a.getByRole("radio", { name: "Bìa mèo ngủ trên mái ngói" }).check();
+  await a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" }).check();
   await a.getByRole("button", { name: "Tạo sách" }).click();
   await expect(a).toHaveURL(new RegExp("/sach/[0-9a-f-]{36}/viet$"));
   const id = new URL(a.url()).pathname.split("/")[2];
 
   await a.goto("/ke-sach");
   const cuon = a.locator(".cuon", { hasText: "Mái nhà cũ" });
-  await expect(cuon.locator(".cuon__bia.bia--meo-mai svg")).toHaveCount(1);
-
-  await a.goto(`/sach/${id}/sua`);
-  await expect(a.getByRole("radio", { name: "Bìa mèo ngủ trên mái ngói" })).toBeChecked();
-  await a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" }).check();
-  await a.getByRole("button", { name: "Lưu", exact: true }).click();
-  await expect(a).toHaveURL(new RegExp(`/sach/${id}$`));
-  await a.goto(`/sach/${id}/sua`);
-  await expect(a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" })).toBeChecked();
-  await a.reload();
-  await expect(a.getByRole("radio", { name: "Bìa cầu gỗ qua suối" })).toBeChecked();
-  await expect(a.locator(".swatch.bia--cau-go svg")).toHaveCount(1);
+  await expect(cuon.locator(".cuon__bia.bia--cau-go svg")).toHaveCount(1);
   // Cuon chua co trang: man doc ve bia o khung trong.
   await a.goto(`/sach/${id}`);
+  await expect(a.locator(".trong__hinh.bia--cau-go svg")).toHaveCount(1);
+  await a.reload();
   await expect(a.locator(".trong__hinh.bia--cau-go svg")).toHaveCount(1);
   await a.goto("/ke-sach");
   await expect(cuon.locator(".cuon__bia.bia--cau-go svg")).toHaveCount(1);
