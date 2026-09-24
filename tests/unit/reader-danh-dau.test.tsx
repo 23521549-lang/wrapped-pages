@@ -220,11 +220,33 @@ describe("Reader: ghi to da xem", () => {
     expect(danhDau).not.toHaveBeenCalled();
   });
 
-  it("roi man doc luc khung con dang hen: gui ngay roi moi lam moi trang vua toi", async () => {
+  it("roi man doc luc khung chua du thoi gian cho: khung do khong duoc gui", async () => {
+    // DOI HANH VI CO Y: truoc day roi man doc bang chuyen trang mem se gui NGAY khung con dang hen, du no chi vua
+    // hien duoc vai chuc mili giay. Luat cua man doc la "mot khung chi tinh la da doc khi nguoi doc dung lai tren
+    // no du CHO_MS", va luat do phai dung o MOI duong roi man doc: tai lai trang hay dong tab von khong gui gi, nen
+    // mot to chi liec qua 100ms lai thanh da doc khi bam quay lai ma khong thanh khi tai lai. Nay de luat thoi gian
+    // cho thang: chua du CHO_MS thi khong ghi, roi man doc bang duong nao cung vay.
     const { unmount } = render(<Reader {...props()} />);
     expect(danhDau).not.toHaveBeenCalled();
     unmount();
+    expect(danhDau).not.toHaveBeenCalled();
+    // Khong co lenh ghi nao dang bay thi cung khong co gi de doi, va khong lam moi trang vua toi.
+    await act(async () => {});
+    expect(lamMoi).not.toHaveBeenCalled();
+  });
+
+  it("roi man doc sau khi khung da du thoi gian cho: doi lenh ghi xong roi moi lam moi trang vua toi", async () => {
+    const { unmount } = render(<Reader {...props()} />);
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
     expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
+    unmount();
+    // Khung da gui roi thi luc go ra khong gui them lan nao nua.
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
+    // Nhung van phai DOI lenh ghi gan nhat xong roi moi lam moi, de ke sach nguoi doc vua toi da thay to nay la da
+    // doc. Khong dua vao thu tu hang doi cua router: bam quay lai go server action dang chay khoi hang doi
+    // (app-router-instance.js, dispatchAction), refresh se chay song song voi no.
     expect(lamMoi).not.toHaveBeenCalled();
     await act(async () => {});
     expect(lamMoi).toHaveBeenCalledTimes(1);

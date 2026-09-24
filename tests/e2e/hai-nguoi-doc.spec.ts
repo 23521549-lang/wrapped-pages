@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangTrang, dongContextCu, haiNguoiDaVao, taoSach, vietTranTrang } from "./kho-sach";
+import { dangTrang, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, vietTranTrang } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -40,6 +40,10 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
     // Che do hai trang ghep (1,2), (3,4) (src/lib/flip.ts): khung dau da cho thay ca to 1 lan to 2.
     await expect(b.locator(".doc__dem")).toHaveText(`Trang 1-2 / ${soTo}`);
+    // DOI HANH VI CO Y: mot khung chi tinh la da doc khi nguoi doc DUNG lai tren no du CHO_MS (600ms), va luat do dung
+    // o moi duong roi man doc - roi man khong con gui ho khung con dang hen nua. Nen phai dung lai that tren khung dau
+    // truoc khi quay lai. Doi DUNG DONG trong read_sheets thay vi doi gio.
+    await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1, 2]);
     await b.goBack();
     if (soTo > 2) await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo - 2} trang mới`);
     else await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveCount(0);
@@ -58,6 +62,9 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
       await expect(b.locator(".doc__dem")).not.toHaveText(nhan);
     }
     await expect(b.locator(".doc__dem")).toContainText(`${soTo} / ${soTo}`);
+    // Nhu tren: khung cuoi chi duoc ghi khi dung lai that su tren no, roi man doc khong gui ho nua. Doi du ca cuon vao
+    // bang roi moi quay lai ke - chi khi do dau trang moi moi duoc phep bien mat.
+    await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual(Array.from({ length: soTo }, (_, i) => i + 1));
     await b.goBack();
     await expect(b).toHaveURL(new RegExp("/ke-sach$"));
     await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveCount(0);

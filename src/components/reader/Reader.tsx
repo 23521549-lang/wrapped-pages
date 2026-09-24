@@ -16,7 +16,11 @@ import { Flipbook, SheetText } from "./Flipbook";
 import { LockedSheet, SealMark } from "./LockedSheet";
 import { useShownSheets } from "./ShownSheets";
 
-/** Dung lat bao lau thi moi gui khung dang hien, de lat nhanh qua nhieu to chi gui khung dung lai that su. */
+/**
+ * Dung lat bao lau thi moi gui khung dang hien, de lat nhanh qua nhieu to chi gui khung dung lai that su. Luat nay
+ * dung o MOI duong roi man doc: khung chua du CHO_MS thi khong duoc ghi, du nguoi doc bam quay lai, tai lai trang
+ * hay dong tab.
+ */
 const CHO_MS = 600;
 
 export type ReaderProps = {
@@ -155,14 +159,18 @@ export function Reader({
 
   useEffect(
     () => () => {
-      // Roi man doc: gui ngay khung con dang hen, DOI lenh ghi gan nhat xong roi moi lam moi trang vua toi.
+      // Roi man doc: BO khung con dang hen thay vi gui no. Huy dong ho di cung - setTimeout khong tu tat khi man doc
+      // go ra, de lai thi no van chay va ghi mot khung nguoi doc da roi. Nho vay luat CHO_MS dung nhu nhau o moi
+      // duong roi man doc: chuyen trang mem, tai lai trang, hay dong tab.
+      // Van DOI lenh ghi gan nhat xong roi moi lam moi trang vua toi, de ke sach vua toi thay dung cac to da doc.
       // Khong dua vao thu tu hang doi cua router: bam quay lai (ACTION_RESTORE) go server action dang chay
       // khoi hang doi (app-router-instance.js, dispatchAction), refresh se chay song song voi no.
-      flush();
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
       const p = inflight.current;
       if (p) void p.then(() => router.refresh());
     },
-    [flush, router],
+    [router],
   );
 
   const renderSheet = useCallback(

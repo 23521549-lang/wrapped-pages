@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -44,7 +44,11 @@ test("nguoi kia: the co trang moi, mo o to dau chua thay, lat het, quay lai thi 
   await b.keyboard.press("ArrowRight");
   await expect(dem).toHaveText("Trang 3 / 3");
 
-  // Quay lai ngay, khi lenh ghi con dang hen: Reader gui cac to vua thay luc roi man roi lam moi ke.
+  // DOI HANH VI CO Y: mot khung chi tinh la da doc khi nguoi doc DUNG lai tren no du CHO_MS (600ms), va luat do dung
+  // o moi duong roi man doc - roi man khong con gui ho khung con dang hen nua. Nen phai dung lai that tren khung cuoi
+  // truoc khi quay lai. Doi DUNG DONG trong read_sheets thay vi doi gio.
+  await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1, 2, 3]);
+
   await b.goBack();
   await expect(b).toHaveURL(new RegExp("/ke-sach$"));
   await expect(the.locator(".dh--moi")).toHaveCount(0);
