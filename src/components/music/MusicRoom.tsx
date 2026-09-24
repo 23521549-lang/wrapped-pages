@@ -11,7 +11,7 @@ import { useYoutubePlayer, type MusicState } from "./useYoutubePlayer";
 const VUNG_SACH = ".doc__khung";
 
 export type MusicRoomProps = {
-  /** Ma video da chuan hoa (books.youtube_id). */
+  /** Ma video da chuan hoa (o nhac moi nhat cua cuon, book_tracks.youtube_id). */
   videoId: string;
   /** Lua chon tat nhac da luu cua nguoi xem (readMusicMuted), chi doc luc gan. */
   initialMuted: boolean;

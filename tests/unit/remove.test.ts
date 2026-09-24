@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { activity, books, drafts, media, pages } from "@/server/db/schema";
+import { activity, bookCovers, books, drafts, media, pages } from "@/server/db/schema";
 import { listDrafts, publishDraft, saveDraft } from "@/server/library/drafts";
 import { deleteUnpublishedBook, discardDraft } from "@/server/library/remove";
 import { listShelf } from "@/server/library/shelf";
@@ -35,7 +35,7 @@ describe("deleteUnpublishedBook", () => {
     const store = new MemoryStore();
     const anh = await taiLen(s.db, store, s.seat1.id, s.chung, "anh");
     const bia = await taiLen(s.db, store, s.seat1.id, s.chung, "bia");
-    await s.db.update(books).set({ coverMediaId: bia.id }).where(eq(books.id, s.chung));
+    await s.db.update(bookCovers).set({ coverMediaId: bia.id }).where(eq(bookCovers.bookId, s.chung));
     expect(await saveDraft(s.db, s.seat1.id, s.chung, khoiAnh(anh.id), 1)).toBeInstanceOf(Date);
     expect((await listShelf(s.db, s.seat2.id)).map((b) => b.id)).toContain(s.chung);
 

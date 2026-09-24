@@ -11,7 +11,7 @@ export type Book = typeof books.$inferSelect;
 
 /**
  * Book cong ba truong bia va nhac HIEN HANH, ghep tu hai dong thoi gian. Giao dien van dung ba cai ten nay (cover,
- * coverMediaId, youtubeId) nen khong mot thanh phan nao phai doi khi ba cot cu cua books bien mat.
+ * coverMediaId, youtubeId) nen khong mot thanh phan nao phai doi khi ba cot cu cua books bi bo o 0015.
  */
 export type BookView = Book & { cover: CoverKey; coverMediaId: string | null; youtubeId: string | null };
 
@@ -71,7 +71,7 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput): 
     // ghi), nen tra null o day la commit mot giao dich khong sua gi. Them buoc ghi nao truoc dong nay thi phai doi sang
     // nem loi de rollback.
     if (coverMediaId !== null && !(await lockCover(tx, ownerId, null, coverMediaId))) return null;
-    const [row] = await tx.insert(books).values({ ownerId, ...input }).returning({ id: books.id });
+    const [row] = await tx.insert(books).values({ ownerId, title: input.title, mode: input.mode }).returning({ id: books.id });
     if (coverMediaId !== null) await attachCover(tx, row.id, coverMediaId);
     // O MO DAU cua hai dong thoi gian, chen ngay trong giao dich tao sach: cuon vua tao chua dang luot nao van dung tren
     // ke va van phai co bia de ve. Day la lop dau cua bat bien "moi cuon luon con it nhat mot o bia".

@@ -14,6 +14,8 @@ import path from "node:path";
  * va database giu nguyen nhu truoc.
  * Khoi "sau khi pha phan chep" chung minh sau khoi RAISE that su bat loi chu khong phai trang tri: moi lan pha mot cho
  * trong ban SAO tam cua 0014 roi doi dung thong diep cua khoi tuong ung. Tep trong kho khong bao gio bi sua.
+ * Chay thang toi 0015 (chep roi bo ba cot cu) chu khong dung o 0014: hai migration di lien nhau tren database that, nen
+ * ket qua phai dung sau ca hai.
  */
 
 const GOC = "drizzle";
@@ -69,8 +71,8 @@ async function dbToi0013(): Promise<PGlite> {
   return c;
 }
 
-async function len0014(c: PGlite, pha?: (sql: string) => string): Promise<void> {
-  await migrate(drizzle(c), { migrationsFolder: thuMuc(14, pha) });
+async function len0015(c: PGlite, pha?: (sql: string) => string): Promise<void> {
+  await migrate(drizzle(c), { migrationsFolder: thuMuc(15, pha) });
 }
 
 async function hang<T>(c: PGlite, cau: string): Promise<T[]> {
@@ -84,8 +86,8 @@ type LoiSql = { message?: string; hint?: string; cause?: unknown };
  * RAISE: doi message ben ngoai thi bai kiem xanh ngay ca khi khoi RAISE bi xoa. Boc toi loi tan cung cua chuoi cause
  * de doi dung thong diep Postgres that su nem ra.
  */
-async function loiLen0014(c: PGlite, pha?: (sql: string) => string): Promise<LoiSql> {
-  const loi = await len0014(c, pha).then(() => null, (e: unknown) => e as LoiSql);
+async function loiLen0015(c: PGlite, pha?: (sql: string) => string): Promise<LoiSql> {
+  const loi = await len0015(c, pha).then(() => null, (e: unknown) => e as LoiSql);
   expect(loi, "migration phai huy giua chung").not.toBeNull();
   let goc = loi as LoiSql;
   while (goc.cause) goc = goc.cause as LoiSql;
@@ -130,7 +132,7 @@ describe("migration dong thoi gian", () => {
     // Cuon co dong media cua bia da bi xoa: khoa ngoai set null da lam viec cua no truoc khi migrate.
     expect(await hang(c, `select id from books where cover_media_id is null order by id`))
       .toEqual([{ id: B2 }, { id: B3 }, { id: B4 }, { id: B5 }]);
-    await len0014(c);
+    await len0015(c);
     const o = await hang<{ book_id: string; round_id: string | null; cover: string; cover_media_id: string | null }>(
       c, `select book_id, round_id, cover, cover_media_id from book_covers order by book_id`,
     );
@@ -147,7 +149,7 @@ describe("migration dong thoi gian", () => {
   it("chi cuon co nhac moi ra o nhac, va o do mang y nguyen ma video hom nay", async () => {
     const c = await dbToi0013();
     await gieoCu(c);
-    await len0014(c);
+    await len0015(c);
     const o = await hang<{ book_id: string; round_id: string | null; youtube_id: string | null }>(
       c, `select book_id, round_id, youtube_id from book_tracks order by book_id`,
     );
@@ -161,7 +163,7 @@ describe("migration dong thoi gian", () => {
   it("khong cuon nao thieu o bia, va khong o nao gan vao mot luot", async () => {
     const c = await dbToi0013();
     await gieoCu(c);
-    await len0014(c);
+    await len0015(c);
     expect(await hang(c, `select b.id from books b where not exists (select 1 from book_covers c where c.book_id = b.id)`)).toEqual([]);
     expect(await hang(c, `select id from book_covers where round_id is not null`)).toEqual([]);
     expect(await hang(c, `select id from book_tracks where round_id is not null`)).toEqual([]);
@@ -170,7 +172,7 @@ describe("migration dong thoi gian", () => {
 
   it("database rong van len duoc, khong dong nao duoc sinh", async () => {
     const c = await dbToi0013();
-    await len0014(c);
+    await len0015(c);
     expect(await hang(c, `select id from book_covers`)).toEqual([]);
     expect(await hang(c, `select id from book_tracks`)).toEqual([]);
     await c.close();
@@ -180,7 +182,7 @@ describe("migration dong thoi gian", () => {
     const c = await dbToi0013();
     await gieoCu(c);
     await c.exec(`insert into drafts (book_id, content) values ('${B1}', '${DOC("nhap")}'::jsonb)`);
-    await len0014(c);
+    await len0015(c);
     expect(await hang(c, `select cover, cover_media_id, youtube_id, drop_track from drafts`))
       .toEqual([{ cover: null, cover_media_id: null, youtube_id: null, drop_track: false }]);
     await c.close();
@@ -190,7 +192,7 @@ describe("migration dong thoi gian", () => {
     const c = await dbToi0013();
     await gieoCu(c);
     await c.exec(`update media set book_id = '${B2}' where id = '${M1}'`);
-    const loi = await loiLen0014(c);
+    const loi = await loiLen0015(c);
     expect(loi.message).toBe("dong-thoi-gian: 1 o bia tro toi anh khong phai bia cua cuon");
     expect(loi.hint).toContain("Sua du lieu cu roi chay lai migration");
     // Ca lan migrate nam trong mot giao dich: hai bang moi khong ton tai, bon cot moi cua drafts cung khong.
@@ -206,8 +208,21 @@ describe("migration dong thoi gian", () => {
     await gieoCu(c);
     // Cot books.cover_media_id chi co khoa ngoai toi media.id, khong rang buoc kind: day la lo hong ma khoi kiem canh.
     await c.exec(`update books set cover_media_id = '${M3}' where id = '${B1}'`);
-    expect((await loiLen0014(c)).message).toBe("dong-thoi-gian: 1 o bia tro toi anh khong phai bia cua cuon");
+    expect((await loiLen0015(c)).message).toBe("dong-thoi-gian: 1 o bia tro toi anh khong phai bia cua cuon");
     expect(await hang(c, `select to_regclass('public.book_covers') as t`)).toEqual([{ t: null }]);
+    await c.close();
+  });
+
+  it("sau 0015, ba cot cu khong con, va du lieu da chep van nguyen", async () => {
+    const c = await dbToi0013();
+    await gieoCu(c);
+    await len0015(c);
+    const cot = await hang<{ column_name: string }>(
+      c, `select column_name from information_schema.columns where table_name = 'books' order by column_name`,
+    );
+    expect(cot.map((r) => r.column_name)).toEqual(["created_at", "id", "mode", "owner_id", "title", "updated_at"]);
+    expect(await hang(c, `select book_id from book_covers order by book_id`)).toHaveLength(5);
+    expect(await hang(c, `select book_id from book_tracks order by book_id`)).toHaveLength(2);
     await c.close();
   });
 });
@@ -248,7 +263,7 @@ describe("sau khi pha phan chep", () => {
   it.each(PHA)("$ten thi migration huy", async ({ sua, loi }) => {
     const c = await dbToi0013();
     await gieoCu(c);
-    expect((await loiLen0014(c, sua)).message).toBe(loi);
+    expect((await loiLen0015(c, sua)).message).toBe(loi);
     expect(await hang(c, `select to_regclass('public.book_covers') as t`)).toEqual([{ t: null }]);
     expect(await hang(c, `select count(*)::int as n from books`)).toEqual([{ n: 5 }]);
     await c.close();

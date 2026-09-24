@@ -1,4 +1,4 @@
-/** Ma video YouTube: dung 11 ky tu chu, so, gach duoi, gach ngang. CHECK books_youtube_id dung dung mau nay (co test). */
+/** Ma video YouTube: dung 11 ky tu chu, so, gach duoi, gach ngang. CHECK book_tracks_youtube_id dung dung mau nay (co test). */
 export const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
 /** Link dai hon muc nay thi khong nhan, ke ca khi trong do co mot ma video dung. */

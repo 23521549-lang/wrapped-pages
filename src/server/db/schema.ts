@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
-  pgTable, uuid, integer, text, timestamp, check, index, jsonb, primaryKey, uniqueIndex, boolean, type AnyPgColumn,
+  pgTable, uuid, integer, text, timestamp, check, index, jsonb, primaryKey, uniqueIndex, boolean,
 } from "drizzle-orm/pg-core";
 // Chi import KIEU: drizzle-kit nap file nay bang bo nap rieng, khong hieu duong dan "@/";
 // `import type` bi xoa hoan toan luc bien dich nen khong sao.
@@ -67,28 +67,18 @@ export const trustedDevices = pgTable("trusted_devices", {
 
 /**
  * Moi cuon thuoc dung mot nguoi. "chia-se": nguoi kia doc duoc; "rieng-tu": nguoi kia khong thay gi, ke ca ten.
- * Hai danh sach trong check phai khop MODES va COVERS cua src/lib/book.ts, mau cua books_youtube_id phai khop
- * YOUTUBE_ID cua src/lib/youtube.ts (co test).
+ * Danh sach trong check phai khop MODES cua src/lib/book.ts (co test). Bia va nhac KHONG o day: moi cuon giu mot dong
+ * thoi gian bia (book_covers) va mot dong thoi gian nhac (book_tracks), moi luot nhieu nhat mot o.
  */
 export const books = pgTable("books", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerId: uuid("owner_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   mode: text("mode").$type<BookMode>().notNull(),
-  cover: text("cover").$type<CoverKey>().notNull(),
-  /** Ma video YouTube da chuan hoa cua nhac nen; null la khong co nhac. */
-  youtubeId: text("youtube_id"),
-  /**
-   * Bia tu tai len; null la dung tranh ve san. cover van bat buoc: la nen khi anh chua tai hoac media tat.
-   * Khoa ngoai vong voi media.book_id nen phai khai kieu tra ve AnyPgColumn.
-   */
-  coverMediaId: uuid("cover_media_id").references((): AnyPgColumn => media.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   modeValue: check("books_mode", sql`${t.mode} in ('chia-se', 'rieng-tu')`),
-  coverValue: check("books_cover", sql`${t.cover} in ('nui-xa', 'khom-truc', 'trang-nuoc', 'chim-bay', 'hoa-dao', 'doi-chim', 'thuyen-trang', 'cau-go', 'doi-thong', 'meo-mai')`),
-  youtubeIdValue: check("books_youtube_id", sql`${t.youtubeId} is null or ${t.youtubeId} ~ '^[A-Za-z0-9_-]{11}$'`),
   byOwner: index("books_owner_idx").on(t.ownerId),
 }));
 

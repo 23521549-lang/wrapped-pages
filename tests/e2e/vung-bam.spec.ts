@@ -78,6 +78,8 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
   }
 
   // Man viet dang mo khung niem phong, loai cau do (nhieu o nhat): khung khong co duong rieng nen di tay o day.
+  // Spec 7.1: "Muc gap 'Doi bia, ten, nhac' o buoc xac nhan dang trang bi BO HOAN TOAN", nen buoc mo muc gap do va
+  // khang dinh o Ten sach hien ra khong con dich de bam; hai phep do vung bam va tran ngang cua khung giu nguyen.
   for (const width of BE_RONG) {
     await a.setViewportSize({ width, height: 900 });
     await a.goto(`/sach/${id}/viet`);
@@ -85,8 +87,6 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
     const hoi = a.getByRole("group", { name: "Xác nhận đăng trang" });
     await hoi.getByRole("radio", { name: "Câu đố" }).check();
     await hoi.getByRole("button", { name: "Thêm gợi ý" }).click();
-    await hoi.getByRole("button", { name: "Đổi bìa, tên, nhạc" }).click();
-    await expect(a.getByLabel("Tên sách")).toBeVisible();
     if (width === BE_RONG_CHAM) expect(await vungBamNho(a, MIEN_TRU_VUNG_BAM), "khung niem phong: vung bam").toEqual([]);
     expect(await tranNgang(a), `khung niem phong o ${width}px: tran ngang`).toEqual([]);
   }

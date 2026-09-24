@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
-import { accounts, books, media } from "@/server/db/schema";
+import { accounts, bookCovers, books, media } from "@/server/db/schema";
 import { mediaStoreKey, STORE_KEY } from "@/lib/media/key";
 import {
   AUDIO_MAX_MS, AUDIO_MIMES, IMAGE_MAX_HEIGHT_PX, IMAGE_MAX_WIDTH_PX, IMAGE_MIMES, MEDIA_KINDS, MEDIA_MAX_BYTES, PEAK_COUNT, PEAK_MAX,
@@ -120,13 +120,13 @@ describe("bang media", () => {
     await viPham(s.db.insert(media).values({ ...hangAnh(s, ID_2), storeKey: hangAnh(s).storeKey }), "media_store_key_unique");
   });
 
-  it("sach cu co cover_media_id null; xoa media dang la bia thi sach ve tranh ve san", async () => {
+  it("o bia moi tao chua co anh; xoa media dang nam trong mot o bia thi o do ve tranh ve san", async () => {
     const s = await haiCuon();
-    expect((await s.db.select({ c: books.coverMediaId }).from(books)).map((r) => r.c)).toEqual([null, null]);
+    expect((await s.db.select({ c: bookCovers.coverMediaId }).from(bookCovers)).map((r) => r.c)).toEqual([null, null]);
     await s.db.insert(media).values({ ...hangBia(s), bookId: s.chung, storeKey: mediaStoreKey(s.chung, ID, "image/jpeg") });
-    await s.db.update(books).set({ coverMediaId: ID }).where(eq(books.id, s.chung));
+    await s.db.update(bookCovers).set({ coverMediaId: ID }).where(eq(bookCovers.bookId, s.chung));
     await s.db.delete(media).where(eq(media.id, ID));
-    expect((await s.db.select({ cover: books.cover, c: books.coverMediaId }).from(books).where(eq(books.id, s.chung)))).toEqual([{ cover: "nui-xa", c: null }]);
+    expect((await s.db.select({ cover: bookCovers.cover, c: bookCovers.coverMediaId }).from(bookCovers).where(eq(bookCovers.bookId, s.chung)))).toEqual([{ cover: "nui-xa", c: null }]);
   });
 
   it("xoa sach thi xoa media cua sach, bia cho gan con lai; xoa tai khoan thi xoa het media cua ho", async () => {
@@ -138,8 +138,11 @@ describe("bang media", () => {
     expect(await s.db.select().from(media)).toEqual([]);
   });
 
-  it("cover_media_id chi tro toi dong media co that", async () => {
+  it("o bia chi tro toi dong media co that", async () => {
     const s = await haiCuon();
-    await viPham(s.db.update(books).set({ coverMediaId: ID }).where(eq(books.id, s.chung)), "books_cover_media_id_media_id_fk");
+    await viPham(
+      s.db.update(bookCovers).set({ coverMediaId: ID }).where(eq(bookCovers.bookId, s.chung)),
+      "book_covers_cover_media_id_media_id_fk",
+    );
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { books, drafts, media, pages, sealReplies, seals } from "@/server/db/schema";
+import { bookCovers, books, drafts, media, pages, sealReplies, seals } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
 import { publishDraft, readDraft, saveDraft } from "@/server/library/drafts";
 import { bindMedia, recordUpload, type UploadRecord } from "@/server/media/access";
@@ -40,8 +40,9 @@ const taiGhiAm = (db: TestDb, ownerId: string, bookId: string) =>
 const taiBia = (db: TestDb, ownerId: string, bookId: string | null) =>
   ghi(db, { id: randomUUID(), ownerId, bookId, kind: "bia", mime: "image/webp", bytes: 1024, width: 1200, height: 720 });
 
+/** Anh bia hien nam trong o bia MO DAU cua cuon: cuon vua tao chi co dung o do. */
 async function biaCuaSach(db: TestDb, bookId: string) {
-  return (await db.select({ c: books.coverMediaId }).from(books).where(eq(books.id, bookId)))[0]?.c;
+  return (await db.select({ c: bookCovers.coverMediaId }).from(bookCovers).where(eq(bookCovers.bookId, bookId)))[0]?.c;
 }
 async function sachCuaMedia(db: TestDb, mediaId: string) {
   return (await db.select({ b: media.bookId }).from(media).where(eq(media.id, mediaId)))[0]?.b;

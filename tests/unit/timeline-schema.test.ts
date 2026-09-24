@@ -15,7 +15,7 @@ async function motCuon() {
   const s = await seedHai();
   const [book] = await s.db
     .insert(books)
-    .values({ ownerId: s.seat1.id, title: "Chuyện chưa kể", mode: "chia-se", cover: "nui-xa" })
+    .values({ ownerId: s.seat1.id, title: "Chuyện chưa kể", mode: "chia-se" })
     .returning();
   return { ...s, book };
 }
@@ -48,7 +48,7 @@ describe("bang book_covers", () => {
 
   it("moi cuon nhieu nhat mot o mo dau, nhung hai cuon deu co o mo dau cua minh", async () => {
     const { db, book, seat1 } = await motCuon();
-    const [khac] = await db.insert(books).values({ ownerId: seat1.id, title: "Cuốn hai", mode: "chia-se", cover: "chim-bay" }).returning();
+    const [khac] = await db.insert(books).values({ ownerId: seat1.id, title: "Cuốn hai", mode: "chia-se" }).returning();
     await db.insert(bookCovers).values({ bookId: book.id, roundId: null, cover: "nui-xa" });
     await db.insert(bookCovers).values({ bookId: khac.id, roundId: null, cover: "chim-bay" });
     await viPham(db.insert(bookCovers).values({ bookId: book.id, roundId: null, cover: "hoa-dao" }), "book_covers_mo_dau_idx");
@@ -84,6 +84,8 @@ describe("bang book_tracks", () => {
     const { db } = await seedHai();
     const res = await db.execute(sql`select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'book_tracks_youtube_id'`);
     expect((res.rows as { def: string }[])[0].def).toContain(`'${YOUTUBE_ID.source}'`);
+    // Co g hay y thi .test() nho lastIndex giua cac lan goi, lan goi xen ke se sai.
+    expect(YOUTUBE_ID.flags).toBe("");
   });
 
   it("moi luot nhieu nhat mot o nhac, moi cuon nhieu nhat mot o mo dau", async () => {

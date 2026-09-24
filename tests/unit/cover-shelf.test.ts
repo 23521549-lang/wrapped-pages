@@ -21,7 +21,7 @@ const RIENG: BookInput = { title: "Cuốn không đặt tên", mode: "rieng-tu",
  * seat1 tai mot bia cho gan qua duong that (setCoverEntry, duong ghi bia duy nhat cua dong thoi gian) roi dat no vao o
  * bia MO DAU cua cuon; tra id bia. Dich cuoi la "bia va nhac chi song o mot noi, la hai bang nay" (spec 6.2), va gio
  * ham nay da di tron duong do: cai neo TAM ghi thang books.cover_media_id khong con, vi ca buoc don rac (sweepMedia)
- * lan cong tai media (canViewMedia) deu da doc book_covers. books.cover khong con noi nao doc nen khong ghi nua.
+ * lan cong tai media (canViewMedia) deu da doc book_covers. Ba cot bia va nhac cu cua books da bi bo han o 0015.
  */
 async function datBia(db: TestDb, ownerId: string, bookId: string, input: BookInput): Promise<string> {
   const id = randomUUID();

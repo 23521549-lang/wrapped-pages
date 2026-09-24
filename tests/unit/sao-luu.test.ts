@@ -59,8 +59,8 @@ const PEAKS = JSON.stringify(Array.from({ length: 48 }, (_, i) => i * 2));
 
 /**
  * Moi bang co it nhat mot hang (test "pham vi" do dieu nay: them bang moi vao schema thi phai gieo them
- * o day); co ca null, jsonb long, timestamptz le micro giay, vong books <-> media, va ca hai hinh dang o cua dong
- * thoi gian (o mo dau round_id null va o gan voi mot luot).
+ * o day); co ca null, jsonb long, timestamptz le micro giay, mot o bia tro toi media (khoa ngoai duy nhat tu hai dong
+ * thoi gian sang media), va ca hai hinh dang o cua dong thoi gian (o mo dau round_id null va o gan voi mot luot).
  */
 async function gieo(c: PGlite) {
   await c.exec(`
@@ -73,13 +73,12 @@ async function gieo(c: PGlite) {
     insert into trusted_devices (device_id, account_id, last_login_at) values ('dev-a', '${A1}', '2026-04-05 06:07:08.9+00');
     insert into moods (account_id, weather, note, set_at, ends_at) values
       ('${A1}', 'nang-am', 'Vui ghê', '2026-09-10 08:00:00+07', '2026-09-11 08:00:00+07');
-    insert into books (id, owner_id, title, mode, cover, youtube_id) values
-      ('${B1}', '${A1}', 'Sách của mình', 'chia-se', 'nui-xa', 'dQw4w9WgXcQ'),
-      ('${B2}', '${A2}', 'Riêng', 'rieng-tu', 'chim-bay', null);
+    insert into books (id, owner_id, title, mode) values
+      ('${B1}', '${A1}', 'Sách của mình', 'chia-se'),
+      ('${B2}', '${A2}', 'Riêng', 'rieng-tu');
     insert into media (id, owner_id, book_id, kind, mime, bytes, width, height, duration_ms, peaks, store_key) values
       ('${M1}', '${A1}', '${B1}', 'bia', 'image/webp', 1000, 500, 300, null, null, '${B1}/${M1}.webp'),
       ('${M2}', '${A2}', '${B2}', 'ghi-am', 'audio/webm', 2000, null, null, 1234, '${PEAKS}', '${B2}/${M2}.webm');
-    update books set cover_media_id = '${M1}' where id = '${B1}';
     insert into media_objects (store_key) values ('cho/${M2}.jpg');
     insert into media_sweeps (id, ran_at) values (1, '2026-03-04 05:06:07.1+00');
     insert into rounds (id, book_id, published_at, edited_at) values
@@ -171,8 +170,10 @@ describe("pham vi", () => {
         }
       }
     }
-    // Dung mot vong hien co: books.cover_media_id <-> media.book_id.
-    expect(hoan).toEqual({ books: ["cover_media_id"] });
+    // Spec 6.2: "Phan thuong kem theo: books.cover_media_id hom nay tham chieu vong toi media.id trong khi media.book_id
+    // tham chieu nguoc lai books.id, nen schema.ts phai khai AnyPgColumn. Bo cot do la bo luon vong tham chieu va dong
+    // khai kieu vong vo ay." Do thi khoa ngoai khong con vong nao, nen khong con cot nao phai hoan khi khoi phuc.
+    expect(hoan).toEqual({});
   });
 
   it("ghi kem danh sach migration da chay, dinh dang va phien ban", async () => {
@@ -198,8 +199,8 @@ describe("sao luu chi doc", () => {
     expect(acc.hang.map((h) => h[tao])).toContain("2026-01-01 20:04:05.123456+00");
     const pg = ban.bang.pages;
     expect(pg.hang.some((h) => h[pg.cot.indexOf("content")]?.includes("🌸"))).toBe(true);
-    const bk = ban.bang.books;
-    expect(bk.hang.some((h) => h[bk.cot.indexOf("youtube_id")] === null)).toBe(true);
+    const bt = ban.bang.book_tracks;
+    expect(bt.hang.some((h) => h[bt.cot.indexOf("youtube_id")] === null)).toBe(true);
   });
 });
 
@@ -217,8 +218,9 @@ describe("khoi phuc", () => {
       expect(await chup(dich)).toEqual(await chup(nguon));
 
       const { rows } = await dich.query<{ t: string; c: string; bia: string }>(
-        `select (a.created_at at time zone 'UTC')::text as t, p.content::text as c, b.cover_media_id::text as bia
-           from accounts a, pages p, books b where a.seat = 1 and p.position = 1 and b.id = '${B1}'`,
+        `select (a.created_at at time zone 'UTC')::text as t, p.content::text as c, c2.cover_media_id::text as bia
+           from accounts a, pages p, book_covers c2
+          where a.seat = 1 and p.position = 1 and c2.book_id = '${B1}' and c2.round_id is null`,
       );
       expect(rows[0].t).toBe("2026-01-01 20:04:05.123456");
       expect(JSON.parse(rows[0].c)).toEqual(JSON.parse(DOC));
