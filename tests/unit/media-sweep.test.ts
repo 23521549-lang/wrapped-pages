@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
-import { books, media, mediaObjects, mediaSweeps } from "@/server/db/schema";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { bookCovers, books, media, mediaObjects, mediaSweeps } from "@/server/db/schema";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
 import { setCoverEntry } from "@/server/library/timeline";
 import type { UploadRecord } from "@/server/media/access";
@@ -160,6 +160,20 @@ describe("sweepMedia", () => {
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "nui-xa", coverMediaId: null })).toBe("saved");
     expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 0, objects: 0 });
     expect(await conLai(s.db, store, bia)).toEqual([true, true]);
+  });
+
+  it("bia chua kip gan ma mot o bia dang tro toi: qua han van con nguyen, cuon khong mat anh", async () => {
+    const s = await haiCuon();
+    const store = new MemoryStore();
+    const bia = await taiBia(s.db, store, s.seat1.id, null);
+    // Dung trang thai migration 0014 de lai: o bia tro toi mot dong media con book_id null (bia cho gan chua kip gan).
+    // setCoverEntry khong tao ra trang thai nay vi no goi attachCover, nen ghi thang vao bang o dung nhu migration ghi.
+    await s.db.update(bookCovers).set({ coverMediaId: bia.id })
+      .where(and(eq(bookCovers.bookId, s.chung), isNull(bookCovers.roundId)));
+    expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 0, objects: 0 });
+    expect(await conLai(s.db, store, bia)).toEqual([true, true]);
+    expect(await s.db.select({ anh: bookCovers.coverMediaId }).from(bookCovers).where(eq(bookCovers.bookId, s.chung)))
+      .toEqual([{ anh: bia.id }]);
   });
 
   it("muoi anh bia tai len mot luot, chi mot anh duoc chon: ca muoi con nguyen sau khi don", async () => {

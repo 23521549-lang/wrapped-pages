@@ -90,7 +90,7 @@ function formMoi(props: Partial<BookFormProps> = {}) {
   fireEvent.change(screen.getByLabelText("Tên sách"), { target: { value: "Chuyện chưa kể" } });
 }
 
-const oTep =() => screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa") as HTMLInputElement;
+const oTep = () => screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa") as HTMLInputElement;
 const oTen = () => screen.getByLabelText("Tên sách") as HTMLInputElement;
 const oAnh = () => screen.getByRole("radio", { name: "Ảnh của bạn" }) as HTMLInputElement;
 const tranh = (ten: string) => screen.getByRole("radio", { name: ten }) as HTMLInputElement;

@@ -68,13 +68,16 @@ BEGIN
     RAISE EXCEPTION 'dong-thoi-gian: % o bia lech gia tri cua cuon', n;
   END IF;
 
-  -- Anh bia cua o phai la dong media loai bia va thuoc dung cuon do; book_id null la bia cho gan chua kip gan.
+  -- Anh bia cua o phai la dong media loai bia va DA thuoc dung cuon do. Bia cho gan (book_id null) ma mot cuon dang tro
+  -- toi cung bi tu choi: don rac media chi giu bia da thuoc mot cuon hoac dang nam trong mot o, ma o day o bia moi chua
+  -- ton tai luc dong media duoc xet lan truoc; de no qua thi khoa ngoai set null se lam o bia mat anh vinh vien, khong
+  -- mot loi nao. Dung ca lan deploy de nguoi van hanh gan anh vao cuon truoc, hon la mat anh mot ngay sau.
   SELECT count(*) INTO n FROM "book_covers" c
   JOIN "media" m ON m."id" = c."cover_media_id"
-  WHERE m."kind" <> 'bia' OR (m."book_id" IS NOT NULL AND m."book_id" <> c."book_id");
+  WHERE m."kind" <> 'bia' OR m."book_id" IS DISTINCT FROM c."book_id";
   IF n > 0 THEN
     RAISE EXCEPTION 'dong-thoi-gian: % o bia tro toi anh khong phai bia cua cuon', n
-      USING HINT = 'Xem tung dong bang: SELECT c.id, c.book_id, c.cover_media_id, m.kind, m.book_id FROM book_covers c JOIN media m ON m.id = c.cover_media_id WHERE m.kind <> ''bia'' OR (m.book_id IS NOT NULL AND m.book_id <> c.book_id); Sua du lieu cu roi chay lai migration.';
+      USING HINT = 'Xem tung dong bang: SELECT c.id, c.book_id, c.cover_media_id, m.kind, m.book_id FROM book_covers c JOIN media m ON m.id = c.cover_media_id WHERE m.kind <> ''bia'' OR m.book_id IS DISTINCT FROM c.book_id; Sua du lieu cu roi chay lai migration.';
   END IF;
 
   SELECT count(*) INTO n FROM "book_tracks";

@@ -177,6 +177,27 @@ export async function datNhac(bookId: string, youtubeId: string): Promise<void> 
   }
 }
 
+/**
+ * Ma video cua o nhac MO DAU cua mot cuon trong database e2e; null khi cuon chua co o nhac nao hoac o do la o go nhac.
+ * Chi doc de kiem. Thay cho phep "mo lai form sua sach, o nhac dien lai link ngan" cua bai da xoa: khong man nao con o
+ * nhac de dien lai, nen doc thang thu may chu that su luu. Cung rao mqce_e2e voi datNhac.
+ */
+export async function nhacCua(bookId: string): Promise<string | null> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const rows = await sql<{ youtube_id: string | null }[]>`
+      select youtube_id from book_tracks where book_id = ${bookId} and round_id is null`;
+    return rows.length > 0 ? rows[0].youtube_id : null;
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Doi gio luu cua ban nhap trong database e2e, de chup anh "Luu hom qua". Cung rao voi dangToThang. */
 export async function doiGioNhap(bookId: string, luc: Date): Promise<void> {
   const sql = postgres(e2eUrls().e2eUrl, { max: 1 });

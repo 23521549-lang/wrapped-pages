@@ -2,7 +2,11 @@ import { test, expect } from "@playwright/test";
 import { COVER_LABEL } from "@/components/book/CoverArt";
 import { COVERS } from "@/lib/book";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dongContextCu, haiNguoiDaVao, nhacCua, taoSach, tranNgang } from "./kho-sach";
+import { giaYoutube } from "./youtube-gia";
+
+/** Ma video mau, dung cho o Nhac nen cua form tao sach. */
+const MA = "5qap5aO4i9A";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -35,6 +39,56 @@ test("tao sach qua giao dien: the xem truoc doi theo form, xong thi toi man viet
 
   await a.getByRole("button", { name: "Tạo sách" }).click();
   await expect(a).toHaveURL(new RegExp("/sach/[0-9a-f-]{36}/viet$"));
+});
+
+/*
+ * O Nhac nen chi con tren form TAO sach: phan quyet B2 da bo no khoi man Sua sach, va bai nhac-nen-form.spec.ts lai
+ * man do nen da bi xoa. Phan phu cua no doi sang /sach/moi o day, khong thieu cho nao: link sai bi chan, chip "Da nhan
+ * video", link dung duoc luu, va de trong la cuon khong co nhac. Rieng phep "mo lai form, o nhac dien lai link ngan"
+ * khong con man nao lam duoc (khong duong giao dien nao sua nhac sau khi tao, xem phan quyet B12), nen thay bang phep
+ * manh hon cung y: may chu chi giu 11 ky tu ma video, khong giu ca duong link nguoi dung dan vao.
+ */
+test("o nhac nen luc tao sach: link sai bi chan, link dung luu ra ma video, de trong la cuon khong nhac", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  // Man doc cua cuon co nhac se tao trinh phat: API YouTube gia, khong goi mang that.
+  await giaYoutube(a);
+  await a.goto("/sach/moi");
+  await a.getByLabel("Tên sách").fill("Chuyện chưa kể");
+  const nhac = a.getByLabel("Nhạc nền");
+  const taoNut = a.getByRole("button", { name: "Tạo sách" });
+  await expect(nhac).toHaveValue("");
+  await expect(a.getByText("Không bắt buộc. Dán link YouTube, nhạc phát khi mở bìa sách.")).toBeVisible();
+
+  // Link sai: bao loi luc roi o; bam Tao sach thi khong gui form, focus ve o nhac.
+  await nhac.fill(`https://youtube.com.evil.test/watch?v=${MA}`);
+  await nhac.blur();
+  await expect(a.getByText("Link YouTube chưa đúng.")).toBeVisible();
+  await expect(nhac).toHaveAttribute("aria-invalid", "true");
+  await taoNut.click();
+  await expect(nhac).toBeFocused();
+  await expect(a).toHaveURL(new RegExp("/sach/moi$"));
+
+  // Link dung: chip Da nhan video thay cho dong loi, va o man hep khong tran ngang.
+  await nhac.fill(`https://www.youtube.com/watch?v=${MA}&t=42`);
+  await expect(a.getByText("Đã nhận video")).toBeVisible();
+  await expect(a.getByText("Link YouTube chưa đúng.")).toHaveCount(0);
+  await expect(nhac).toHaveAttribute("aria-invalid", "false");
+  await a.setViewportSize({ width: 375, height: 812 });
+  expect(await tranNgang(a), "tran ngang o 375px").toEqual([]);
+  await a.setViewportSize({ width: 1280, height: 900 });
+
+  await taoNut.click();
+  await expect(a).toHaveURL(new RegExp("/sach/[0-9a-f-]{36}/viet$"));
+  const coNhac = new URL(a.url()).pathname.split("/")[2];
+  expect(await nhacCua(coNhac), "may chu chi giu ma video, khong giu ca duong link").toBe(MA);
+  await a.goto(`/sach/${coNhac}`);
+  await expect(a.getByRole("complementary", { name: "Nhạc nền" })).toBeVisible();
+
+  // De trong o nhac (taoSach khong cham o do): cuon khong co o nhac nao, man doc khong co the nhac.
+  const khongNhac = await taoSach(a, "Sổ tay chạy bộ", "chia-se");
+  expect(await nhacCua(khongNhac)).toBeNull();
+  await a.goto(`/sach/${khongNhac}`);
+  await expect(a.locator(".nhac-the")).toHaveCount(0);
 });
 
 test("ten trong thi bao loi ngay o o ten va khong gui form", async ({ browser }) => {

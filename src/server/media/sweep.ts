@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, lt, lte, notExists, sql, type SQLWrapper } from "drizzle-orm";
-import { drafts, media, mediaObjects, mediaSweeps, pages } from "@/server/db/schema";
+import { and, asc, eq, exists, inArray, lt, lte, notExists, sql, type SQLWrapper } from "drizzle-orm";
+import { bookCovers, drafts, media, mediaObjects, mediaSweeps, pages } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { MediaStore } from "./store";
 
@@ -40,6 +40,17 @@ async function claimSweep(db: AnyDb, now: Date): Promise<boolean> {
  */
 const BIA_CUA_SACH = sql`${media.kind} = 'bia' and ${media.bookId} is not null`;
 
+/**
+ * Anh dang nam trong mot o cua dong thoi gian bia. Luat NAY la mot ve THEM vao BIA_CUA_SACH, khong phai thay the no:
+ * bo ve kia di thi anh bi bo khoi moi o se bi don, trai voi phan quyet B7 (dot nay khong co duong xoa anh trong kho).
+ * Can ve nay vi migration 0014 chep book_covers tu books va CO THE de lai o bia tro toi mot dong media con book_id null
+ * (bia cho gan chua kip gan): dong do khong khop BIA_CUA_SACH, va khoa ngoai cover_media_id la set null, nen don rac se
+ * lam o bia mat anh vinh vien ma khong bao gi.
+ */
+function trongOBia(db: AnyDb) {
+  return exists(db.select({ id: bookCovers.id }).from(bookCovers).where(eq(bookCovers.coverMediaId, media.id)));
+}
+
 /** Noi dung tai lieu co mot khoi cap cao nhat mang id cua dong media dang xet (cung jsonpath voi bindMedia). */
 function mentionsMedia(content: SQLWrapper) {
   return sql`jsonb_path_exists(${content}, '$.content[*] ? (@.attrs.id == $id)', jsonb_build_object('id', ${media.id}))`;
@@ -47,8 +58,9 @@ function mentionsMedia(content: SQLWrapper) {
 
 /**
  * Don rac media. Chan tan suat bang moc trong database: null khi lan don truoc chua qua MEDIA_SWEEP_INTERVAL_MS.
- * 1. Xoa dong media tao truoc now - MEDIA_ORPHAN_MS ma khong phai bia cua mot cuon, va khong nhap hay to da dang nao
- *    cua cuon tham chieu. Bia cho gan qua han (chua co sach) nam trong so nay; bia da thuoc mot cuon thi khong.
+ * 1. Xoa dong media tao truoc now - MEDIA_ORPHAN_MS ma khong phai bia cua mot cuon, khong nam trong o bia nao cua dong
+ *    thoi gian, va khong nhap hay to da dang nao cua cuon tham chieu. Bia cho gan qua han (chua co sach, chua o nao tro
+ *    toi) nam trong so nay; bia da thuoc mot cuon hoac dang duoc mot o bia chon thi khong.
  * 2. Xoa khoi kho toi da MEDIA_SWEEP_BATCH object ghi trong so cai media_objects qua han ma khong con dong media: object
  *    vua mat dong o buoc 1, object cua sach da xoa (dong media mat theo cascade), object put xong ma ghi dong hong. Xoa
  *    object truoc, xoa so cai sau, nen hong giua chung thi lan sau xoa lai (remove bo qua key khong con).
@@ -61,7 +73,7 @@ export async function sweepMedia(db: AnyDb, store: MediaStore, now: Date): Promi
     .delete(media)
     .where(and(
       lt(media.createdAt, cutoff),
-      sql`not (${BIA_CUA_SACH})`,
+      sql`not (${BIA_CUA_SACH} or ${trongOBia(db)})`,
       notExists(db.select({ bookId: drafts.bookId }).from(drafts).where(and(eq(drafts.bookId, media.bookId), mentionsMedia(drafts.content)))),
       notExists(db.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, media.bookId), mentionsMedia(pages.content)))),
     ))

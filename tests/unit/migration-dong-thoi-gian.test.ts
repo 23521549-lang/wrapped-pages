@@ -62,6 +62,7 @@ const R1 = "77777777-7777-4777-8777-777777777777";
 const M1 = "88888888-8888-4888-8888-888888888888";
 const M2 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const M3 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const M4 = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 const DOC = (chu: string) => JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: chu }] }] });
 
@@ -210,6 +211,28 @@ describe("migration dong thoi gian", () => {
     await c.exec(`update books set cover_media_id = '${M3}' where id = '${B1}'`);
     expect((await loiLen0015(c)).message).toBe("dong-thoi-gian: 1 o bia tro toi anh khong phai bia cua cuon");
     expect(await hang(c, `select to_regclass('public.book_covers') as t`)).toEqual([{ t: null }]);
+    await c.close();
+  });
+
+  /*
+   * Bia CHO GAN ma mot cuon dang tro toi la trang thai lam mat anh: 0014 chep nguyen no vao o bia, roi sweepMedia thay
+   * dong media do khong phai "bia cua mot cuon" nen xoa sau MEDIA_ORPHAN_MS, va khoa ngoai set null cua
+   * book_covers.cover_media_id lam o bia mat anh vinh vien, khong mot loi nao. Migration phai dung ca lan deploy lai
+   * o day de nguoi van hanh sua du lieu truoc, chu khong duoc cho qua.
+   */
+  it("anh bia cua cuon la bia cho gan chua kip gan thi ca migration huy", async () => {
+    const c = await dbToi0013();
+    await gieoCu(c);
+    await c.exec(`
+      insert into media (id, owner_id, book_id, kind, mime, bytes, width, height, store_key) values
+        ('${M4}', '${A2}', null, 'bia', 'image/webp', 1024, 1200, 720, 'cho/${M4}.webp');
+      update books set cover_media_id = '${M4}' where id = '${B4}';
+    `);
+    const loi = await loiLen0015(c);
+    expect(loi.message).toBe("dong-thoi-gian: 1 o bia tro toi anh khong phai bia cua cuon");
+    expect(loi.hint).toContain("Sua du lieu cu roi chay lai migration");
+    expect(await hang(c, `select to_regclass('public.book_covers') as t`)).toEqual([{ t: null }]);
+    expect(await hang(c, `select count(*)::int as n from books`)).toEqual([{ n: 5 }]);
     await c.close();
   });
 
