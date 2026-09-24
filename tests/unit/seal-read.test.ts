@@ -10,7 +10,7 @@ import { sealsOfBook } from "@/server/seal/seals";
 import type { DocJson } from "@/lib/doc/types";
 import { SEAL_COOLDOWN_MS } from "@/lib/seal/attempts";
 import { RITUAL_WINDOW_MS, type SealInput } from "@/lib/seal/types";
-import type { TestDb } from "../helpers/db";
+import { ANH_CHUP, chiQuaAnhChup, type TestDb } from "../helpers/db";
 import { dang, haiCuon, to } from "../helpers/library";
 import { CAU_DO, GOI_Y, henGio, TRAO_DOI } from "../helpers/seal";
 
@@ -440,33 +440,6 @@ describe("listShelf voi to khoa", () => {
     expect(json).not.toContain("Sau A");
   });
 });
-
-const ANH_CHUP = { isolationLevel: "repeatable read", accessMode: "read only" };
-
-/**
- * Boc db de chung minh moi lan doc di qua mot anh chup. PGlite chi co mot ket noi
- * nen khong dung lai duoc cuoc dua that; thay vao do moi cach doc hay ghi thang tren db deu nem loi, chi
- * `transaction` duoc chuyen tiep toi db that va ghi lai cau hinh. Cac cau lenh ben trong giao dich chay tren tx
- * that. `choPhep` mo rieng tung cua, vi du "insert" cho lenh ghi moc cua markRead.
- */
-function chiQuaAnhChup(db: TestDb, ...choPhep: string[]) {
-  const cauHinh: unknown[] = [];
-  const cam = new Set(["select", "selectDistinct", "selectDistinctOn", "execute", "query", "insert", "update", "delete", "with", "$with", "$count"]);
-  const boc = new Proxy(db, {
-    get(goc, ten) {
-      if (ten === "transaction") {
-        return (fn: Parameters<TestDb["transaction"]>[0], config?: Parameters<TestDb["transaction"]>[1]) => {
-          cauHinh.push(config);
-          return goc.transaction(fn, config);
-        };
-      }
-      if (typeof ten === "string" && cam.has(ten) && !choPhep.includes(ten)) throw new Error(`doc ngoai anh chup: db.${ten}`);
-      const v = Reflect.get(goc, ten, goc);
-      return typeof v === "function" ? v.bind(goc) : v;
-    },
-  });
-  return { boc, cauHinh };
-}
 
 describe("doc tren mot anh chup", () => {
   it("readSnapshot la giao dich repeatable read chi doc that tren database", async () => {

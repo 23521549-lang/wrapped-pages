@@ -7,6 +7,7 @@ import { docExcerpt, markedExcerpt, NOT_BLANK_PATTERN } from "@/lib/doc/text";
 import { SHELF_MARK } from "@/lib/doc/types";
 import { dayKey } from "@/lib/when";
 import { groupBy, isLockedFor, lockedForSql, sealsOfBooks } from "@/server/seal/seals";
+import { newestCovers } from "./timeline";
 
 export type ShelfBook = {
   id: string;
@@ -182,7 +183,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
   return readSnapshot(db, async (tx) => {
     const visible = await tx
       .select({
-        id: books.id, title: books.title, mode: books.mode, cover: books.cover, coverMediaId: books.coverMediaId,
+        id: books.id, title: books.title, mode: books.mode,
         ownerId: books.ownerId, createdAt: books.createdAt, ownerNickname: accounts.nickname,
       })
       .from(books)
@@ -191,7 +192,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     if (visible.length === 0) return [];
 
     const ids = visible.map((b) => b.id);
-    const [stats, ranges, picked, firsts, newest] = await Promise.all([
+    const [stats, ranges, picked, firsts, newest, covers] = await Promise.all([
       tx
         .select({
           bookId: pages.bookId, n: count(), last: max(pages.position), at: max(pages.publishedAt),
@@ -208,6 +209,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
       pickedSheets(tx, ids, viewerId, now),
       firstReadableSheets(tx, ids, viewerId, now),
       newestRounds(tx, ids),
+      newestCovers(tx, ids),
     ]);
 
     const statOf = new Map(stats.map((s) => [s.bookId, s]));
@@ -215,6 +217,9 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     const pickedOf = new Map(picked.map((p) => [p.bookId, p]));
     const firstOf = new Map(firsts.map((p) => [p.bookId, p]));
     const roundOf = new Map(newest.map((r) => [r.bookId, r.roundId]));
+    // Bia cua tung cuon: dung MOT cau lenh cho ca ke, chay chung anh chup voi cac cau tren; khong mot vong lap nao
+    // theo tung cuon (ngan sach cua spec).
+    const coverOf = new Map(covers.map((c) => [c.bookId, c]));
 
     // Cuon co luot moi nhat con niem phong voi nguoi xem. Tinh DUNG MOT LAN roi dung cho ca hai noi can no (chon luot
     // duoc phep doc noi dung o duoi, va chon doan cua tung khung): hai noi tu tinh lay theo hai duong thi chi can lech
@@ -266,7 +271,11 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     };
 
     return visible
-      .map((b): ShelfBook => {
+      .flatMap((b): ShelfBook[] => {
+        const bia = coverOf.get(b.id);
+        // Cuon khong con o bia nao thi khong ve duoc the: bat bien cua book_covers cam trang thai nay, nen day chi la
+        // lop chan. Mot nhanh bia mac dinh se la nguon su that thu hai.
+        if (bia === undefined) return [];
         const s = statOf.get(b.id);
         const last = s?.last ?? 0;
         const mine = b.ownerId === viewerId;
@@ -276,8 +285,8 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
         // Khong co doan: giu cach cu - dong he lo cua niem phong phu to cuoi neu con khoa, khong thi khong co doan van;
         // man doc van mo o to doc duoc dau tien (moi to deu khoa thi to cuoi).
         const lastSeal = doan ? undefined : locked.find((r) => r.firstPosition <= last && last <= r.lastPosition);
-        return {
-          id: b.id, title: b.title, mode: b.mode, cover: b.cover, coverMediaId: b.coverMediaId, mine, ownerNickname: b.ownerNickname,
+        return [{
+          id: b.id, title: b.title, mode: b.mode, cover: bia.cover, coverMediaId: bia.coverMediaId, mine, ownerNickname: b.ownerNickname,
           pageCount: s?.n ?? 0,
           // So to moi = so to nguoi xem chua thay bao gio; to niem phong cung tinh vi markRead khong ghi chung.
           newCount: mine ? 0 : (s?.chuaXem ?? 0),
@@ -287,7 +296,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
           lastPublishedAt: s?.at ?? null,
           excerpt: doan?.excerpt ?? (lastSeal?.teaser || null),
           createdAt: b.createdAt,
-        };
+        }];
       })
       // oxlint-disable-next-line unicorn/no-array-sort -- mang vua duoc .map() tao moi, khong ai khac giu tham chieu nen sap xep tai cho la an toan; doi sang toSorted() can nang tsconfig lib len ES2023, ngoai pham vi task nay.
       .sort(

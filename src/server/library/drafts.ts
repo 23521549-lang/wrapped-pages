@@ -1,5 +1,6 @@
 import { and, desc, eq, max, notExists, sql } from "drizzle-orm";
 import { bookCovers, books, bookTracks, drafts, pages, rounds } from "@/server/db/schema";
+import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { COVERS, type BookMode, type CoverKey } from "@/lib/book";
 import { normalizeSheets } from "@/lib/doc/continuation";
@@ -16,6 +17,7 @@ import { attachCover, lockCover } from "@/server/media/cover";
 import { insertSeal } from "@/server/seal/seals";
 import { findOwnBook } from "./books";
 import { lockOwnBook } from "./remove";
+import { newestCovers, type CoverNow, type NewestCover } from "./timeline";
 
 /**
  * Luu (hoac ghi de) ban nhap duy nhat cua mot cuon. Chi chu sach. Tai lieu qua bindMedia truoc khi ghi: khoi media
@@ -117,21 +119,41 @@ export type DraftItem = {
   hasPages: boolean;
 };
 
-/** Moi ban nhap cua rieng ownerId, moi nhat truoc. */
+/**
+ * Ghep bia moi nhat vao tung dong cua mot danh sach cuon: MOT cau lenh bia cho ca danh sach, khong mot cau theo tung
+ * cuon. Cuon khong con o bia nao bi bo han khoi danh sach - khong co bia thi khong ve duoc the, ma mot nhanh bia mac
+ * dinh se la nguon su that thu hai.
+ * Moi dong la vat the moi cua rieng truy van goi den, khong ai khac giu tham chieu, nen gan thang bia vao do.
+ */
+function ghepBia<T extends { bookId: string }>(rows: T[], covers: NewestCover[]): (T & CoverNow)[] {
+  const coverOf = new Map(covers.map((c) => [c.bookId, c]));
+  return rows.flatMap((r) => {
+    const bia = coverOf.get(r.bookId);
+    return bia === undefined ? [] : [Object.assign(r, { cover: bia.cover, coverMediaId: bia.coverMediaId })];
+  });
+}
+
+/**
+ * Moi ban nhap cua rieng ownerId, moi nhat truoc. Hai cau lenh chung mot anh chup: bia va phan con lai cua the
+ * khong bao gio den tu hai trang thai khac nhau.
+ */
 export async function listDrafts(db: AnyDb, ownerId: string): Promise<DraftItem[]> {
-  const rows = await db
-    .select({
-      bookId: drafts.bookId, title: books.title, mode: books.mode, cover: books.cover, coverMediaId: books.coverMediaId,
-      sheetCount: drafts.sheetCount, updatedAt: drafts.updatedAt, content: drafts.content,
-      hasPages: sql<boolean>`exists (select 1 from ${pages} where ${pages.bookId} = ${drafts.bookId})`.mapWith(Boolean),
-    })
-    .from(drafts)
-    .innerJoin(books, eq(books.id, drafts.bookId))
-    .where(eq(books.ownerId, ownerId))
-    .orderBy(desc(drafts.updatedAt));
-  // rest la vat the moi tao rieng cho tung dong (tu destructuring), khong ai khac giu tham chieu,
-  // nen gan thang excerpt vao do re hon tao vat the sao chep lai lan nua.
-  return rows.map(({ content, ...rest }) => Object.assign(rest, { excerpt: docExcerpt(content) }));
+  return readSnapshot(db, async (tx) => {
+    const rows = await tx
+      .select({
+        bookId: drafts.bookId, title: books.title, mode: books.mode,
+        sheetCount: drafts.sheetCount, updatedAt: drafts.updatedAt, content: drafts.content,
+        hasPages: sql<boolean>`exists (select 1 from ${pages} where ${pages.bookId} = ${drafts.bookId})`.mapWith(Boolean),
+      })
+      .from(drafts)
+      .innerJoin(books, eq(books.id, drafts.bookId))
+      .where(eq(books.ownerId, ownerId))
+      .orderBy(desc(drafts.updatedAt));
+    // rest la vat the moi tao rieng cho tung dong (tu destructuring), khong ai khac giu tham chieu,
+    // nen gan thang excerpt vao do re hon tao vat the sao chep lai lan nua.
+    const items = rows.map(({ content, ...rest }) => Object.assign(rest, { excerpt: docExcerpt(content) }));
+    return ghepBia(items, await newestCovers(tx, rows.map((r) => r.bookId)));
+  });
 }
 
 export type UnwrittenBook = { bookId: string; title: string; mode: BookMode; cover: CoverKey; coverMediaId: string | null; createdAt: Date };
@@ -139,17 +161,21 @@ export type UnwrittenBook = { bookId: string; title: string; mode: BookMode; cov
 /**
  * Cuon cua rieng ownerId chua co to nao va chua co ban nhap (vua tao, chua go chu nao), moi tao truoc. /ban-nhap hien
  * chung canh cac ban nhap de moi cuon chua dang deu xoa duoc tu mot noi.
+ * Hai cau lenh chung mot anh chup, cung ly do voi listDrafts.
  */
 export async function listUnwrittenBooks(db: AnyDb, ownerId: string): Promise<UnwrittenBook[]> {
-  return db
-    .select({ bookId: books.id, title: books.title, mode: books.mode, cover: books.cover, coverMediaId: books.coverMediaId, createdAt: books.createdAt })
-    .from(books)
-    .where(and(
-      eq(books.ownerId, ownerId),
-      notExists(db.select({ position: pages.position }).from(pages).where(eq(pages.bookId, books.id))),
-      notExists(db.select({ bookId: drafts.bookId }).from(drafts).where(eq(drafts.bookId, books.id))),
-    ))
-    .orderBy(desc(books.createdAt), desc(books.id));
+  return readSnapshot(db, async (tx) => {
+    const rows = await tx
+      .select({ bookId: books.id, title: books.title, mode: books.mode, createdAt: books.createdAt })
+      .from(books)
+      .where(and(
+        eq(books.ownerId, ownerId),
+        notExists(tx.select({ position: pages.position }).from(pages).where(eq(pages.bookId, books.id))),
+        notExists(tx.select({ bookId: drafts.bookId }).from(drafts).where(eq(drafts.bookId, books.id))),
+      ))
+      .orderBy(desc(books.createdAt), desc(books.id));
+    return ghepBia(rows, await newestCovers(tx, rows.map((r) => r.bookId)));
+  });
 }
 
 /**
