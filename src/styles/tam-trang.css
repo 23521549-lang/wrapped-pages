@@ -54,8 +54,12 @@
 .troi__nhan{ margin-top: var(--space-xs); font-size: var(--text-base); font-weight: 450; max-width: 32rem; overflow-wrap: anywhere; }
 .troi__cuoi{ margin-top: var(--space-sm); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-md); }
 .troi__gio{ font-size: var(--text-sm); }
-.troi .btn--chu{ color: inherit; padding-inline: 0; text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); }
-.troi .btn--chu:hover{ text-decoration-color: currentColor; }
+.troi .btn--chu{ color: inherit; padding-inline: 0; }
+/* Bo gach chan roi thi dau hieu con lai khi re chuot hay di toi bang phim la muc cua chinh troi day them mot bac ve
+   phia muc dam nhat (phan quyet B5). Tron trong oklab chu khong oklch: oklab noi thang theo hai truc nen giu nguyen
+   tong mau cua troi (nang am van am), con oklch noi theo cung goc mau se keo goc 58 do ve 16 do, tuc doi han sac.
+   Ba lop nen quy tac nay thang quy tac color: inherit ngay tren du thu tu tep the nao. */
+.troi .btn--chu:hover, .troi .btn--chu:focus-visible{ color: color-mix(in oklab, currentColor 75%, var(--color-ink-dam)); }
 .troi .btn--chu .hoa{ width: 32px; height: 32px; margin: -6px 0; }
 /* muc phu cua tung troi: giai nghia, nguon, luc tha */
 .troi--nang-am .troi__phu{ color: var(--troi-nang-am-ink2); }
@@ -287,8 +291,11 @@
 .nhan__dau label{ font-weight: 600; }
 .nhan__dem{ color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
 .nhan__dem--day{ color: var(--color-ink); font-weight: 600; }
-/* da vuot 80: bo dem gach chan, va mot dong ly do ngay duoi o nhap, de nguoi go thay lien chu khong doi toi luc bam "Tha" */
-.nhan__dem--qua{ text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: .25em; }
+/* da vuot 80: bo dem doi sang kieu bao loi bang mot bac muc dam nhat, cong chu dam da co san o .nhan__dem--day (qua
+   80 thi luon qua moc "day" nen hai lop luon di cung nhau). Dung luat "nhan manh bang chu dam tren nen nhat" cua
+   CLAUDE.md muc 3.1: khong gach chan, khong vien, khong to nen (yeu cau diem 12). Cung luc do mot dong ly do hien ra
+   ngay duoi o nhap va o nhap mang aria-invalid, nen nguoi go thay lien chu khong doi toi luc bam "Tha". */
+.nhan__dem--qua{ color: var(--color-ink-dam); }
 .nhan__qua{ font-size: var(--text-sm); color: var(--color-ink); font-weight: 600; }
 .nhan__goi{ font-size: var(--text-sm); color: var(--color-ink-3); }
 .tha__cuoi{ display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-sm); margin-top: var(--space-xs); }

@@ -15,6 +15,9 @@
   --color-ink:   oklch(24% 0.012 250);
   --color-ink-2: oklch(44% 0.013 248);
   --color-ink-3: oklch(50% 0.012 248);
+  /* Muc dam nhat cua web. Chi dung cho chu nut va nhan bao loi luc re chuot hay luc di toi bang phim: nut chu bo
+     gach chan roi thi mot bac muc dam hon la dau hieu con lai de nguoi dung biet no bam duoc (phan quyet B5). */
+  --color-ink-dam: oklch(16% 0.014 250);
 
   --color-rule:    oklch(92% 0.010 235);
   /* nen thanh dieu huong: xanh nuoc nhat, cung tong voi --blue-1 nhung nhat hon mot chut de chu --color-ink-2 van ro */

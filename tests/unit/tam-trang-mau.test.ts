@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
+import { oklchToSrgb } from "@/lib/mau/oklch";
 import { contrastRatio } from "@/lib/mau/tuong-phan";
 import { WEATHERS } from "@/lib/tam-trang/troi";
-import { docBangToken } from "../helpers/bang-token";
+import { boComment, docBangOklch, docBangToken, type Oklch } from "../helpers/bang-token";
 
 /*
  * Chu tren bau troi dung tren nen chuyen sac tu --troi-X-1 toi --troi-X-2. Cong tuong phan chung khong doc duoc nen
@@ -46,5 +47,75 @@ describe("tuong phan tren chin bau troi", () => {
       expect(re.test(css), `.hoa--${k}`).toBe(true);
     }
     expect(css).not.toContain("hoa-theo-troi");
+  });
+});
+
+/** Goc mau ve dang hai truc a/b cua oklab, de tron hai mau dung nhu color-mix(in oklab, ...) cua trinh duyet. */
+function sangOklab(m: Oklch): { l: number; a: number; b: number } {
+  const rad = (m.h * Math.PI) / 180;
+  return { l: m.l, a: m.c * Math.cos(rad), b: m.c * Math.sin(rad) };
+}
+
+/** `color-mix(in oklab, X p%, Y)`: noi thang tung truc, roi doi nguoc ve ba so oklch. */
+function tronOklab(x: Oklch, y: Oklch, p: number): Oklch {
+  const a = sangOklab(x);
+  const b = sangOklab(y);
+  const l = p * a.l + (1 - p) * b.l;
+  const ta = p * a.a + (1 - p) * b.a;
+  const tb = p * a.b + (1 - p) * b.b;
+  return { l, c: Math.hypot(ta, tb), h: ((Math.atan2(tb, ta) * 180) / Math.PI + 360) % 360 };
+}
+
+/** Khoang cach hai goc mau, luon lay cung ngan hon. */
+function lechGoc(x: number, y: number): number {
+  const d = Math.abs(x - y) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+/*
+ * Nut chu trong dai troi bo gach chan roi (yeu cau dot ba diem 19), nen dau hieu "bam duoc" con lai luc re chuot hay
+ * luc di toi bang phim la muc cua chinh troi day them mot bac ve phia muc dam nhat (phan quyet B5). Mau do la mot
+ * color-mix voi currentColor nen cong tuong phan chung khong doc duoc no; day la cho do no, va do bang chinh con so
+ * phan tram viet trong CSS chu khong phai mot ban sao viet tay.
+ */
+describe("nut chu trong dai troi dam them mot bac khi re chuot hay di toi bang phim", () => {
+  // Bo chu thich truoc khi tim: chinh khoi chu thich cua quy tac nay co nhac lai mot bo chon kem dau ngoac nhon.
+  const css = boComment(readFileSync("src/styles/tam-trang.css", "utf8"));
+  const quyTac = /([^{}]*\.troi\s+\.btn--chu:hover[^{}]*)\{([^{}]*)\}/.exec(css);
+  const tron = quyTac === null
+    ? null
+    : /color:\s*color-mix\(\s*in\s+(\w+)\s*,\s*currentColor\s+([\d.]+)%\s*,\s*var\(\s*(--[\w-]+)\s*\)\s*\)/.exec(quyTac[2]);
+  const bangLch = docBangOklch();
+  const bangRgb = docBangToken();
+
+  it("co quy tac dam mau cho ca re chuot lan di toi bang phim", () => {
+    expect(quyTac, ".troi .btn--chu:hover").not.toBeNull();
+    expect(quyTac?.[1]).toContain(".troi .btn--chu:focus-visible");
+    expect(tron, "color: color-mix(...) cua quy tac dam mau").not.toBeNull();
+  });
+
+  it("tron trong oklab chu khong oklch, de goc mau cua troi khong bi keo di", () => {
+    // oklch noi theo cung goc mau: tron muc nang am (goc 58) voi muc dam nhat (goc 250) se di qua cung ngan va rot
+    // xuong goc 16, tuc tu nau am thanh do hong. oklab noi thang theo hai truc nen chi dam hon va bot ruc, giu tong.
+    expect(tron?.[1]).toBe("oklab");
+  });
+
+  it.each(WEATHERS)("%s: mau dam them van doc ro tren ca hai dau troi, va van la muc cua chinh troi do", (k) => {
+    expect(tron, "quy tac dam mau").not.toBeNull();
+    const [, , phanTram, tenDich] = tron as RegExpExecArray;
+    const muc = bangLch[`--troi-${k}-ink`];
+    const dich = bangLch[tenDich];
+    expect(muc, `--troi-${k}-ink`).toBeDefined();
+    expect(dich, tenDich).toBeDefined();
+
+    const dam = tronOklab(muc, dich, Number(phanTram) / 100);
+    // Dam hon that su, va van cung tong mau voi muc cua troi (khong nhay sang mot sac khac, soat truoc N7).
+    expect(dam.l, `${k}: do sang sau khi tron`).toBeLessThan(muc.l - 3);
+    expect(lechGoc(dam.h, muc.h), `${k}: goc mau sau khi tron`).toBeLessThan(12);
+
+    const mauDam = oklchToSrgb(dam.l / 100, dam.c, dam.h);
+    for (const nen of [`--troi-${k}-1`, `--troi-${k}-2`]) {
+      expect(contrastRatio(mauDam, bangRgb[nen]), `mau dam ${k} tren ${nen}`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

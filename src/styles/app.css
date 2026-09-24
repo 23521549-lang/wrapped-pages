@@ -17,7 +17,7 @@
  * re chuot:
  *  1. .btn: nen xanh nhat, vien xanh. Hanh dong quan trong nhat cua man, moi man mot nut.
  *  2. .btn--quiet (va .btn--line cu, cung mot kieu): vien manh, nen trong suot, chu dam.
- *  3. .btn--chu: chi la chu dam, gach chan hien khi re chuot; vung bam van 44px.
+ *  3. .btn--chu: chi la chu dam, dam mau them mot bac khi re chuot hay khi di toi bang phim; vung bam van 44px.
  */
 .btn{
   font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; white-space: nowrap;
@@ -31,10 +31,12 @@
 .btn--quiet:hover, .btn--line:hover{ background: var(--color-paper-2); }
 .btn--chu{
   padding-inline: .2rem; background: transparent; color: var(--color-ink); border-color: transparent;
-  text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: 1.5px; text-underline-offset: .3em;
-  transition: text-decoration-color var(--dur-micro) var(--ease-out);
 }
-.btn--chu:hover{ background: transparent; text-decoration-color: currentColor; }
+/* Bo gach chan roi thi dau hieu con lai la: vung bam 44px, con tro ban tay, vong focus, bong hoa ep o lien ket lich
+   hoa, va mot bac muc dam hon khi re chuot hay khi di toi bang phim (phan quyet B5). Doi thang, khong buoc chuyen:
+   .btn--chu khong con transition cua rieng no, con transition: background-color thua huong tu .btn khong cham toi
+   color. Van phai khai lai background: transparent de de len .btn:hover. */
+.btn--chu:hover, .btn--chu:focus-visible{ background: transparent; color: var(--color-ink-dam); }
 .btn--sm{ min-height: 36px; padding: .4rem .85rem; font-size: var(--text-xs); }
 .btn--icon{ width: 44px; height: 44px; padding: 0; }
 .btn--icon svg{ width: 18px; height: 18px; }
@@ -165,9 +167,8 @@
 a.hoat-dong__dong:focus-visible{ outline-offset: -2.5px; }
 .hoat-dong__chu{ font-size: var(--text-sm); line-height: 1.45; color: var(--color-ink-2); overflow-wrap: anywhere; text-wrap: pretty; min-width: 0; }
 .hoat-dong__chu b, .hoat-dong__ai{ font-weight: 600; color: var(--color-ink); }
-/* dong co sach: re chuot thi cau gach chan, khong to nen */
-a.hoat-dong__dong .hoat-dong__chu{ text-decoration: underline; text-decoration-color: transparent; text-underline-offset: .2em; transition: text-decoration-color var(--dur-micro) var(--ease-out); }
-a.hoat-dong__dong:hover .hoat-dong__chu{ text-decoration-color: currentColor; }
+/* dong co sach: re chuot hay di toi bang phim thi cau doi sang muc chinh, khong to nen, khong gach chan */
+a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-dong__chu{ color: var(--color-ink); }
 .hoat-dong__gio{ font-size: var(--text-xs); line-height: calc(var(--text-sm) * 1.45); color: var(--color-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hoat-dong__phu{ grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0 var(--space-sm); }
 /* nhan phu trong dong Hoat dong la dau hieu trang thai, khong phai nut: chu nho, khong nen, khong bo tron */
