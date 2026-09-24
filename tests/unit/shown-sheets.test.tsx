@@ -8,7 +8,7 @@ import { ShownSheetsProvider, useShownRange } from "@/components/reader/ShownShe
 import type { DocJson } from "@/lib/doc/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => {}) }));
+vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => []) }));
 vi.mock("@/app/actions/seal", () => ({ actionAnswer: vi.fn(), actionGiftKey: vi.fn() }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...rest}>{children}</a>,

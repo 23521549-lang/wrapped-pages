@@ -92,40 +92,51 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
 }
 
 /**
- * Ghi lai cac to nguoi xem VUA THAY: khoang [from, to] cua khung sach dang dung yen. Chi to that su hien moi duoc ghi,
- * nen mo man doc thang toi mot to xa khong bien cac to bi nhay coc thanh da doc.
- * Khoang rong hon MAX_SHOWN_SHEETS bi tu choi: day la diem cuoi cong khai, khong duoc dung de danh dau ca cuon la da
- * doc. To vuot to cuoi bi bo; to nam trong luot con niem phong voi nguoi xem khong bao gio duoc ghi, nen no van la
- * trang moi cho toi khi mo ra va lat that.
+ * Ghi lai cac to nguoi xem VUA THAY: dung cac vi tri cua khung sach dang dung yen, khong phai mot khoang. Chi to that
+ * su hien moi duoc ghi, nen mo man doc thang toi mot to xa khong bien cac to bi nhay coc thanh da doc; va mot khung
+ * co to khoa nam giua khong con phai gui ca lo bao trum to do.
+ * Nhieu hon MAX_SHOWN_SHEETS vi tri thi bi tu choi: day la diem cuoi cong khai, khong duoc dung de danh dau ca cuon
+ * la da doc. To vuot to cuoi bi bo; to nam trong luot con niem phong voi nguoi xem khong bao gio duoc ghi, nen no van
+ * la trang moi cho toi khi mo ra va lat that.
  * Chu sach khong co dong nao; cuon khong duoc doc hoac chua co to nao thi bo qua.
+ * Tra ve dung cac vi tri nam trong bang sau lan goi nay, tang dan. Danh sach gui len bi LOC BOT im lang chu khong bi
+ * tu choi ca cum, nen nguoi goi chi duoc nho nhung vi tri co trong danh sach tra ve.
  * Doc va ghi trong cung mot giao dich, khoa dong sach FOR SHARE: publishDraft va editRound (FOR UPDATE) khong the chen
  * giua, nen khong ghi duoc mot vi tri vua bi doi cho hay vua bi khoa.
  */
 export async function markRead(
-  db: AnyDb, viewerId: string, bookId: string, from: number, to: number, now: Date = new Date(),
-): Promise<void> {
-  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from) return;
-  if (to - from + 1 > MAX_SHOWN_SHEETS || !isUuid(bookId)) return;
-  await db.transaction(async (tx) => {
+  db: AnyDb, viewerId: string, bookId: string, positions: readonly number[], now: Date = new Date(),
+): Promise<number[]> {
+  if (!Array.isArray(positions) || !isUuid(bookId)) return [];
+  // Bo trung roi xep tang dan: mang nay vua duoc dung ra nen khong co gi cua nguoi goi bi doi, va thu tu tang dan cho
+  // lenh chen mot thu tu khoa dong co dinh, du hai tab cung gui mot cum theo hai thu tu khac nhau.
+  // oxlint-disable-next-line unicorn/no-array-sort -- toSorted can lib ES2023, du an dang o ES2022.
+  const muon = [...new Set(positions)].sort((a, b) => a - b);
+  if (muon.length === 0 || muon.length > MAX_SHOWN_SHEETS) return [];
+  if (muon.some((p) => !Number.isInteger(p) || p < 1)) return [];
+  return await db.transaction(async (tx) => {
     const [book] = await tx
       .select({ id: books.id, ownerId: books.ownerId })
       .from(books)
       .where(and(eq(books.id, bookId), readableBy(viewerId)))
       .for("share");
-    if (!book || book.ownerId === viewerId) return;
+    if (!book || book.ownerId === viewerId) return [];
     const [[{ last }], sealRows] = await Promise.all([
       tx.select({ last: max(pages.position) }).from(pages).where(eq(pages.bookId, book.id)),
       sealsOfBook(tx, book.id),
     ]);
-    if (last === null) return;
+    if (last === null) return [];
     const khoa = sealRows.filter((s) => isLockedFor(s, false, now));
-    const rows = [];
-    for (let p = from; p <= Math.min(to, last); p++) {
-      if (sealAt(khoa, p) === undefined) rows.push({ accountId: viewerId, bookId: book.id, position: p });
-    }
+    const rows = muon
+      .filter((p) => p <= last && sealAt(khoa, p) === undefined)
+      .map((p) => ({ accountId: viewerId, bookId: book.id, position: p }));
     // Moi duong tra ve deu nam truoc lenh ghi duy nhat o duoi, va truoc do chi co lenh doc.
-    if (rows.length === 0) return;
+    if (rows.length === 0) return [];
+    // Khong dung RETURNING: onConflictDoNothing khong tra lai dong da co san, ma dong da co san van la dong DA GHI -
+    // bo sot chung se lam man doc gui lai mai mot to no ghi xong tu lau. Giao dich nay commit duoc thi moi vi tri
+    // trong rows deu nam trong bang, du la vua chen hay da co tu truoc.
     await tx.insert(readSheets).values(rows).onConflictDoNothing();
+    return rows.map((r) => r.position);
   });
 }
 

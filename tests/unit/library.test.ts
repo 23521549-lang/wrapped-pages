@@ -86,7 +86,7 @@ describe("ke sach", () => {
     // nhat, nen ca ba deu la ung vien cua phep bat tham theo ngay, khong con phu thuoc nguoi kia da xem to nao.
     expect(cuaNguoiKia).toMatchObject({ pageCount: 3, newCount: 3, mine: false, ownerNickname: "Linh" });
     expect(cuaNguoiKia.excerpt).toBe(["một", "hai", "ba"][cuaNguoiKia.excerptPosition - 1]);
-    await markRead(db, seat2.id, chung, 1, 2);
+    await markRead(db, seat2.id, chung, [1, 2]);
     expect((await listShelf(db, seat2.id)).find((b) => b.id === chung)!.newCount).toBe(1);
     expect((await listShelf(db, seat1.id)).find((b) => b.id === chung)!).toMatchObject({ newCount: 0, mine: true });
   });

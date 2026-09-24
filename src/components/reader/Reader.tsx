@@ -62,7 +62,8 @@ export function Reader({
   const moId = useId();
   // Cac to da ghi (tu may chu, cong cac khung vua gui trong tab nay): khung nao cung da ghi thi khong goi nua.
   const daGui = useRef(new Set(seen));
-  const pending = useRef<{ first: number; last: number } | null>(null);
+  // Cac vi tri dang cho gui (cac to DANG MO cua khung dung yen gan nhat), hoac null khi khong co gi cho.
+  const pending = useRef<number[] | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inflight = useRef<Promise<void> | null>(null);
   // To dang hien song o ShownSheetsProvider (neu co) de cot phai cua man doc cung theo; khung thu thach van doc no.
@@ -102,31 +103,41 @@ export function Reader({
     const khung = pending.current;
     pending.current = null;
     if (khung === null) return;
-    // Chi khung MAY CHU DA NHAN moi duoc ghi nho. Ghi luc vua hien thi to lat nhanh qua (khung bi khung sau de len,
-    // khong bao gio gui) hay lan gui hong (mat mang) se bi coi la da ghi, quay lai doc that cung khong gui nua.
+    // Chi cac to MAY CHU DA GHI moi duoc nho, va may chu noi ro chung la nhung to nao: markRead con loc them mot lan
+    // nua (to vuot to cuoi, to vua bi khoa lai) nen "khong nem loi" khong co nghia la ca cum da vao bang.
+    // Ghi luc vua hien thi to lat nhanh qua (khung bi khung sau de len, khong bao gio gui) hay lan gui hong (mat mang)
+    // se bi coi la da ghi, quay lai doc that cung khong gui nua.
     // Hong thi im lang voi nguoi doc: mat vai to da xem khong dang mot loi tren man doc, va lan sau van gui lai duoc.
-    inflight.current = actionMarkRead(bookId, khung.first, khung.last).then(
-      () => {
-        for (let p = khung.first; p <= khung.last; p++) daGui.current.add(p);
+    inflight.current = actionMarkRead(bookId, khung).then(
+      (daGhi) => {
+        for (const p of daGhi) daGui.current.add(p);
       },
       () => {},
     );
   }, [bookId]);
 
+  // To nao dang khoa, duoi dang chuoi "0"/"1" cung thu tu voi sheets. Day la mot gia tri NGUYEN THUY, nen onShow giu
+  // nguyen danh tinh qua moi lan may chu lam moi (looks la mang moi o moi lan ve, con chuoi nay thi so bang gia tri).
+  // Neu onShow doi danh tinh thi hieu ung cua Flipbook bao lai khung va dong ho cho CHO_MS gan lai tu dau: mot nhip
+  // lam moi day hon CHO_MS se lam viec ghi to da xem tat lim ma khong bao mot loi nao.
+  const khoaKey = looks.map((l) => (l.kind === "khoa" ? "1" : "0")).join("");
+
   const onShow = useCallback(
     (first: number, last: number) => {
       setShown({ first, last });
       if (trackRead) {
-        // Chi to that su hien VA may chu chiu nhan moi duoc gui: to trong luot con niem phong voi nguoi xem bi markRead
-        // tu choi, nen bo khoi khung gui - de no khong bi nho nham la da ghi, va van duoc gui khi niem phong vua mo ngay
-        // tai cho (looks moi ve, man doc khong gan lai tu dau). Khung nao cung da ghi roi thi thoi: lat qua lat lai
-        // khong goi lai may chu.
+        // Chi to that su hien VA may chu chiu ghi moi duoc gui: to trong luot con niem phong voi nguoi xem bi markRead
+        // loc bo im lang, nen bo khoi khung gui - de no khong bi nho nham la da ghi, va van duoc gui khi niem phong vua
+        // mo ngay tai cho (khoaKey doi, man doc khong gan lai tu dau). Khung nao cung da ghi roi thi thoi: lat qua lat
+        // lai khong goi lai may chu.
+        // Gui DUNG cac vi tri nay, khong gui khoang [dau, cuoi] cua chung: mot to khoa nam giua hai to mo khong bao gio
+        // lot vao lenh goi, va lenh goi khong phai dua vao viec khung chi co toi MAX_SHOWN_SHEETS to moi dung.
         const mo: number[] = [];
         for (let p = first; p <= last; p++) {
-          if (looks[p - 1]?.kind !== "khoa") mo.push(p);
+          if (khoaKey[p - 1] !== "1") mo.push(p);
         }
         if (mo.some((p) => !daGui.current.has(p))) {
-          pending.current = { first: mo[0], last: mo[mo.length - 1] };
+          pending.current = mo;
           if (timer.current) clearTimeout(timer.current);
           timer.current = setTimeout(flush, CHO_MS);
         }
@@ -134,7 +145,7 @@ export function Reader({
       // Khung dung yen ma khong con to dang go thi thoi: quay lai thi to do hien thang, khong go lai tu dau.
       if (moIndex !== null && (moIndex + 1 < first || moIndex + 1 > last)) stopReveal();
     },
-    [moIndex, stopReveal, setShown, trackRead, flush, looks],
+    [moIndex, stopReveal, setShown, trackRead, flush, khoaKey],
   );
 
   useEffect(

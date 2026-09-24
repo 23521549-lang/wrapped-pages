@@ -38,12 +38,15 @@ function Khung({ bookNow, mediaEnabled = false }: { bookNow: typeof NOW | null; 
   return (
     <>
       <button type="button" onClick={() => flow.start()}>Đăng trang</button>
-      {flow.open && <PublishPanel flow={flow} bookTitle={NOW.title} partnerNickname="Linh" onCancel={() => {}} />}
+      {flow.open && <PublishPanel flow={flow} bookTitle={NOW.title} partnerNickname="Linh" onCancel={flow.cancel} />}
     </>
   );
 }
 
 const moKhung = () => fireEvent.click(screen.getByRole("button", { name: "Đăng trang" }));
+
+/** Tep anh bia de tha vao o chon tep; noi dung khong quan trong vi bo doc anh la gia lap. */
+const tepBia = () => new File([new Uint8Array([1])], "bia.jpg", { type: "image/jpeg" });
 
 afterEach(() => {
   cleanup();
@@ -124,9 +127,7 @@ describe("muc doi bia, ten, nhac o buoc dang", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đổi bìa, tên, nhạc" }));
     const dang = screen.getByRole("button", { name: "Đăng" }) as HTMLButtonElement;
     expect(dang.disabled).toBe(false);
-    fireEvent.change(screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa"), {
-      target: { files: [new File([new Uint8Array([1])], "bia.jpg", { type: "image/jpeg" })] },
-    });
+    fireEvent.change(screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa"), { target: { files: [tepBia()] } });
     // Dang luc nay se giu nguyen bia cu va bo roi bia vua tai len: nut phai khoa, nhu form sach van lam.
     expect(dang.disabled).toBe(true);
     fireEvent.click(dang);
@@ -135,6 +136,40 @@ describe("muc doi bia, ten, nhac o buoc dang", () => {
       xong?.("broken");
     });
     expect(dang.disabled).toBe(false);
+  });
+
+  it("dong muc gap trong luc dang doc anh bia: nut Dang mo khoa lai", async () => {
+    // O bia bi go ra giua chung thi viec dang doc cung bi bo theo, va bia do khong di kem lan dang nua: khong con
+    // gi de cho, nut Dang phai bam duoc. Truoc day co khoa nam o useBookEdit con o bia thi go mat, nen khong ai ha.
+    docAnh.mockImplementation(() => new Promise<"broken">(() => {}));
+    render(<Khung bookNow={NOW} mediaEnabled />);
+    moKhung();
+    const nut = screen.getByRole("button", { name: "Đổi bìa, tên, nhạc" });
+    fireEvent.click(nut);
+    fireEvent.change(screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa"), { target: { files: [tepBia()] } });
+    const dang = screen.getByRole("button", { name: "Đăng" }) as HTMLButtonElement;
+    expect(dang.disabled).toBe(true);
+    fireEvent.click(nut);
+    expect(dang.disabled).toBe(false);
+    fireEvent.click(dang);
+    await waitFor(() => expect(actionPublish).toHaveBeenCalled());
+    expect(actionPublish.mock.calls[0][3]).toBeNull();
+  });
+
+  it("chon anh bia roi bam De sau: mo lai buoc dang thi nut Dang van bam duoc", async () => {
+    docAnh.mockImplementation(() => new Promise<"broken">(() => {}));
+    render(<Khung bookNow={NOW} mediaEnabled />);
+    moKhung();
+    fireEvent.click(screen.getByRole("button", { name: "Đổi bìa, tên, nhạc" }));
+    fireEvent.change(screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa"), { target: { files: [tepBia()] } });
+    expect((screen.getByRole("button", { name: "Đăng" }) as HTMLButtonElement).disabled).toBe(true);
+    // "De sau" la duong rut lui: dong ca khung dang, keo theo o bia. Mo lai buoc dang phai nhu moi.
+    fireEvent.click(screen.getByRole("button", { name: "Để sau" }));
+    moKhung();
+    const dang = screen.getByRole("button", { name: "Đăng" }) as HTMLButtonElement;
+    expect(dang.disabled).toBe(false);
+    fireEvent.click(dang);
+    await waitFor(() => expect(actionPublish).toHaveBeenCalled());
   });
 
   it("link nhac hong thi khong dang, va focus quay ve o nhac", () => {

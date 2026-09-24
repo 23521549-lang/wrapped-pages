@@ -212,19 +212,35 @@ describe("readBook che to khoa", () => {
 describe("markRead khong ghi to dang khoa", () => {
   it("to trong luot khoa khong duoc ghi, mo roi thi ghi duoc", async () => {
     const s = await sachCoKhoa(CAU_DO);
-    await markRead(s.db, s.seat2.id, s.chung, 1, 2, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [1, 2], NOW);
     expect(await mocCua(s)).toEqual([1]);
     await s.db.update(seals).set({ openedAt: phut(-1) }).where(eq(seals.id, s.sealId));
-    await markRead(s.db, s.seat2.id, s.chung, 2, 3, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [2, 3], NOW);
     expect(await mocCua(s)).toEqual([1, 2, 3]);
+  });
+
+  it("markRead tra ve dung cac vi tri da nam trong bang, khong tra ca cum vua gui", async () => {
+    const s = await sachCoKhoa(CAU_DO);
+    // To 2 nam trong luot con khoa nen bi loc im lang: nguoi goi chi duoc nho to 1.
+    expect(await markRead(s.db, s.seat2.id, s.chung, [1, 2], NOW)).toEqual([1]);
+    // Goi lai dung cum do: to 1 da co san van la to DA GHI, nen van duoc tra ve.
+    expect(await markRead(s.db, s.seat2.id, s.chung, [1, 2], NOW)).toEqual([1]);
+    // To 3 con khoa, to 4 vuot to cuoi cua cuon.
+    expect(await markRead(s.db, s.seat2.id, s.chung, [3, 4], NOW)).toEqual([]);
+    // Nhieu hon MAX_SHOWN_SHEETS vi tri, vi tri khong phai so nguyen tu 1, cum rong, va cuon cua chinh chu sach.
+    expect(await markRead(s.db, s.seat2.id, s.chung, [1, 2, 3], NOW)).toEqual([]);
+    expect(await markRead(s.db, s.seat2.id, s.chung, [0, 1], NOW)).toEqual([]);
+    expect(await markRead(s.db, s.seat2.id, s.chung, [], NOW)).toEqual([]);
+    expect(await markRead(s.db, s.seat1.id, s.chung, [1], NOW)).toEqual([]);
+    expect(await mocCua(s)).toEqual([1]);
   });
 
   it("vi tri vuot to cuoi bi bo, ghi lai cung khong sinh dong thua", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "mot", "hai", "ba");
-    await markRead(s.db, s.seat2.id, s.chung, 3, 4, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [3, 4], NOW);
     expect(await mocCua(s)).toEqual([3]);
-    await markRead(s.db, s.seat2.id, s.chung, 3, 4, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [3, 4], NOW);
     expect(await mocCua(s)).toEqual([3]);
     const view = (await readBook(s.db, s.seat2.id, s.chung, NOW))!;
     expect(view.sheets.map((x) => x.content)).toEqual([to("mot"), to("hai"), to("ba")]);
@@ -244,10 +260,10 @@ describe("markRead khong ghi to dang khoa", () => {
     // Doan trich den tu luot dang moi nhat (spec 2026-09-22 muc 10); luot do con niem phong voi nguoi xem nen khong
     // hien mot chu nao, chi con dong he lo cua chinh no. Ca cuon khoa nen man doc mo o to cuoi.
     expect(ke).toMatchObject({ excerpt: "He lo dau", excerptPosition: 2, excerptLocked: true, lockedCount: 2, newCount: 2 });
-    await markRead(s.db, s.seat2.id, s.chung, 1, 2, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [1, 2], NOW);
     expect(await mocCua(s)).toEqual([]);
     await dang(s.db, s.seat1.id, s.chung, "mo ba");
-    await markRead(s.db, s.seat2.id, s.chung, 3, 3, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [3, 3], NOW);
     expect(await mocCua(s)).toEqual([3]);
     ke = (await listShelf(s.db, s.seat2.id, NOW)).find((b) => b.id === s.chung)!;
     // Luot dang moi nhat la luot cua to 3 va da mo: doan trich la chu cua chinh no. Hai to khoa van la trang moi.
@@ -272,7 +288,7 @@ describe("markRead khong ghi to dang khoa", () => {
     expect(json).toContain(biMat(2));
     for (const i of [4, 5]) expect(json).not.toContain(biMat(i));
     expect(json).not.toContain("B2");
-    for (const [dau, cuoi] of [[1, 2], [3, 4], [5, 6]] as const) await markRead(s.db, s.seat2.id, s.chung, dau, cuoi, NOW);
+    for (const khung of [[1, 2], [3, 4], [5, 6]]) await markRead(s.db, s.seat2.id, s.chung, khung, NOW);
     expect(await mocCua(s)).toEqual([1, 2, 3]);
     await dang(s.db, s.seat1.id, s.chung, "mo sau");
     const ke = (await listShelf(s.db, s.seat2.id, NOW)).find((x) => x.id === s.chung)!;
@@ -281,8 +297,8 @@ describe("markRead khong ghi to dang khoa", () => {
     expect(ke).toMatchObject({ lockedCount: 2, newCount: 3, pageCount: 6, excerptLocked: false, excerptPosition: 6, excerpt: "mo sau" });
     await s.db.insert(sealReplies).values({ sealId: b!, accountId: s.seat2.id, content: to("tra loi") });
     await s.db.update(seals).set({ openedAt: NOW }).where(eq(seals.id, b!));
-    await markRead(s.db, s.seat2.id, s.chung, 4, 5, NOW);
-    await markRead(s.db, s.seat2.id, s.chung, 6, 6, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [4, 5], NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [6, 6], NOW);
     expect(await mocCua(s)).toEqual([1, 2, 3, 4, 5, 6]);
     view = (await readBook(s.db, s.seat2.id, s.chung, ms(RITUAL_WINDOW_MS)))!;
     expect(view.seals[1].ritual).toBe(true);
@@ -304,13 +320,13 @@ describe("markRead khong ghi to dang khoa", () => {
     // van mo o to doc duoc dau tien (to 1).
     expect(keChu).toMatchObject({ excerpt: "He T", excerptPosition: 1, excerptLocked: true, lockedCount: 2, newCount: 0 });
     expect(JSON.stringify([cuaChu, keChu])).not.toContain(biMat(2));
-    await markRead(s.db, s.seat2.id, s.chung, 1, 2, phut(60));
-    await markRead(s.db, s.seat2.id, s.chung, 3, 3, phut(60));
+    await markRead(s.db, s.seat2.id, s.chung, [1, 2], phut(60));
+    await markRead(s.db, s.seat2.id, s.chung, [3, 3], phut(60));
     expect(await mocCua(s)).toEqual([1, 2, 3]);
     const s2 = await haiCuon();
     await dang(s2.db, s2.seat1.id, s2.chung, "mo");
     await dangTo(s2, henGio(phut(60)), toKhoa("He T", biMat(2)));
-    await markRead(s2.db, s2.seat2.id, s2.chung, 1, 2, ms(3_600_000 - 1));
+    await markRead(s2.db, s2.seat2.id, s2.chung, [1, 2], ms(3_600_000 - 1));
     expect(await mocCua(s2)).toEqual([1]);
     const dungGio = (await readBook(s2.db, s2.seat2.id, s2.chung, phut(60)))!;
     expect(dungGio.sheets[1].locked).toBe(false);
@@ -318,7 +334,7 @@ describe("markRead khong ghi to dang khoa", () => {
     await publishDraft(s2.db, s2.seat1.id, s2.rieng, [toKhoa("rieng", biMat(9))], henGio(phut(60)));
     expect(await readBook(s2.db, s2.seat2.id, s2.rieng, NOW)).toBeNull();
     expect((await listShelf(s2.db, s2.seat2.id, NOW)).some((b) => b.id === s2.rieng)).toBe(false);
-    await markRead(s2.db, s2.seat2.id, s2.rieng, 1, 1, phut(90));
+    await markRead(s2.db, s2.seat2.id, s2.rieng, [1, 1], phut(90));
     expect(await s2.db.select().from(readSheets).where(eq(readSheets.bookId, s2.rieng))).toHaveLength(0);
   });
 });
@@ -444,7 +460,7 @@ describe("doc tren mot anh chup", () => {
     const traoDoi = (await dangTo(s, TRAO_DOI, toKhoa("Tờ bốn", biMat(4))))!;
     await s.db.insert(sealReplies).values({ sealId: traoDoi, accountId: s.seat2.id, content: to("Em nghĩ về anh") });
     await s.db.update(seals).set({ openedAt: phut(-1) }).where(eq(seals.id, traoDoi));
-    await markRead(s.db, s.seat2.id, s.chung, 1, 1, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [1, 1], NOW);
     for (const ai of [s.seat1.id, s.seat2.id]) {
       const { boc, cauHinh } = chiQuaAnhChup(s.db);
       const view = await readBook(boc, ai, s.chung, NOW);
@@ -461,7 +477,7 @@ describe("doc tren mot anh chup", () => {
 
   it("listShelf doc sach, thong ke, to da xem, to cuoi va niem phong trong mot anh chup; ket qua giong het", async () => {
     const s = await sachCoKhoa(CAU_DO);
-    await markRead(s.db, s.seat2.id, s.chung, 1, 1, NOW);
+    await markRead(s.db, s.seat2.id, s.chung, [1, 1], NOW);
     for (const ai of [s.seat1.id, s.seat2.id]) {
       const { boc, cauHinh } = chiQuaAnhChup(s.db);
       const shelf = await listShelf(boc, ai, NOW);
@@ -473,7 +489,7 @@ describe("doc tren mot anh chup", () => {
   it("markRead doc luat khoa va ghi to da xem trong cung mot giao dich, khong lenh nao nam ngoai", async () => {
     const s = await sachCoKhoa(CAU_DO);
     const { boc, cauHinh } = chiQuaAnhChup(s.db);
-    await markRead(boc, s.seat2.id, s.chung, 1, 2, NOW);
+    await markRead(boc, s.seat2.id, s.chung, [1, 2], NOW);
     // Giao dich thuong (khong phai anh chup chi doc): lenh ghi nam ben trong, luat khoa doc tren cung trang thai vi tri.
     expect(cauHinh).toEqual([undefined]);
     expect(await mocCua(s)).toEqual([1]);

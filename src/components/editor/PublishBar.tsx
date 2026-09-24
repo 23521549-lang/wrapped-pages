@@ -228,7 +228,9 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
   const { seal, ready, error, pending } = flow;
   // O bia dang doc hay dang tai anh len: dang luc nay se ghi lai dung bia CU va bo roi bia vua tai len. Khoa nut Dang
   // cho toi khi xong, dung nhu nut gui cua form sach (BookForm). "De sau" van bam duoc: do la duong rut lui.
-  const busy = flow.doi?.busy ?? false;
+  // Chi muc gap DANG MO moi khoa duoc nut: muc dong thi lan dang khong gui gi ve sach (doiGi la null) nen khong co bia
+  // nao de cho, va mot co ban con sot lai cua o bia da go khong duoc phep giam nguoi viet dang luot ho dang soan.
+  const busy = flow.doiMo && (flow.doi?.busy ?? false);
   const cau = cauXacNhan(seal.kind, partnerNickname);
   const loai = luaChon(partnerNickname).find((c) => c.kind === seal.kind);
 

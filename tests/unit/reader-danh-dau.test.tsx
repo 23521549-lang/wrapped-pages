@@ -11,9 +11,12 @@ import type { DocJson } from "@/lib/doc/types";
  */
 const CHO_MS = 600;
 
+// actionMarkRead tra ve dung cac vi tri may chu da ghi. May chu that con loc them, nhung o day khong co to khoa nao
+// den duoc lenh goi (Reader da loc truoc), nen ban gia nhan het cum vua gui.
 const { lamMoi, router, danhDau } = vi.hoisted(() => {
   const refresh = vi.fn();
-  return { lamMoi: refresh, router: { refresh }, danhDau: vi.fn(async () => {}) };
+  const ghi = vi.fn(async (_bookId: string, positions: number[]) => positions);
+  return { lamMoi: refresh, router: { refresh }, danhDau: ghi };
 });
 
 // Router phai la MOT doi tuong duy nhat qua moi lan ve. Tra ve doi tuong moi o moi lan ve thi hieu ung don dep cua
@@ -96,11 +99,11 @@ describe("Reader: ghi to da xem", () => {
     act(() => {
       vi.advanceTimersByTime(CHO_MS);
     });
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
     act(() => {
       vi.advanceTimersByTime(CHO_MS);
     });
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
   });
 
   it("lat nhanh qua mot to roi quay lai va dung lai: to do van duoc gui", () => {
@@ -119,7 +122,7 @@ describe("Reader: ghi to da xem", () => {
     act(() => {
       vi.advanceTimersByTime(CHO_MS);
     });
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1], ["b1", 3, 3], ["b1", 2, 2]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]], ["b1", [3]], ["b1", [2]]]);
   });
 
   it("khung may chu bao da ghi tu truoc thi khong goi lai", () => {
@@ -131,7 +134,7 @@ describe("Reader: ghi to da xem", () => {
   });
 
   it("to cua luot con niem phong khong duoc gui; mo ngay tai cho thi khung ke tiep gui no", () => {
-    // May chu tu choi moi to nam trong luot con niem phong voi nguoi xem (markRead), nen trinh duyet khong gui.
+    // May chu loc bo moi to nam trong luot con niem phong voi nguoi xem (markRead), nen trinh duyet khong gui.
     const khoa: ReaderProps["looks"] = [{ kind: "khoa", teaser: null }, { kind: "thuong" }, { kind: "thuong" }];
     const { rerender } = render(<Reader {...props({ looks: khoa })} />);
     act(() => {
@@ -143,7 +146,20 @@ describe("Reader: ghi to da xem", () => {
     act(() => {
       vi.advanceTimersByTime(CHO_MS);
     });
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
+  });
+
+  it("may chu lam moi nhanh hon thoi gian cho: khung dung yen van duoc gui dung mot lan", () => {
+    const { rerender } = render(<Reader {...props()} />);
+    // Moi lan lam moi tu may chu dua xuong mot mang looks MOI (cung noi dung). Khung sach khong doi, nen dong ho cho
+    // khong duoc gan lai tu dau: gan lai thi lenh ghi khong bao gio chay va viec ghi to da xem tat lim, khong bao loi.
+    for (let i = 0; i < 12; i++) {
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      rerender(<Reader {...props()} />);
+    }
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
   });
 
   it("lenh ghi hong thi to do khong bi coi la da ghi: quay lai van gui lai", async () => {
@@ -152,7 +168,7 @@ describe("Reader: ghi to da xem", () => {
     act(() => {
       vi.advanceTimersByTime(CHO_MS);
     });
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
     await act(async () => {});
     lat(container, "Trang sau");
     act(() => {
@@ -162,14 +178,35 @@ describe("Reader: ghi to da xem", () => {
     act(() => {
       vi.advanceTimersByTime(CHO_MS);
     });
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1], ["b1", 2, 2], ["b1", 1, 1]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]], ["b1", [2]], ["b1", [1]]]);
+  });
+
+  it("may chu khong ghi to nao ma cung khong bao loi: to do van duoc gui lai", async () => {
+    // markRead LOC im lang (to vuot to cuoi, to vua bi khoa lai) chu khong tu choi ca lenh goi. Nho ca cum vua gui
+    // thi mot to bi loc se khong bao gio duoc gui lai, va no o lai "trang moi" mai tren ke sach.
+    danhDau.mockImplementationOnce(async () => []);
+    const { container } = render(<Reader {...props()} />);
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
+    await act(async () => {});
+    lat(container, "Trang sau");
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    lat(container, "Trang trước");
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    expect(danhDau.mock.calls).toEqual([["b1", [1]], ["b1", [2]], ["b1", [1]]]);
   });
 
   it("roi man doc luc khung con dang hen: gui ngay roi moi lam moi trang vua toi", async () => {
     const { unmount } = render(<Reader {...props()} />);
     expect(danhDau).not.toHaveBeenCalled();
     unmount();
-    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+    expect(danhDau.mock.calls).toEqual([["b1", [1]]]);
     expect(lamMoi).not.toHaveBeenCalled();
     await act(async () => {});
     expect(lamMoi).toHaveBeenCalledTimes(1);

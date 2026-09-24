@@ -7,7 +7,7 @@ import type { DocJson } from "@/lib/doc/types";
 import type { ReaderSeal } from "@/lib/seal/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => {}) }));
+vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => []) }));
 vi.mock("@/app/actions/seal", () => ({ actionAnswer: vi.fn(), actionGiftKey: vi.fn() }));
 
 const T0 = new Date("2026-09-13T08:00:00.000Z");

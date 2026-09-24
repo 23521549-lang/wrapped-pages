@@ -9,7 +9,7 @@ import type { ReaderSeal } from "@/lib/seal/types";
 
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => {}) }));
+vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => []) }));
 vi.mock("@/app/actions/seal", () => ({
   actionAnswer: vi.fn(async () => ({ error: "" })),
   actionGiftKey: vi.fn(async () => ({ error: "" })),

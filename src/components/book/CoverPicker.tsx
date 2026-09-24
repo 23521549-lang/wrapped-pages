@@ -69,6 +69,9 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   const source = useRef<SourceImage | null>(null);
   const run = useRef(0);
   const focusNext = useRef<"photo" | "pick" | null>(null);
+  // Ham bao ban giu trong ref, nhu source va run: hieu ung go component o duoi chi gan mot lan, nen no khong duoc
+  // phu thuoc vao mot ham co the doi qua moi lan ve.
+  const baoBan = useRef(onBusyChange);
 
   // Bia anh dang co thi luon hien, ke ca khi kho tat: truong an coverMedia van gui lai id do de sua ten khong
   // lam mat bia, nen o cuoi phai hien dung cai dang duoc gui - khong duoc de mot tranh ve hien la "dang chon"
@@ -89,11 +92,20 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   });
 
   useEffect(() => {
+    baoBan.current = onBusyChange;
+  }, [onBusyChange]);
+
+  useEffect(() => {
     const held = source;
     const runs = run;
+    const bao = baoBan;
     return () => {
       runs.current += 1;
       if (held.current) releaseSourceImage(held.current);
+      // Go component ra la bo luon viec dang doc hay dang tai (runs.current vua doi, go() cua luot do khong chay nua),
+      // nen o bia khong con ban va bia dang doc cung khong di kem lan gui nua. Khong ha co o day thi khong con ai ha:
+      // form giu nut gui khoa mai, ke ca sau khi mo lai o bia.
+      bao.current(false);
     };
   }, []);
 

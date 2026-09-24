@@ -25,7 +25,8 @@ BEGIN
   JOIN "books" b ON b."id" = m."book_id"
   WHERE b."owner_id" = m."account_id";
   IF n > 0 THEN
-    RAISE EXCEPTION 'to-da-xem: % moc doc cua chinh chu sach', n;
+    RAISE EXCEPTION 'to-da-xem: % moc doc cua chinh chu sach', n
+      USING HINT = 'Xem tung dong bang: SELECT m.account_id, m.book_id, m.position FROM read_marks m JOIN books b ON b.id = m.book_id WHERE b.owner_id = m.account_id; Moi dong la moc doc cua chu sach trong cuon cua chinh ho, mo hinh cu khong bao gio tao ra. Tim cho sinh ra chung truoc; chung thua that thi DELETE FROM read_marks m USING books b WHERE b.id = m.book_id AND b.owner_id = m.account_id; roi chay lai migration.';
   END IF;
 END $$;--> statement-breakpoint
 INSERT INTO "read_sheets" ("account_id", "book_id", "position")

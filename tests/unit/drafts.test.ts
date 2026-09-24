@@ -235,7 +235,7 @@ describe("doc sach va cac to da xem", () => {
   it("readBook tra cac to theo thu tu va cac to nguoi doc da xem", async () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await dang(db, seat1.id, chung, "một", "hai", "ba");
-    await markRead(db, seat2.id, chung, 1, 2);
+    await markRead(db, seat2.id, chung, [1, 2]);
     const v = (await readBook(db, seat2.id, chung))!;
     expect(v.mine).toBe(false);
     expect([v.seen, v.firstUnread]).toEqual([[1, 2], 3]);
@@ -250,26 +250,26 @@ describe("doc sach va cac to da xem", () => {
     expect((await readBook(db, seat1.id, rieng))?.mine).toBe(true);
   });
 
-  it("chi ghi to co that, bo qua gia tri khong hop le va khoang qua rong", async () => {
+  it("chi ghi to co that, bo qua gia tri khong hop le va cum nhieu to hon mot khung", async () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await dang(db, seat1.id, chung, "một", "hai");
-    await markRead(db, seat2.id, chung, 2, 3);
-    await markRead(db, seat2.id, chung, 0, 1);
-    await markRead(db, seat2.id, chung, 1.5, 2);
-    await markRead(db, seat2.id, chung, 1, 3);
+    await markRead(db, seat2.id, chung, [2, 3]);
+    await markRead(db, seat2.id, chung, [0, 1]);
+    await markRead(db, seat2.id, chung, [1.5, 2]);
+    await markRead(db, seat2.id, chung, [1, 2, 3]);
     expect((await readBook(db, seat2.id, chung))?.seen).toEqual([2]);
-    await markRead(db, seat2.id, chung, 1, 2);
+    await markRead(db, seat2.id, chung, [1, 2]);
     const v = (await readBook(db, seat2.id, chung))!;
     expect([v.seen, v.firstUnread]).toEqual([[1, 2], 0]);
   });
 
   it("chu sach khong co dong nao; sach rieng tu cua nguoi kia va sach chua co to thi bo qua", async () => {
     const { db, seat1, seat2, chung, rieng } = await haiCuon();
-    await markRead(db, seat2.id, chung, 1, 1);
+    await markRead(db, seat2.id, chung, [1, 1]);
     await dang(db, seat1.id, rieng, "riêng");
     await dang(db, seat1.id, chung, "một");
-    await markRead(db, seat1.id, chung, 1, 1);
-    await markRead(db, seat2.id, rieng, 1, 1);
+    await markRead(db, seat1.id, chung, [1, 1]);
+    await markRead(db, seat2.id, rieng, [1, 1]);
     const rows = await db.select().from(readSheets);
     expect(rows).toHaveLength(0);
   });

@@ -12,7 +12,7 @@ import type { DocJson, ParagraphNode } from "@/lib/doc/types";
 import { PEAK_COUNT } from "@/lib/media/kinds";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => {}) }));
+vi.mock("@/app/actions/library", () => ({ actionMarkRead: vi.fn(async () => []) }));
 vi.mock("@/app/actions/seal", () => ({ actionAnswer: vi.fn(), actionGiftKey: vi.fn() }));
 
 const ID = "0b6f3c2e-7d1a-4f5b-9c8e-2a4d6f8b0c1e";
