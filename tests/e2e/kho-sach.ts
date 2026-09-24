@@ -154,14 +154,21 @@ export async function dangToThang(bookId: string, ...cacTo: (string | DocJson)[]
   }
 }
 
-/** Gan ma video cho mot cuon trong database e2e (thay cho o Nhac nen cua form sua sach). Cung rao voi dangToThang. */
+/**
+ * Gan ma video cho mot cuon trong database e2e bang o nhac MO DAU cua no (thay cho o Nhac nen cua form sua sach).
+ * Man doc lay nhac tu book_tracks chu khong con tu books.youtube_id, nen ghi cot cu se khong con tac dung gi.
+ * Kiem cuon truoc roi moi ghi: voi insert ... on conflict do update thi so dong luon la 1 khi cuon co that, con khi
+ * cuon khong co that Postgres nem loi khoa ngoai chu khong tra ve 0 dong. Cung rao voi dangToThang.
+ */
 export async function datNhac(bookId: string, youtubeId: string): Promise<void> {
   const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
   try {
     const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
     assertE2eDatabase(ten);
-    const r = await sql`update books set youtube_id = ${youtubeId} where id = ${bookId}`;
-    if (r.count !== 1) throw new Error("datNhac: khong tim thay cuon sach");
+    const [cuon] = await sql`select id from books where id = ${bookId}`;
+    if (!cuon) throw new Error("datNhac: khong tim thay cuon sach");
+    await sql`insert into book_tracks (book_id, round_id, youtube_id) values (${bookId}, null, ${youtubeId})
+      on conflict (book_id) where round_id is null do update set youtube_id = excluded.youtube_id`;
   } catch (e) {
     if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("datNhac:"))) throw e;
     rethrowSafely(e);

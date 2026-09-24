@@ -3,7 +3,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
-import { findOwnBook, findReadableBook } from "@/server/library/books";
+import { findReadableBook, readOwnBook } from "@/server/library/books";
 import { ownRoundExists } from "@/server/library/edit-round";
 import { SO_TRANG } from "@/lib/round";
 import { requireMe } from "./guard";
@@ -24,8 +24,11 @@ async function laTaiTrang(): Promise<boolean> {
   return (await headers()).get("sec-fetch-dest") !== "empty";
 }
 
-/** Cuon cua chinh nguoi dang vao. cache() de cong va trang dung chung mot lan doc trong cung request. */
-export const sachCuaToi = cache((accountId: string, bookId: string) => findOwnBook(db, accountId, bookId));
+/**
+ * Cuon cua chinh nguoi dang vao, kem bia va nhac hien hanh. cache() de cong va trang dung chung mot lan doc trong cung
+ * request.
+ */
+export const sachCuaToi = cache((accountId: string, bookId: string) => readOwnBook(db, accountId, bookId));
 
 /** Man doc: cuon cua minh hoac cuon chia se cua nguoi kia. */
 export async function congDoc(bookId: string): Promise<void> {

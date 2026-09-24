@@ -1,11 +1,19 @@
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
+import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
-import type { BookInput } from "@/lib/book";
+import type { BookInput, CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { attachCover, lockCover } from "@/server/media/cover";
+import { newestCover, newestTrack } from "./timeline";
 
 export type Book = typeof books.$inferSelect;
+
+/**
+ * Book cong ba truong bia va nhac HIEN HANH, ghep tu hai dong thoi gian. Giao dien van dung ba cai ten nay (cover,
+ * coverMediaId, youtubeId) nen khong mot thanh phan nao phai doi khi ba cot cu cua books bien mat.
+ */
+export type BookView = Book & { cover: CoverKey; coverMediaId: string | null; youtubeId: string | null };
 
 /** Ket qua sua sach. "invalid-cover": bia tu tai len khong dung duoc cho cuon nay (xem lockCover). */
 export type BookUpdate = "saved" | "not-found" | "invalid-cover";
@@ -31,6 +39,21 @@ export async function findOwnBook(db: AnyDb, ownerId: string, bookId: string): P
   if (!isUuid(bookId)) return null;
   const [row] = await db.select().from(books).where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)));
   return row ?? null;
+}
+
+/**
+ * Cuon cua chinh ownerId kem bia va nhac hien hanh. Doc trong MOT anh chup (readSnapshot) de dong books, o bia va o
+ * nhac luon den tu cung mot trang thai: mot lan Dang chen vao giua khong the ghep bia cua trang thai nay voi nhac cua
+ * trang thai kia. Cuon khong con o bia nao tra null: moi cuon luon phai co it nhat mot o bia (bat bien cua book_covers),
+ * nen truong hop nay khong bao gio xay ra that, va lang le ve mot bia mac dinh thi la dung mot nguon su that thu hai.
+ */
+export async function readOwnBook(db: AnyDb, ownerId: string, bookId: string): Promise<BookView | null> {
+  return readSnapshot(db, async (tx) => {
+    const book = await findOwnBook(tx, ownerId, bookId);
+    if (!book) return null;
+    const [bia, nhac] = await Promise.all([newestCover(tx, book.id), newestTrack(tx, book.id)]);
+    return bia === null ? null : { ...book, ...bia, youtubeId: nhac };
+  });
 }
 
 /**

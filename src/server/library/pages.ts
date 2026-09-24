@@ -8,12 +8,13 @@ import type { ReaderReply } from "@/lib/round-reply";
 import type { ReaderRound, ReaderSeal, ReaderSheet } from "@/lib/seal/types";
 import { isUuid } from "@/lib/uuid";
 import { closedToPartner, isLockedFor, readerSeals, sealAt, sealsOfBook } from "@/server/seal/seals";
-import { findReadableBook, readableBy, type Book } from "./books";
+import { findReadableBook, readableBy, type BookView } from "./books";
 import { repliesOfBook } from "./round-replies";
 import { roundsOfBook } from "./rounds";
+import { newestCover, newestTrack } from "./timeline";
 
 export type ReaderView = {
-  book: Book; mine: boolean; sheets: ReaderSheet[]; seals: ReaderSeal[]; rounds: ReaderRound[]; replies: ReaderReply[];
+  book: BookView; mine: boolean; sheets: ReaderSheet[]; seals: ReaderSeal[]; rounds: ReaderRound[]; replies: ReaderReply[];
   /** Vi tri cac to nguoi xem da tung thay, tang dan. Chu sach khong co dong nao. */
   seen: number[];
   /**
@@ -44,7 +45,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const book = await findReadableBook(tx, viewerId, bookId);
     if (!book) return null;
     const mine = book.ownerId === viewerId;
-    const [rows, daXem, sealRows, luot, replies] = await Promise.all([
+    const [rows, daXem, sealRows, luot, replies, bia, nhac] = await Promise.all([
       tx
         .select({ position: pages.position, content: pages.content, publishedAt: pages.publishedAt, roundId: pages.roundId })
         .from(pages)
@@ -58,7 +59,13 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
       sealsOfBook(tx, book.id),
       roundsOfBook(tx, book.id),
       book.mode === "chia-se" ? repliesOfBook(tx, book.id) : Promise.resolve<ReaderReply[]>([]),
+      newestCover(tx, book.id),
+      newestTrack(tx, book.id),
     ]);
+    // Bia va nhac chay trong CUNG anh chup voi cac cau tren, nen mot lan Dang chen vao giua khong the ghep bia cua
+    // trang thai nay voi to cua trang thai kia. Cuon khong con o bia nao coi nhu khong ton tai (nhu readOwnBook).
+    if (bia === null) return null;
+    const view: BookView = { ...book, ...bia, youtubeId: nhac };
     const seals = await readerSeals(tx, sealRows, viewerId, mine, now);
     const lockedIds = new Set(seals.filter((s) => s.locked).map((s) => s.id));
     const niemCua = new Map(sealRows.map((s) => [s.roundId, s]));
@@ -87,7 +94,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     // To nho nhat chua thay: man doc mo o day khi duong dan khong kem ?trang (src/lib/reading.ts). Chu sach khong co
     // dong da xem nao nen ra to 1, va startSheet bo qua so nay voi cuon cua chinh minh.
     const firstUnread = rows.find((r) => !coRoi.has(r.position))?.position ?? 0;
-    return { book, mine, sheets, seals, rounds, replies, seen, firstUnread };
+    return { book: view, mine, sheets, seals, rounds, replies, seen, firstUnread };
   });
 }
 
