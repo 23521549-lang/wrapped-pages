@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 import { conTroKhi, dangKemNiemPhong, gioSau, khongLo, luiGioMo, luiMocThu, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -63,8 +63,6 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   });
   const [s] = await niemPhongCua(id);
 
-  // Reader cua nguoi kia gui khung to dang hien sau khi to 1 hien (server action). Doi dung response do, khong doi gio.
-  const daGuiKhung = b.waitForResponse((r) => r.request().method() === "POST" && "next-action" in r.request().headers());
   await b.goto(`/sach/${id}`);
   await expect(b.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   await expect(b.locator(".sach .giay-noi-dung p").first()).toHaveText(HE_LO);
@@ -73,9 +71,9 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await expect(khung.locator(".con-lan")).toHaveText("Còn 5 lần");
   await khongLo(b, BI_MAT, DAI, "quan may", GOI_Y_1, GOI_Y_2);
 
-  // Da mo sach ma to khoa van la trang moi: markRead khong bao gio ghi to nam trong luot con khoa voi nguoi xem.
-  // Doan trich la dong he lo.
-  await daGuiKhung;
+  // Da mo sach ma to khoa van la trang moi: Reader loc cac to con khoa ra khoi khung gui (may chu cung se tu choi
+  // chung), nen khong co lenh ghi nao duoc goi va khong co gi de doi. Doan trich la dong he lo.
+  expect(await toDaXemCua(id)).toEqual([]);
   await b.goto("/ke-sach");
   const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
   const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
@@ -135,9 +133,14 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await b.reload();
   await khongNghiThuc(b);
 
-  // Ke sach sau khi mo: het chip khoa, doan trich la chu that. newCount khong kiem: no phu thuoc moc gui tre 600ms.
+  // Niem phong vua mo ngay tai cho: to 1 khong con bi loc nua, khung dang dung yen tren no duoc gui sau CHO_MS.
+  // Doi dung dong trong read_sheets thay vi doi gio, roi ke sach het trang moi.
+  await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1]);
+
+  // Ke sach sau khi mo: het trang moi, het chip khoa, doan trich la chu that.
   await b.goto("/ke-sach");
-  await expect(b.locator(".ke-dau__phu")).toHaveText(new RegExp("^1 cuốn(, [0-9]+ trang mới)?$"));
+  await expect(b.locator(".ke-dau__phu")).toHaveText("1 cuốn");
+  await expect(the.locator(".dh--moi")).toHaveCount(0);
   await expect(the.locator(".dh--khoa")).toHaveCount(0);
   await expect(ganNhat.locator(".trang-khoa")).toHaveCount(0);
   await expect(ganNhat.locator(".vua-viet__chu")).toContainText(BI_MAT);

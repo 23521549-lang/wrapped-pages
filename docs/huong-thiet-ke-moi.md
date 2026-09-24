@@ -157,10 +157,10 @@ Luật của việc sửa:
 
 - Chỉ chủ sách, chỉ lượt của sách mình. Người kia gọi thẳng action nhận đúng câu "Không tìm thấy lượt này." như với lượt lạ, không có gì được ghi.
 - Lượt có niêm phong còn đóng với người kia (câu đố chưa giải, trao đổi chưa có trang trả lời, hẹn giờ chưa tới giờ) thì chưa sửa được; mở rồi thì sửa được. Dòng hé lộ cắt lúc đăng giữ nguyên.
-- Vị trí tờ chỉ sống ở `pages.position`. Niêm phong và dòng Hoạt động bám lượt (`round_id`), khoảng tờ của chúng tính từ các tờ của lượt, nên sửa lượt không phải dời gì ngoài các tờ phía sau và mốc đã đọc.
+- Vị trí tờ chỉ sống ở `pages.position`. Niêm phong và dòng Hoạt động bám lượt (`round_id`), khoảng tờ của chúng tính từ các tờ của lượt, nên sửa lượt không phải dời gì ngoài các tờ phía sau và các dòng tờ đã xem (`read_sheets`) bám theo vị trí tờ. Lượt ngắn lại thì dòng tờ đã xem của những tờ không còn nữa bị xóa, để chúng không bám nhầm sang tờ của lượt sau khi các tờ đó lùi về.
 - Màn sửa nối các tờ của lượt thành một tài liệu trên trình viết có ngắt trang của màn viết, lưu thì cắt lại bằng đúng bộ đo và bộ xếp trang của màn viết. Dấu `noiTiep` trên mọi khối bị cắt ngang giúp nối lại đúng chỗ, nên chưa sửa gì thì cắt lại ra đúng các tờ cũ.
 - Không tự lưu lên máy chủ: chỉ "Lưu thay đổi" mới gửi. Hai tab sửa cùng một lượt được chặn bằng khóa lạc quan theo mốc phiên bản của lượt; tab giữ mốc cũ nhận "Lượt này vừa được sửa ở nơi khác. Tải lại để xem bản mới nhất.".
-- Lưu nháp, đăng, sửa lượt cùng khóa dòng sách trong giao dịch; mốc đã đọc cũng tính và ghi dưới khóa chia sẻ của dòng sách.
+- Lưu nháp, đăng, sửa lượt cùng khóa dòng sách trong giao dịch; các tờ đã xem (`read_sheets`) cũng đọc và ghi dưới khóa chia sẻ của dòng sách.
 - Media giữ lại được là media đang có trên các tờ của lượt. Media bỏ khỏi lượt bị xóa hẳn ở lần dọn kế tiếp, màn sửa báo trước.
 
 **Lối vào.** Màn sửa sách có mục "Nội dung": mỗi lượt một dòng "Lượt 2 · trang 6 tới 11 · 20.09" và nút viền "Sửa lượt này"; lượt còn niêm phong thay nút bằng chữ "Đang niêm phong" kèm ổ khóa 12px. Dải dưới cuốn sách của màn đọc giữ "Đã sửa lúc ..." (mốc sửa của lượt) cho cả hai người; với chủ sách mỗi tờ có "Sửa trang N" mở màn sửa lượt ngay tại tờ đó, hay dòng "Đang niêm phong, chưa sửa được". Đường dẫn cũ `/sach/[id]/sua-trang/[so]` chuyển 308 sang màn sửa lượt tương ứng.
@@ -182,7 +182,7 @@ Người đọc gửi được đúng một lời hồi đáp cho mỗi lượt 
 
 Khung sách trên Kệ sách luôn lấy đoạn từ lượt đăng mới nhất của cuốn.
 
-- **Người viết chọn.** Bôi đen một câu trong màn viết (hoặc màn sửa lượt) rồi bấm "Chọn làm đoạn trên kệ" trên thanh công cụ. Đoạn đã chọn được tô một vệt xanh nhạt ngay trong trang đang viết. Chọn lại là thay chỗ cũ, mỗi cuốn chỉ một đoạn; bấm lần nữa là bỏ. Dấu chọn nằm trong tài liệu của tờ nên đi theo tờ khi đăng và khi sửa lượt. Màn đọc không vẽ dấu này.
+- **Người viết chọn.** Bôi đen một câu trong màn viết (hoặc màn sửa lượt) rồi bấm "Chọn làm đoạn trên kệ" trên thanh công cụ. Đoạn đã chọn được tô một vệt xanh nhạt ngay trong trang đang viết. Chọn lại là thay chỗ cũ, bấm lần nữa là bỏ; dấu cũ chỉ được gỡ trong tài liệu đang mở, tức trong chính lượt đang viết hay đang sửa, nên mỗi lượt đăng giữ một đoạn của riêng nó và các lượt cũ vẫn giữ dấu của chúng. Kệ sách chỉ đọc lượt mới nhất, nên bấm nút trong lúc sửa một lượt CŨ không đổi gì trên kệ. Dấu chọn nằm trong tài liệu của tờ nên đi theo tờ khi đăng và khi sửa lượt. Màn đọc không vẽ dấu này.
 - **Không chọn gì.** Khung lấy ngẫu nhiên một đoạn có chữ trong chính lượt mới nhất, tất định theo cuốn, người xem và ngày Việt Nam: cùng ngày tải lại vẫn là đoạn đó, sang ngày thì đổi.
 - **Lượt mới nhất còn niêm phong.** Không hiện chữ nào, chỉ dòng hé lộ như trước.
 - **Trang mới.** Bấm khung mở thẳng tới tờ chứa đoạn, và chỉ những tờ thật sự lật qua mới tính là đã đọc; các tờ bị nhảy cóc vẫn là trang mới trên kệ.

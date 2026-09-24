@@ -226,6 +226,9 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
   const hopRef = useRef<HTMLDivElement>(null);
   const doiId = useId();
   const { seal, ready, error, pending } = flow;
+  // O bia dang doc hay dang tai anh len: dang luc nay se ghi lai dung bia CU va bo roi bia vua tai len. Khoa nut Dang
+  // cho toi khi xong, dung nhu nut gui cua form sach (BookForm). "De sau" van bam duoc: do la duong rut lui.
+  const busy = flow.doi?.busy ?? false;
   const cau = cauXacNhan(seal.kind, partnerNickname);
   const loai = luaChon(partnerNickname).find((c) => c.kind === seal.kind);
 
@@ -259,7 +262,7 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
           {/* Loi chung dat ngay tren hai nut. */}
           {error && <p className="luu luu--loi" role="alert">{error}</p>}
           <div className="dang-hoi__nut">
-            <button type="button" className="btn" disabled={pending} onClick={() => flow.publish(hopRef.current)}>Đăng</button>
+            <button type="button" className="btn" disabled={pending || busy} onClick={() => flow.publish(hopRef.current)}>Đăng</button>
             <button type="button" className="btn btn--line" disabled={pending} onClick={onCancel}>Để sau</button>
           </div>
           {flow.doi !== null && (

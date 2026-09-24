@@ -102,23 +102,31 @@ export function Reader({
     const khung = pending.current;
     pending.current = null;
     if (khung === null) return;
-    // Chi khung THAT SU gui di moi duoc ghi nho. Ghi luc vua hien thi to lat nhanh qua (khung bi khung sau de len,
-    // khong bao gio gui) se bi coi la da ghi, quay lai doc that cung khong gui nua.
-    for (let p = khung.first; p <= khung.last; p++) daGui.current.add(p);
-    inflight.current = actionMarkRead(bookId, khung.first, khung.last).catch(() => {});
+    // Chi khung MAY CHU DA NHAN moi duoc ghi nho. Ghi luc vua hien thi to lat nhanh qua (khung bi khung sau de len,
+    // khong bao gio gui) hay lan gui hong (mat mang) se bi coi la da ghi, quay lai doc that cung khong gui nua.
+    // Hong thi im lang voi nguoi doc: mat vai to da xem khong dang mot loi tren man doc, va lan sau van gui lai duoc.
+    inflight.current = actionMarkRead(bookId, khung.first, khung.last).then(
+      () => {
+        for (let p = khung.first; p <= khung.last; p++) daGui.current.add(p);
+      },
+      () => {},
+    );
   }, [bookId]);
 
   const onShow = useCallback(
     (first: number, last: number) => {
       setShown({ first, last });
       if (trackRead) {
-        // Chi to that su hien moi duoc ghi. Khung nao cung da ghi roi thi thoi: lat qua lat lai khong goi lai may chu.
-        let moi = false;
+        // Chi to that su hien VA may chu chiu nhan moi duoc gui: to trong luot con niem phong voi nguoi xem bi markRead
+        // tu choi, nen bo khoi khung gui - de no khong bi nho nham la da ghi, va van duoc gui khi niem phong vua mo ngay
+        // tai cho (looks moi ve, man doc khong gan lai tu dau). Khung nao cung da ghi roi thi thoi: lat qua lat lai
+        // khong goi lai may chu.
+        const mo: number[] = [];
         for (let p = first; p <= last; p++) {
-          if (!daGui.current.has(p)) moi = true;
+          if (looks[p - 1]?.kind !== "khoa") mo.push(p);
         }
-        if (moi) {
-          pending.current = { first, last };
+        if (mo.some((p) => !daGui.current.has(p))) {
+          pending.current = { first: mo[0], last: mo[mo.length - 1] };
           if (timer.current) clearTimeout(timer.current);
           timer.current = setTimeout(flush, CHO_MS);
         }
@@ -126,7 +134,7 @@ export function Reader({
       // Khung dung yen ma khong con to dang go thi thoi: quay lai thi to do hien thang, khong go lai tu dau.
       if (moIndex !== null && (moIndex + 1 < first || moIndex + 1 > last)) stopReveal();
     },
-    [moIndex, stopReveal, setShown, trackRead, flush],
+    [moIndex, stopReveal, setShown, trackRead, flush, looks],
   );
 
   useEffect(

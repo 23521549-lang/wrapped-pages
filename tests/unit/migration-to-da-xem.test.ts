@@ -72,7 +72,7 @@ async function gieoCu(c: PGlite): Promise<void> {
       ('${B3}', '${R3}', 1, '${DOC("y")}'::jsonb, '2026-09-03 00:00:00+00'),
       ('${B3}', '${R3}', 2, '${DOC("z")}'::jsonb, '2026-09-03 00:00:00+00');
     insert into read_marks (account_id, book_id, position) values
-      ('${A2}', '${B1}', 2), ('${A1}', '${B2}', 0), ('${A1}', '${B3}', 9), ('${A1}', '${B1}', 3);
+      ('${A2}', '${B1}', 2), ('${A1}', '${B2}', 0), ('${A1}', '${B3}', 9);
   `);
 }
 
@@ -81,7 +81,7 @@ async function hang<T>(c: PGlite, cau: string): Promise<T[]> {
 }
 
 describe("migration to da xem: moc cu thanh tung to", () => {
-  it("moc p thanh dung cac to 1 toi p co that; moc 0 khong sinh dong; moc vuot to cuoi chi lay to co that; moc cua chinh chu sach khong chuyen", async () => {
+  it("moc p thanh dung cac to 1 toi p co that; moc 0 khong sinh dong; moc vuot to cuoi chi lay to co that", async () => {
     const c = await dbToi0011();
     await gieoCu(c);
     await len0013(c);
@@ -90,6 +90,18 @@ describe("migration to da xem: moc cu thanh tung to", () => {
     expect(rows.map((r) => [r.account_id, r.book_id, r.position])).toEqual([
       [A1, B3, 1], [A1, B3, 2], [A2, B1, 1], [A2, B1, 2],
     ]);
+    await c.close();
+  });
+
+  it("con moc doc cua chinh chu sach thi migration dung han, khong am tham bo qua", async () => {
+    const c = await dbToi0011();
+    await gieoCu(c);
+    // Gia thiet cua mo hinh cu: chu sach khong bao gio co moc trong cuon cua chinh minh. Con mot dong nhu vay nghia la
+    // gia thiet do sai o that, va 0013 se xoa no di ma khong ai biet: ban trien khai phai dung lai de xem lai.
+    await c.exec(`insert into read_marks (account_id, book_id, position) values ('${A1}', '${B1}', 3);`);
+    await expect(len0013(c)).rejects.toThrow(/moc doc cua chinh chu sach/);
+    // Giao dich huy: bang moc cu van con nguyen, khong mat du lieu nao.
+    expect(await hang(c, "select count(*)::int as n from read_marks")).toEqual([{ n: 4 }]);
     await c.close();
   });
 

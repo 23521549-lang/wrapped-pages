@@ -130,6 +130,41 @@ describe("Reader: ghi to da xem", () => {
     expect(danhDau).not.toHaveBeenCalled();
   });
 
+  it("to cua luot con niem phong khong duoc gui; mo ngay tai cho thi khung ke tiep gui no", () => {
+    // May chu tu choi moi to nam trong luot con niem phong voi nguoi xem (markRead), nen trinh duyet khong gui.
+    const khoa: ReaderProps["looks"] = [{ kind: "khoa", teaser: null }, { kind: "thuong" }, { kind: "thuong" }];
+    const { rerender } = render(<Reader {...props({ looks: khoa })} />);
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    expect(danhDau).not.toHaveBeenCalled();
+    // Mo niem phong bang chuyen trang mem hay router.refresh(): Reader ve lai voi looks moi, KHONG gan lai tu dau.
+    rerender(<Reader {...props()} />);
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+  });
+
+  it("lenh ghi hong thi to do khong bi coi la da ghi: quay lai van gui lai", async () => {
+    danhDau.mockRejectedValueOnce(new Error("mat mang"));
+    const { container } = render(<Reader {...props()} />);
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    expect(danhDau.mock.calls).toEqual([["b1", 1, 1]]);
+    await act(async () => {});
+    lat(container, "Trang sau");
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    lat(container, "Trang trước");
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS);
+    });
+    expect(danhDau.mock.calls).toEqual([["b1", 1, 1], ["b1", 2, 2], ["b1", 1, 1]]);
+  });
+
   it("roi man doc luc khung con dang hen: gui ngay roi moi lam moi trang vua toi", async () => {
     const { unmount } = render(<Reader {...props()} />);
     expect(danhDau).not.toHaveBeenCalled();
