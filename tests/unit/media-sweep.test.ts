@@ -100,6 +100,11 @@ describe("saveUpload", () => {
   });
 });
 
+/*
+ * Spec 2026-09-24 muc 6.5: "dong kind = 'bia' co book_id khac null KHONG BAO GIO bi don; no la tai san cua cuon. Chi
+ * bia CHO GAN (book_id null) moi bi don sau MEDIA_ORPHAN_MS nhu cu." Kho anh bia cua mot cuon lon dan mai, va phan lon
+ * anh trong kho khong nam trong o nao cua dong thoi gian, nen luat cu se xoa het chung sau dung mot ngay.
+ */
 describe("sweepMedia", () => {
   it("chan tan suat bang moc chung: trong MEDIA_SWEEP_INTERVAL_MS thi null va khong xoa gi, dung moc thi don", async () => {
     const s = await haiCuon();
@@ -126,22 +131,45 @@ describe("sweepMedia", () => {
     expect(await s.db.select().from(mediaObjects)).toEqual([]);
   });
 
-  it("media con duoc tham chieu thi khong bao gio bi don: trong nhap, trong to da dang, la bia cua sach", async () => {
+  it("anh con duoc tham chieu thi khong bao gio bi don: trong nhap, trong to da dang", async () => {
     const s = await haiCuon();
     const store = new MemoryStore();
     const trongNhap = await taiAnh(s.db, store, s.seat1.id, s.chung);
     expect(await saveDraft(s.db, s.seat1.id, s.chung, khoiAnh(trongNhap.id), 1)).toBeInstanceOf(Date);
     const daDang = await taiAnh(s.db, store, s.seat1.id, s.rieng);
     expect(await publishDraft(s.db, s.seat1.id, s.rieng, [khoiAnh(daDang.id)])).not.toBeNull();
-    const bia = await taiBia(s.db, store, s.seat1.id, s.chung);
-    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "nui-xa", coverMediaId: bia.id })).toBe("saved");
-    // Neo TAM: luat don rac con hoi cot bia cu cua books, trong khi duong ghi bia that su chi con la o cua dong thoi
-    // gian. Xoa dong nay ngay khi luat don rac doc book_covers.
-    await s.db.update(books).set({ coverMediaId: bia.id }).where(eq(books.id, s.chung));
     const rac = await taiAnh(s.db, store, s.seat1.id, s.chung);
     expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 1, objects: 1 });
-    for (const giu of [trongNhap, daDang, bia]) expect(await conLai(s.db, store, giu)).toEqual([true, true]);
+    for (const giu of [trongNhap, daDang]) expect(await conLai(s.db, store, giu)).toEqual([true, true]);
     expect(await conLai(s.db, store, rac)).toEqual([false, false]);
+  });
+
+  it("bia da thuoc mot cuon khong bao gio bi don, du khong o nao chon no", async () => {
+    const s = await haiCuon();
+    const store = new MemoryStore();
+    const trongKho = await taiBia(s.db, store, s.seat1.id, s.chung);
+    expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 0, objects: 0 });
+    expect(await conLai(s.db, store, trongKho)).toEqual([true, true]);
+  });
+
+  it("bia bi bo khoi o van o lai trong kho de chon lai", async () => {
+    const s = await haiCuon();
+    const store = new MemoryStore();
+    const bia = await taiBia(s.db, store, s.seat1.id, s.chung);
+    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "nui-xa", coverMediaId: bia.id })).toBe("saved");
+    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "nui-xa", coverMediaId: null })).toBe("saved");
+    expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 0, objects: 0 });
+    expect(await conLai(s.db, store, bia)).toEqual([true, true]);
+  });
+
+  it("muoi anh bia tai len mot luot, chi mot anh duoc chon: ca muoi con nguyen sau khi don", async () => {
+    const s = await haiCuon();
+    const store = new MemoryStore();
+    const kho: Tep[] = [];
+    for (let i = 0; i < 10; i += 1) kho.push(await taiBia(s.db, store, s.seat1.id, s.chung));
+    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "nui-xa", coverMediaId: kho[0].id })).toBe("saved");
+    expect(await sweepMedia(s.db, store, sau(QUA_HAN))).toEqual({ media: 0, objects: 0 });
+    for (const anh of kho) expect(await conLai(s.db, store, anh)).toEqual([true, true]);
   });
 
   it("bia cho gan: con han thi giu, qua han thi bi don", async () => {

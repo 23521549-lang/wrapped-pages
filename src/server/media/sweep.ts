@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, lt, lte, notExists, sql, type SQLWrapper } from "drizzle-orm";
-import { books, drafts, media, mediaObjects, mediaSweeps, pages } from "@/server/db/schema";
+import { drafts, media, mediaObjects, mediaSweeps, pages } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { MediaStore } from "./store";
 
@@ -32,6 +32,14 @@ async function claimSweep(db: AnyDb, now: Date): Promise<boolean> {
   return rows.length === 1;
 }
 
+/**
+ * Bia da thuoc mot cuon la TAI SAN cua cuon do, khong bao gio bi don: kho anh bia cua mot cuon lon dan mai va phan lon
+ * anh trong kho khong nam trong o nao cua dong thoi gian, nen "khong ai tham chieu" khong con nghia la rac. Luat doc
+ * kind va book_id cua chinh dong media, KHONG hoi "co o nao dang chon anh nay khong": anh bi bo khoi moi o van phai o
+ * lai kho de chon lai. Bia CHO GAN (book_id null, tai o trang Sach moi roi bo do) van bi don sau MEDIA_ORPHAN_MS nhu cu.
+ */
+const BIA_CUA_SACH = sql`${media.kind} = 'bia' and ${media.bookId} is not null`;
+
 /** Noi dung tai lieu co mot khoi cap cao nhat mang id cua dong media dang xet (cung jsonpath voi bindMedia). */
 function mentionsMedia(content: SQLWrapper) {
   return sql`jsonb_path_exists(${content}, '$.content[*] ? (@.attrs.id == $id)', jsonb_build_object('id', ${media.id}))`;
@@ -39,8 +47,8 @@ function mentionsMedia(content: SQLWrapper) {
 
 /**
  * Don rac media. Chan tan suat bang moc trong database: null khi lan don truoc chua qua MEDIA_SWEEP_INTERVAL_MS.
- * 1. Xoa dong media tao truoc now - MEDIA_ORPHAN_MS ma khong bia sach, nhap hay to da dang nao cua cuon tham chieu. Bia
- *    cho gan qua han (chua co sach) nam trong so nay.
+ * 1. Xoa dong media tao truoc now - MEDIA_ORPHAN_MS ma khong phai bia cua mot cuon, va khong nhap hay to da dang nao
+ *    cua cuon tham chieu. Bia cho gan qua han (chua co sach) nam trong so nay; bia da thuoc mot cuon thi khong.
  * 2. Xoa khoi kho toi da MEDIA_SWEEP_BATCH object ghi trong so cai media_objects qua han ma khong con dong media: object
  *    vua mat dong o buoc 1, object cua sach da xoa (dong media mat theo cascade), object put xong ma ghi dong hong. Xoa
  *    object truoc, xoa so cai sau, nen hong giua chung thi lan sau xoa lai (remove bo qua key khong con).
@@ -53,7 +61,7 @@ export async function sweepMedia(db: AnyDb, store: MediaStore, now: Date): Promi
     .delete(media)
     .where(and(
       lt(media.createdAt, cutoff),
-      notExists(db.select({ id: books.id }).from(books).where(eq(books.coverMediaId, media.id))),
+      sql`not (${BIA_CUA_SACH})`,
       notExists(db.select({ bookId: drafts.bookId }).from(drafts).where(and(eq(drafts.bookId, media.bookId), mentionsMedia(drafts.content)))),
       notExists(db.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, media.bookId), mentionsMedia(pages.content)))),
     ))
