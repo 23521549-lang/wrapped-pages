@@ -136,9 +136,14 @@ export function Reader({
         for (let p = first; p <= last; p++) {
           if (khoaKey[p - 1] !== "1") mo.push(p);
         }
+        // Mot khung moi hien ra la da ROI khung truoc: huy lenh ghi con dang hen cua khung do truoc khi hen lenh moi,
+        // ke ca khi khung moi khong co gi de gui (moi to cua no deu khoa, hay deu da ghi). Khong huy thi dong ho cua
+        // khung cu chay tiep tren khung moi, va mot khung nguoi doc chi luot qua van bi ghi la da doc.
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = null;
+        pending.current = null;
         if (mo.some((p) => !daGui.current.has(p))) {
           pending.current = mo;
-          if (timer.current) clearTimeout(timer.current);
           timer.current = setTimeout(flush, CHO_MS);
         }
       }

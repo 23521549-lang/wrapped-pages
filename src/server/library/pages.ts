@@ -1,4 +1,4 @@
-import { and, asc, count, eq, max } from "drizzle-orm";
+import { and, asc, count, eq, inArray, max } from "drizzle-orm";
 import { books, pages, readSheets } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -95,9 +95,9 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
  * Ghi lai cac to nguoi xem VUA THAY: dung cac vi tri cua khung sach dang dung yen, khong phai mot khoang. Chi to that
  * su hien moi duoc ghi, nen mo man doc thang toi mot to xa khong bien cac to bi nhay coc thanh da doc; va mot khung
  * co to khoa nam giua khong con phai gui ca lo bao trum to do.
- * Nhieu hon MAX_SHOWN_SHEETS vi tri thi bi tu choi: day la diem cuoi cong khai, khong duoc dung de danh dau ca cuon
- * la da doc. To vuot to cuoi bi bo; to nam trong luot con niem phong voi nguoi xem khong bao gio duoc ghi, nen no van
- * la trang moi cho toi khi mo ra va lat that.
+ * Nhieu hon MAX_SHOWN_SHEETS vi tri khac nhau (dem sau khi bo trung) thi bi tu choi: day la diem cuoi cong khai,
+ * khong duoc dung de danh dau ca cuon la da doc. To vuot to cuoi bi bo; to nam trong luot con niem phong voi nguoi xem
+ * khong bao gio duoc ghi, nen no van la trang moi cho toi khi mo ra va lat that.
  * Chu sach khong co dong nao; cuon khong duoc doc hoac chua co to nao thi bo qua.
  * Tra ve dung cac vi tri nam trong bang sau lan goi nay, tang dan. Danh sach gui len bi LOC BOT im lang chu khong bi
  * tu choi ca cum, nen nguoi goi chi duoc nho nhung vi tri co trong danh sach tra ve.
@@ -133,10 +133,21 @@ export async function markRead(
     // Moi duong tra ve deu nam truoc lenh ghi duy nhat o duoi, va truoc do chi co lenh doc.
     if (rows.length === 0) return [];
     // Khong dung RETURNING: onConflictDoNothing khong tra lai dong da co san, ma dong da co san van la dong DA GHI -
-    // bo sot chung se lam man doc gui lai mai mot to no ghi xong tu lau. Giao dich nay commit duoc thi moi vi tri
-    // trong rows deu nam trong bang, du la vua chen hay da co tu truoc.
+    // bo sot chung se lam man doc gui lai mai mot to no ghi xong tu lau. Cung khong duoc tra thang rows: lenh chen
+    // gap mot tuple DANG CHEN cua giao dich khac thi coi la dung do va bo qua ngay chu khong cho, nen giao dich kia
+    // quay lui la vi tri do chang nam trong bang ma van bi bao la da ghi. Doc lai trong CHINH giao dich nay: thay
+    // dong vua chen cua minh va cac dong da commit, khong thay dong chua commit cua ai khac.
     await tx.insert(readSheets).values(rows).onConflictDoNothing();
-    return rows.map((r) => r.position);
+    const daGhi = await tx
+      .select({ position: readSheets.position })
+      .from(readSheets)
+      .where(and(
+        eq(readSheets.accountId, viewerId),
+        eq(readSheets.bookId, book.id),
+        inArray(readSheets.position, rows.map((r) => r.position)),
+      ))
+      .orderBy(asc(readSheets.position));
+    return daGhi.map((r) => r.position);
   });
 }
 

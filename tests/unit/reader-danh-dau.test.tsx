@@ -202,6 +202,24 @@ describe("Reader: ghi to da xem", () => {
     expect(danhDau.mock.calls).toEqual([["b1", [1]], ["b1", [2]], ["b1", [1]]]);
   });
 
+  it("lat sang mot khung toan to khoa: lenh ghi dang hen cua khung vua roi bi huy", () => {
+    // Hien mot khung moi la ROI khung cu, ke ca khi khung moi khong co gi de gui (moi to cua no deu khoa). Khong huy
+    // thi dong ho cua khung cu van chay het tren khung moi, va mot khung chi luot qua 300ms bi ghi la da doc.
+    const khoa: ReaderProps["looks"] = [{ kind: "thuong" }, { kind: "khoa", teaser: null }, { kind: "thuong" }];
+    const { container, unmount } = render(<Reader {...props({ looks: khoa })} />);
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    lat(container, "Trang sau");
+    act(() => {
+      vi.advanceTimersByTime(CHO_MS * 2);
+    });
+    expect(danhDau).not.toHaveBeenCalled();
+    // Roi man doc cung khong con gi de gui: khung to 1 da bi bo lai tu luc lat.
+    unmount();
+    expect(danhDau).not.toHaveBeenCalled();
+  });
+
   it("roi man doc luc khung con dang hen: gui ngay roi moi lam moi trang vua toi", async () => {
     const { unmount } = render(<Reader {...props()} />);
     expect(danhDau).not.toHaveBeenCalled();

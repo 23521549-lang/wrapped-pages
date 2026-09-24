@@ -5,8 +5,9 @@
 export type FlipMode = "mot" | "doi";
 
 /**
- * So to nhieu nhat mot khung cua sach lat hien cung luc (che do "doi" mo hai trang ghep). markRead tu choi khoang rong
- * hon con so nay: mot khoang rong hon khong the la mot khung nguoi doc that su nhin thay.
+ * So to nhieu nhat mot khung cua sach lat hien cung luc (che do "doi" mo hai trang ghep). markRead tu choi lenh goi
+ * mang nhieu hon tung nay VI TRI KHAC NHAU (dem sau khi bo trung): mot khung nguoi doc that su nhin thay khong bao gio
+ * co nhieu to hon the. Do rong cua khoang thi khong bi chan - hai to cach xa nhau van la hai vi tri.
  */
 export const MAX_SHOWN_SHEETS = 2;
 

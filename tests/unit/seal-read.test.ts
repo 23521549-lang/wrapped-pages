@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { readSheets, sealAttempts, sealReplies, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
+import type { AnyDb } from "@/server/db/types";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
 import { listShelf } from "@/server/library/shelf";
@@ -38,6 +39,19 @@ async function dangTo(s: Bo, seal: SealInput | null, ...docs: DocJson[]) {
   if (!r || r === "invalid-cover") throw new Error("khong dang duoc");
   const rows = await sealsOfBook(s.db, s.chung);
   return rows.find((x) => x.firstPosition === r.firstPosition)?.id ?? null;
+}
+
+/**
+ * Cung database do, nhung MOI lenh chen deu khong ghi gi - dung nhu Postgres bo qua mot tuple dang cho cua giao dich
+ * khac roi giao dich do quay lui. Dung de soi markRead tra ve cai gi khi lenh chen im lang khong chen duoc.
+ */
+function boChen(db: TestDb): AnyDb {
+  const chen = () => ({ values: () => ({ onConflictDoNothing: () => Promise.resolve() }) });
+  const bocTx = (tx: AnyDb): AnyDb => ({
+    select: (cot?: unknown) => (tx as unknown as { select: (c?: unknown) => unknown }).select(cot),
+    insert: chen,
+  }) as unknown as AnyDb;
+  return { transaction: (fn: (tx: AnyDb) => Promise<unknown>) => db.transaction((tx) => fn(bocTx(tx))) } as unknown as AnyDb;
 }
 
 /** Cac to seat2 da xem tren cuon chung, tang dan. */
@@ -233,6 +247,22 @@ describe("markRead khong ghi to dang khoa", () => {
     expect(await markRead(s.db, s.seat2.id, s.chung, [], NOW)).toEqual([]);
     expect(await markRead(s.db, s.seat1.id, s.chung, [1], NOW)).toEqual([]);
     expect(await mocCua(s)).toEqual([1]);
+  });
+
+  it("tra ve cac vi tri DOC LAI DUOC trong bang, khong phai cac vi tri dinh chen", async () => {
+    const s = await haiCuon();
+    await dang(s.db, s.seat1.id, s.chung, "mot", "hai", "ba", "bon", "nam");
+    // MAX_SHOWN_SHEETS chan SO LUONG vi tri khac nhau, khong chan do rong cua khoang: hai to cach xa nhau van vao.
+    expect(await markRead(s.db, s.seat2.id, s.chung, [1, 5], NOW)).toEqual([1, 5]);
+    const s2 = await haiCuon();
+    await dang(s2.db, s2.seat1.id, s2.chung, "mot", "hai");
+    // Lenh chen khong doi mot tuple DANG CHEN cua giao dich khac: no coi do la dung do va bo qua ngay, giao dich kia
+    // quay lui thi khong con dong nao. boChen lam dung the - moi lenh doc chay that, rieng lenh chen khong ghi gi.
+    expect(await markRead(boChen(s2.db), s2.seat2.id, s2.chung, [1, 2], NOW)).toEqual([]);
+    expect(await mocCua(s2)).toEqual([]);
+    // Dong da commit tu truoc van la dong DA GHI, nen van duoc tra ve du lenh chen khong lam gi.
+    await s2.db.insert(readSheets).values({ accountId: s2.seat2.id, bookId: s2.chung, position: 2 });
+    expect(await markRead(boChen(s2.db), s2.seat2.id, s2.chung, [1, 2], NOW)).toEqual([2]);
   });
 
   it("vi tri vuot to cuoi bi bo, ghi lai cung khong sinh dong thua", async () => {
