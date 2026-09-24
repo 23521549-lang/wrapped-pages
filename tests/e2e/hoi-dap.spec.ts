@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { normalizeReplyBody } from "@/lib/round-reply";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong } from "./niem-phong";
 import { BE_RONG, BE_RONG_CHAM } from "./vung-bam";
 import { giaYoutube } from "./youtube-gia";
@@ -83,6 +83,11 @@ test("nguoi doc gui loi hoi dap sau khi hoi lai; bam doi chi gui mot loi; nguoi 
   const caption = khung(b).locator("figcaption");
   await expect(caption).toHaveText(/^Bạn gửi hôm nay, [0-9]{2}:[0-9]{2}$/);
   await expect(khung(b).locator(".hoi-dap__loi")).toBeFocused();
+
+  // To 1 va 2 chi thanh "da thay" khi khung dung yen tren chung du CHO_MS (600ms) cua Reader, va lan ghi do di qua may
+  // chu. Doi DUNG DONG trong read_sheets thay vi doi gio: ca doan tren chay het trong duoi 600ms tren may nhanh (tren
+  // CI la 565ms tu luc mo man doc toi luc tai lai), nen khong doi thi lan tai lai duoi day van mo o to 1.
+  await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1, 2]);
 
   // Tai lai khong kem ?trang: man doc mo o to nho nhat chua thay (to 3, luot hai), nen khung la o chu con trong cua luot do.
   await b.reload();
