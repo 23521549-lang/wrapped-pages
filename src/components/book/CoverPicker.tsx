@@ -225,8 +225,14 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
             <CoverArt cover={c} />
           </label>
         ))}
+        {/*
+         * Hai nhanh nay cung mot vi tri va deu ve mot the <input>, nen khong co key rieng thi React dung lai CHINH
+         * nut DOM cu: o chon tep (type=file, khong value, khong kiem soat) bien thanh o radio (co value va checked,
+         * co kiem soat). React canh bao "changing an uncontrolled input to be controlled", va nut DOM con giu lai
+         * tep da chon cua lan truoc. Key khac nhau buoc React go nhanh cu ra roi dung nhanh moi.
+         */}
         {showPhoto ? (
-          <label className={`swatch bia--${value.cover}`}>
+          <label key="anh-da-chon" className={`swatch bia--${value.cover}`}>
             <input
               ref={photoRef}
               type="radio"
@@ -242,7 +248,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
           </label>
         ) : (
           mediaEnabled && (
-            <label className="swatch swatch--anh">
+            <label key="chon-tep" className="swatch swatch--anh">
               <input
                 ref={fileRef}
                 type="file"

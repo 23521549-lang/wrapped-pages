@@ -282,6 +282,24 @@ describe("BookForm bia tu tai len: tai len", () => {
     expect([gui.getAll("cover"), gui.get("coverMedia")]).toEqual([["nui-xa"], BIA]);
   });
 
+  it("o chon tep doi thanh o radio Anh cua ban: React dung nut DOM moi, khong bien o khong kiem soat thanh co kiem soat", async () => {
+    const than = vi.spyOn(console, "error").mockImplementation(() => {});
+    const xong = taiTreo();
+    formMoi();
+    // Hai nhanh cung mot vi tri deu ve mot the <input>: khong co key rieng thi React dung lai CHINH nut DOM nay,
+    // bien mot o khong kiem soat (type=file, khong value) thanh o co kiem soat (type=radio, co value va checked).
+    const tepCu = oTep();
+    await chon(tepCu);
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(1));
+    await xong({ id: BIA, w: 1200, h: 720 });
+
+    expect(oAnh()).not.toBe(tepCu);
+    const than2 = than.mock.calls.map((c) => String(c[0])).filter((m) => m.includes("controlled"));
+    than.mockRestore();
+    expect(than2).toEqual([]);
+  });
+
   it("trinh duyet khong ma hoa duoc WebP (tra PNG): gui JPEG", async () => {
     khongWebp = true;
     formMoi();
