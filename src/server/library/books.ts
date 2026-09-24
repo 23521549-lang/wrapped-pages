@@ -1,5 +1,5 @@
 import { and, eq, sql, type SQL } from "drizzle-orm";
-import { books } from "@/server/db/schema";
+import { bookCovers, books, bookTracks } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookInput } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
@@ -50,6 +50,12 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput): 
     if (coverMediaId !== null && !(await lockCover(tx, ownerId, null, coverMediaId))) return null;
     const [row] = await tx.insert(books).values({ ownerId, ...input }).returning({ id: books.id });
     if (coverMediaId !== null) await attachCover(tx, row.id, coverMediaId);
+    // O MO DAU cua hai dong thoi gian, chen ngay trong giao dich tao sach: cuon vua tao chua dang luot nao van dung tren
+    // ke va van phai co bia de ve. Day la lop dau cua bat bien "moi cuon luon con it nhat mot o bia".
+    await tx.insert(bookCovers).values({ bookId: row.id, roundId: null, cover: input.cover, coverMediaId });
+    if (input.youtubeId !== null) {
+      await tx.insert(bookTracks).values({ bookId: row.id, roundId: null, youtubeId: input.youtubeId });
+    }
     return row.id;
   });
 }

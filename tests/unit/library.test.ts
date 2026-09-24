@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { dang, haiCuon } from "../helpers/library";
-import { books } from "@/server/db/schema";
+import { seedHai } from "../helpers/seed";
+import { bookCovers, books, bookTracks, media } from "@/server/db/schema";
 import { createBook, findOwnBook, findReadableBook, updateBook } from "@/server/library/books";
 import { listShelf } from "@/server/library/shelf";
 import { markRead } from "@/server/library/pages";
+import { recordUpload } from "@/server/media/access";
 import { isUuid } from "@/lib/uuid";
 
 describe("isUuid", () => {
@@ -108,5 +111,39 @@ describe("ke sach", () => {
       // Doan trich la to co chu chon theo ngay (spec 2026-09-22 muc 7), khong con la to cuoi.
       pageCount: 0, newCount: 0, excerptPosition: 0, excerptLocked: false, lastPublishedAt: null, excerpt: null,
     });
+  });
+});
+
+describe("createBook dung o mo dau", () => {
+  it("cuon moi co dung mot o bia mo dau mang tranh da chon, va khong co o nhac khi khong nhap nhac", async () => {
+    const { db, seat1 } = await seedHai();
+    const id = await createBook(db, seat1.id, { title: "Chuyện chưa kể", mode: "chia-se", cover: "hoa-dao", youtubeId: null, coverMediaId: null });
+    expect(await db.select({ b: bookCovers.bookId, r: bookCovers.roundId, c: bookCovers.cover, m: bookCovers.coverMediaId }).from(bookCovers))
+      .toEqual([{ b: id, r: null, c: "hoa-dao", m: null }]);
+    expect(await db.select().from(bookTracks)).toEqual([]);
+  });
+
+  it("nhap nhac luc tao sach thi co them mot o nhac mo dau", async () => {
+    const { db, seat1 } = await seedHai();
+    const id = await createBook(db, seat1.id, { title: "Có nhạc", mode: "chia-se", cover: "nui-xa", youtubeId: "5qap5aO4i9A", coverMediaId: null });
+    expect(await db.select({ b: bookTracks.bookId, r: bookTracks.roundId, y: bookTracks.youtubeId }).from(bookTracks))
+      .toEqual([{ b: id, r: null, y: "5qap5aO4i9A" }]);
+  });
+
+  it("bia anh khong dung duoc: khong tao cuon nao, va khong o nao duoc ghi", async () => {
+    const { db, seat1 } = await seedHai();
+    expect(await createBook(db, seat1.id, { title: "Hỏng", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: randomUUID() })).toBeNull();
+    expect(await db.select().from(books)).toEqual([]);
+    expect(await db.select().from(bookCovers)).toEqual([]);
+    expect(await db.select().from(bookTracks)).toEqual([]);
+  });
+
+  it("bia anh dung duoc: o mo dau mang id anh do va anh duoc gan vao cuon", async () => {
+    const { db, seat1 } = await seedHai();
+    const bia = randomUUID();
+    expect(await recordUpload(db, { id: bia, ownerId: seat1.id, bookId: null, kind: "bia", mime: "image/webp", bytes: 1024, width: 1200, height: 720 })).toBe(true);
+    const id = await createBook(db, seat1.id, { title: "Có bìa ảnh", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: bia });
+    expect(await db.select({ m: bookCovers.coverMediaId }).from(bookCovers)).toEqual([{ m: bia }]);
+    expect((await db.select({ b: media.bookId }).from(media)).map((r) => r.b)).toEqual([id]);
   });
 });
