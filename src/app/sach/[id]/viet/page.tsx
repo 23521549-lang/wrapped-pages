@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { db } from "@/server/db";
 import { readDraft } from "@/server/library/drafts";
-import { bookHasPages } from "@/server/library/pages";
 import { getMediaStore } from "@/server/media/get-store";
 import { sachCuaToi } from "@/server/web/cong";
 import { requireMe } from "@/server/web/guard";
@@ -16,10 +15,9 @@ export default async function VietSach({ params }: { params: Promise<{ id: strin
   await connection();
   const [me, { id }] = await Promise.all([requireMe(), params]);
   // readDraft tu kiem chu sach, nen doc song song voi cuon ma khong doc duoc nhap cua ai khac.
-  const [book, draft, coTo] = await Promise.all([
+  const [book, draft] = await Promise.all([
     sachCuaToi(me.accountId, id),
     readDraft(db, me.accountId, id),
-    bookHasPages(db, id),
   ]);
   if (!book) notFound();
   return (
@@ -33,7 +31,6 @@ export default async function VietSach({ params }: { params: Promise<{ id: strin
         initialSavedAt={draft ? draft.updatedAt.toISOString() : null}
         author={me.nickname}
         mediaEnabled={getMediaStore() !== null}
-        bookNow={coTo ? { title: book.title, cover: book.cover, youtubeId: book.youtubeId, coverMediaId: book.coverMediaId } : null}
       />
     </>
   );

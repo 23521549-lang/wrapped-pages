@@ -42,7 +42,7 @@ function moHop(partnerNickname: string | null) {
     beforePublish: vi.fn(async () => {}),
     afterFail: vi.fn(),
   };
-  render(<Khung bookId="b" partnerNickname={partnerNickname} bookNow={null} mediaEnabled={false} {...p} />);
+  render(<Khung bookId="b" partnerNickname={partnerNickname} {...p} />);
   fireEvent.click(screen.getByRole("button", { name: "Đăng trang" }));
   return p;
 }
@@ -100,7 +100,7 @@ describe("PublishBar kem niem phong", () => {
     fireEvent.change(o("Câu hỏi"), { target: { value: "Hôm đó em nghĩ gì?" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
-    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" }, null);
+    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" });
     expect(p.beforePublish).toHaveBeenCalledTimes(1);
     expect(p.beforePublish.mock.invocationCallOrder[0]).toBeLessThan(actionPublish.mock.invocationCallOrder[0]);
     expect(p.prepare).toHaveBeenCalledTimes(2);
@@ -215,6 +215,6 @@ describe("PublishBar kem niem phong", () => {
     expect(cauXacNhan()).toBe("Đăng 2 trang vào Chuyện chưa kể, Linh đọc được ngay.");
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
-    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null, null);
+    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null);
   });
 });

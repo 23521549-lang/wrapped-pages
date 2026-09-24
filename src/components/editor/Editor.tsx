@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import { actionSaveDraft } from "@/app/actions/library";
-import type { BookNow } from "@/components/book/BookEditFields";
 import { charCountLabel } from "@/lib/doc/counter";
 import { toPlainJson } from "@/lib/doc/plain";
 import type { DocJson } from "@/lib/doc/types";
@@ -34,15 +33,13 @@ export type EditorProps = {
   author: string;
   /** Kho media dang bat. Tat thi Them anh va Ghi am mo di, van Tab toi duoc, kem mot cau ghi chu. */
   mediaEnabled: boolean;
-  /** Gia tri hien tai cua cuon cho muc "Doi bia, ten, nhac" o buoc dang; null la cuon chua co to nao. */
-  bookNow?: BookNow;
 };
 
 type Snapshot = { doc: unknown; sheets: number };
 
 const KHOA_TAP_TRUNG = "mqce-tap-trung";
 
-export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initialSavedAt, author, mediaEnabled, bookNow = null }: EditorProps) {
+export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initialSavedAt, author, mediaEnabled }: EditorProps) {
   const [status, setStatus] = useState<SaveStatus | null>(
     initialSavedAt ? { kind: "da-luu", at: initialSavedAt } : null,
   );
@@ -106,8 +103,6 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
   const dang = usePublish({
     bookId,
     partnerNickname,
-    bookNow,
-    mediaEnabled,
     prepare,
     beforePublish,
     afterFail: () => {

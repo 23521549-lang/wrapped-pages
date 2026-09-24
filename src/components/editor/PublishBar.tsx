@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition, type Ref } from "react";
+import { useEffect, useRef, useState, useTransition, type Ref } from "react";
 import { flushSync } from "react-dom";
 import { unstable_rethrow } from "next/navigation";
 import { actionPublish } from "@/app/actions/library";
-import { BookEditFields, useBookEdit, type BookNow } from "@/components/book/BookEditFields";
-import { parseBookEdit } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
 import { parseSealInput } from "@/lib/seal/input";
 import { luaChon, SealFields, SealKinds } from "./SealPicker";
@@ -14,10 +12,6 @@ import { blankAnswerIds, emptySeal, localInputValue, sealPayload, type SealChoic
 export type PublishDeps = {
   bookId: string;
   partnerNickname: string | null;
-  /** Gia tri hien tai cua cuon cho muc "Doi bia, ten, nhac"; null la cuon chua co to nao (khong co muc do). */
-  bookNow: BookNow;
-  /** Kho media dang bat: tat thi khong tai bia moi len duoc, bia anh cu van hien. */
-  mediaEnabled: boolean;
   /** Do va xep trang lan cuoi, cat tai lieu thanh cac to (da bo to trong o cuoi). */
   prepare: () => { sheets: DocJson[] } | { error: string };
   /** Khoa vung soan thao, luu nhap lan cuoi va tat hen gio tu luu. */
@@ -56,7 +50,7 @@ export function cauXacNhan(kind: SealChoice, partnerNickname: string | null): { 
  * chon niem phong; so to tinh lai qua refresh() moi lan xep trang, va lop an toan thuc su van la prepare() chay
  * lai sau beforePublish() trong publish().
  */
-export function usePublish({ bookId, partnerNickname, bookNow, mediaEnabled, prepare, beforePublish, afterFail }: PublishDeps) {
+export function usePublish({ bookId, partnerNickname, prepare, beforePublish, afterFail }: PublishDeps) {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState<SanSang>({ count: 0 });
   const [seal, setSeal] = useState<SealDraft>(emptySeal);
@@ -64,9 +58,6 @@ export function usePublish({ bookId, partnerNickname, bookNow, mediaEnabled, pre
   const [invalid, setInvalid] = useState<ReadonlySet<number>>(KHONG_LOI);
   const [minMo, setMinMo] = useState("");
   const [pending, startTransition] = useTransition();
-  const [doiMo, setDoiMo] = useState(false);
-  // Trang thai cua ba o luon duoc dung (hook khong duoc goi co dieu kien); chi khi bookNow khac null moi co muc gap.
-  const doi = useBookEdit(bookNow);
 
   /** Hien mot loi chung (null la xoa) va bo moi dong dang bi danh dau loi. */
   function baoLoi(msg: string | null) {
@@ -140,16 +131,6 @@ export function usePublish({ bookId, partnerNickname, bookNow, mediaEnabled, pre
       baoLoi(checked.error);
       return;
     }
-    // Muc gap khong mo thi khong gui gi ve sach (spec). Mo thi kiem tai cho bang dung bo luat cua may chu.
-    const doiGi = doiMo && bookNow !== null ? doi.payload() : null;
-    if (doiGi !== null) {
-      if (!doi.check()) return;
-      const daKiem = parseBookEdit(doiGi);
-      if ("error" in daKiem) {
-        baoLoi(daKiem.error);
-        return;
-      }
-    }
     baoLoi(null);
     startTransition(async () => {
       await beforePublish();
@@ -163,7 +144,7 @@ export function usePublish({ bookId, partnerNickname, bookNow, mediaEnabled, pre
           afterFail();
           return;
         }
-        const r = await actionPublish(bookId, fresh.sheets, payload.seal, doiGi);
+        const r = await actionPublish(bookId, fresh.sheets, payload.seal);
         if (r && "error" in r) {
           setError(r.error);
           afterFail();
@@ -179,10 +160,7 @@ export function usePublish({ bookId, partnerNickname, bookNow, mediaEnabled, pre
     });
   }
 
-  return {
-    bookId, mediaEnabled, open, ready, seal, error, invalid, minMo, pending, start, cancel, refresh, changeSeal, publish,
-    doi: bookNow === null ? null : doi, doiMo, toggleDoi: () => setDoiMo((x) => !x),
-  };
+  return { open, ready, seal, error, invalid, minMo, pending, start, cancel, refresh, changeSeal, publish };
 }
 
 export type PublishFlow = ReturnType<typeof usePublish>;
@@ -224,13 +202,7 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
   onCancel: () => void;
 }) {
   const hopRef = useRef<HTMLDivElement>(null);
-  const doiId = useId();
   const { seal, ready, error, pending } = flow;
-  // O bia dang doc hay dang tai anh len: dang luc nay se ghi lai dung bia CU va bo roi bia vua tai len. Khoa nut Dang
-  // cho toi khi xong, dung nhu nut gui cua form sach (BookForm). "De sau" van bam duoc: do la duong rut lui.
-  // Chi muc gap DANG MO moi khoa duoc nut: muc dong thi lan dang khong gui gi ve sach (doiGi la null) nen khong co bia
-  // nao de cho, va mot co ban con sot lai cua o bia da go khong duoc phep giam nguoi viet dang luot ho dang soan.
-  const busy = flow.doiMo && (flow.doi?.busy ?? false);
   const cau = cauXacNhan(seal.kind, partnerNickname);
   const loai = luaChon(partnerNickname).find((c) => c.kind === seal.kind);
 
@@ -264,28 +236,9 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
           {/* Loi chung dat ngay tren hai nut. */}
           {error && <p className="luu luu--loi" role="alert">{error}</p>}
           <div className="dang-hoi__nut">
-            <button type="button" className="btn" disabled={pending || busy} onClick={() => flow.publish(hopRef.current)}>Đăng</button>
+            <button type="button" className="btn" disabled={pending} onClick={() => flow.publish(hopRef.current)}>Đăng</button>
             <button type="button" className="btn btn--line" disabled={pending} onClick={onCancel}>Để sau</button>
           </div>
-          {flow.doi !== null && (
-            <div className="doi-sach">
-              <button
-                type="button"
-                className="btn btn--chu doi-sach__mo"
-                aria-expanded={flow.doiMo}
-                aria-controls={doiId}
-                disabled={pending}
-                onClick={flow.toggleDoi}
-              >
-                Đổi bìa, tên, nhạc
-              </button>
-              {flow.doiMo && (
-                <div className="doi-sach__o" id={doiId}>
-                  <BookEditFields state={flow.doi} bookId={flow.bookId} mediaEnabled={flow.mediaEnabled} disabled={pending} />
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
       {seal.kind !== "khong" && (

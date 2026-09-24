@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { COVERS, TITLE_MAX, type CoverKey } from "@/lib/book";
 import { parseYoutubeLink, youtubeLink, type YoutubeLink } from "@/lib/youtube";
-import { chosenCoverMedia, CoverPicker, type CoverValue } from "./CoverPicker";
+import { CoverPicker, type CoverValue } from "./CoverPicker";
 
 const TEN_TRONG = "Sách cần có tên. Viết vài chữ, đổi lại sau cũng được.";
 const GOI_Y = "Tên hiện trên kệ. Đổi lại được sau.";
@@ -11,9 +11,9 @@ const NHAC_GOI_Y = "Không bắt buộc. Dán link YouTube, nhạc phát khi m�
 const NHAC_DA_NHAN = "Nhạc phát khi mở bìa sách.";
 
 /** Gia tri hien tai cua mot cuon, de dien san. null la cuon moi, chua co gi. */
-export type BookNow = { title: string; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null } | null;
+type BookNow = { title: string; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null } | null;
 
-export type BookEditState = ReturnType<typeof useBookEdit>;
+type BookEditState = ReturnType<typeof useBookEdit>;
 
 /** Dong duoi o nhac nen: loi sau lan roi o dau tien, chip khi link doc ra mot video, con lai la goi y. */
 function MusicHelp({ id, check, touched }: { id: string; check: YoutubeLink; touched: boolean }) {
@@ -35,9 +35,8 @@ function MusicHelp({ id, check, touched }: { id: string; check: YoutubeLink; tou
 }
 
 /**
- * Trang thai cua bon truong doi duoc cua mot cuon: ten, tranh bia, bia tu tai len, nhac nen. Dung chung cho form tao
- * va sua sach lan muc gap "Doi bia, ten, nhac" o buoc dang trang, nen hai cho khong the lech luat, lech chu hay lech
- * cach bao loi. Che do chia se hay rieng tu khong o day: chi form sach moi doi duoc (spec).
+ * Trang thai cua bon truong doi duoc cua mot cuon: ten, tranh bia, bia tu tai len, nhac nen. Dung cho form tao va sua
+ * sach. Che do chia se hay rieng tu khong o day: chi form sach moi doi duoc (spec).
  */
 export function useBookEdit(book: BookNow) {
   const [title, setTitle] = useState(book?.title ?? "");
@@ -50,13 +49,11 @@ export function useBookEdit(book: BookNow) {
   const [busy, setBusy] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const musicRef = useRef<HTMLInputElement>(null);
-  // Cung ham kiem voi may chu (parseBookEdit), nen giao dien khong bao gio nhan mot gia tri ma may chu se tu choi.
+  // Cung ham kiem voi may chu (parseBookInput), nen giao dien khong bao gio nhan mot gia tri ma may chu se tu choi.
   const musicCheck = parseYoutubeLink(music);
   return {
     title, setTitle, bia, setBia, music, setMusic, touched, setTouched, musicTouched, setMusicTouched, busy, setBusy,
     titleRef, musicRef, musicCheck,
-    /** Gia tri gui len may chu, dung ten truong cua parseBookEdit. */
-    payload: () => ({ title, cover: bia.cover, coverMedia: chosenCoverMedia(bia) ?? "", music }),
     /** Kiem tai cho va dua focus toi o sai dau tien. false la con sai, dung gui. */
     check: (): boolean => {
       setTouched(true);

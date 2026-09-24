@@ -18,25 +18,17 @@ export const TITLE_MAX = 60;
  */
 export type BookInput = { title: string; mode: BookMode; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null };
 
-/**
- * Bon truong doi duoc ca o form sach lan o muc "Doi bia, ten, nhac" cua buoc dang trang. Che do chia se hay rieng tu
- * KHONG o day: doi che do co he qua rieng tu rieng, chi form sach moi lam duoc.
- */
-export type BookEdit = Omit<BookInput, "mode">;
-
 const TEN_SAI = `Tên sách phải từ 1 tới ${TITLE_MAX} ký tự.`;
 const BIA_SAI = "Chọn một bìa cho cuốn sách.";
-const KHONG_DOC_DUOC = "Chưa đổi được tên, bìa hay nhạc. Thử lại nhé.";
 
 function isOneOf<T extends string>(list: readonly T[], value: unknown): value is T {
   return typeof value === "string" && (list as readonly string[]).includes(value);
 }
 
 /**
- * Bo luat chung cua bon truong, nhan chuoi tho: FormData cua form sach va doi tuong tu buoc dang deu quy ve day, nen
- * hai duong khong the lech luat hay lech cau loi.
+ * Bo luat chung cua bon truong, nhan chuoi tho. Chi form sach di qua day; muc gap o buoc dang khong con (spec).
  */
-function parseFields(title: string, cover: unknown, coverMedia: string, music: string): BookEdit | { error: string } {
+function parseFields(title: string, cover: unknown, coverMedia: string, music: string): Omit<BookInput, "mode"> | { error: string } {
   const ten = title.trim().replace(/\s+/g, " ");
   if (ten.length < 1 || ten.length > TITLE_MAX || !isStorable(ten)) return { error: TEN_SAI };
   if (!isOneOf(COVERS, cover)) return { error: BIA_SAI };
@@ -53,15 +45,4 @@ export function parseBookInput(fd: FormData): BookInput | { error: string } {
   if (!isOneOf(MODES, mode)) return { error: "Chọn một chế độ cho cuốn sách." };
   const chung = parseFields(String(fd.get("title") ?? ""), fd.get("cover"), String(fd.get("coverMedia") ?? ""), String(fd.get("music") ?? ""));
   return "error" in chung ? chung : { ...chung, mode };
-}
-
-/**
- * Kiem muc "Doi bia, ten, nhac" cua buoc dang trang. Gia tri den thang tu trinh duyet (khong qua FormData) nen tung
- * truong phai la chuoi truoc khi vao bo luat chung; khong co che do sach.
- */
-export function parseBookEdit(value: unknown): BookEdit | { error: string } {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return { error: KHONG_DOC_DUOC };
-  const { title, cover, coverMedia, music } = value as Record<string, unknown>;
-  if (typeof title !== "string" || typeof coverMedia !== "string" || typeof music !== "string") return { error: KHONG_DOC_DUOC };
-  return parseFields(title, cover, coverMedia, music);
 }
