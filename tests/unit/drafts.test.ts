@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNotNull } from "drizzle-orm";
+import { viPham, type TestDb } from "../helpers/db";
 import { dang, haiCuon, to } from "../helpers/library";
-import { activity, books, drafts, media, pages, readSheets, rounds } from "@/server/db/schema";
+import { activity, bookCovers, books, bookTracks, drafts, media, pages, readSheets, rounds, seals } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
 import { listDrafts, listUnwrittenBooks, publishDraft, readDraft, saveDraft, setDraftTrim } from "@/server/library/drafts";
 import { markRead, readBook } from "@/server/library/pages";
+import { newestTrack } from "@/server/library/timeline";
 import { discardDraft } from "@/server/library/remove";
 import { recordUpload } from "@/server/media/access";
 import { TRANG_TRONG, type DocJson } from "@/lib/doc/types";
@@ -227,7 +229,147 @@ describe("dang trang", () => {
   });
 });
 
-// Muc doi bia, ten, nhac o buoc dang da bi bo (spec 7.1), nen khong con duong ghi nao qua publishDraft.
+/*
+ * Moi cuon da co san mot o bia mo dau tu luc tao sach (createBook), nen cac ca duoi day chi hoi ve cac o GAN VOI MOT
+ * LUOT: do la tat ca nhung gi mot lan dang duoc phep sinh ra.
+ */
+async function oCuaLuot(db: TestDb) {
+  const bia = await db
+    .select({ roundId: bookCovers.roundId, cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId })
+    .from(bookCovers)
+    .where(isNotNull(bookCovers.roundId));
+  const nhac = await db
+    .select({ roundId: bookTracks.roundId, youtubeId: bookTracks.youtubeId })
+    .from(bookTracks)
+    .where(isNotNull(bookTracks.roundId));
+  return { bia, nhac };
+}
+
+// Duong ghi bia va nhac cua mot luot di qua chinh dong nhap (setDraftTrim), khong qua tham so nao cua publishDraft:
+// muc doi bia, ten, nhac o buoc dang da bi bo (spec 7.1).
+describe("publishDraft sinh o cua luot", () => {
+  it("nhap khong chon gi thi khong sinh o nao", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await saveDraft(db, seat1.id, chung, to("một"), 1);
+    expect(await publishDraft(db, seat1.id, chung, [to("một")])).toEqual({ firstPosition: 1, count: 1 });
+    expect(await oCuaLuot(db)).toEqual({ bia: [], nhac: [] });
+  });
+
+  it("nhap co bia thi sinh dung mot o bia gan dung luot vua dang", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false });
+    expect(await publishDraft(db, seat1.id, chung, [to("một")])).toEqual({ firstPosition: 1, count: 1 });
+    const [luot] = await db.select({ id: rounds.id }).from(rounds);
+    expect(await oCuaLuot(db)).toEqual({ bia: [{ roundId: luot.id, cover: "hoa-dao", coverMediaId: null }], nhac: [] });
+  });
+
+  it("anh bia cua nhap di theo vao o cua luot va van thuoc cuon", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    const bia = randomUUID();
+    expect(await recordUpload(db, { id: bia, ownerId: seat1.id, bookId: null, kind: "bia", mime: "image/webp", bytes: 1024, width: 1200, height: 720 })).toBe(true);
+    await setDraftTrim(db, seat1.id, chung, { cover: "nui-xa", coverMediaId: bia, youtubeId: null, dropTrack: false });
+    await publishDraft(db, seat1.id, chung, [to("một")]);
+    expect((await oCuaLuot(db)).bia).toEqual([{ roundId: expect.any(String), cover: "nui-xa", coverMediaId: bia }]);
+    expect(await db.select({ b: media.bookId }).from(media).where(eq(media.id, bia))).toEqual([{ b: chung }]);
+  });
+
+  it("nhap co ma video thi o nhac mang dung ma do", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: "dQw4w9WgXcQ", dropTrack: false });
+    await publishDraft(db, seat1.id, chung, [to("một")]);
+    const [luot] = await db.select({ id: rounds.id }).from(rounds);
+    expect(await oCuaLuot(db)).toEqual({ bia: [], nhac: [{ roundId: luot.id, youtubeId: "dQw4w9WgXcQ" }] });
+  });
+
+  it("nhap co o go nhac thi sinh mot o nhac mang null", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: null, dropTrack: true });
+    await publishDraft(db, seat1.id, chung, [to("một")]);
+    const [luot] = await db.select({ id: rounds.id }).from(rounds);
+    expect(await oCuaLuot(db)).toEqual({ bia: [], nhac: [{ roundId: luot.id, youtubeId: null }] });
+  });
+
+  // O go nhac phai la mot O THAT mang null, khong phai viec khong sinh o nao: khong the thi mot cuon da tung co nhac
+  // se khong bao gio im duoc nua.
+  it("o go nhac lam cuon im lai: nhac moi nhat tro ve null", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: "5qap5aO4i9A", dropTrack: false });
+    await publishDraft(db, seat1.id, chung, [to("một")]);
+    expect(await newestTrack(db, chung)).toBe("5qap5aO4i9A");
+    await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: null, dropTrack: true });
+    await publishDraft(db, seat1.id, chung, [to("hai")]);
+    expect(await newestTrack(db, chung)).toBeNull();
+  });
+
+  it("bia anh cua nhap da bi doi chu: tra invalid-cover va khong ghi gi", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    const bia = randomUUID();
+    expect(await recordUpload(db, { id: bia, ownerId: seat1.id, bookId: null, kind: "bia", mime: "image/webp", bytes: 1024, width: 1200, height: 720 })).toBe(true);
+    await setDraftTrim(db, seat1.id, chung, { cover: "nui-xa", coverMediaId: bia, youtubeId: null, dropTrack: false });
+    await db.update(media).set({ ownerId: seat2.id }).where(eq(media.id, bia));
+    await saveDraft(db, seat1.id, chung, to("một"), 1);
+    expect(await publishDraft(db, seat1.id, chung, [to("một")])).toBe("invalid-cover");
+    expect([await db.select().from(rounds), await db.select().from(pages)]).toEqual([[], []]);
+    expect(await oCuaLuot(db)).toEqual({ bia: [], nhac: [] });
+    expect(await db.select().from(drafts)).toHaveLength(1);
+  });
+
+  it("dang xong thi nhap mat, nen lan dang ke tiep khong sinh o nao nua", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false });
+    await publishDraft(db, seat1.id, chung, [to("một")]);
+    await publishDraft(db, seat1.id, chung, [to("hai")]);
+    expect(await db.select().from(rounds)).toHaveLength(2);
+    expect((await oCuaLuot(db)).bia).toHaveLength(1);
+  });
+
+  it("mot luot khong the co hai o bia: chi muc unique chan lop cuoi", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false });
+    await publishDraft(db, seat1.id, chung, [to("một")]);
+    const [luot] = await db.select({ id: rounds.id }).from(rounds);
+    await viPham(db.insert(bookCovers).values({ bookId: chung, roundId: luot.id, cover: "cau-go" }), "book_covers_round_id_unique");
+  });
+
+  // PGlite chi co MOT ket noi va tu xep hang cac giao dich, nen ca nay khong chung minh duoc hai ket noi that chay
+  // song song; no chung minh ket qua CUOI CUNG: nhap chi con o lan dang dau, nen hai luot ma chi mot o bia.
+  it("hai lan dang lien tiep qua Promise.all: hai luot khac nhau, chi luot cua nhap sinh o", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false });
+    const ketQua = await Promise.all([
+      publishDraft(db, seat1.id, chung, [to("một")]),
+      publishDraft(db, seat1.id, chung, [to("hai")]),
+    ]);
+    expect(ketQua.filter((r) => r !== null && r !== "invalid-cover")).toHaveLength(2);
+    expect(await db.select().from(rounds)).toHaveLength(2);
+    expect((await oCuaLuot(db)).bia).toHaveLength(1);
+  });
+
+  /*
+   * Bang chung cho "hong mot phan thi khong co phan nao duoc ghi", lan nay o buoc NAM SAU khi hai o da duoc ghi: cau hoi
+   * dai 201 ky tu lam dong seals vi pham CHECK seals_cau_hoi, nem loi sau khi luot, cac to va hai o deu da nam trong
+   * giao dich. Niem phong nhu vay khong bao gio den tu actionPublish (lop kiem chan tu truoc); no dong vai "buoc sau do
+   * hong". Nua sau cua ca chinh la bang chung rang khang dinh tren khong rong: cung lua chon do, chi khac cau hoi ngan
+   * lai, thi ca hai o deu duoc ghi that.
+   */
+  it("mot buoc sau khi ghi hai o hong: khong luot, to hay o nao duoc ghi, nhap van con", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: "dQw4w9WgXcQ", dropTrack: false });
+    await saveDraft(db, seat1.id, chung, to("nháp"), 1);
+    const qua = { kind: "cau-do" as const, question: "a".repeat(201), answers: ["mưa"], hints: [] };
+    await expect(publishDraft(db, seat1.id, chung, [to("một")], qua)).rejects.toThrow();
+    expect([
+      await db.select().from(pages), await db.select().from(rounds), await db.select().from(activity), await db.select().from(seals),
+    ]).toEqual([[], [], [], []]);
+    expect(await oCuaLuot(db)).toEqual({ bia: [], nhac: [] });
+    expect(await db.select({ bia: drafts.cover, nhac: drafts.youtubeId }).from(drafts)).toEqual([{ bia: "hoa-dao", nhac: "dQw4w9WgXcQ" }]);
+    expect(await publishDraft(db, seat1.id, chung, [to("một")], { ...qua, question: "Mưa gì?" })).toEqual({ firstPosition: 1, count: 1 });
+    expect(await db.select().from(seals)).toHaveLength(1);
+    const o = await oCuaLuot(db);
+    expect([o.bia.length, o.nhac.length]).toEqual([1, 1]);
+  });
+});
+
 describe("doc sach va cac to da xem", () => {
   it("readBook tra cac to theo thu tu va cac to nguoi doc da xem", async () => {
     const { db, seat1, seat2, chung } = await haiCuon();
