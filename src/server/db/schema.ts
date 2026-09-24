@@ -125,14 +125,6 @@ export const pages = pgTable("pages", {
   byRound: index("pages_round_idx").on(t.roundId),
 }));
 
-/** Moi cuon co toi da mot ban nhap, cua chinh chu sach. Nguoi kia khong bao gio thay. */
-export const drafts = pgTable("drafts", {
-  bookId: uuid("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
-  content: jsonb("content").$type<DocJson>().notNull(),
-  sheetCount: integer("sheet_count").notNull().default(1),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
 /**
  * Cac to mot nguoi DA THUC SU THAY tren man doc, moi to mot dong. Thay cho mot so "da doc toi dau": mo man doc thang
  * toi mot to xa khong duoc bien cac to bi nhay coc thanh da doc. Khong co dong la chua thay; to nam trong luot con
@@ -321,6 +313,67 @@ export const mediaSweeps = pgTable("media_sweeps", {
   ranAt: timestamp("ran_at", { withTimezone: true }).notNull(),
 }, (t) => ({
   one: check("media_sweeps_one", sql`${t.id} = 1`),
+}));
+
+/**
+ * Moi cuon co toi da mot ban nhap, cua chinh chu sach. Nguoi kia khong bao gio thay.
+ * Dat sau media vi cover_media_id tro toi media.id: khai sau thi tham chieu la thang, khong phai vong.
+ */
+export const drafts = pgTable("drafts", {
+  bookId: uuid("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
+  content: jsonb("content").$type<DocJson>().notNull(),
+  sheetCount: integer("sheet_count").notNull().default(1),
+  /** O bia cua luot sap dang: tranh ve san; null la luot nay khong them o bia nao. */
+  cover: text("cover").$type<CoverKey>(),
+  /** Anh bia phu len tranh ve; chi co nghia khi cover khac null. */
+  coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+  /** Ma video cua o nhac sap dang; null cong dropTrack false la luot nay khong them o nhac nao. */
+  youtubeId: text("youtube_id"),
+  /** Luot sap dang la mot o GO NHAC: o that se mang youtube_id null. Khong di cung mot ma video. */
+  dropTrack: boolean("drop_track").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  coverValue: check("drafts_cover", sql`${t.cover} is null or ${t.cover} in ('nui-xa', 'khom-truc', 'trang-nuoc', 'chim-bay', 'hoa-dao', 'doi-chim', 'thuyen-trang', 'cau-go', 'doi-thong', 'meo-mai')`),
+  coverMedia: check("drafts_cover_media", sql`${t.coverMediaId} is null or ${t.cover} is not null`),
+  youtubeIdValue: check("drafts_youtube_id", sql`${t.youtubeId} is null or ${t.youtubeId} ~ '^[A-Za-z0-9_-]{11}$'`),
+  goNhac: check("drafts_drop_track", sql`${t.dropTrack} = false or ${t.youtubeId} is null`),
+}));
+
+/**
+ * Dong thoi gian bia cua mot cuon: moi dong la mot O. round_id la luot da tieu thu o do; null la O MO DAU sinh luc tao
+ * sach. unique(round_id) ep moi luot nhieu nhat mot o bia, chi muc rieng phan ep moi cuon nhieu nhat mot o mo dau, nen
+ * so o <= so luot + 1 ma khong nho code giu. Tranh ve san luon bat buoc nen khong co o "go bia".
+ * Danh sach trong book_covers_cover phai khop COVERS cua src/lib/book.ts (co test).
+ * Bat bien: moi cuon luon con it nhat mot o bia. Khong ep duoc bang rang buoc thuong (phai la rang buoc hoan), nen ep
+ * bang ba lop: createBook chen o mo dau trong cung giao dich, setCoverEntry tu choi don o bia cuoi cung, migration kiem.
+ */
+export const bookCovers = pgTable("book_covers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
+  roundId: uuid("round_id").unique().references(() => rounds.id, { onDelete: "cascade" }),
+  cover: text("cover").$type<CoverKey>().notNull(),
+  /** Anh tu tai len phu len tranh ve; null la chi dung tranh ve. Chi co khoa ngoai toi media.id, khong rang buoc kind. */
+  coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+}, (t) => ({
+  coverValue: check("book_covers_cover", sql`${t.cover} in ('nui-xa', 'khom-truc', 'trang-nuoc', 'chim-bay', 'hoa-dao', 'doi-chim', 'thuyen-trang', 'cau-go', 'doi-thong', 'meo-mai')`),
+  byBook: index("book_covers_book_idx").on(t.bookId),
+  moDau: uniqueIndex("book_covers_mo_dau_idx").on(t.bookId).where(sql`${t.roundId} is null`),
+}));
+
+/**
+ * Dong thoi gian nhac cua mot cuon, cung hinh dang voi book_covers. youtube_id null la O GO NHAC: tu luot nay cuon
+ * khong con nhac nen. Khong co o nao la cuon chua bao gio co nhac. Mau cua book_tracks_youtube_id phai khop YOUTUBE_ID
+ * cua src/lib/youtube.ts (co test).
+ */
+export const bookTracks = pgTable("book_tracks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
+  roundId: uuid("round_id").unique().references(() => rounds.id, { onDelete: "cascade" }),
+  youtubeId: text("youtube_id"),
+}, (t) => ({
+  youtubeIdValue: check("book_tracks_youtube_id", sql`${t.youtubeId} is null or ${t.youtubeId} ~ '^[A-Za-z0-9_-]{11}$'`),
+  byBook: index("book_tracks_book_idx").on(t.bookId),
+  moDau: uniqueIndex("book_tracks_mo_dau_idx").on(t.bookId).where(sql`${t.roundId} is null`),
 }));
 
 /**

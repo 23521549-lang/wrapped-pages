@@ -59,7 +59,8 @@ const PEAKS = JSON.stringify(Array.from({ length: 48 }, (_, i) => i * 2));
 
 /**
  * Moi bang co it nhat mot hang (test "pham vi" do dieu nay: them bang moi vao schema thi phai gieo them
- * o day); co ca null, jsonb long, timestamptz le micro giay, vong books <-> media.
+ * o day); co ca null, jsonb long, timestamptz le micro giay, vong books <-> media, va ca hai hinh dang o cua dong
+ * thoi gian (o mo dau round_id null va o gan voi mot luot).
  */
 async function gieo(c: PGlite) {
   await c.exec(`
@@ -89,7 +90,15 @@ async function gieo(c: PGlite) {
       ('${B1}', '${R1}', 1, '${DOC}', '2026-09-01 00:00:00.123456+00'),
       ('${B1}', '${R2}', 2, '{"type":"doc","content":[]}', '2026-09-03 00:00:00+00'),
       ('${B1}', '${R3}', 3, '{"type":"doc","content":[]}', '2026-09-04 00:00:00+00');
-    insert into drafts (book_id, content, sheet_count) values ('${B2}', '${DOC}', 3);
+    insert into book_covers (book_id, round_id, cover, cover_media_id) values
+      ('${B1}', null, 'nui-xa', '${M1}'),
+      ('${B1}', '${R1}', 'hoa-dao', null),
+      ('${B2}', null, 'chim-bay', null);
+    insert into book_tracks (book_id, round_id, youtube_id) values
+      ('${B1}', null, 'dQw4w9WgXcQ'),
+      ('${B1}', '${R2}', null);
+    insert into drafts (book_id, content, sheet_count, cover, cover_media_id, youtube_id) values
+      ('${B2}', '${DOC}', 3, 'nui-xa', null, '5qap5aO4i9A');
     insert into read_sheets (account_id, book_id, position) values ('${A2}', '${B1}', 1), ('${A2}', '${B1}', 2);
     insert into seals (id, book_id, round_id, kind, question, answers, hints, teaser) values
       ('${S1}', '${B1}', '${R1}', 'cau-do', 'Mình gặp nhau ở đâu?', '["hồ tây","Hồ Tây"]', '["nước"]', 'Ngày ấy...');
