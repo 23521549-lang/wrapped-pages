@@ -18,10 +18,13 @@ import { lopPhong } from "./phong";
  * thi Next ve trang mac dinh tieng Anh, co the <style> noi tuyen khong nonce bi CSP chan nen mat mau.
  * Trang tinh _global-error chi con duoc phuc vu khi chinh buoc dung trang loi cung hong; tep nay khong doi
  * duoc trang do (Next dung san no bang giao dien mac dinh cua minh, co hay khong co tep nay cung vay).
+ *
+ * suppressHydrationWarning: cung ly do nhu layout goc - tien ich mo rong cua trinh duyet sua the <html> truoc khi
+ * React chay. Chi tat canh bao cho thuoc tinh cua rieng the nay, khong lan xuong noi dung.
  */
 export default function LoiToanCuc({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
-    <html lang="vi" className={lopPhong}>
+    <html lang="vi" className={lopPhong} suppressHydrationWarning>
       <body>
         <title>Món Quà Của Em</title>
         <LoiTrang error={error} retry={retry} />

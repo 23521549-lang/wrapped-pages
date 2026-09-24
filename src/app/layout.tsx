@@ -15,9 +15,16 @@ export const metadata: Metadata = { title: "Món Quà Của Em" };
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * suppressHydrationWarning o day chi tat canh bao cho THUOC TINH CUA RIENG the <html>, khong lan xuong noi dung ben
+ * trong: tien ich mo rong cua trinh duyet (Dark Reader, Grammarly, dich trang) hay them lop hay thuoc tinh vao the
+ * nay truoc khi React kip chay, sinh mot canh bao khong phai loi cua ta. Da doi chieu tren ban dev: chuoi lop may
+ * chu tra ve va chuoi trinh duyet dung giong nhau tung ky tu, va `lopPhong` chi la hai ten lop tinh noi lai nen
+ * khong the tu lech.
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" className={lopPhong}>
+    <html lang="vi" className={lopPhong} suppressHydrationWarning>
       <body>
         {/* Bo loc muc cua moi bia khai mot lan o day; CoverArt chi tro toi no bang id. */}
         <InkDefs />
