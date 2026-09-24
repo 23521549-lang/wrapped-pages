@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
-import { books, media, seals } from "@/server/db/schema";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { bookCovers, books, media, seals } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
 import { setDraftTrim } from "@/server/library/drafts";
 import { bindMedia, canViewMedia, recordUpload, type UploadRecord } from "@/server/media/access";
@@ -54,6 +54,23 @@ async function niemPhong(db: TestDb, bookId: string, position: number, kind: "ca
   const cot = kind === "hen-gio" ? { kind, opensAt: phut(30) } : { kind, question: "Ở đâu?", answers: ["ben xe"] };
   const [row] = await db.insert(seals).values({ bookId, roundId: await luotCua(db, bookId, position), teaser: "", ...cot }).returning({ id: seals.id });
   return row.id;
+}
+
+/**
+ * Dat mot anh vao o bia MO DAU cua mot cuon, ghi thang vao bang: cac ca duoi day can ca nhung trang thai ma
+ * setCoverEntry khong bao gio tao ra. createBook da chen san o mo dau nen day phai la UPDATE; mot
+ * `insert ... onConflictDoNothing` se lang le khong ghi gi va lam moi bai duoi day xanh gia. Doc lai ngay sau khi ghi
+ * chinh la cai chan do: mot lan dung rong khong the loi qua ma khong ai thay.
+ */
+async function oBia(db: TestDb, bookId: string, cover: "nui-xa" | "hoa-dao", coverMediaId: string | null) {
+  const da = await db
+    .update(bookCovers)
+    .set({ cover, coverMediaId })
+    .where(and(eq(bookCovers.bookId, bookId), isNull(bookCovers.roundId)))
+    .returning({ id: bookCovers.id });
+  if (da.length === 0) await db.insert(bookCovers).values({ bookId, roundId: null, cover, coverMediaId });
+  const o = await db.select({ c: bookCovers.coverMediaId }).from(bookCovers).where(and(eq(bookCovers.bookId, bookId), isNull(bookCovers.roundId)));
+  expect(o).toEqual([{ c: coverMediaId }]);
 }
 
 /** Ket qua canViewMedia cua chu sach (seat1) va nguoi kia (seat2), gon thanh id hoac null. */
@@ -248,20 +265,65 @@ describe("canViewMedia", () => {
     expect(res.rows).toEqual([{ co: true }]);
   });
 
-  it("bia hien tai: chu sach duoc, nguoi kia duoc khi sach chia se, ke ca khi id do nam trong to hen gio con khoa", async () => {
+  it("anh trong o bia: chu sach duoc, nguoi kia duoc khi sach chia se, ke ca khi id do nam trong to hen gio con khoa", async () => {
     const s = await haiCuon();
     const biaChung = await tai(s.db, bia(s.seat1.id, s.chung));
-    const biaCu = await tai(s.db, bia(s.seat1.id, s.chung));
     const biaRieng = await tai(s.db, bia(s.seat1.id, s.rieng));
     const choGan = await tai(s.db, bia(s.seat1.id, null));
-    await s.db.update(books).set({ coverMediaId: biaChung }).where(eq(books.id, s.chung));
-    await s.db.update(books).set({ coverMediaId: biaRieng }).where(eq(books.id, s.rieng));
+    await oBia(s.db, s.chung, "nui-xa", biaChung);
+    await oBia(s.db, s.rieng, "nui-xa", biaRieng);
     await to(s.db, s.chung, 1, khoiAnh(biaChung));
     await niemPhong(s.db, s.chung, 1, "hen-gio");
     expect(await aiThay(s, biaChung)).toEqual([biaChung, biaChung]);
     expect(await aiThay(s, biaRieng)).toEqual([biaRieng, null]);
-    expect(await aiThay(s, biaCu)).toEqual([biaCu, null]);
     expect(await aiThay(s, choGan)).toEqual([choGan, null]);
+  });
+
+  it("anh bia CHUA o nao chon: chu sach van xem duoc (do la kho anh cua ho), nguoi kia thi khong", async () => {
+    const s = await haiCuon();
+    const trongKho = await tai(s.db, bia(s.seat1.id, s.chung));
+    expect(await aiThay(s, trongKho)).toEqual([trongKho, null]);
+  });
+
+  it("anh bia nam trong mot o CU (khong phai o moi nhat) thi nguoi kia van xem duoc", async () => {
+    const s = await haiCuon();
+    const cu = await tai(s.db, bia(s.seat1.id, s.chung));
+    const moi = await tai(s.db, bia(s.seat1.id, s.chung));
+    await oBia(s.db, s.chung, "nui-xa", cu);
+    const luot = await themLuot(s.db, s.chung, 1, [{ type: "doc", content: [doan("Một")] }]);
+    await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: luot, cover: "hoa-dao", coverMediaId: moi });
+    expect(await aiThay(s, cu)).toEqual([cu, cu]);
+    expect(await aiThay(s, moi)).toEqual([moi, moi]);
+  });
+
+  it("anh bi bo khoi moi o: nguoi kia mat quyen ngay lan doc sau, chu sach thi khong", async () => {
+    const s = await haiCuon();
+    const anhBia = await tai(s.db, bia(s.seat1.id, s.chung));
+    await oBia(s.db, s.chung, "nui-xa", anhBia);
+    expect(await aiThay(s, anhBia)).toEqual([anhBia, anhBia]);
+    await oBia(s.db, s.chung, "nui-xa", null);
+    expect(await aiThay(s, anhBia)).toEqual([anhBia, null]);
+  });
+
+  it("o cua cuon KHAC chon anh nay: khong mo duoc quyen, ca khi cuon cua chinh anh la cuon chia se", async () => {
+    const s = await haiCuon();
+    const cuaRieng = await tai(s.db, bia(s.seat1.id, s.rieng));
+    await oBia(s.db, s.chung, "nui-xa", cuaRieng);
+    expect(await aiThay(s, cuaRieng)).toEqual([cuaRieng, null]);
+
+    const khac = await createBook(s.db, s.seat1.id, { title: "Cuốn khác", mode: "chia-se", cover: "nui-xa", youtubeId: null, coverMediaId: null });
+    const cuaChung = await tai(s.db, bia(s.seat1.id, s.chung));
+    await oBia(s.db, khac, "nui-xa", cuaChung);
+    expect(await aiThay(s, cuaChung)).toEqual([cuaChung, null]);
+  });
+
+  it("cuon chuyen sang rieng tu: nguoi kia mat quyen xem bia ngay lan doc sau", async () => {
+    const s = await haiCuon();
+    const anhBia = await tai(s.db, bia(s.seat1.id, s.chung));
+    await oBia(s.db, s.chung, "nui-xa", anhBia);
+    expect(await aiThay(s, anhBia)).toEqual([anhBia, anhBia]);
+    await s.db.update(books).set({ mode: "rieng-tu" }).where(eq(books.id, s.chung));
+    expect(await aiThay(s, anhBia)).toEqual([anhBia, null]);
   });
 
   // setDraftTrim gan anh bia vao cuon NGAY luc nguoi viet chon, tu truoc khi dang: day la duong duy nhat cho mot anh
@@ -274,13 +336,37 @@ describe("canViewMedia", () => {
     expect(await aiThay(s, choGan.id)).toEqual([choGan.id, null]);
   });
 
-  it("cover_media_id tro toi mot dong khong phai bia (cot khong co CHECK rang buoc kind): khong duoc loi tat, van xet to/niem phong nhu binh thuong, nen ca chu sach cung null khi to con khoa", async () => {
+  it("dong kind = 'anh' bi dat vao mot o bia (cot khong co CHECK rang buoc kind): khong duoc loi tat, van xet to va niem phong, nen ca chu sach cung null khi to con khoa", async () => {
     const s = await haiCuon();
     const id = await tai(s.db, anh(s.seat1.id, s.chung));
     await to(s.db, s.chung, 1, khoiAnh(id));
     await niemPhong(s.db, s.chung, 1, "hen-gio");
-    await s.db.update(books).set({ coverMediaId: id }).where(eq(books.id, s.chung));
+    await oBia(s.db, s.chung, "nui-xa", id);
     expect(await aiThay(s, id)).toEqual([null, null]);
+  });
+
+  it("ghi am cua chu sach khong bao gio di qua nhanh bia, ke ca khi bi dat vao mot o", async () => {
+    const s = await haiCuon();
+    const g = await tai(s.db, ghiAm(s.seat1.id, s.chung));
+    await oBia(s.db, s.chung, "nui-xa", g);
+    expect(await aiThay(s, g)).toEqual([g, null]);
+    await to(s.db, s.chung, 1, khoiAnh(g));
+    await niemPhong(s.db, s.chung, 1, "hen-gio");
+    expect(await aiThay(s, g)).toEqual([null, null]);
+  });
+
+  // Nhanh tat cua bia bo qua han luat to va niem phong, nen no chi an toan chung nao KHONG duong ghi nao dua duoc mot
+  // dong kind = 'bia' len mot to da dang. bindMedia la cua duy nhat vao pages.content; bai nay canh chinh cai cua do,
+  // de neu ai do noi long no sau nay thi do ngay tai day chu khong am tham mo lai lo hong.
+  it("bat bien cua nhanh tat bia: bindMedia khong bao gio cho mot dong kind = 'bia' len mot to", async () => {
+    const s = await haiCuon();
+    const anhBia = await tai(s.db, bia(s.seat1.id, s.chung));
+    const thuong = await tai(s.db, anh(s.seat1.id, s.chung));
+    await oBia(s.db, s.chung, "nui-xa", anhBia);
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, { type: "doc", content: [khoiAnh(anhBia)] })).toBeNull();
+    expect(await bindMedia(s.db, s.seat1.id, s.chung, { type: "doc", content: [khoiAnh(thuong)] })).toEqual({
+      type: "doc", content: [{ type: "anh", attrs: { id: thuong, w: 1200, h: 900 } }],
+    });
   });
 
   it("id khong phai uuid hay khong co dong: null voi ca hai", async () => {

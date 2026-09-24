@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { drafts, media, pages } from "@/server/db/schema";
+import { bookCovers, drafts, media, pages } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { mediaStoreKey } from "@/lib/media/key";
@@ -128,23 +128,38 @@ async function visibleOnPages(tx: AnyDb, bookId: string, mediaId: string, isOwne
 }
 
 /**
+ * Id nay co dang nam trong MOT o cua dong thoi gian bia cua cuon khong. bookId luon la cuon cua CHINH dong media
+ * (media.book_id), khong bao gio la cuon do noi goi dua vao: nho vay bia thuoc cuon A bi gan vao mot o cua cuon B van
+ * bi tu choi voi nguoi doc cuon B. O nao cung tinh, khong chi o moi nhat: trang Dong thoi gian ve lai ca dong, nen mot
+ * bia da tung dung tren ke phai con xem duoc.
+ */
+async function coTrongOBia(tx: AnyDb, bookId: string, mediaId: string): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: bookCovers.id })
+    .from(bookCovers)
+    .where(and(eq(bookCovers.bookId, bookId), eq(bookCovers.coverMediaId, mediaId)))
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
  * Viewer co duoc tai media nay khong. Moi lan doc deu goi lai, chay tren mot anh chup:
  * - id khong phai uuid hoac khong co dong: null;
  * - bia cho gan (chua co sach): chi nguoi tai len;
  * - sach khong doc duoc voi viewer (rieng tu cua nguoi kia): null, giong het khong ton tai;
- * - media la bia hien tai cua sach (books.cover_media_id) VA thuc su la dong kind = 'bia': duoc (chu sach, va
- *   nguoi kia khi sach chia se). Cot cover_media_id khong co CHECK rang buoc kind, chi co khoa ngoai toi media.id;
- *   vi vay cong tac nay tu kiem lai kind thay vi tin cover_media_id, de mot anh dang
- *   nam trong to hen gio con khoa khong the duoc lo som chi bang cach bi gan lam bia. Mot dong khong phai 'bia'
- *   duoc cover_media_id tro toi roi qua nhanh nay ma xet tiep bang luat to/niem phong ben duoi, khong bi tu choi
- *   ngay: mot anh da dang binh thuong van phai hien nhu moi anh khac.
- * - chua to da dang nao chua media: chi chu sach (nhap hien tai, tai len chua luu);
- * - co to da dang chua media: can it nhat mot to trong do khong khoa voi chinh viewer. To hen gio chua toi gio thi
- *   ca chu sach cung null, nhu readBook che to do voi ca hai.
- * Sach chuyen sang rieng tu hay to con khoa thi lan doc sau bi tu choi ngay.
- * visibleOnPages chi tim trong cac to cua media.book_id, nen bia gan voi mot sach phai la dong media co book_id
- * dung sach do: bia thuoc sach A ma bi gan lam cover_media_id cua sach B se van bi tu choi voi nguoi doc sach B,
- * vi book o day luon la sach cua chinh dong media (tim qua bookId cua row), khong phai sach goi ham.
+ * - media la bia cua mot cuon (kind = 'bia' va book_id khac null): chu sach luon duoc (do la kho anh cua ho, bang chon
+ *   bia phai ve duoc); nguoi kia chi duoc khi id do dang nam trong mot o cua book_covers CUA CHINH CUON DO va cuon do
+ *   dang chia se. Anh trong kho ma chua o nao chon thi voi nguoi kia nhu khong ton tai, va bo khoi moi o thi ho mat
+ *   quyen ngay lan doc sau;
+ * - media khong phai bia: giu nguyen luat to va niem phong - chua to da dang nao chua no thi chi chu sach (nhap hien
+ *   tai, tai len chua luu); co to chua no thi can it nhat mot to khong khoa voi chinh viewer. To hen gio chua toi gio
+ *   khoa ca chu sach, nhu readBook che to do voi ca hai.
+ * Sach chuyen sang rieng tu hay to con khoa thi lan doc sau bi tu choi ngay: khong co bo nho dem nao o giua.
+ * Mot dong kind = 'anh' bi dat vao mot o bia KHONG duoc loi tat - book_covers.cover_media_id chi co khoa ngoai toi
+ * media.id chu khong co CHECK rang buoc kind, nen cong tac nay tu kiem lai kind cua chinh dong media. No roi xuong luat
+ * to va niem phong nhu moi anh khac, vi vay mot anh dang nam trong to hen gio con khoa khong the lo som chi bang cach
+ * bi gan lam bia. Lo hong nay da bi bit mot lan o dot truoc, khong duoc mo lai.
+ * Cuon dem ra xet luon la cuon cua chinh dong media (bookId cua row), khong bao gio la cuon do noi goi dua vao.
  */
 export async function canViewMedia(db: AnyDb, viewerId: string, mediaId: string, now: Date): Promise<MediaFile | null> {
   if (!isUuid(mediaId)) return null;
@@ -158,7 +173,8 @@ export async function canViewMedia(db: AnyDb, viewerId: string, mediaId: string,
     if (bookId === null) return ownerId === viewerId ? file : null;
     const book = await findReadableBook(tx, viewerId, bookId);
     if (!book) return null;
-    if (book.coverMediaId === file.id && file.kind === "bia") return file;
-    return (await visibleOnPages(tx, book.id, file.id, book.ownerId === viewerId, now)) ? file : null;
+    const laChu = book.ownerId === viewerId;
+    if (file.kind === "bia") return laChu || (await coTrongOBia(tx, book.id, file.id)) ? file : null;
+    return (await visibleOnPages(tx, book.id, file.id, laChu, now)) ? file : null;
   });
 }

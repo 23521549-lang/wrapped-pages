@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { BookInput } from "@/lib/book";
-import { bookCovers, books } from "@/server/db/schema";
+import { bookCovers } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { createBook, readOwnBook, updateBook } from "@/server/library/books";
 import { listDrafts, listUnwrittenBooks, saveDraft } from "@/server/library/drafts";
@@ -19,17 +19,14 @@ const RIENG: BookInput = { title: "Cuốn không đặt tên", mode: "rieng-tu",
 
 /**
  * seat1 tai mot bia cho gan qua duong that (setCoverEntry, duong ghi bia duy nhat cua dong thoi gian) roi dat no vao o
- * bia MO DAU cua cuon; tra id bia. Dich cuoi la "bia va nhac chi song o mot noi, la hai bang nay" (spec 6.2).
- * Dong ghi thang books.cover_media_id ben duoi la phan con lai cua mot cai neo TAM: ke sach, ban nhap va man doc da
- * lay bia tu dong thoi gian, nhung cong tai media (canViewMedia) va buoc don rac (sweepMedia) van doc cot cu. Xoa dong
- * do ngay khi hai noi ay chuyen sang book_covers; khong dat qua updateBook vi duong ghi do chi con ten sach va che do
- * (B2). books.cover khong con noi nao doc nen khong ghi nua.
+ * bia MO DAU cua cuon; tra id bia. Dich cuoi la "bia va nhac chi song o mot noi, la hai bang nay" (spec 6.2), va gio
+ * ham nay da di tron duong do: cai neo TAM ghi thang books.cover_media_id khong con, vi ca buoc don rac (sweepMedia)
+ * lan cong tai media (canViewMedia) deu da doc book_covers. books.cover khong con noi nao doc nen khong ghi nua.
  */
 async function datBia(db: TestDb, ownerId: string, bookId: string, input: BookInput): Promise<string> {
   const id = randomUUID();
   expect(await recordUpload(db, { id, ownerId, bookId: null, kind: "bia", mime: "image/webp", bytes: 1024, width: 1200, height: 720 })).toBe(true);
   expect(await setCoverEntry(db, ownerId, bookId, null, { cover: input.cover, coverMediaId: id })).toBe("saved");
-  await db.update(books).set({ coverMediaId: id }).where(eq(books.id, bookId));
   return id;
 }
 
