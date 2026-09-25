@@ -47,6 +47,16 @@ export type HinhDai = {
 const hinhCua = new WeakMap<HTMLElement, HinhDai>();
 const dangSong = new WeakSet<HTMLElement>();
 
+/**
+ * Bao nguoc len React: mat nao (data-mat) vua thanh troi lon.
+ *
+ * "Mat nao dang lon" la trang thai chay cua lan doi cho, nhung thuoc tinh `class` lai thuoc ve React: moi lan doi tam
+ * trang, React ghi lai ca chuoi class tu JSX, ma trong JSX mat "minh" luon nhan `an`. Neu ai do doc lop `troi--an` ra
+ * de suy trang thai thi ho doc dung gia tri vua bi ghi de. Nen chi co MOT nguon su that, va no nam ben React
+ * (BauTroi.tsx); day la duong bao len do (phan quyet M2).
+ */
+const baoMat = new WeakMap<HTMLElement, (ten: string) => void>();
+
 /** Do bo cuc cua mot dai troi va nho lai. Goi luc ranh, khong bao gio goi trong lan bam. */
 export function doHinh(w: HTMLElement): HinhDai {
   const wr = w.getBoundingClientRect();
@@ -260,6 +270,7 @@ export function doiTroi(w: HTMLElement, banPhim: boolean): void {
     an.classList.remove("troi--an");
     hien.classList.add("troi--an");
     w.classList.remove("troi-cua-so--san");
+    baoMat.get(w)?.(mat(an));
     tiep();
     dangSong.add(w);
     hen(w, () => dangSong.delete(w), KHOA_TINH_MS);
@@ -269,6 +280,7 @@ export function doiTroi(w: HTMLElement, banPhim: boolean): void {
   const h = hinhSan(w);
   if (h.mat[mat(an)] === undefined) return;
   an.classList.remove("troi--an");
+  baoMat.get(w)?.(mat(an));
   songLan(w, an, hien, h);
   const v = viec(w);
   const id = requestAnimationFrame(() => {
@@ -285,8 +297,11 @@ export function doiTroi(w: HTMLElement, banPhim: boolean): void {
 /**
  * Gan cac tay nghe cua mot dai troi co o cua so. Tra ve ham go, de thanh phan React don sach khi roi trang.
  * Bam bang chuot hay cham: bat song ngay tu pointerdown, khong doi nha tay. Ban phim: su kien click (detail = 0).
+ *
+ * `baoDoiMat` nhan ten mat (data-mat) vua thanh troi lon, ngay o khung hinh dau cua lan doi cho: xem baoMat o tren.
  */
-export function ganSong(w: HTMLElement): () => void {
+export function ganSong(w: HTMLElement, baoDoiMat: (ten: string) => void): () => void {
+  baoMat.set(w, baoDoiMat);
   const doLaiKhiRanh = () => {
     if (!w.isConnected) return;
     const chay = () => {
@@ -366,5 +381,6 @@ export function ganSong(w: HTMLElement): () => void {
     goViec(w);
     dangSong.delete(w);
     hinhCua.delete(w);
+    baoMat.delete(w);
   };
 }
