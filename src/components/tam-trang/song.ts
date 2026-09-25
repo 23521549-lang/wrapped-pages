@@ -1,6 +1,7 @@
 import {
   CHU_MS, KINH_MS, KINH_TRE_MS, NUT_KHUNG, NUT_MS, SONG_EASE, SONG_HET, SONG_MS, TOE, TOE_MS, treChu, VONG,
 } from "@/lib/tam-trang/song-nhip";
+import { dongChu, ghi, giamChuyenDong, goViec, hen, viec } from "./hieu-ung-chung";
 
 /*
  * Doi cho hai bau troi cua dai "O cua so" bang mot vong song nuoc lan tu tam o cua so.
@@ -46,49 +47,6 @@ export type HinhDai = {
 const hinhCua = new WeakMap<HTMLElement, HinhDai>();
 const dangSong = new WeakSet<HTMLElement>();
 
-/** Moi viec dang cho cua mot dai troi, de huy sach khi thanh phan roi trang giua luc song dang lan. */
-type Viec = {
-  hen: Set<ReturnType<typeof setTimeout>>;
-  khung: Set<number>;
-  ranh: Set<number>;
-  hoat: Animation[];
-};
-
-const viecCua = new WeakMap<HTMLElement, Viec>();
-
-function viec(w: HTMLElement): Viec {
-  const co = viecCua.get(w);
-  if (co !== undefined) return co;
-  const moi: Viec = { hen: new Set(), khung: new Set(), ranh: new Set(), hoat: [] };
-  viecCua.set(w, moi);
-  return moi;
-}
-
-/** setTimeout co ghi so, de ham go cua dai troi huy duoc. */
-function hen(w: HTMLElement, f: () => void, ms: number): void {
-  const v = viec(w);
-  const id = setTimeout(() => {
-    v.hen.delete(id);
-    f();
-  }, ms);
-  v.hen.add(id);
-}
-
-/**
- * Ghi lai mot hoat hinh de huy duoc khi roi trang giua chung: vao so chung cua dai troi (ham go huy sach) VA vao so
- * rieng `cua` cua vong song dang chay, de chinh vong song do don minh khi tan.
- *
- * Vi sao phai co so rieng: moi vong song ghi khoang 27 doi tuong Animation, va moi cai giu mot KeyframeEffect tro toi
- * phan tu cua no - ke ca phan tu da bi go khoi cay DOM. Neu chi co so chung nhu truoc, mang ay chi duoc vut di luc roi
- * trang, tuc bam qua lai 30 lan la giu song song ~800 Animation va ~300 phan tu da go suot ca lan tham trang. `hen`,
- * `khung` va `ranh` deu tu xoa minh khi chay xong; `hoat` gio cung vay.
- */
-function ghi(w: HTMLElement, cua: Set<Animation>, a: Animation | undefined): void {
-  if (a === undefined) return;
-  viec(w).hoat.push(a);
-  cua.add(a);
-}
-
 /** Do bo cuc cua mot dai troi va nho lai. Goi luc ranh, khong bao gio goi trong lan bam. */
 export function doHinh(w: HTMLElement): HinhDai {
   const wr = w.getBoundingClientRect();
@@ -104,7 +62,7 @@ export function doHinh(w: HTMLElement): HinhDai {
     const X = Math.round(kr.left + kr.width / 2 - wr.left);
     const Y = Math.round(kr.top + kr.height / 2 - wr.top);
     const R = Math.ceil(Math.max(Math.hypot(X, Y), Math.hypot(W - X, Y), Math.hypot(X, H - Y), Math.hypot(W - X, H - Y))) + 4;
-    const chu = [...sec.querySelectorAll<HTMLElement>(".troi__noi > *")].map((el) => {
+    const chu = dongChu(sec).map((el) => {
       const r = el.getBoundingClientRect();
       return Math.hypot(
         Math.max(r.left - wr.left - X, 0, X - (r.right - wr.left)),
@@ -177,7 +135,7 @@ function songLan(w: HTMLElement, vao: HTMLElement, ra: HTMLElement, h: HinhDai):
   ghi(w, cua, song);
 
   // Chu cua troi moi hien dan dung luc mep song di qua tung dong (khoang cach da do san).
-  [...vao.querySelectorAll<HTMLElement>(".troi__noi > *")].forEach((el, i) => {
+  dongChu(vao).forEach((el, i) => {
     ghi(w, cua, el.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: CHU_MS, delay: treChu(g.chu[i] ?? 0, r0, R), easing: "ease-out", fill: "backwards",
     }));
@@ -265,22 +223,12 @@ function songLan(w: HTMLElement, vao: HTMLElement, ra: HTMLElement, h: HinhDai):
   }, SONG_HET);
 }
 
-/**
- * So hoat hinh ma mot dai troi dang giu. Chi de bai kiem do duoc ro ri: mang nay phai xep lai sau moi vong song, khong
- * duoc lon dan theo so lan doi cho (xem tests/unit/tam-trang-bau-troi.test.tsx).
- */
-export function soHoatDangGiu(w: HTMLElement): number {
-  return viecCua.get(w)?.hoat.length ?? 0;
-}
-
 /** Troi dang hien va troi dang an cua mot dai. */
 function haiMat(w: HTMLElement): { hien: HTMLElement; an: HTMLElement } | null {
   const hien = w.querySelector<HTMLElement>(".troi[data-mat]:not(.troi--an)");
   const an = w.querySelector<HTMLElement>(".troi[data-mat].troi--an");
   return hien !== null && an !== null ? { hien, an } : null;
 }
-
-const giamChuyenDong = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 
 /**
  * Doi cho hai bau troi. banPhim = true khi nguoi dung bam bang Enter hay dau cach: chi khi do vong focus moi hien
@@ -415,14 +363,7 @@ export function ganSong(w: HTMLElement): () => void {
     document.removeEventListener("keydown", phim);
     globalThis.removeEventListener("resize", doiKhung);
     // Roi trang giua luc song dang lan: huy moi hen gio, khung hinh, lan do bo cuc va hoat hinh dang cho, roi nha khoa.
-    const v = viecCua.get(w);
-    if (v !== undefined) {
-      for (const id of v.hen) clearTimeout(id);
-      for (const id of v.khung) cancelAnimationFrame(id);
-      for (const id of v.ranh) globalThis.cancelIdleCallback?.(id);
-      for (const a of v.hoat) a.cancel();
-      viecCua.delete(w);
-    }
+    goViec(w);
     dangSong.delete(w);
     hinhCua.delete(w);
   };

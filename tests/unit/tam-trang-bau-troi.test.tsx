@@ -3,7 +3,8 @@ import { act, useEffect, useLayoutEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
-import { doHinh, soHoatDangGiu } from "@/components/tam-trang/song";
+import { dongChu, soHoatDangGiu } from "@/components/tam-trang/hieu-ung-chung";
+import { doHinh } from "@/components/tam-trang/song";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { netTroi } from "@/lib/tam-trang/net-troi";
 import { CHU_MS, SONG_HET, SONG_MS } from "@/lib/tam-trang/song-nhip";
@@ -587,5 +588,21 @@ describe("BauTroi: nut tam dung hieu ung (WCAG SC 2.2.2)", () => {
     const dai = container.querySelector(".troi-cua-so") as HTMLElement;
     expect(dai.classList.contains("troi-dung")).toBe(true);
     expect(container.querySelector(".nut-dung")?.textContent).toBe("Cho hiệu ứng chạy");
+  });
+});
+
+describe("dongChu: cac dong chu cua mot bau troi", () => {
+  /*
+   * Do tren mat "kia" cua dai hai troi chu khong phai tren bau troi don: o che do mot bau troi, MotTroi con ve them
+   * vung aria-live cua nut tam dung ngay trong .troi__noi, nen mang that la bay phan tu. Mat "kia" khong mang vung ay
+   * nen no la cho duy nhat doc duoc dung sau dong chu that cua mot bau troi.
+   */
+  it("dung thu tu tren duoi, chay duoc ca khi chua tach kho chu", () => {
+    const { container } = ve(KIA, MINH);
+    const sec = container.querySelector(".troi[data-mat=\"kia\"]") as HTMLElement;
+    const lop = dongChu(sec).map((el) => el.className);
+    expect(lop).toEqual([
+      "sr-only", "troi__dong troi__tho d", "troi__giai troi__phu", "troi__nguon troi__phu", "troi__nhan", "troi__cuoi",
+    ]);
   });
 });
