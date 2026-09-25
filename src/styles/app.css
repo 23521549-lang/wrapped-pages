@@ -335,6 +335,23 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 /* chon bia: moi o la mot nhan boc radio that, radio phu kin o va trong suot. O toi thieu 120px: cot form o 320px chi
    con khoang 272px, 130px se roi ve mot cot va muoi mot o thanh mot dai rat dai; 120px giu hai cot, o van tren 44px. */
 .picker{ display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); }
+/* Vung cuon cua bang bia: an thanh cuon, bu lai bang vet mo o day. Vet mo la mot phan tu dinh o mep duoi keo nguoc
+   len dung chieu cao cua no, con luoi o co dung chung ay dem duoi, nen cuon toi day thi vet mo nam tron tren khoang
+   trong va khong con nhin thay; kho anh it hon mot khung cung vay. Khong can script, khong co gi phai don - cung co
+   che voi cot Hoat dong (.hoat-dong__cuon).
+   Dem 6px ba phia de vong focus cua o (outline 2.5px, offset 3px) khong bi vung cuon cat mat: dat overflow-y auto la
+   trinh duyet cat ca hai chieu. Phia duoi da co dem cua luoi o. */
+.cuon-vung{
+  max-height: 300px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  scrollbar-width: none; scroll-padding-block: 8px; padding: 6px 6px 0;
+}
+.cuon-vung::-webkit-scrollbar{ display: none; }
+.cuon-vung .picker{ padding-bottom: 2.25rem; }
+.cuon-vung::after{
+  content: ''; position: sticky; bottom: 0; display: block; height: 2.25rem;
+  margin-top: -2.25rem; pointer-events: none;
+  background: linear-gradient(color-mix(in oklch, var(--color-paper) 0%, transparent), var(--color-paper));
+}
 /* .swatch la nhan boc mot input radio that (khong phai khung noi dung tinh): vien phai qua duoc nguong
    tuong phan cua dieu khien (--color-rule-ui), giong .swatch--anh da lam, khong dung --color-rule trang tri. */
 .swatch{ position: relative; display: block; border: 1px solid var(--color-rule-ui); border-radius: 14px; overflow: hidden; cursor: pointer; aspect-ratio: 5 / 3; color: var(--blue-ink); transition: transform var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out); }
@@ -348,6 +365,10 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 /* o Anh cua ban va buoc cat bia 5:3; khung cat la thuoc tinh SVG, khong style noi tuyen */
 .swatch--anh{ display: grid; place-content: center; justify-items: center; gap: .3rem; padding: var(--space-xs); border-style: dashed; border-color: var(--color-rule-ui); background: var(--color-paper-2); font-size: var(--text-sm); font-weight: 500; line-height: 1.3; text-align: center; }
 .swatch--anh:hover{ background: var(--color-paper-3); }
+/* O "Giu bia dang dung" cua trang Viet tiep: cung dang voi o chon tep, khac han muoi o tranh, de nguoi dung thay ngay
+   day khong phai mot bia ma la mot lua chon khong doi bia. */
+.swatch--giu{ display: grid; place-content: center; justify-items: center; padding: var(--space-xs); border-style: dashed; background: var(--color-paper-2); font-size: var(--text-sm); font-weight: 500; line-height: 1.3; text-align: center; }
+.swatch--giu:hover{ background: var(--color-paper-3); }
 .swatch--anh svg{ width: 22px; height: 22px; }
 .bia-anh{ display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-sm); }
 .cat-bia{ display: grid; gap: var(--space-sm); padding: var(--space-md); min-width: 0; border: 1px solid var(--blue-line); border-radius: var(--radius-sm); background: var(--color-paper); }
