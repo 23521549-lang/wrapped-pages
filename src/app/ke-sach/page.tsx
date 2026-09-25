@@ -39,8 +39,11 @@ export default async function KeSach() {
   const coDaiTroi = minh !== null || kia !== null;
   const fresh = shelf.reduce((n, b) => n + b.newCount, 0);
   // Chia hai ngan ngay tai day, giu nguyen thu tu listShelf tra ve.
-  const cuaBan = shelf.filter((b) => b.mine);
-  const cuaKia = shelf.filter((b) => !b.mine);
+  // Thoi diem tuong doi tinh o day, khong truyen ham xuong thanh phan trinh duyet: ham khong di qua duoc ranh gioi
+  // may chu - trinh duyet, va chuoi thoi gian tuong doi phai la cua may chu de lan ve dau cua trinh duyet khong lech.
+  const tren = shelf.map((b) => Object.assign(b, { when: when(b) }));
+  const cuaBan = tren.filter((b) => b.mine);
+  const cuaKia = tren.filter((b) => !b.mine);
   const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} />;
 
   return (
@@ -102,12 +105,11 @@ export default async function KeSach() {
                 {hoatDong}
               </div>
 
-              <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." when={when} />
+              <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." />
               <Ngan
                 ten={`Kệ của ${me.partnerNickname}`}
                 books={cuaKia}
                 trong={`${me.partnerNickname} chưa chia sẻ cuốn nào.`}
-                when={when}
               />
 
               <footer className="foot">

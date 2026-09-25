@@ -2,8 +2,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { Ngan, SO_TANG_GON } from "@/components/book/Ngan";
-import type { ShelfBook as Sach } from "@/server/library/shelf";
+import { Ngan, SO_TANG_GON, type SachTrenKe } from "@/components/book/Ngan";
 
 /*
  * Ngan ke thu gon con ba tang. Diem 18 cua chu du an: nut an voi mat nhung phai hien ra khi di toi bang phim Tab va
@@ -17,18 +16,19 @@ const CSS = readFileSync("src/styles/app.css", "utf8").split(CR).join("");
 /** So cot ma getComputedStyle se bao. jsdom tra chuoi rong cho gridTemplateColumns nen phai va. */
 let cot = 3;
 
-function sach(i: number): Sach {
+function sach(i: number): SachTrenKe {
   return {
     id: `s${i}`, title: `Cuốn ${i}`, mode: "chia-se", cover: "nui-xa", coverMediaId: null,
     pageCount: 2, newCount: 0, lockedCount: 0, mine: true, ownerNickname: "Linh",
     createdAt: new Date(0), lastPublishedAt: new Date(0), excerpt: null, excerptPosition: 1, excerptLocked: false,
-  } as unknown as Sach;
+    when: "vừa xong",
+  } as unknown as SachTrenKe;
 }
 
 const nhieu = (n: number) => Array.from({ length: n }, (_, i) => sach(i + 1));
 
-function ve(books: readonly Sach[]) {
-  render(<Ngan ten="Kệ của bạn" books={books} trong="Bạn chưa có cuốn nào." when={() => "vừa xong"} />);
+function ve(books: readonly SachTrenKe[]) {
+  render(<Ngan ten="Kệ của bạn" books={books} trong="Bạn chưa có cuốn nào." />);
 }
 
 const cuon = () => [...document.querySelectorAll(".cuon")];
@@ -118,7 +118,7 @@ describe("Ngan: thu gon con ba tang", () => {
         ngat();
       }
     });
-    const { unmount } = render(<Ngan ten="Kệ của bạn" books={nhieu(20)} trong="x" when={() => "vừa xong"} />);
+    const { unmount } = render(<Ngan ten="Kệ của bạn" books={nhieu(20)} trong="x" />);
     unmount();
     expect(ngat).toHaveBeenCalled();
   });

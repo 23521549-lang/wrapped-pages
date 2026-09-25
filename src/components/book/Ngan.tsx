@@ -8,12 +8,18 @@ import { ShelfBook } from "./ShelfBook";
 /** Thu gon con chung nay tang moi ngan (diem 14 cua chu du an, phan quyet B6: tinh theo TUNG ngan). */
 export const SO_TANG_GON = 3;
 
+/**
+ * Mot cuon tren ke, kem dong thoi diem may chu da dung san. Chuoi do phai tinh o may chu: no la thoi gian TUONG DOI
+ * ("hôm qua", "2 giờ trước"), ma may chu va trinh duyet doc dong ho khac nhau thi lan ve dau cua trinh duyet se lech
+ * voi HTML may chu gui xuong. Ngoai ra ham khong di qua duoc ranh gioi may chu - trinh duyet.
+ */
+export type SachTrenKe = Sach & { when: string };
+
 export type NganProps = {
   ten: string;
-  books: readonly Sach[];
+  books: readonly SachTrenKe[];
   /** Chu cua ngan trong. */
   trong: string;
-  when: (b: Sach) => string;
 };
 
 /**
@@ -27,7 +33,7 @@ export type NganProps = {
  * khong co JavaScript van thay dung ba tang va khong thay mot nut vo dung nao. Ngay khi gan, mot layout effect (chay
  * truoc khi ve, nen khong nhay va khong xo dich) doc so cot, cat danh sach va bo lop cat do.
  */
-export function Ngan({ ten, books, trong, when }: NganProps) {
+export function Ngan({ ten, books, trong }: NganProps) {
   const luoiRef = useRef<HTMLUListElement>(null);
   /** null la chua do xong: may chu con dang cat bang CSS. */
   const [cot, setCot] = useState<number | null>(null);
@@ -87,7 +93,7 @@ export function Ngan({ ten, books, trong, when }: NganProps) {
                   cover={b.cover}
                   coverMediaId={b.coverMediaId}
                   pageCount={b.pageCount}
-                  when={when(b)}
+                  when={b.when}
                   newCount={b.newCount}
                   lockedCount={b.lockedCount}
                   isPrivate={b.mode === "rieng-tu"}
