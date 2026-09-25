@@ -103,6 +103,8 @@ export function CoverPicker({ value, onChange, photos, giuDuoc, bookId, mediaEna
   });
 
   // Keo o dang chon vao tam nhin bang scrollTop cua CHINH vung cuon. scrollIntoView se cuon ca trang va lam man nhay.
+  // offsetTop cua o tinh tu vung cuon vi .cuon-vung dat position: relative (app.css); khong co dong do thi offsetTop tinh
+  // tu mot to tien xa hon, gom ca phan trang phia tren bang bia, va bang mo ra bi cuon qua tay.
   // useLayoutEffect vi viec nay phai xong truoc khung hinh dau, khong duoc de nguoi dung thay bang bia nhay mot cai.
   useLayoutEffect(() => {
     const vung = vungRef.current;

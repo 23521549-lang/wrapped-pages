@@ -389,8 +389,10 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
    che voi cot Hoat dong (.hoat-dong__cuon).
    Dem 6px ba phia de vong focus cua o (outline 2.5px, offset 3px) khong bi vung cuon cat mat: dat overflow-y auto la
    trinh duyet cat ca hai chieu. Phia duoi da co dem cua luoi o. */
+/* position: relative lam vung cuon thanh offsetParent cua moi o, nen offsetTop cua o la toa do trong noi dung cuon,
+   cung he voi scrollTop (CoverPicker keo o dang chon vao giua khung bang phep tinh do). */
 .cuon-vung{
-  max-height: 300px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  position: relative; max-height: 300px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
   scrollbar-width: none; scroll-padding-block: 8px; padding: 6px 6px 0;
 }
 .cuon-vung::-webkit-scrollbar{ display: none; }

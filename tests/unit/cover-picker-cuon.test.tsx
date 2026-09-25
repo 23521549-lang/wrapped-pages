@@ -128,6 +128,12 @@ describe("vung cuon trong app.css", () => {
     expect(CSS).toContain(".cuon-vung::-webkit-scrollbar{ display: none; }");
   });
 
+  it("vung cuon la offsetParent cua moi o, nen offsetTop cua o cung he toa do voi scrollTop", () => {
+    // Thieu dong nay thi offsetTop cua o tinh tu mot to tien xa hon (ca phan trang phia tren bang bia), va bang mo ra
+    // bi cuon qua tay: o dang chon nam khuat phia tren khung. Bai e2e viet-tiep do dieu do tren trinh duyet that.
+    expect(khai(".cuon-vung")).toContain("position: relative");
+  });
+
   it("vong focus cua o khong bi vung cuon cat mat", () => {
     // overflow-y: auto cat CA hai chieu, nen phai chua san cho vong focus (outline 2.5px, offset 3px).
     const vung = khai(".cuon-vung");

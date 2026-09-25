@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { resetDb } from "./db";
 import { biaCua, dangTrang, dongContextCu, haiNguoiDaVao, nhacCua, taoSach } from "./kho-sach";
 import { chonBia } from "./media";
@@ -115,4 +115,44 @@ test("cuon cua nguoi kia: trang Viet tiep tra 404", async ({ browser }) => {
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   const r = await b.goto(`/sach/${id}/viet-tiep`);
   expect(r?.status()).toBe(404);
+});
+
+/**
+ * O dang chon co nam tron trong phan thay duoc cua khung cuon bang bia khong. Chi trinh duyet that do duoc: jsdom tra 0
+ * cho moi toa do, nen bai don vi khong the thay bang bia mo ra bi cuon lech.
+ */
+async function oChonTrongKhung(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const vung = document.querySelector(".cuon-vung");
+    const o = vung?.querySelector("input:checked")?.closest(".swatch");
+    if (!vung || !o) return "khong thay o dang chon";
+    const k = vung.getBoundingClientRect();
+    const r = o.getBoundingClientRect();
+    if (r.top >= k.top - 1 && r.bottom <= k.bottom + 1) return "trong khung";
+    return `ngoai khung: o ${Math.round(r.top)} toi ${Math.round(r.bottom)}, khung ${Math.round(k.top)} toi ${Math.round(k.bottom)}`;
+  });
+}
+
+test("mo trang Viet tiep thi o dang chon nam trong phan thay duoc cua bang bia, ca o dau bang lan o giua bang", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
+  await a.locator(".viet-chu .ProseMirror").click();
+  await a.keyboard.insertText("Lượt đầu tiên.");
+  await dangTrang(a);
+  // Man hep: luoi hai cot, bang bia cao gap may lan khung cuon.
+  await a.setViewportSize({ width: 375, height: 800 });
+
+  await a.goto(`/sach/${id}/viet-tiep`);
+  await expect(a.getByRole("radio", { name: /Giữ bìa đang dùng/ })).toBeChecked();
+  expect(await oChonTrongKhung(a), "o dau bang").toBe("trong khung");
+
+  // O o giua bang: chon roi gui (ban nhap giu lua chon), mo lai trang.
+  const hoaDao = a.locator('label.swatch:has(input[value="hoa-dao"]:not([data-anh]))');
+  await hoaDao.scrollIntoViewIfNeeded();
+  await hoaDao.click();
+  await a.getByRole("button", { name: "Viết trang" }).click();
+  await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet$`));
+  await a.goto(`/sach/${id}/viet-tiep`);
+  await expect(a.getByRole("radio", { name: "Bìa cành hoa đào" })).toBeChecked();
+  expect(await oChonTrongKhung(a), "o giua bang").toBe("trong khung");
 });
