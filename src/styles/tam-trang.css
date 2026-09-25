@@ -183,6 +183,38 @@
 .troi--dang-song .cua-so:hover .cua-so__kinh{ transform: none; }
 
 /*
+ * Hieu ung C - vet nuoc khi THAY mot tam trang (src/components/tam-trang/loang.ts). Lop loang to dung MOT cong thuc
+ * mau va deo dung MOT mat na day voi .troi__nen, nen luc don trao nen that vao khong loe mot khung hinh nao.
+ *
+ * .giot la cai khuon: deo san mot mat na radial-gradient TINH, khong bao gio doi, chi phong to bang transform va mo
+ * vao bang opacity. .giot__nen la nuoc ben trong: to dung manh nen troi moi nam o cho do bang background-size cong
+ * background-position, nen the chi to bang cai khuon chu khong to bang ca dai troi. Con so 82% phai khop hang LOI cua
+ * src/lib/tam-trang/loang-nhip.ts: tests/unit/tam-trang-loang-nhip.test.ts doc thang tep nay va so hai con so.
+ *
+ * Co y KHONG viet will-change: mot hoat hinh transform hay opacity dang chay thi trinh duyet tu tach lop ghep hinh.
+ */
+.loang{
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, black 58%, transparent 100%); mask-image: linear-gradient(to bottom, black 58%, transparent 100%);
+}
+/* trong o kinh: o tron da tu cat hinh, va no to kin toi mep nen khong co cai nhat dan o day */
+.loang--nho{ -webkit-mask-image: none; mask-image: none; }
+.giot{
+  position: absolute; overflow: hidden; transform-origin: 50% 50%;
+  -webkit-mask-image: radial-gradient(closest-side circle, black 0 82%, transparent 100%); mask-image: radial-gradient(closest-side circle, black 0 82%, transparent 100%);
+}
+.giot__nen{ position: absolute; inset: 0; transform-origin: 50% 50%; background-repeat: no-repeat; background-image: linear-gradient(180deg, var(--t1), var(--t2) 70%); }
+/*
+ * Trong lan loang, thu to mau nen la may chuc vet nuoc, nen nen chuyen sac cua troi moi tat di. Tat bang `background`
+ * chu KHONG bang opacity hay visibility cua ca the: net ve (.m) nam BEN TRONG .troi__nen, tat the cha la bien hoat
+ * hinh cua tung net thanh hoat hinh rong, va toi buoc don ca tram net bat ra cung mot luc (phan quyet M1).
+ */
+.troi--dang-loang > .troi__nen{ background: none; }
+/* troi moi nam tren lop loang, troi cu nam duoi cung: thu tu nay khong phu thuoc thu tu the trong cay DOM */
+.troi-dai > .troi--dang-loang{ z-index: 3; }
+.troi-dai > .troi--cu{ z-index: 0; }
+
+/*
  * Net ve bau troi. Mau net di qua fill/stroke/background (nen troi --tnet, --t1, --t2), khong qua color: day la trang
  * tri an voi trinh doc man hinh, khong phai chu.
  */
@@ -254,7 +286,8 @@
   .m-la{ opacity: .7; transform: translate(var(--lx, 0px), 0) rotate(30deg); }
   .m-bui{ opacity: .6; }
   /* doi cho troi: doi ngay, khong lop song nao (song.ts cung khong tao lop khi nguoi dung xin giam chuyen dong) */
-  .song-vong, .song-kinh-cu, .song-kinh-vong{ display: none; }
+  /* thay tam trang: trao thang, khong lop loang nao (loang.ts cung khong tao lop khi nguoi dung xin giam chuyen dong) */
+  .song-vong, .song-kinh-cu, .song-kinh-vong, .loang{ display: none; }
   .cua-so__kinh{ transition: none; }
   /* Khong con gi chay de ma tam dung (globals.css da tat moi animation): giau han nut thay vi de mot cong tac khong
      lam gi trong hang cuoi. display: none nen no cung ra khoi luot Tab, khong phai mot diem dung vo nghia. O giu cho

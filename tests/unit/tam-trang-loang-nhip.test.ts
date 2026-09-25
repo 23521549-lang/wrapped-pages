@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   bezier, CHU_MS, CHU_TRE_MS, CU_MS, CUA_MS, DON_MS, DV_MS, hatTu, JIT_HE, KHUNG_NGOAI, KHUNG_TRONG, khuonO, lanF,
   LOANG_HET_MS, LOANG_MS, LOI, luoiGiot, MAT_DO, MAU, NEN_MS, NEN_TRE_MS, NHIEU_MS, O_HE, O_SAN, R0_HE, rng, RV_HE,
   S0, tien,
 } from "@/lib/tam-trang/loang-nhip";
+import { boComment, THU_MUC_CSS } from "../helpers/bang-token";
 
 /** Doc so ti le tu mot chuoi "scale(0.30000)". */
 const tyLe = (t: unknown) => Number(/scale\(([0-9.]+)\)/.exec(String(t))?.[1] ?? "0");
@@ -96,13 +98,19 @@ describe("nhip", () => {
   /*
    * Loi dac 82 phan tram khong phai mot con so dep ngau nhien: no la cach viet lai be rong mep mem ma spec muc 3.3
    * doi - khoang 30px o dai lon, dung bang be rong chuyen tiep cua feGaussianBlur stdDeviation 11 o ban duyet vong
-   * mot. Kiem ca hai dau: con so tho, va he qua hinh hoc cua no. Task 7 viet dung con so nay vao `.giot` trong
-   * tam-trang.css (--loi: 82%) va phai them o do mot phep doi chieu doc thang tep CSS; o day chua co quy tac ay nen
-   * chua doi chieu duoc, bai nay giu phan chac chan doi chieu duoc: hai dau cua chinh mo dun thuan.
+   * mot. Kiem ca ba dau: con so tho, he qua hinh hoc cua no, va con so viet trong mat na tinh cua `.giot` o
+   * tam-trang.css. Doc thang tep CSS that chu khong chep tay mot chuoi: hang so va CSS song o hai noi, doi mot ben ma
+   * quen ben kia la mep vet nuoc khong con dung be rong da duyet, va khong cong nao khac bat duoc dieu do.
    */
-  it("loi dac cua mat na la 82 phan tram, va no cho mep mem khoang 30px o dai lon", () => {
+  it("loi dac cua mat na la 82 phan tram, cho mep mem khoang 30px, va dung bang con so trong tam-trang.css", () => {
     expect(LOI).toBe(0.82);
     expect((1 - LOI) * MAT_DO * RV_HE).toBeCloseTo(30.4, 1);
+
+    const css = boComment(readFileSync(`${THU_MUC_CSS}/tam-trang.css`, "utf8"));
+    const khoi = /\.giot\{([^}]*)\}/.exec(css);
+    const nan = [...(khoi?.[1] ?? "").matchAll(/radial-gradient\(closest-side circle, black 0 ([\d.]+)%, transparent 100%\)/g)];
+    // Hai lan: -webkit-mask-image cho Safari, va mask-image chuan.
+    expect(nan.map((m) => m[1])).toEqual([(LOI * 100).toFixed(0), (LOI * 100).toFixed(0)]);
   });
 });
 
