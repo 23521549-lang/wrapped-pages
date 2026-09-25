@@ -87,7 +87,9 @@
   --roi-sang-mau: oklch(99.4% 0.005 235 / .62);
   /* Chieu cao mot tang ke: bia 5:3 cong hai dong chu va cac dau hieu. Chi dung de may chu cat san ba tang. */
   --tang-cao: 15.5rem;
-  --ke-mep: oklch(91.5% 0.012 75);
+  /* Mep ke: mot duong vang am "muc vua" duoi moi tang sach (diem 14 va 22 cua chu du an). Phai qua cong tuong phan 3:1
+     nhu --color-rule-ui, tren ca ba be mat giay: 3.52 / 3.37 / 3.18. */
+  --ke-mep: oklch(62% 0.07 78);
   --ke-mep-bong: oklch(96.5% 0.007 75);
   --radius-sach: 2px 5px 5px 2px;
   --gay-sach-pha: 90%;

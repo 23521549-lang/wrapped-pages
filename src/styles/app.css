@@ -207,7 +207,9 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .ngan__dem{ font-size: var(--text-sm); color: var(--color-ink-3); white-space: nowrap; }
 .ngan__trong{ display: grid; gap: var(--space-xs); color: var(--color-ink-2); }
 /* mep ke: vach 1px xam am va bong mem ngan ngay duoi, chi bang nen chuyen mau */
-.ke-mep{ display: block; width: min(420px, 100%); height: 5px; background: linear-gradient(var(--ke-mep) 0 1px, var(--ke-mep-bong) 1px, transparent 5px); }
+/* Net mep ke la mot VIEN that (border-top), khong ve bang gradient: cong tuong phan doc duoc vien tu CSS va do no tren
+   ca ba be mat giay, con net ve bang gradient thi cong khong thay. Bong mem 4px ngay duoi van la gradient trang tri. */
+.ke-mep{ display: block; width: min(420px, 100%); height: 5px; border-top: 1px solid var(--ke-mep); background: linear-gradient(var(--ke-mep-bong), transparent); }
 /* Moi hang sach dung tren mot mep ke, nen mot hang doc ra la mot tang. Khoang cach doc giua hai tang rong hon mot
    chut cho mep ke ra hinh, dung y cua chu du an o diem 14. */
 .ngan .hang{ row-gap: var(--space-xl); }
@@ -241,7 +243,7 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .cuon{ display: grid; min-width: 0; }
 .cuon__lien{ position: relative; display: grid; align-content: start; min-width: 0; border-radius: 4px; }
 .cuon__lien:focus-visible{ outline-offset: 6px; }
-.cuon__lien::before{ content: ''; order: 1; height: 5px; margin-inline: calc(-1 * var(--hang-khe) / 2); background: linear-gradient(var(--ke-mep) 0 1px, var(--ke-mep-bong) 1px, transparent 5px); }
+.cuon__lien::before{ content: ''; order: 1; height: 5px; margin-inline: calc(-1 * var(--hang-khe) / 2); border-top: 1px solid var(--ke-mep); background: linear-gradient(var(--ke-mep-bong), transparent); }
 .cuon:last-child .cuon__lien::before{ margin-right: -100vw; }
 .cuon__bia{
   --gay: color-mix(in oklch, var(--bia-duoi) var(--gay-sach-pha), var(--color-ink));
