@@ -9,7 +9,7 @@ import type { TroiHien } from "@/lib/tam-trang/lich";
 import { TROI, WEATHERS } from "@/lib/tam-trang/troi";
 import { dongChu, giamChuyenDong, goViec } from "./hieu-ung-chung";
 import { Hoa } from "./HoaEp";
-import { loangTroi, type MatLoang } from "./loang";
+import { huyLoang, loangTroi, type MatLoang } from "./loang";
 import { NetTroi } from "./NetTroi";
 import { ganSong } from "./song";
 
@@ -241,6 +241,15 @@ function matLoang(w: HTMLElement, cu: TroiCu): MatLoang | null {
 }
 
 /**
+ * Go dau "dang loang" cua dai troi. Mot cau go duoc dau cua ca hai nhanh: dai lon danh dau tren chinh bau troi moi, o
+ * cua so danh dau tren o kinh moi, va khong bao gio co ca hai cung luc.
+ */
+function goDauLoang(w: HTMLElement): void {
+  w.querySelector(".troi--dang-loang, .cua-so__kinh--loang")
+    ?.classList.remove("troi--dang-loang", "cua-so__kinh--loang");
+}
+
+/**
  * Dai troi o dau ke sach, che do "O cua so" cua ban mau da duyet. Mac dinh la mot bau troi lon cua nguoi kia; khi nguoi
  * xem cung dang giu tam trang, mot o cua so tron nho mang troi cua ho (thu nho, van chuyen dong, kem bong hoa ep).
  *
@@ -369,6 +378,24 @@ export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien |
   }, [caHai, kia, minh]);
 
   /*
+   * So bau troi tren dai vua doi GIUA lan loang: nguoi kia vua tha tam trang cua ho, hay vua thu no lai. Ham go cua
+   * effect theo `caHai` o duoi huy moi hen gio cua dai troi, ke ca cai hen don dep cua lan loang, nen khong go tay o
+   * day thi lop vet nuoc, dau "dang loang" va trai troi cu con nam lai trong cay toi tan lan thay tam trang sau.
+   *
+   * Dat TRUOC effect chay lan loang: mot lan loang khong bao gio bat dau o dung luot `caHai` doi (effect nhan ra lan
+   * thay tam trang bo qua luot do), nhung neu mot ngay nao do no co, thu tu nay dam bao lan loang moi khong bi chinh
+   * cau go nay huy ngay khi vua dung xong.
+   */
+  useLayoutEffect(() => {
+    const w = dai.current;
+    if (w === null || !huyLoang(w)) return;
+    goDauLoang(w);
+    // Tra trang thai ve nhu sau mot lan loang binh thuong: tam trang moi van hien du, chi la trao thang thay vi loang
+    // not - dung cai ma nhanh giam chuyen dong lam.
+    setCu(null);
+  }, [caHai]);
+
+  /*
    * Chay lan loang. Effect nay chay o lan commit da co CA hai bau troi trong cay, va van truoc khi trinh duyet ve, nen
    * khung hinh dau tien da la khung hinh co vet nuoc.
    */
@@ -386,9 +413,7 @@ export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien |
     // day: goi flushSync tu trong mot lifecycle thi React in canh bao, ma luc do cung khong co khung hinh nao de giu.
     let dongBo = true;
     loangTroi(w, mat, () => {
-      // Mot cau go duoc dau "dang loang" cua ca hai nhanh: dai lon danh dau tren chinh bau troi moi, o cua so danh
-      // dau tren o kinh moi, va khong bao gio co ca hai cung luc.
-      w.querySelector(".troi--dang-loang, .cua-so__kinh--loang")?.classList.remove("troi--dang-loang", "cua-so__kinh--loang");
+      goDauLoang(w);
       // flushSync de React go trai troi cu NGAY trong luot nay: de vong ve lai binh thuong thi giua luc go lop loang
       // va luc go troi cu se lot mot khung hinh co ca hai.
       if (dongBo) setCu(null);

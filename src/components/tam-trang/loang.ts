@@ -68,6 +68,19 @@ function donLan(w: HTMLElement): void {
 }
 
 /**
+ * Go han mot lan loang chua tan, khi nguoi goi khong doi duoc toi luc no tu don. Tra ve true khi that su co mot lan
+ * dang do, de nguoi goi biet minh con phai tra not trang thai cua rieng ho ve (dau "dang loang", trai troi cu).
+ *
+ * Co mot truong hop khong doi duoc that: so bau troi tren dai vua doi giua lan loang, nen ham go cua effect theo so
+ * bau troi sap huy moi hen gio cua dai - ke ca cai hen don dep cua chinh lan loang nay.
+ */
+export function huyLoang(w: HTMLElement): boolean {
+  if (!lanCua.has(w)) return false;
+  donLan(w);
+  return true;
+}
+
+/**
  * Chay mot lan loang. `xong` duoc goi trong buoc don, TRUOC khi lop loang bi go, de nguoi goi trao trang thai (go
  * troi cu, go lop `troi--dang-loang`) trong dung mot luot - giua troi cu bien mat va lop loang bien mat khong co khung
  * hinh nao lot vao. Vet nuoc va nen that dung chung dung mot cong thuc mau nen luc trao khong loe.

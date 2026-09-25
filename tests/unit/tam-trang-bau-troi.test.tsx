@@ -881,6 +881,55 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     expect(dai.querySelector(".song-vong")).not.toBeNull();
   });
 
+  /*
+   * So bau troi tren dai doi GIUA lan loang: nguoi kia vua tha tam trang cua ho (mot troi thanh hai troi), hay vua thu
+   * no lai (hai troi thanh mot). Ham go cua effect theo so bau troi huy moi hen gio cua dai troi, ke ca cai hen don
+   * dep cua lan loang, nen neu khong go tay thi hoat hinh dung het ma lop vet nuoc, dau "dang loang" va trai troi cu
+   * con nam lai trong cay toi tan lan thay tam trang sau - mot bau troi khong nen, phu mot lop nuoc dong cung.
+   */
+  it("nguoi kia tha tam trang giua lan loang tren dai lon: go sach lop loang, dau dang loang va trai troi cu", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = ve(null, MINH);
+    rerender(<BauTroi tenKia="Linh" kia={null} minh={MINH_MOI} />);
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    // Phan quyet M3: chung minh lan loang DANG chay that truoc khi kiem viec don no.
+    expect(lopLoang(dai).querySelectorAll(".giot").length).toBeGreaterThan(0);
+
+    rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    expect(dai.querySelector(".loang")).toBeNull();
+    expect(dai.querySelector(".troi--dang-loang")).toBeNull();
+    expect(dai.querySelector(".troi--cu")).toBeNull();
+    expect(soHoatDangGiu(dai)).toBe(0);
+
+    // Cai hen don dep da bi huy, nen khong co gi bat ra muon sau do.
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+    expect(dai.querySelector(".loang")).toBeNull();
+    expect(dai.querySelectorAll(".troi[data-k]")).toHaveLength(2);
+  });
+
+  /*
+   * Cung mot lo hong, nhanh o cua so. O day React tu go o kinh dang loang khi mat "kia" bien mat, nen cai con lai la
+   * trang thai ben React: `cu` khong bao gio duoc tra ve null, va ngay khi nguoi kia tha lai, o cua so moc ra mot o
+   * kinh cu ma khong lan loang nao con chay de phu len no.
+   */
+  it("nguoi kia thu tam trang giua lan loang trong o cua so: khong de lai o kinh cu nao khi ho tha lai", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = ve(KIA, MINH);
+    rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    const oCu = dai.querySelector(".troi[data-mat=\"kia\"] .cua-so__o") as HTMLElement;
+    expect(lopLoang(oCu).querySelectorAll(".giot").length).toBeGreaterThan(0);
+
+    rerender(<BauTroi tenKia="Linh" kia={null} minh={MINH_MOI} />);
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+    rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+
+    const o = dai.querySelector(".troi[data-mat=\"kia\"] .cua-so__o") as HTMLElement;
+    expect(o.querySelectorAll(".cua-so__kinh")).toHaveLength(1);
+    expect(dai.querySelector(".cua-so__kinh--loang")).toBeNull();
+    expect(dai.querySelector(".loang")).toBeNull();
+  });
+
   it("troi cua nguoi kia doi thi khong loang: chi tam trang cua chinh nguoi xem moi co lan loang", () => {
     const { container, rerender } = ve(KIA, null);
     rerender(<BauTroi tenKia="Linh" kia={{ ...KIA, weather: "giong", gio: "09:00", tha: "Thả lúc 09:00" }} minh={null} />);
