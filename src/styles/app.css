@@ -505,7 +505,9 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 @media (max-width: 700px){
   .nav__in{ gap: 0 var(--space-md); }
   .wordmark{ min-height: 52px; margin-right: auto; }
-  .nav__links{ order: 3; width: 100%; margin-right: 0; }
+  /* Bon muc phai vua mot hang o 320px (spec 11.1): khe hep lai va cac muc dan deu ca hang. Cho xuong hang la luoi an toan
+     khi nguoi dung phong to chu, de thanh khong bao gio tran ngang du co chu the nao. */
+  .nav__links{ order: 3; width: 100%; margin-right: 0; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--space-sm); }
   .nav__link{ min-height: 44px; }
 }
 /*

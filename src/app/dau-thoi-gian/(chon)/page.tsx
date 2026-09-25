@@ -9,7 +9,9 @@ import { CoverArt } from "@/components/book/CoverArt";
 import { CoverImage } from "@/components/book/CoverImage";
 
 /*
- * Trang chon cuon cua Dau thoi gian. Liet ke DUNG nhung cuon nguoi xem thay duoc tren ke (listShelf: cuon cua minh ke ca
+ * Trang chon cuon cua Dau thoi gian. Nam trong nhom tuyen (chon) de khung giu cho (loading.tsx) cua no chi boc CHINH
+ * trang nay: boc ca doan con [id] thi trang cua mot cuon bat dau stream voi ma 200 truoc khi cong cua no kip tra 404.
+ * Liet ke DUNG nhung cuon nguoi xem thay duoc tren ke (listShelf: cuon cua minh ke ca
  * rieng tu, cong cuon chia se cua nguoi kia), khong rong hon. Moi dong mot cuon, bam vao thi toi luoi muoi hai thang
  * cua cuon do.
  */

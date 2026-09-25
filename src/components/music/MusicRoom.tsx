@@ -138,11 +138,14 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children, side, 
       {/* Cot phai luon co mat va the nhac luon la con dau cua no: side chen SAU the nhac, nen iframe khong doi cho. */}
       <div className="doc-luoi__phu doc-luoi__phu--nhac">
         <aside className="nhac-the" aria-labelledby={tieuDe}>
-          {/* Ten vung (aria-labelledby) chi lay chu "Nhạc nền"; lien ket thi doc them no dan toi dau. */}
+          {/*
+            Ten vung (aria-labelledby) chi lay chu "Nhạc nền" cua the span. Lien ket doc them no dan toi dau bang
+            aria-label, bat dau bang dung chu nhin thay (label in name, WCAG 2.5.3). Khong ghep ten bang mot the span an
+            dat canh: Chromium chen mot dau cach truoc the an, va ten doc ra co mot dau cach thua truoc dau phay.
+          */}
           <h2 className="d nhac-the__t">
-            <Link className="nhac-the__lien" href={dauHref}>
+            <Link className="nhac-the__lien" href={dauHref} aria-label="Nhạc nền, xem dấu thời gian của cuốn này">
               <span id={tieuDe}>Nhạc nền</span>
-              <span className="sr-only">, xem dấu thời gian của cuốn này</span>
             </Link>
           </h2>
           <div ref={mayRef} className="nhac-the__may" />
