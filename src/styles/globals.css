@@ -7,6 +7,12 @@
 @import "./khung-cho.css";
 
 html, body { overflow-x: clip; }
+/* Thanh dieu huong dinh o dinh trang, nen moi lan trinh duyet tu cuon toi mot phan tu (Tab toi mot nut, mo mot khung
+   ben trong trang, tim chu, lien ket neo) co the dat phan tu do NAM DUOI thanh: nhin thi thay nhung bam khong trung,
+   vi thanh chan lay cu bam. Chua san mot khoang o dinh vung cuon goc de moi lan cuon deu dung duoi thanh. Khong anh
+   huong cac vung cuon rieng (bang bia, cot Hoat dong): chung co scroll-padding cua chinh chung. */
+html { scroll-padding-top: 5rem; }
+@media (max-width: 700px){ html { scroll-padding-top: 8rem; } }
 body{
   margin:0; background: var(--color-paper); color: var(--color-ink);
   font-family: var(--font-body); font-size: var(--text-base); line-height:1.65;

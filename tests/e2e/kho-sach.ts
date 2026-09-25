@@ -198,6 +198,30 @@ export async function nhacCua(bookId: string): Promise<string | null> {
   }
 }
 
+/**
+ * Dong thoi gian bia cua mot cuon trong database e2e, theo dung thu tu man Sua sach ve: o mo dau truoc, roi cac o theo
+ * vi tri to dau cua luot. Chi doc de kiem. Cung rao mqce_e2e voi datNhac.
+ */
+export async function biaCua(bookId: string): Promise<{ roundId: string | null; cover: string; coverMediaId: string | null }[]> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const rows = await sql<{ round_id: string | null; cover: string; cover_media_id: string | null }[]>`
+      select c.round_id, c.cover, c.cover_media_id
+      from book_covers c
+      left join (select round_id, min(position) as dau from pages group by round_id) k on k.round_id = c.round_id
+      where c.book_id = ${bookId}
+      order by coalesce(k.dau, 0)`;
+    return rows.map((r) => ({ roundId: r.round_id, cover: r.cover, coverMediaId: r.cover_media_id }));
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Doi gio luu cua ban nhap trong database e2e, de chup anh "Luu hom qua". Cung rao voi dangToThang. */
 export async function doiGioNhap(bookId: string, luc: Date): Promise<void> {
   const sql = postgres(e2eUrls().e2eUrl, { max: 1 });

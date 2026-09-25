@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TrackTimeline } from "@/components/book/TrackTimeline";
 import type { TrackSlot } from "@/server/library/timeline";
@@ -28,6 +28,11 @@ const cuaLuot = (o: TrackSlot["o"]): TrackSlot =>
 function ve(slots: TrackSlot[]) {
   render(<TrackTimeline bookId="sach-1" slots={slots} now={NOW} />);
 }
+
+beforeAll(() => {
+  // jsdom khong co scrollIntoView. Dong dang mo tu keo minh vao tam nhin mot lan, nen phai co ham nay de goi duoc.
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { value: () => {}, configurable: true, writable: true });
+});
 
 afterEach(() => {
   cleanup();

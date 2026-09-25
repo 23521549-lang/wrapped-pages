@@ -16,7 +16,7 @@ type Tep = { name: string; mimeType: string; buffer: Buffer };
 /** Bo doc anh iPhone nap qua mang (Worker tu blob:), giai ma 12 MP mat khoang 1.7 giay: doi rong hon mac dinh. */
 const CHO_ANH_MS = 20_000;
 
-const oBia = (p: Page) => p.getByLabel("Ảnh của bạn, chọn ảnh làm bìa");
+const oBia = (p: Page) => p.getByLabel("Thêm ảnh của bạn làm bìa");
 const san = (p: Page) => p.getByRole("group", { name: "Khung cắt ảnh bìa" });
 
 /** Chon tep lam bia, doi buoc cat, doc viewBox cua san cat (kich thuoc anh da xoay theo huong chup), roi Huy. */
@@ -49,7 +49,7 @@ test("bia nhan PNG, JPEG xoay theo EXIF, GIF, AVIF, HEIC; TIFF bao dung cau; HEI
   await oBia(a).setInputFiles(tepMau("plain.heic"));
   await expect(san(a).locator("svg").first()).toHaveAttribute("viewBox", "0 0 120 80", { timeout: CHO_ANH_MS });
   await a.getByRole("button", { name: "Dùng ảnh này" }).click();
-  await expect(a.getByRole("radio", { name: "Ảnh của bạn" })).toBeChecked();
+  await expect(a.getByRole("radio", { name: /Ảnh của bạn/ })).toBeChecked();
   await a.getByRole("button", { name: "Tạo sách" }).click();
   await a.waitForURL(new RegExp("/sach/[0-9a-f-]{36}/viet$"));
 });

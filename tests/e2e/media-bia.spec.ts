@@ -16,7 +16,7 @@ test("bia tu tai len: chon anh, cat bang phim, dung anh nay, luu; the sach ve an
   await a.goto("/sach/moi");
   await a.getByLabel("Tên sách").fill("Những bữa sáng");
 
-  await a.getByLabel("Ảnh của bạn, chọn ảnh làm bìa").setInputFiles({
+  await a.getByLabel("Thêm ảnh của bạn làm bìa").setInputFiles({
     name: "bia.png", mimeType: "image/png", buffer: await anhPng(a, 800, 600),
   });
   const san = a.getByRole("group", { name: "Khung cắt ảnh bìa" });
@@ -29,7 +29,8 @@ test("bia tu tai len: chon anh, cat bang phim, dung anh nay, luu; the sach ve an
   await khongTranNgang(a, "form sach dang mo buoc cat");
 
   await a.getByRole("button", { name: "Dùng ảnh này" }).click();
-  const oAnh = a.getByRole("radio", { name: "Ảnh của bạn" });
+  // Moi anh trong kho co mot nhan rieng ("Anh cua ban, vua tai len" hay kem ngay tai), nen loc theo tien to.
+  const oAnh = a.getByRole("radio", { name: /Ảnh của bạn/ });
   await expect(oAnh).toBeChecked();
   await expect(a.getByRole("group", { name: "Khung cắt ảnh bìa" })).toHaveCount(0);
   const biaSrc = await a.locator(".chon img.bia__anh").getAttribute("src");

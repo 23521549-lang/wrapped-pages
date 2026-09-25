@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { actionRemoveCoverEntry, actionSetCoverEntry } from "@/app/actions/library";
 import { Button } from "@/components/Button";
 import { COVERS, COVER_NAME } from "@/lib/book";
@@ -21,6 +21,19 @@ export type CoverTimelineProps = {
   now: Date;
 };
 
+/**
+ * Mo mot dong ra thi keo chinh dong do vao tam nhin dung MOT lan, va chi khi no chua nam tron trong khung
+ * ("nearest": da thay tron thi khong cuon di dau). Khoang chua o dinh vung cuon goc (html scroll-padding-top) lo cho
+ * dong khong bao gio nam duoi thanh dieu huong dinh.
+ */
+function useKeoVaoTamNhin(mo: boolean) {
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (mo) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [mo]);
+  return ref;
+}
+
 /** Chu cua mot o: "Lúc tạo sách" hay "Lượt 3, trang 12 tới 17, 20.09". Noi bang dau phay, khong dung dau cham giua. */
 function nhanO(s: CoverSlot, now: Date): string {
   if (s.roundId === null) return "Lúc tạo sách";
@@ -38,6 +51,7 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
   const [loi, setLoi] = useState<string | null>(null);
   const [dangLuu, chayLuu] = useTransition();
   const [dangBo, chayBo] = useTransition();
+  const dongRef = useKeoVaoTamNhin(mo);
   const ten = nhanO(s, now);
   const dang = dangLuu || dangBo;
 
@@ -54,7 +68,7 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
   }
 
   return (
-    <li className="o">
+    <li className="o" ref={dongRef}>
       <span className={s.o === null ? "o__hinh o__hinh--trong" : `o__hinh bia--${s.o.cover}`} aria-hidden="true">
         {s.o !== null && (
           <>

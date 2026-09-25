@@ -159,6 +159,22 @@ export async function toCuaKhoi(page: Page, chon: string): Promise<number> {
 }
 
 /** Be rong bat buoc do tran ngang. */
+/**
+ * Tai mot anh bia qua bang chon bia dang mo tren trang: chon tep, di qua buoc cat, roi doi o anh moi hien ra. Tra ve
+ * khi bang da co them dung mot o. Dung o moi man co CoverPicker (Sach moi, Viet tiep, mot dong cua muc Bia theo luot).
+ */
+export async function chonBia(page: Page, ten: string): Promise<void> {
+  const bang = page.getByRole("group", { name: "Bìa" });
+  const truoc = await bang.getByRole("radio").count();
+  await page.getByLabel("Thêm ảnh của bạn làm bìa").setInputFiles({
+    name: ten, mimeType: "image/png", buffer: await anhPng(page, 800, 600),
+  });
+  await expect(page.getByRole("group", { name: "Khung cắt ảnh bìa" })).toBeVisible();
+  await page.getByRole("button", { name: "Dùng ảnh này" }).click();
+  await expect(page.getByRole("group", { name: "Khung cắt ảnh bìa" })).toHaveCount(0);
+  await expect.poll(() => bang.getByRole("radio").count()).toBe(truoc + 1);
+}
+
 export const BE_RONG = [320, 375, 414, 768] as const;
 
 /** Khong tran ngang o ca bon be rong, roi tra khung nhin ve co cu. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { actionRemoveTrackEntry, actionSetTrackEntry } from "@/app/actions/library";
 import { Button } from "@/components/Button";
 import { pageRange } from "@/lib/seal/reader";
@@ -28,6 +28,19 @@ function NotNhac({ go = false }: { go?: boolean }) {
   );
 }
 
+/**
+ * Mo mot dong ra thi keo chinh dong do vao tam nhin dung MOT lan, va chi khi no chua nam tron trong khung
+ * ("nearest": da thay tron thi khong cuon di dau). Khoang chua o dinh vung cuon goc (html scroll-padding-top) lo cho
+ * dong khong bao gio nam duoi thanh dieu huong dinh.
+ */
+function useKeoVaoTamNhin(mo: boolean) {
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (mo) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [mo]);
+  return ref;
+}
+
 /** Chu cua mot o: "Lúc tạo sách" hay "Lượt 3, trang 12 tới 17, 20.09". Noi bang dau phay. */
 function nhanO(s: TrackSlot, now: Date): string {
   if (s.roundId === null) return "Lúc tạo sách";
@@ -41,6 +54,7 @@ function Dong({ s, bookId, now }: { s: TrackSlot; bookId: string; now: Date }) {
   const [dangLuu, chayLuu] = useTransition();
   const [dangBo, chayBo] = useTransition();
   const nhac = useMusicField(s.o?.youtubeId ?? null);
+  const dongRef = useKeoVaoTamNhin(mo);
   const ten = nhanO(s, now);
   const dang = dangLuu || dangBo;
   const goNhac = s.o !== null && s.o.youtubeId === null;
@@ -66,7 +80,7 @@ function Dong({ s, bookId, now }: { s: TrackSlot; bookId: string; now: Date }) {
   }
 
   return (
-    <li className="o">
+    <li className="o" ref={dongRef}>
       <span className="o__hinh o__hinh--nhac" aria-hidden="true">
         {s.o !== null && <NotNhac go={goNhac} />}
       </span>

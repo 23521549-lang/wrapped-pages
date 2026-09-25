@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CoverTimeline } from "@/components/book/CoverTimeline";
 import type { CoverSlot } from "@/server/library/timeline";
@@ -30,6 +30,11 @@ const cuaLuot = (roundId: string, ordinal: number, first: number, last: number, 
 function ve(slots: CoverSlot[]) {
   render(<CoverTimeline bookId="sach-1" slots={slots} photos={[{ id: ANH, nhan: "Ảnh của bạn, tải 20.09" }]} mediaEnabled now={NOW} />);
 }
+
+beforeAll(() => {
+  // jsdom khong co scrollIntoView. Dong dang mo tu keo minh vao tam nhin mot lan, nen phai co ham nay de goi duoc.
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { value: () => {}, configurable: true, writable: true });
+});
 
 afterEach(() => {
   cleanup();

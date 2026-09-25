@@ -200,7 +200,7 @@ test("khong mot vi pham CSP nao tren cac man chinh, ke ca o man viet va man doc"
   // img-src blob:: buoc cat anh bia ve anh vua chon tu mot blob: URL. Nap lai chinh URL do bang mot <img> va doi
   // decode(): chi xong khi anh nap duoc, CSP chan thi tu choi. Luc no xong, the <image> cua trang cung da nap.
   await a.goto("/sach/moi");
-  await a.getByLabel("Ảnh của bạn, chọn ảnh làm bìa").setInputFiles({
+  await a.getByLabel("Thêm ảnh của bạn làm bìa").setInputFiles({
     name: "bia.png", mimeType: "image/png", buffer: await anhPng(a, 800, 600),
   });
   const anhCat = a.getByRole("group", { name: "Khung cắt ảnh bìa" }).locator("image");
@@ -218,7 +218,7 @@ test("khong mot vi pham CSP nao tren cac man chinh, ke ca o man viet va man doc"
   // roi chinh Worker do doc tep nguoi dung chon qua mot blob: URL (connect-src). San cat hien dung kich thuoc nghia la
   // worker da chay xong duoi CSP that.
   await a.getByRole("button", { name: "Hủy", exact: true }).click();
-  await a.getByLabel("Ảnh của bạn, chọn ảnh làm bìa").setInputFiles(tepMau("plain.heic"));
+  await a.getByLabel("Thêm ảnh của bạn làm bìa").setInputFiles(tepMau("plain.heic"));
   await expect(a.getByRole("group", { name: "Khung cắt ảnh bìa" }).locator("svg").first())
     .toHaveAttribute("viewBox", "0 0 120 80", { timeout: 20_000 });
   expect(await viPhamCua(a), "bo doc anh iPhone (Worker blob:): co vi pham CSP").toEqual([]);
