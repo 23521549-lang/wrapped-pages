@@ -1,7 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
-import { BE_RONG } from "./media";
+import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { BE_RONG, BE_RONG_CHAM, vungBamNho } from "./vung-bam";
 
 /*
  * Ke chia tang va bia tu doi, tren trinh duyet that. Hai thu chi chung minh duoc o day: so cot cua luoi (mot su that
@@ -22,6 +22,14 @@ async function nCuon(page: Page, n: number): Promise<string[]> {
   return ma;
 }
 
+/**
+ * Cho ngan tu do so cot xong: may chu ve ca ngan trong lop cat CSS `.ngan__gon`, va lop do chi go khi thanh phan da
+ * chay tren trinh duyet va doc so cot. Moi phep dem truoc moc nay la dem ban cua may chu.
+ */
+async function daDoXong(ngan: Locator): Promise<void> {
+  await expect(ngan.locator(".ngan__gon")).toHaveCount(0);
+}
+
 /** So cot that cua luoi mot ngan, doc tu tri da tinh cua trinh duyet. */
 async function soCot(page: Page, ngan: string): Promise<number> {
   return page.evaluate((ten) => {
@@ -40,6 +48,7 @@ test("ke hon ba tang: chi thay ba tang, bam dai nut thi thay het, bam lai thi go
   await a.setViewportSize({ width: 414, height: 900 });
   await a.goto("/ke-sach");
   const ngan = a.locator("section.ngan", { hasText: "Kệ của bạn" });
+  await daDoXong(ngan);
   const cot = await soCot(a, "Kệ của bạn");
   expect(cot, "luoi phai co it nhat mot cot").toBeGreaterThan(0);
 
@@ -77,23 +86,27 @@ test("ba tang tro xuong thi khong co dai nut nao", async ({ browser }) => {
   await nCuon(a, 2);
   await a.goto("/ke-sach");
   const ngan = a.locator("section.ngan", { hasText: "Kệ của bạn" });
+  await daDoXong(ngan);
   await expect(ngan.locator(".cuon")).toHaveCount(2);
   await expect(ngan.getByRole("button", { name: /kệ của bạn/ })).toHaveCount(0);
 });
 
-test("ke chia tang khong tran ngang o bon be rong", async ({ browser }) => {
+test("ke chia tang: dai nut an du 44px, va khong tran ngang o bon be rong ca khi gon lan khi mo", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
-  await nCuon(a, 9);
-  await a.goto("/ke-sach");
+  // Muoi cuon: o 768px luoi co ba cot, ba tang la chin cho, nen ke thu gon duoc o ca bon be rong.
+  await nCuon(a, 10);
   for (const w of BE_RONG) {
     await a.setViewportSize({ width: w, height: 900 });
-    const tran = await a.evaluate(() => {
-      const rong = document.documentElement.clientWidth;
-      return [...document.querySelectorAll<HTMLElement>("section.ngan *")]
-        .filter((el) => el.getBoundingClientRect().right > rong + 1)
-        .map((el) => el.className);
-    });
-    expect(tran, `tran ngang o ${w}px`).toEqual([]);
+    await a.goto("/ke-sach");
+    const nut = a.locator("section.ngan", { hasText: "Kệ của bạn" }).getByRole("button", { name: /^(Mở rộng|Thu gọn) kệ của bạn/ });
+    // Dai nut chi sinh ra sau khi ngan do xong so cot: do truoc do la do mot ke chua co nut.
+    await expect(nut).toBeVisible();
+    if (w === BE_RONG_CHAM) expect(await vungBamNho(a), `ke gon o ${w}px: vung bam`).toEqual([]);
+    expect(await tranNgang(a), `ke gon o ${w}px: tran ngang`).toEqual([]);
+    await nut.click();
+    await expect(nut).toHaveAttribute("aria-expanded", "true");
+    if (w === BE_RONG_CHAM) expect(await vungBamNho(a), `ke mo o ${w}px: vung bam`).toEqual([]);
+    expect(await tranNgang(a), `ke mo o ${w}px: tran ngang`).toEqual([]);
   }
 });
 

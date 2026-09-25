@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
-import { BE_RONG } from "./media";
+import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { BE_RONG, BE_RONG_CHAM, vungBamNho, type MienTru } from "./vung-bam";
 import { giaYoutube } from "./youtube-gia";
 
 /*
@@ -10,6 +10,14 @@ import { giaYoutube } from "./youtube-gia";
  */
 
 const MA = "dQw4w9WgXcQ";
+
+/**
+ * Mien tru vung bam (co ten va ly do; phan tu van duoc do, qua vung bam that cua no):
+ * - .dtg-dong .nhap__ten: ten sach tren trang chon cuon cua Dau thoi gian chi cao mot dong chu, nhung ::after cua no phu
+ *   kin ca dong (`.dtg-dong{ position: relative }`, `.dtg-dong .nhap__ten::after{ position: absolute; inset: 0 }`),
+ *   nen ca dong - bia, ten va dong dem - la vung bam.
+ */
+const MIEN_TRU: MienTru[] = [{ phanTu: ".dtg-dong .nhap__ten", vungBam: "li.dtg-dong" }];
 
 test.beforeEach(resetDb);
 test.afterEach(dongContextCu);
@@ -95,21 +103,16 @@ test("cuon rieng tu cua nguoi kia: khong co trong trang chon cuon va trang cua n
   expect(r2?.status()).toBe(200);
 });
 
-test("hai trang Dau thoi gian khong tran ngang o bon be rong", async ({ browser }) => {
+test("hai trang Dau thoi gian voi ten sach dai: vung bam 44px va khong tran ngang o bon be rong", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể có một cái tên khá dài để thử tràn ngang", "chia-se");
   await dangToThang(id, "Lượt đầu tiên.");
   for (const duong of ["/dau-thoi-gian", `/dau-thoi-gian/${id}`]) {
-    await a.goto(duong);
     for (const w of BE_RONG) {
       await a.setViewportSize({ width: w, height: 900 });
-      const tran = await a.evaluate(() => {
-        const rong = document.documentElement.clientWidth;
-        return [...document.querySelectorAll<HTMLElement>("body *")]
-          .filter((el) => el.getBoundingClientRect().right > rong + 1)
-          .map((el) => el.className);
-      });
-      expect(tran, `tran ngang o ${duong}, ${w}px`).toEqual([]);
+      await a.goto(duong);
+      if (w === BE_RONG_CHAM) expect(await vungBamNho(a, MIEN_TRU), `${duong}: vung bam`).toEqual([]);
+      expect(await tranNgang(a), `${duong} o ${w}px: tran ngang`).toEqual([]);
     }
   }
 });

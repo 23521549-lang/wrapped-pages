@@ -17,7 +17,8 @@ test.afterEach(async () => {
 /**
  * Cong dung chung cho vung bam 44px o be rong cam ung va khong tran ngang o bon
  * be rong tren moi man cua web. Bon man chinh (ke sach, man doc, man viet, cai dat)
- * di qua doMoiManChinh; cac man con lai di qua doMan: tao sach, sua sach, sua luot (luot thuong va luot niem phong),
+ * di qua doMoiManChinh, cung trang Viet tiep va hai trang Dau thoi gian; cac man con lai di qua doMan: tao sach, sua sach
+ * (dong va mo mot o cua hai muc dong thoi gian), sua luot (luot thuong va luot niem phong),
  * ban nhap, cho, trang 404,
  * trang tra loi, man doc cua nguoi doc (co khung Loi hoi dap dang mo o chu), dang nhap (context moi, chua co phien),
  * o test rieng tren web trong: khoi tao va man da xong o ca
@@ -42,10 +43,14 @@ test.afterEach(async () => {
  * - .loai-niem input: nut radio 18px trong dong chon loai niem phong o man viet (SealPicker.tsx SealKinds). Cung co
  *   che: radio nam TRONG `<label class="loai-niem">`, va `.loai-niem{ min-height: 44px; cursor: pointer }` ve ca
  *   dong (ten va mo ta) thanh vung bam.
+ * - .dtg-dong .nhap__ten: ten sach tren trang chon cuon cua Dau thoi gian chi cao mot dong chu, nhung ::after cua no phu
+ *   kin ca dong (`.dtg-dong{ position: relative }`, `.dtg-dong .nhap__ten::after{ position: absolute; inset: 0 }`),
+ *   nen ca dong - bia, ten va dong dem - la vung bam.
  */
 const MIEN_TRU_VUNG_BAM: MienTru[] = [
   { phanTu: ".the-chon input", vungBam: "label.the-chon" },
   { phanTu: ".loai-niem input", vungBam: "label.loai-niem" },
+  { phanTu: ".dtg-dong .nhap__ten", vungBam: "li.dtg-dong" },
 ];
 
 const HE_LO = "Em tới sớm hơn giờ hẹn bốn mươi phút.";
@@ -94,6 +99,17 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
   const manCuaA: Man[] = [
     { ten: "tao sach", duong: "/sach/moi", daVe: tenSach },
     { ten: "sua sach", duong: `/sach/${id}/sua`, daVe: tenSach },
+    {
+      ten: "sua sach, mo mot o bia va mot o nhac",
+      duong: `/sach/${id}/sua`,
+      daVe: async (p) => {
+        for (const [muc, nut] of [["Bìa theo lượt", /^(Đổi bìa này|Thêm bìa) /], ["Nhạc theo lượt", /^(Đổi nhạc này|Thêm nhạc) /]] as const) {
+          const vung = p.getByRole("region", { name: muc });
+          await vung.getByRole("button", { name: nut }).first().click();
+          await expect(vung.getByRole("button", { name: "Lưu" })).toBeVisible();
+        }
+      },
+    },
     {
       ten: "sua luot",
       duong: `/sach/${id}/sua-luot/1?trang=2`,

@@ -34,8 +34,10 @@ test("chu sach bam vao khung sach mo: man doc mo dung to cua doan trich; nut Vie
   await a.reload();
   await expect(lien).toHaveAttribute("href", href);
 
-  // Ban phim: lien ket khung dung truoc nut chinh.
+  // Ban phim di dung thu tu mat doc tren trang trai: lien ket khung, anh bia (loi vao trang Dau thoi gian), roi nut chinh.
   await lien.focus();
+  await a.keyboard.press("Tab");
+  await expect(ganNhat.getByRole("link", { name: "Dấu thời gian của Chuyện chưa kể" })).toBeFocused();
   await a.keyboard.press("Tab");
   await expect(vietTiep).toBeFocused();
 

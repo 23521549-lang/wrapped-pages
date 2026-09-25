@@ -123,35 +123,54 @@ export async function vungBamNho(page: Page, mienTru: MienTru[] = []): Promise<s
 }
 
 /**
- * Di qua bon man chinh - ke sach, man doc, man viet, cai dat - va chay mot phep do (vungBamNho hoac
- * tranNgang) tren tung man, khang dinh rong ngay tai do voi thong diep neu ten man. Dung de ca hai
+ * Di qua cac man chinh - ke sach, man doc, trang Viet tiep, man viet, hai trang Dau thoi gian, cai dat - va chay mot phep
+ * do (vungBamNho hoac tranNgang) tren tung man, khang dinh rong ngay tai do voi thong diep neu ten man. Dung de ca hai
  * phep do 11.3 va 11.4 chay tren cung mot buoc duyet.
  *
- * Lay duong toi man doc/man viet tu href THAT tren ke thay vi doan ma sach, nen khong phu thuoc cuon nao
- * dang mo: man doc lay tu lien ket cua cuon dau tien tren ke (moi cuon tren ke la mot lien ket toi man doc,
- * src/components/book/ShelfBook.tsx), man viet lay tu nut "Viet tiep" cua cuon sach mo (src/app/ke-sach/page.tsx:
- * nut do chi co khi trang gan nhat la cuon cua chinh nguoi xem). Can it nhat mot cuon co trang da dang
- * (dangToThang) cua nguoi dang xem de cuon sach mo xuat hien - mot cong chay tren ke rong la mot cong luon xanh.
+ * Lay duong tu href THAT thay vi doan ma sach, nen khong phu thuoc cuon nao dang mo:
+ * - man doc: lien ket cua cuon dau tien tren ke (moi cuon tren ke la mot lien ket toi man doc, ShelfBook.tsx);
+ * - trang Viet tiep: nut "Viet tiep" cua cuon sach mo (src/app/ke-sach/page.tsx: nut do chi co khi trang gan nhat la
+ *   cuon cua chinh nguoi xem). Man viet la man ma trang do gui toi, cung cuon;
+ * - hai trang Dau thoi gian: muc cua thanh dieu huong, roi dong dau tien cua trang chon cuon.
+ * Can it nhat mot cuon co trang da dang (dangToThang) cua nguoi dang xem de cuon sach mo xuat hien - mot cong chay tren
+ * ke rong la mot cong luon xanh.
  */
 export async function doMoiManChinh(page: Page, phepDo: (p: Page) => Promise<string[]>): Promise<void> {
   await page.goto("/ke-sach");
   expect(await phepDo(page), "ke sach").toEqual([]);
 
-  // Lay ca hai href TRUOC khi roi khoi /ke-sach: sau khi dieu huong di, ke sach khong con tren trang nua.
+  // Lay het href TRUOC khi roi khoi /ke-sach: sau khi dieu huong di, ke sach khong con tren trang nua.
   const docHref = await page.locator(".cuon__lien").first().getAttribute("href");
-  const vietHref = await page.getByRole("article", { name: "Một trang trong sách" }).getByRole("link", { name: "Viết tiếp" }).getAttribute("href");
+  const vietTiepHref = await page.getByRole("article", { name: "Một trang trong sách" }).getByRole("link", { name: "Viết tiếp" }).getAttribute("href");
+  const dauHref = await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Dấu thời gian" }).getAttribute("href");
   if (!docHref) {
     throw new Error("doMoiManChinh: khong tim thay cuon nao tren ke sach - can it nhat mot cuon");
   }
-  if (!vietHref) {
-    throw new Error("doMoiManChinh: khong tim thay lien ket 'Viet tiep' tren ke sach - can cuon do la cua chinh nguoi dang xem");
+  const maSach = /^\/sach\/([^/]+)\/viet-tiep$/.exec(vietTiepHref ?? "")?.[1];
+  if (!vietTiepHref || !maSach) {
+    throw new Error("doMoiManChinh: khong tim thay lien ket 'Viet tiep' toi /sach/<ma>/viet-tiep tren ke sach - can cuon do la cua chinh nguoi dang xem");
+  }
+  if (!dauHref) {
+    throw new Error("doMoiManChinh: thanh dieu huong khong co muc 'Dau thoi gian'");
   }
 
   await page.goto(docHref);
   expect(await phepDo(page), "man doc").toEqual([]);
 
-  await page.goto(vietHref);
+  await page.goto(vietTiepHref);
+  expect(await phepDo(page), "trang viet tiep").toEqual([]);
+
+  await page.goto(`/sach/${maSach}/viet`);
   expect(await phepDo(page), "man viet").toEqual([]);
+
+  await page.goto(dauHref);
+  expect(await phepDo(page), "dau thoi gian: trang chon cuon").toEqual([]);
+  const cuonHref = await page.locator(".dtg-dong .nhap__ten").first().getAttribute("href");
+  if (!cuonHref) {
+    throw new Error("doMoiManChinh: trang chon cuon cua Dau thoi gian khong co cuon nao");
+  }
+  await page.goto(cuonHref);
+  expect(await phepDo(page), "dau thoi gian: trang mot cuon").toEqual([]);
 
   await page.goto("/cai-dat");
   expect(await phepDo(page), "cai dat").toEqual([]);
