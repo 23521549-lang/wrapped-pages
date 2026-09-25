@@ -2,23 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTamDung } from "@/components/hieu-ung/tam-dung";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
 import { Hoa } from "./HoaEp";
 import { NetTroi } from "./NetTroi";
 import { ganSong } from "./song";
-
-/** Nho lua chon tam dung bau troi giua cac lan tham trang. Chi la lua chon trinh bay nen de o trinh duyet. */
-const KHOA_DUNG = "troi-tam-dung";
-
-/** Da chon tam dung tu lan truoc chua. Trinh duyet co the cam ca viec DOC localStorage, nen boc trong try/catch. */
-function docDaDung(): boolean {
-  try {
-    return localStorage.getItem(KHOA_DUNG) === "dung";
-  } catch {
-    return false;
-  }
-}
 
 /** Mot mat cua dai: bau troi lon cua ai, o cua so mang troi cua nguoi con lai (null khi chi mot nguoi co tam trang). */
 type Mat = {
@@ -85,9 +74,10 @@ function MotTroi({ m, an, goc, dung, doiDung, bao }: {
           <p className="troi__cuoi">
             <span className="troi__gio troi__phu">{m.troi.tha}</span>
             <Link className="btn btn--chu" href="/tam-trang"><Hoa weather={m.troi.weather} />Xem lịch hoa</Link>
-            {/* Nhan doi theo viec sap lam, khong dung aria-pressed: mot nut mot viec, doc len la biet bam se duoc gi. */}
+            {/* Nhan doi theo viec sap lam, khong dung aria-pressed: mot nut mot viec, doc len la biet bam se duoc gi.
+                Nut nay dung MOI hieu ung tu chay cua trang, khong rieng bau troi (phan quyet B4). */}
             <button type="button" className="btn btn--chu nut-dung" onClick={doiDung}>
-              {dung ? "Cho bầu trời chạy" : "Tạm dừng bầu trời"}
+              {dung ? "Cho hiệu ứng chạy" : "Tạm dừng hiệu ứng"}
             </button>
           </p>
           {bao !== undefined && <p className="sr-only" aria-live="polite">{bao}</p>}
@@ -114,21 +104,36 @@ function MotTroi({ m, an, goc, dung, doiDung, bao }: {
  * cua ca hai nguoi nen khong co ly do doi chu hay giau di. Nhan luon la "Xem lich hoa", bong hoa ep mang mau muc cua
  * kieu troi dang hien. Nho vay hang cuoi (.troi__cuoi) cua hai mat cao bang nhau.
  *
- * Nut "Tam dung bau troi" nam trong hang cuoi da co san (.troi__cuoi), nen no khong xo dich gi cua ban mau da duyet.
+ * Nut "Tam dung hieu ung" nam trong hang cuoi da co san (.troi__cuoi), nen no khong xo dich gi cua ban mau da duyet.
  * Chuyen dong nen cua bau troi tu bat dau, keo dai qua 5 giay va o song song voi noi dung khac - dung ba dieu kien cua
  * WCAG SC 2.2.2, ma ngoai le "essential" khong dung duoc o day (chinh nhanh giam chuyen dong chung minh: bau troi dung
  * yen van dep va van du nghia). Nut bat lop `troi-dung` tren dai troi, lop do dung MOI net ve cua ca hai mat. Lua chon
- * duoc nho trong localStorage va doc lai trong layout effect luc mount (truoc khi ve, xem chu thich tai cho). Khi nguoi dung
- * xin giam chuyen dong thi khong con gi chay, nen nut duoc giau han bang CSS (tam-trang.css, nhanh prefers-reduced-motion).
+ * duoc luu va doc lai qua useTamDung (src/components/hieu-ung/tam-dung.ts), dung chung voi bia tu doi cua khung sach
+ * lon o plan sau: mot cong tac cho moi hieu ung tu chay, theo phan quyet B4. Khi nguoi dung xin giam chuyen dong thi
+ * khong con gi chay, nen nut duoc giau han bang CSS (tam-trang.css, nhanh prefers-reduced-motion).
  */
 export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien | null; minh: TroiHien | null }) {
   const dai = useRef<HTMLElement | null>(null);
-  const [dung, setDung] = useState(false);
+  const dangDung = useRef(false);
   const [bao, setBao] = useState("");
   const caHai = kia !== null && minh !== null;
   const batDai = useCallback((el: HTMLElement | null) => {
     dai.current = el;
   }, []);
+
+  /*
+   * Duong DUY NHAT dat lop `troi-dung` len dai troi, va no dat bang classList chu khong qua className cua JSX: song.ts
+   * cung sua lop cua CHINH phan tu nay (troi-cua-so--san, troi--an), ma React ghi de ca thuoc tinh class moi lan gia
+   * tri className doi - tuc mot lan bam tam dung se xoa mat lop do song.ts vua dat.
+   *
+   * Ham nay chay dong bo trong chinh layout effect cua useTamDung, tuc truoc khi trinh duyet ve khung hinh dau: lop
+   * moi la thu quyet dinh bau troi co chay hay khong, con nhan cua nut chi doi theo o vong ve lai sau do.
+   */
+  const apDung = useCallback((v: boolean) => {
+    dangDung.current = v;
+    dai.current?.classList.toggle("troi-dung", v);
+  }, []);
+  const [dung, datDung] = useTamDung(apDung);
 
   // Phu thuoc caHai chu khong phai mang rong: dai co o cua so chi ton tai khi ca hai cung giu tam trang, va so nguoi
   // dang giu tam trang doi ngay trong lan song lai (sau khi tha hay thu lai) ma thanh phan khong bi dung lai. Gan mot
@@ -138,41 +143,17 @@ export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien |
     return w === null || !caHai ? undefined : ganSong(w);
   }, [caHai]);
 
-  /*
-   * Hai layout effect duoi day, KHONG phai passive effect (useEffect), va do la ca van de: passive effect chi chay sau
-   * khi trinh duyet ve xong, nen nguoi da chon tam dung se thay dung mot khung hinh bau troi CHAY va nhan "Tam dung bau
-   * troi" truoc khi trang nhay ve trang thai dung - mot nhap nhay ngay tren chinh thu ho da tat. Layout effect chay
-   * trong lan commit, truoc khi ve. Van khong doc localStorage luc render duoc: may chu khong co localStorage, doc luc
-   * render la HTML may chu gui xuong lech voi lan ve dau cua trinh duyet.
-   *
-   * Thu tu khai bao o day co nghia: layout effect chay theo dung thu tu khai bao, nen cai dat lop phai dung TRUOC cai
-   * doc lua chon da luu - doc truoc thi cai dat lop (o lan commit ay van thay dung = false) se xoa ngay lop vua dat.
-   */
-  // Dat lop bang classList chu khong qua className cua JSX: song.ts cung sua lop cua CHINH phan tu nay
-  // (troi-cua-so--san, troi--an), ma React ghi de ca thuoc tinh class moi lan gia tri className doi - tuc mot lan bam
-  // tam dung se xoa mat lop do song.ts vua dat.
+  // Tu mot bau troi sang hai bau troi (hay nguoc lai) thi the boc dai troi la mot phan tu MOI, chua mang lop nao: dat
+  // lai lop theo lua chon dang giu, neu khong nguoi da tam dung se thay hieu ung chay lai ma ho khong bam gi. Doc ref
+  // chu khong doc `dung`: o lan commit dau tien, useTamDung da dat lop tu localStorage nhung `dung` van con la false.
   useLayoutEffect(() => {
-    dai.current?.classList.toggle("troi-dung", dung);
-  }, [dung]);
-
-  useLayoutEffect(() => {
-    if (!docDaDung()) return;
-    // Dat lop ngay tai day chu khong cho vong ve lai cua setDung: lop moi la thu quyet dinh bau troi co chay hay khong,
-    // va no khong di qua React nen dat duoc som nhat co the. setDung chi de nhan cua nut doi theo.
-    dai.current?.classList.add("troi-dung");
-    // oxlint-disable-next-line react/set-state-in-effect -- Dung dung viec ma chinh luat nay cho phep: dong bo voi mot he thong ngoai (localStorage). Khong "khoi tao thang trang thai" duoc, vi may chu khong co localStorage nen doc luc render la HTML may chu gui xuong lech voi lan ve dau cua trinh duyet; cung khong "cap nhat tu su kien gay ra thay doi" duoc, vi thay doi nay den tu mot phien truoc chu khong tu su kien nao trong phien nay. Dung mot vong ve lai, ngay trong lan commit dau tien va truoc khi trinh duyet ve.
-    setDung(true);
-  }, []);
+    apDung(dangDung.current);
+  }, [apDung, caHai]);
 
   function doiDung() {
     const moi = !dung;
-    setDung(moi);
-    setBao(moi ? "Bầu trời đã tạm dừng." : "Bầu trời chạy lại rồi.");
-    try {
-      localStorage.setItem(KHOA_DUNG, moi ? "dung" : "chay");
-    } catch {
-      // Trinh duyet chan luu tru: nut van chay, chi khong nho duoc lua chon sang lan sau.
-    }
+    datDung(moi);
+    setBao(moi ? "Hiệu ứng đã tạm dừng." : "Hiệu ứng chạy lại rồi.");
   }
 
   if (kia === null && minh === null) return null;

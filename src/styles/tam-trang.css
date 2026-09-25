@@ -138,7 +138,8 @@
    truoc (.troi-cua-so--san), de luc bam khong con viec danh thuc hang chuc net ve */
 .troi-cua-so:not(.troi-cua-so--san) > .troi--an:not(.troi--dang-song) .m{ animation-play-state: paused; }
 /*
- * Nut "Tam dung bau troi" (WCAG SC 2.2.2). Lop nay do BauTroi.tsx dat bang classList len dai troi - la .troi-cua-so o
+ * Nut "Tam dung hieu ung" (WCAG SC 2.2.2, phan quyet B4: mot cong tac cho moi hieu ung tu chay cua trang, nguon o
+ * src/components/hieu-ung/tam-dung.ts). Lop nay do BauTroi.tsx dat bang classList len dai troi - la .troi-cua-so o
  * che do hai troi, la chinh the .troi o che do mot troi - nen mot quy tac phu ca hai. No dung MOI net ve, ke ca troi
  * thu nho trong o cua so. Do sau hai lop, lon hon moi quy tac .m-* (mot lop), nen khong phu thuoc thu tu trong tep.
  * Vong song cua lan doi cho chay bang Web Animations va khong nam trong .m, nen doi cho van binh thuong khi dang dung.
