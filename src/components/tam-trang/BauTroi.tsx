@@ -84,7 +84,7 @@ function MotTroi({ m, an, goc, dung, doiDung, bao }: {
           {m.troi.note !== null && <p className="troi__nhan">{m.troi.note}</p>}
           <p className="troi__cuoi">
             <span className="troi__gio troi__phu">{m.troi.tha}</span>
-            {!m.laMinh && <Link className="btn btn--chu" href="/tam-trang"><Hoa weather={m.troi.weather} />Xem lịch hoa</Link>}
+            <Link className="btn btn--chu" href="/tam-trang"><Hoa weather={m.troi.weather} />Xem lịch hoa</Link>
             {/* Nhan doi theo viec sap lam, khong dung aria-pressed: mot nut mot viec, doc len la biet bam se duoc gi. */}
             <button type="button" className="btn btn--chu nut-dung" onClick={doiDung}>
               {dung ? "Cho bầu trời chạy" : "Tạm dừng bầu trời"}
@@ -108,8 +108,11 @@ function MotTroi({ m, an, goc, dung, doiDung, bao }: {
  * trong luc song dang lan bi bo qua. Trang thai doi cho chi o trinh duyet, khong luu, khong tu xoay vong.
  *
  * Chi mot nguoi co tam trang thi khong co o cua so; neu la cua chinh nguoi xem thi troi lon mang nhan "Ban". Hai cau tho
- * khong co ten nguoi; ten nguoi va kieu troi chi doc cho trinh doc man hinh. "Xem lich hoa" chi o troi cua nguoi kia
- * (quyet dinh cua chu du an): ban mau dat loi vao nay sau mot bien dieu kien, va o che do o cua so bat no cho ca hai mat.
+ * khong co ten nguoi; ten nguoi va kieu troi chi doc cho trinh doc man hinh.
+ *
+ * "Xem lich hoa" hien o CA HAI mat, ke ca troi cua chinh nguoi xem (yeu cau dot ba diem 3, spec muc 5): lich hoa la
+ * cua ca hai nguoi nen khong co ly do doi chu hay giau di. Nhan luon la "Xem lich hoa", bong hoa ep mang mau muc cua
+ * kieu troi dang hien. Nho vay hang cuoi (.troi__cuoi) cua hai mat cao bang nhau.
  *
  * Nut "Tam dung bau troi" nam trong hang cuoi da co san (.troi__cuoi), nen no khong xo dich gi cua ban mau da duyet.
  * Chuyen dong nen cua bau troi tu bat dau, keo dai qua 5 giay va o song song voi noi dung khac - dung ba dieu kien cua

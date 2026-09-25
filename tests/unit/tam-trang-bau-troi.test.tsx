@@ -85,7 +85,7 @@ describe("BauTroi: mot bau troi", () => {
     expect(container.querySelector(".troi-cua-so")).toBeNull();
   });
 
-  it("chi chinh minh: troi lon mang nhan Ban, khong loi vao lich hoa, khong o cua so; tho Nom khong co giai nghia", () => {
+  it("chi chinh minh: troi lon mang nhan Ban, CO loi vao lich hoa, khong o cua so; tho Nom khong co giai nghia", () => {
     const { container } = ve(null, MINH);
     const vung = screen.getByRole("region", { name: "Tâm trạng của bạn" });
     expect(vung.className).toBe("troi troi--nang-am");
@@ -93,7 +93,12 @@ describe("BauTroi: mot bau troi", () => {
     expect(container.querySelector(".troi__noi .sr-only")?.textContent).toBe("Bạn: Nắng ấm.");
     expect(container.querySelector(".troi__giai")).toBeNull();
     expect(container.querySelector(".troi__nhan")).toBeNull();
-    expect(screen.queryByRole("link")).toBeNull();
+    // Spec muc 5 ("Bo dieu kien !m.laMinh ... de lien ket 'Xem lich hoa' hien ca khi nguoi xem dang nhin troi cua
+    // chinh minh") va yeu cau diem 3: nhan khong doi theo chu troi, bong hoa mang mau troi dang hien. Lich hoa la cua
+    // ca hai nguoi nen khong co ly do doi chu hay giau di. Bai nay truoc day khang dinh dieu nguoc lai.
+    const lien = screen.getByRole("link", { name: "Xem lịch hoa" });
+    expect(lien.getAttribute("href")).toBe("/tam-trang");
+    expect(lien.querySelector("svg.hoa use")?.getAttribute("href")).toBe("#hoa-cuc");
     expect(container.querySelector(".cua-so")).toBeNull();
   });
 

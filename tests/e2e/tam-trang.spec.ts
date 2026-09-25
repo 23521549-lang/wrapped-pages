@@ -165,7 +165,9 @@ test("tha tam trang: nguoi kia thay bau troi voi tho co; nguoi tha thay troi cua
   const troiMinh = a.getByRole("region", { name: "Tâm trạng của bạn" });
   await expect(troiMinh).toHaveClass("troi troi--mua-phun");
   await expect(troiMinh.locator(".troi__ai")).toHaveText("Bạn");
-  await expect(troiMinh.getByRole("link", { name: "Xem lịch hoa" })).toHaveCount(0);
+  // Spec muc 5 va yeu cau diem 3: bong hoa lich hoa hien o ca troi cua minh lan troi cua nguoi kia.
+  await expect(troiMinh.getByRole("link", { name: "Xem lịch hoa" })).toHaveCount(1);
+  await expect(troiMinh.locator(".troi__cuoi svg.hoa use")).toHaveAttribute("href", "#hoa-hue-mua");
   await expect(a.locator(".cua-so")).toHaveCount(0);
 
   await b.goto("/ke-sach");
@@ -320,7 +322,8 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
   const troiMinh = b.getByRole("region", { name: "Tâm trạng của bạn" });
   await expect(troiMinh).toHaveClass(/troi--nang-am troi--cua-so/);
   await expect(troiMinh.locator(".troi__ai")).toHaveText("Bạn");
-  await expect(troiMinh.getByRole("link", { name: "Xem lịch hoa" })).toHaveCount(0);
+  // Spec muc 5 va yeu cau diem 3: bong hoa lich hoa hien o ca troi cua minh lan troi cua nguoi kia.
+  await expect(troiMinh.getByRole("link", { name: "Xem lịch hoa" })).toHaveCount(1);
   const oLai = b.getByRole("button", { name: `Xem trời của ${tenCuaA}` });
   await expect(oLai).toBeFocused();
   await expect(b.getByText("Đang xem trời của bạn.")).toBeAttached();
