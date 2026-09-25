@@ -47,12 +47,13 @@ export function gomTheoThang(dau: readonly Dau[], nam: number): OThang[] {
 
 /** Cac nam co it nhat mot dau, tang dan, khong trung. */
 export function namCo(dau: readonly Dau[]): number[] {
+  // oxlint-disable-next-line unicorn/no-array-sort -- mang vua tao tu Set, khong ai khac giu tham chieu; toSorted can lib ES2023, du an dang o ES2022 (nhu shelf.ts).
   return [...new Set(dau.map((d) => namThang(d.at).nam))].sort((a, b) => a - b);
 }
 
-/** Dau moi nhat theo thu tu dong thoi gian (luot cao nhat); null khi chua co dau nao. */
+/** Dau moi nhat theo thu tu dong thoi gian (luot cao nhat); null khi chua co dau nao. Mot luot duyet, khong sap xep. */
 function moiNhat(dau: readonly Dau[]): Dau | null {
-  return dau.length === 0 ? null : [...dau].sort(truocSau)[dau.length - 1];
+  return dau.reduce<Dau | null>((max, d) => (max === null || truocSau(d, max) >= 0 ? d : max), null);
 }
 
 /** Nam mac dinh: nam cua dau moi nhat. Chua co dau nao thi la nam cua `now`. */
