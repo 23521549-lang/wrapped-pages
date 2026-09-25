@@ -8,7 +8,7 @@ import { currentMoods } from "@/server/mood/moods";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { OpenBook } from "@/components/book/OpenBook";
-import { Ngan } from "@/components/book/Ngan";
+import { Ngan, type SachTrenKe } from "@/components/book/Ngan";
 import { GlyphKhoa, GlyphRieng } from "@/components/book/ShelfBook";
 import { ActivityPanel } from "@/components/feed/ActivityPanel";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
@@ -39,11 +39,16 @@ export default async function KeSach() {
   const coDaiTroi = minh !== null || kia !== null;
   const fresh = shelf.reduce((n, b) => n + b.newCount, 0);
   // Chia hai ngan ngay tai day, giu nguyen thu tu listShelf tra ve.
-  // Thoi diem tuong doi tinh o day, khong truyen ham xuong thanh phan trinh duyet: ham khong di qua duoc ranh gioi
-  // may chu - trinh duyet, va chuoi thoi gian tuong doi phai la cua may chu de lan ve dau cua trinh duyet khong lech.
-  const tren = shelf.map((b) => Object.assign(b, { when: when(b) }));
-  const cuaBan = tren.filter((b) => b.mine);
-  const cuaKia = tren.filter((b) => !b.mine);
+  // Ngan la thanh phan TRINH DUYET, nen chi dua sang no dung nhung truong mot the sach ve ra. Ca dong ShelfBook mang
+  // theo `excerpt`, ma doan trich cua mot luot con niem phong khong bao gio duoc xuong trinh duyet, ke ca duoi dang
+  // khong ve ra. Thoi diem tuong doi cung tinh o day, vi ham khong di qua duoc ranh gioi may chu - trinh duyet.
+  const theKe = (b: Sach): SachTrenKe => ({
+    id: b.id, title: b.title, cover: b.cover, coverMediaId: b.coverMediaId,
+    pageCount: b.pageCount, newCount: b.newCount, lockedCount: b.lockedCount,
+    isPrivate: b.mode === "rieng-tu", when: when(b),
+  });
+  const cuaBan = shelf.filter((b) => b.mine).map(theKe);
+  const cuaKia = shelf.filter((b) => !b.mine).map(theKe);
   const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} />;
 
   return (

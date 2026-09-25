@@ -18,11 +18,9 @@ let cot = 3;
 
 function sach(i: number): SachTrenKe {
   return {
-    id: `s${i}`, title: `Cuốn ${i}`, mode: "chia-se", cover: "nui-xa", coverMediaId: null,
-    pageCount: 2, newCount: 0, lockedCount: 0, mine: true, ownerNickname: "Linh",
-    createdAt: new Date(0), lastPublishedAt: new Date(0), excerpt: null, excerptPosition: 1, excerptLocked: false,
-    when: "vừa xong",
-  } as unknown as SachTrenKe;
+    id: `s${i}`, title: `Cuốn ${i}`, cover: "nui-xa", coverMediaId: null,
+    pageCount: 2, newCount: 0, lockedCount: 0, isPrivate: false, when: "vừa xong",
+  };
 }
 
 const nhieu = (n: number) => Array.from({ length: n }, (_, i) => sach(i + 1));
@@ -121,6 +119,14 @@ describe("Ngan: thu gon con ba tang", () => {
     const { unmount } = render(<Ngan ten="Kệ của bạn" books={nhieu(20)} trong="x" />);
     unmount();
     expect(ngat).toHaveBeenCalled();
+  });
+
+  it("kieu cua mot the tren ke chi co dung nhung truong the do ve ra", () => {
+    // Ngan la thanh phan TRINH DUYET: moi truong di qua props deu duoc chep nguyen van vao goi du lieu may chu gui
+    // xuong. Doan trich cua mot luot con niem phong khong bao gio duoc xuong trinh duyet, ke ca duoi dang khong ve ra,
+    // nen kieu nay khong duoc mang theo `excerpt` hay bat ky truong nao the sach khong dung toi.
+    const khoa = Object.keys(sach(1)).sort();
+    expect(khoa).toEqual(["cover", "coverMediaId", "id", "isPrivate", "lockedCount", "newCount", "pageCount", "title", "when"]);
   });
 });
 

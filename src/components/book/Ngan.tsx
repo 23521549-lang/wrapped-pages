@@ -1,19 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CoverKey } from "@/lib/book";
 import { soCot, soCuonCuaTang } from "@/lib/luoi-cot";
-import type { ShelfBook as Sach } from "@/server/library/shelf";
 import { ShelfBook } from "./ShelfBook";
 
 /** Thu gon con chung nay tang moi ngan (diem 14 cua chu du an, phan quyet B6: tinh theo TUNG ngan). */
 export const SO_TANG_GON = 3;
 
 /**
- * Mot cuon tren ke, kem dong thoi diem may chu da dung san. Chuoi do phai tinh o may chu: no la thoi gian TUONG DOI
- * ("hôm qua", "2 giờ trước"), ma may chu va trinh duyet doc dong ho khac nhau thi lan ve dau cua trinh duyet se lech
- * voi HTML may chu gui xuong. Ngoai ra ham khong di qua duoc ranh gioi may chu - trinh duyet.
+ * DUNG NHUNG TRUONG ma mot the sach tren ke ve ra, khong hon mot truong nao.
+ *
+ * Day la mot thanh phan TRINH DUYET, nen moi truong cua props di qua day deu duoc chep nguyen van vao goi du lieu ma
+ * may chu gui xuong. Truyen ca dong ShelfBook vao day la gui kem ca `excerpt` - doan trich cua cuon - ma doan trich
+ * cua mot luot con niem phong thi khong bao gio duoc xuong trinh duyet, ke ca duoi dang khong ve ra. Vi vay kieu nay
+ * liet ke tung truong mot, va `isPrivate` da tinh san o may chu de ca `mode` cung khong phai di theo.
+ *
+ * `when` cung phai tinh o may chu: no la thoi gian TUONG DOI ("hôm qua", "2 giờ trước"), ma may chu voi trinh duyet
+ * doc dong ho khac nhau thi lan ve dau cua trinh duyet se lech voi HTML may chu gui xuong.
  */
-export type SachTrenKe = Sach & { when: string };
+export type SachTrenKe = {
+  id: string;
+  title: string;
+  cover: CoverKey;
+  coverMediaId: string | null;
+  pageCount: number;
+  newCount: number;
+  lockedCount: number;
+  isPrivate: boolean;
+  when: string;
+};
 
 export type NganProps = {
   ten: string;
@@ -96,7 +112,7 @@ export function Ngan({ ten, books, trong }: NganProps) {
                   when={b.when}
                   newCount={b.newCount}
                   lockedCount={b.lockedCount}
-                  isPrivate={b.mode === "rieng-tu"}
+                  isPrivate={b.isPrivate}
                 />
               ))}
             </ul>
