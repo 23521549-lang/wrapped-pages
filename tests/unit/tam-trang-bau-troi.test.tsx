@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
-import { act, useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
 import { dongChu, soHoatDangGiu } from "@/components/tam-trang/hieu-ung-chung";
 import { doHinh } from "@/components/tam-trang/song";
