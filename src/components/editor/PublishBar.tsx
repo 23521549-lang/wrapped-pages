@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, useTransition, type Ref } from "react";
 import { flushSync } from "react-dom";
+import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { actionPublish } from "@/app/actions/library";
+import { cauOLuot, type TrimInput } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
 import { parseSealInput } from "@/lib/seal/input";
 import { luaChon, SealFields, SealKinds } from "./SealPicker";
@@ -194,10 +196,13 @@ export function PublishButton({ flow, ref }: { flow: PublishFlow; ref?: Ref<HTML
  * Khung dang trang kem niem phong, gom hai cot: cot trai chon loai niem phong, cau xac nhan va hai nut; cot
  * giua cac o cua loai da chon (khong co khi chon Khong). To giay dang viet la cot thu ba, do Editor ve.
  */
-export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
+export function PublishPanel({ flow, bookId, bookTitle, partnerNickname, oLuot, onCancel }: {
   flow: PublishFlow;
+  bookId: string;
   bookTitle: string;
   partnerNickname: string | null;
+  /** Hai o ma ban nhap dang giu cho luot nay. Buoc dang chi BAO LAI, khong sua duoc o day. */
+  oLuot: TrimInput;
   /** Dong khung. Editor tra focus ve nut Dang trang. */
   onCancel: () => void;
 }) {
@@ -233,6 +238,14 @@ export function PublishPanel({ flow, bookTitle, partnerNickname, onCancel }: {
               Đăng <b>{ready.count} trang</b> vào <b>{bookTitle}</b>{cau.giua}.
             </p>
           )}
+          {/*
+            Mot dong chu tinh thay cho muc gap "Doi bia, ten, nhac" da bo: buoc dang chi bao lai luot nay them gi, con
+            doi thi o trang Viet tiep. Khong o nhap nao o day, nen buoc dang khong dai them va khong co gi phai cho tai.
+          */}
+          <p className="dang-hoi__o">
+            {cauOLuot(oLuot)}{" "}
+            <Link className="btn btn--chu" href={`/sach/${bookId}/viet-tiep`}>Đổi ở trang Viết tiếp</Link>
+          </p>
           {/* Loi chung dat ngay tren hai nut. */}
           {error && <p className="luu luu--loi" role="alert">{error}</p>}
           <div className="dang-hoi__nut">

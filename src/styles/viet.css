@@ -196,6 +196,8 @@
 .niem__cuoi{ margin-top: auto; display: grid; gap: var(--space-sm); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); }
 .dang-hoi__chu{ font-size: var(--text-sm); line-height: 1.55; color: var(--color-ink-2); }
 .dang-hoi__chu b{ color: var(--color-ink); font-weight: 600; }
+/* Dong bao lai luot nay them bia va nhac gi. Chi doc, khong nen, khong vien: no la mot cau ghi chu chu khong phai o nhap. */
+.dang-hoi__o{ font-size: var(--text-sm); line-height: 1.6; color: var(--color-ink-2); overflow-wrap: anywhere; }
 .dang-hoi__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 
 /* cot giua: cac o cua loai dang chon; truot vao nhe moi lan doi loai (chi transform, opacity) */

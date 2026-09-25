@@ -29,6 +29,7 @@ export default async function VietSach({ params }: { params: Promise<{ id: strin
         initialSavedAt={draft ? draft.updatedAt.toISOString() : null}
         author={me.nickname}
         mediaEnabled={getMediaStore() !== null}
+        oLuot={draft?.trim ?? { cover: null, coverMediaId: null, youtubeId: null, dropTrack: false }}
       />
     </>
   );

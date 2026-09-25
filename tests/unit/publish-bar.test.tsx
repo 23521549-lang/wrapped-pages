@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PublishButton, PublishPanel, usePublish, type PublishDeps } from "@/components/editor/PublishBar";
+import type { AnchorHTMLAttributes } from "react";
+import type { TrimInput } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
 
 /*
@@ -15,18 +17,24 @@ const { actionPublish } = vi.hoisted(() => ({
 vi.mock("@/app/actions/library", () => ({ actionPublish }));
 vi.mock("@/app/actions/media", () => ({ actionUploadMedia: vi.fn() }));
 vi.mock("next/navigation", () => ({ unstable_rethrow: () => {} }));
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...rest}>{children}</a>,
+}));
+
+/** Luot sap dang chua chon bia hay nhac nao. Cac bai can lua chon khac tu truyen oLuot rieng. */
+const O_TRONG: TrimInput = { cover: null, coverMediaId: null, youtubeId: null, dropTrack: false };
 
 const SHEET: DocJson = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Mot" }] }] };
 
 /** Ghep nut va khung nhu Editor: nut an khi khung mo, De sau dong khung. */
-function Khung(p: PublishDeps & { onCancel: () => void }) {
+function Khung(p: PublishDeps & { onCancel: () => void; oLuot?: TrimInput }) {
   const flow = usePublish(p);
   return (
     <>
       <PublishButton flow={flow} />
       {/* Thay cho lan xep trang cua Editor (usePagedLayout goi refresh sau moi lan do). */}
       <button type="button" onClick={flow.refresh}>Xếp lại</button>
-      {flow.open && <PublishPanel flow={flow} bookTitle="Chuyện chưa kể" partnerNickname={p.partnerNickname} onCancel={() => {
+      {flow.open && <PublishPanel flow={flow} bookId={p.bookId} bookTitle="Chuyện chưa kể" partnerNickname={p.partnerNickname} oLuot={p.oLuot ?? O_TRONG} onCancel={() => {
         p.onCancel();
         flow.cancel();
       }} />}
@@ -35,14 +43,14 @@ function Khung(p: PublishDeps & { onCancel: () => void }) {
 }
 
 /** Ve nut va khung voi cac ham gia, bam Dang trang de mo khung niem phong. */
-function moHop(partnerNickname: string | null) {
+function moHop(partnerNickname: string | null, oLuot?: TrimInput) {
   const p = {
     prepare: vi.fn((): { sheets: DocJson[] } | { error: string } => ({ sheets: [SHEET] })),
     onCancel: vi.fn(),
     beforePublish: vi.fn(async () => {}),
     afterFail: vi.fn(),
   };
-  render(<Khung bookId="b" partnerNickname={partnerNickname} {...p} />);
+  render(<Khung bookId="b" partnerNickname={partnerNickname} oLuot={oLuot} {...p} />);
   fireEvent.click(screen.getByRole("button", { name: "Đăng trang" }));
   return p;
 }
@@ -216,5 +224,36 @@ describe("PublishBar kem niem phong", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
     expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null);
+  });
+});
+
+/*
+ * Muc gap "Doi bia, ten, nhac" o buoc dang da bi bo han (spec 7.1). Thay cho no la MOT dong chu tinh bao lai luot nay
+ * them gi, kem mot lien ket sang trang Viet tiep. Bon bai duoi giu dung luat do: khong o nhap nao quay lai buoc dang.
+ */
+describe("dong chu tinh o buoc dang", () => {
+  const dong = () => document.querySelector(".dang-hoi__o");
+
+  it("chua chon gi: bao dung cau khong them bia hay nhac", () => {
+    moHop("Linh");
+    expect(dong()?.textContent).toContain("Lượt này không thêm bìa hay nhạc.");
+  });
+
+  it("da chon bia va nhac: goi ten tranh va noi co nhac nen", () => {
+    moHop("Linh", { cover: "hoa-dao", coverMediaId: null, youtubeId: "dQw4w9WgXcQ", dropTrack: false });
+    expect(dong()?.textContent).toContain("Lượt này thêm bìa Cành hoa đào và nhạc nền.");
+  });
+
+  it("lien ket Doi o trang Viet tiep tro dung cuon dang viet", () => {
+    moHop("Linh");
+    const lien = screen.getByRole("link", { name: "Đổi ở trang Viết tiếp" });
+    expect(lien.getAttribute("href")).toBe("/sach/b/viet-tiep");
+  });
+
+  it("khong co o nhap nao trong khoi xac nhan, va van dung hai nut", () => {
+    moHop("Linh");
+    const cuoi = document.querySelector(".niem__cuoi");
+    expect(cuoi?.querySelectorAll("input, select, textarea").length).toBe(0);
+    expect(document.querySelectorAll(".dang-hoi__nut button").length).toBe(2);
   });
 });

@@ -19,6 +19,7 @@ import { NONCE_TAI_LIEU } from "./nonce";
 import { PageBreaks } from "./pageBreaks";
 import { PagedSurface } from "./PagedSurface";
 import { PublishButton, PublishPanel, usePublish } from "./PublishBar";
+import type { TrimInput } from "@/lib/book";
 import { SaveBadge } from "./SaveBadge";
 import { usePagedLayout } from "./usePagedLayout";
 
@@ -33,13 +34,15 @@ export type EditorProps = {
   author: string;
   /** Kho media dang bat. Tat thi Them anh va Ghi am mo di, van Tab toi duoc, kem mot cau ghi chu. */
   mediaEnabled: boolean;
+  /** Hai o bia va nhac ma ban nhap dang giu cho luot nay; buoc dang bao lai bang mot dong chu tinh. */
+  oLuot: TrimInput;
 };
 
 type Snapshot = { doc: unknown; sheets: number };
 
 const KHOA_TAP_TRUNG = "mqce-tap-trung";
 
-export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initialSavedAt, author, mediaEnabled }: EditorProps) {
+export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initialSavedAt, author, mediaEnabled, oLuot }: EditorProps) {
   const [status, setStatus] = useState<SaveStatus | null>(
     initialSavedAt ? { kind: "da-luu", at: initialSavedAt } : null,
   );
@@ -201,7 +204,9 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
         {dang.open && (
           <PublishPanel
             flow={dang}
+            bookId={bookId}
             bookTitle={bookTitle}
+            oLuot={oLuot}
             partnerNickname={partnerNickname}
             onCancel={() => {
               flushSync(() => dang.cancel());

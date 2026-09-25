@@ -137,7 +137,16 @@ async function xong() {
 
 async function veEditor(mediaEnabled = true) {
   const r = render(
-    <Editor bookId={SACH} bookTitle="Những bữa sáng" partnerNickname="Linh" initialDoc={DOC} initialSavedAt={null} author="Mạnh" mediaEnabled={mediaEnabled} />,
+    <Editor
+      bookId={SACH}
+      bookTitle="Những bữa sáng"
+      partnerNickname="Linh"
+      initialDoc={DOC}
+      initialSavedAt={null}
+      author="Mạnh"
+      mediaEnabled={mediaEnabled}
+      oLuot={{ cover: null, coverMediaId: null, youtubeId: null, dropTrack: false }}
+    />,
   );
   await xong();
   return r;
