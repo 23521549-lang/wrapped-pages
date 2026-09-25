@@ -375,6 +375,56 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
   await expect(b.getByRole("region", { name: `Tâm trạng của ${tenCuaA}` })).toBeVisible();
 });
 
+/**
+ * CLS dung dinh nghia cua trinh duyet: chi cong nhung ban ghi layout-shift KHONG do mot cu bam vua xay ra
+ * (hadRecentInput sai). Xo dich trong nua giay sau cu bam thi nguoi dung dang cho no, nen trinh duyet khong tinh.
+ */
+async function demCls(p: Page): Promise<void> {
+  await p.evaluate(() => {
+    const w = window as unknown as { cls?: number };
+    w.cls = 0;
+    new PerformanceObserver((ds) => {
+      for (const d of ds.getEntries()) {
+        const x = d as unknown as { value: number; hadRecentInput: boolean };
+        if (!x.hadRecentInput) w.cls = (w.cls ?? 0) + x.value;
+      }
+    }).observe({ type: "layout-shift", buffered: false });
+  });
+}
+
+const cls = (p: Page) => p.evaluate(async () => {
+  await new Promise((xong) => requestAnimationFrame(() => setTimeout(() => xong(null), 0)));
+  return (window as unknown as { cls?: number }).cls ?? -1;
+});
+
+/*
+ * Hop "Thả tâm trạng" nam giua dau ke va ke sach. Truoc day no chi dong SAU khi may chu tra loi, tuc thuong qua nua
+ * giay sau cu bam, nen lan thu hop do bi tinh vao CLS: do duoc mot ban ghi 0,1349 tren `.dau-ke` ngay ca khi tat hieu
+ * ung. Gio hop dong ngay trong luot bam. Bai nay dem tu TRUOC cu bam toi sau khi moi thu xong, o hai bo may.
+ */
+test("thay tam trang khong gay xo dich nao ngoai cua so cu bam: CLS bang 0 ca luot", async ({ browser }) => {
+  const { b } = await haiNguoiDaVao(browser);
+  // Da giu san mot tam trang, tuc dai troi da co tren trang: bai nay do lan THAY tam trang. Lan tha dau tien thi dai
+  // troi xuat hien lan dau o dinh trang, mot viec khac han va khong thuoc bai nay.
+  await tha(b, "nang-am");
+  for (const giam of [false, true]) {
+    await b.emulateMedia({ reducedMotion: giam ? "reduce" : "no-preference" });
+    await b.goto("/ke-sach");
+    await b.getByRole("button", { name: "Thả tâm trạng" }).click();
+    await b.locator("label.o", { hasText: TROI[giam ? "mua-phun" : "giong"].ten }).click();
+    // Doi hoat hinh mo hop chay xong, roi moi bat dem: chi do tu luc bam Tha.
+    await b.waitForTimeout(400);
+    await demCls(b);
+    await b.getByRole("button", { name: "Thả", exact: true }).click();
+    await expect(b.getByText(/Đã thả .+\. Giữ trong 24 giờ\./)).toBeAttached();
+    // Cho het lan loang (neu co) va buoc don.
+    await b.waitForTimeout(3500);
+    const tong = await cls(b);
+    console.log(`[tam-trang] CLS ca luot tha, ${giam ? "giam chuyen dong" : "chuyen dong thuong"}: ${tong}`);
+    expect(tong, `CLS khi tha tam trang (${giam ? "giam" : "thuong"})`).toBe(0);
+  }
+});
+
 test("thay tam trang: troi moi loang phu het troi cu, khong xo dich, xong thi sach", async ({ browser }) => {
   const { b } = await haiNguoiDaVao(browser);
   await tha(b, "nang-am");
@@ -390,11 +440,11 @@ test("thay tam trang: troi moi loang phu het troi cu, khong xo dich, xong thi sa
   // Dang loang: co lop vet nuoc, trai troi cu van con va tro nang.
   await expect(b.locator(".loang .giot").first()).toBeAttached();
   /*
-   * Bat dem xo dich o DAY chu khong truoc luc tha: loi hua "CLS bang 0" la loi hua cua HIEU UNG (spec muc 2 luat 2),
-   * con doan truoc no con co mot viec khac han - hop "Thả tâm trạng" thu lai sau khi may chu tra loi, keo ca dau ke
-   * sach len. Da do that: cung mot luong tha voi `prefers-reduced-motion: reduce`, tuc KHONG co lan loang nao, van
-   * sinh dung mot ban ghi layout-shift 0,1349 tren `.dau-ke` - no khong den tu lan loang. Cua so do o day om tu giua
-   * lan loang qua het buoc don, tuc dung cho troi cu va lop vet nuoc bi go: khuc de xo dich nhat cua ca hieu ung.
+   * Bat dem xo dich o DAY chu khong truoc luc tha: bai nay dem MOI ban ghi layout-shift, ke ca ban ghi do chinh cu bam
+   * sinh ra, ma hop "Thả tâm trạng" thu lai ngay trong luot bam la mot ban ghi nhu vay (trinh duyet danh dau
+   * hadRecentInput va khong tinh no vao CLS). Viec "khong xo dich ngoai cua so cu bam" duoc do rieng, dung dinh nghia
+   * CLS, o bai "thay tam trang khong gay xo dich nao ngoai cua so cu bam". Cua so o day om tu giua lan loang qua het buoc
+   * don, tuc dung cho troi cu va lop vet nuoc bi go: khuc de xo dich nhat cua ca hieu ung.
    */
   await expect(b.locator(".tha")).toBeHidden();
   // Ban ghi layout-shift sinh ra luc trinh duyet VE, khong phai luc DOM doi, nen doi them hai khung hinh: bat dem

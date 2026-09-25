@@ -149,7 +149,13 @@ function MotTroi({ m, an, cu, cuaSoCu = null, dung, doiDung }: {
             </span>
           </button>
         )}
-        <div className="troi__noi">
+        {/*
+          Khoa theo CHINH tam trang dang hien: tam trang moi thi phan chu la nhung nut moi chu khong phai nut cu bi doi cho.
+          Chieu cao dai troi da bi khoa, nen thu duy nhat co the xo dich la cac dong ben trong khi bai tho moi dai ngan khac
+          bai cu - va trinh duyet chi tinh xo dich cho NUT CU di chuyen, khong tinh nut moi xuat hien. O nhanh giam chuyen
+          dong (troi doi thang, khong lop loang), day la cho duy nhat con de lai xo dich: do duoc 0,0023 truoc khi khoa.
+        */}
+        <div className="troi__noi" key={`${m.troi.weather}|${m.troi.gio}|${m.troi.note ?? ""}`}>
           <p className="sr-only">{`${m.laMinh ? "Bạn" : m.ai}: ${t.ten}.`}</p>
           {m.laMinh && <p className="troi__ai troi__phu">Bạn</p>}
           <p className="troi__dong troi__tho d">

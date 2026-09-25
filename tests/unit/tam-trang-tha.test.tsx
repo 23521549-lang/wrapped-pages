@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ChoKeSach from "@/app/ke-sach/loading";
 import { ThaTamTrang, type DangGiu } from "@/components/tam-trang/ThaTamTrang";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
@@ -281,5 +281,52 @@ describe("ke sach va khung giu cho", () => {
     // Cung the voi nhom nut that cua ThaTamTrang (div), khong thi bo cuc flex ben trong khong giong nhau.
     expect(nhom.tagName).toBe("DIV");
     expect(nhom.querySelectorAll(".vach-cho--nut").length).toBe(2);
+  });
+
+  /*
+   * Hop Tha tam trang nam giua dau ke va ke sach. Dong no SAU khi may chu tra loi (thuong qua nua giay) la mot lan xo
+   * dich ma trinh duyet khong tinh la do nguoi dung bam - CLS do duoc 0,216 toi 0,707 tren dau ke sach, ke ca khi da tat
+   * hieu ung. Dong ngay trong luot bam thi lan xo dich do nam trong cua so cu bam va khong bi tinh.
+   */
+  it("bam Tha thi hop dong NGAY trong luot bam, khong doi may chu tra loi", async () => {
+    // May chu chua tra loi trong luc khang dinh. Phai TRA LOI no truoc khi bai ket thuc: React 19 gop moi action bat
+    // dong bo dang cho vao mot pham vi chung, nen mot action treo mai se giu transition cua moi bai sau o trang thai
+    // dang cho, va cac bai do hong theo mot cach khong lien quan gi toi chung.
+    let traLoi!: (r: { ok: true }) => void;
+    actionSetMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
+    const { container } = ve();
+    fireEvent.click(nutMo());
+    fireEvent.click(screen.getByRole("radio", { name: "Mưa phùn" }));
+    fireEvent.click(screen.getByRole("button", { name: "Thả" }));
+    expect((container.querySelector("#tha-tam-trang") as HTMLElement).hidden).toBe(true);
+    expect(document.activeElement).toBe(nutMo());
+    await act(async () => traLoi({ ok: true }));
+  });
+
+  it("may chu tu choi sau khi hop da dong: hop mo lai, giu lua chon, bao loi va dua focus toi nut Tha", async () => {
+    actionSetMood.mockResolvedValueOnce({ error: "Bạn cần đăng nhập trước." });
+    const { container } = ve();
+    fireEvent.click(nutMo());
+    fireEvent.click(screen.getByRole("radio", { name: "Giông" }));
+    fireEvent.change(oNhan(), { target: { value: "Nhớ cậu" } });
+    const nutGui = screen.getByRole("button", { name: "Thả" });
+    fireEvent.click(nutGui);
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("Bạn cần đăng nhập trước."));
+    expect((container.querySelector("#tha-tam-trang") as HTMLElement).hidden).toBe(false);
+    expect((screen.getByRole("radio", { name: "Giông" }) as HTMLInputElement).checked).toBe(true);
+    expect(oNhan().value).toBe("Nhớ cậu");
+    // Focus chi toi duoc nut Tha sau khi lan gui xong han: trong luc do nut van bi tat.
+    await waitFor(() => expect(document.activeElement).toBe(nutGui));
+  });
+
+  it("bam Thu lai thi hop cung dong ngay trong luot bam", async () => {
+    let traLoi!: (r: { ok: true }) => void;
+    actionWithdrawMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
+    const { container } = ve({ weather: "cau-vong", conLai: "còn 3 giờ" });
+    fireEvent.click(nutMo());
+    fireEvent.click(screen.getByRole("button", { name: "Thu lại" }));
+    expect((container.querySelector("#tha-tam-trang") as HTMLElement).hidden).toBe(true);
+    expect(document.activeElement).toBe(nutMo());
+    await act(async () => traLoi({ ok: true }));
   });
 });

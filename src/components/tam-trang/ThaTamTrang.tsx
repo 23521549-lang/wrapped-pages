@@ -42,7 +42,10 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   const [bao, setBao] = useState("");
   const [dangGui, batDau] = useTransition();
   const nutRef = useRef<HTMLButtonElement>(null);
+  const nutThaRef = useRef<HTMLButtonElement>(null);
   const hopRef = useRef<HTMLElement>(null);
+  /** Hop vua duoc mo lai sau khi may chu tu choi: dua focus toi nut Tha de nguoi dung thu lai ngay. */
+  const moLaiRef = useRef(false);
   const soChu = [...nhan].length;
   const qua = soChu > NOTE_MAX;
   // Bo dem: dam khi vua day, them kieu bao loi khi da vuot. Mot chuoi lop thay vi ba nhanh dieu kieu long nhau.
@@ -85,6 +88,27 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     setMo(true);
   }
 
+  /*
+   * Tha va Thu lai DONG HOP NGAY trong luot bam, khong doi may chu tra loi. Hop nam giua dau ke va ke sach, nen dong no
+   * la mot lan xo dich ca ke. Trinh duyet chi bo qua xo dich xay ra trong nua giay sau mot cu bam; dong sau khi may chu
+   * tra loi (thuong lau hon the) thi lan xo dich do bi tinh vao CLS, do duoc 0,216 toi 0,707 tren dau ke sach.
+   * Lua chon cua nguoi dung chi bi xoa khi may chu da nhan; may chu tu choi thi hop mo lai nguyen nhu cu, kem cau bao,
+   * va focus toi nut Tha de thu lai duoc ngay.
+   */
+  function moLaiVoiLoi(cau: string) {
+    setLoi(cau);
+    moLaiRef.current = true;
+    setMo(true);
+  }
+
+  // Focus toi nut Tha sau khi hop da mo lai tren man VA lan gui da xong han: luc goi setMo(true) hop van dang an, va
+  // trong luc transition con chay nut Tha van bi tat, ma trinh duyet khong cho focus vao mot nut dang tat.
+  useEffect(() => {
+    if (!mo || dangGui || !moLaiRef.current) return;
+    moLaiRef.current = false;
+    nutThaRef.current?.focus();
+  }, [mo, dangGui]);
+
   function tha() {
     // Cung mot ham kiem voi server action: chua chon troi hay loi nhan qua dai deu ra dung cau bao do, khong cho mot
     // vong goi may chu moi biet.
@@ -93,34 +117,38 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
       setLoi(vao.error);
       return;
     }
+    setLoi("");
+    setMo(false);
+    nutRef.current?.focus();
     batDau(async () => {
       try {
         const r = await actionSetMood(vao.weather, vao.note);
         if ("error" in r) {
-          setLoi(r.error);
+          moLaiVoiLoi(r.error);
           return;
         }
         dong();
         setBao(`Đã thả ${TROI[vao.weather].ten}. Giữ trong 24 giờ.`);
-        nutRef.current?.focus();
       } catch {
-        setLoi(CHUA_THA_DUOC);
+        moLaiVoiLoi(CHUA_THA_DUOC);
       }
     });
   }
 
   function thuLai() {
+    setLoi("");
+    setMo(false);
+    nutRef.current?.focus();
     batDau(async () => {
       try {
         const r = await actionWithdrawMood();
         if ("error" in r) {
-          setLoi(r.error);
+          moLaiVoiLoi(r.error);
           return;
         }
         setBao("Đã thu lại tâm trạng.");
-        nutRef.current?.focus();
       } catch {
-        setLoi(CHUA_THA_DUOC);
+        moLaiVoiLoi(CHUA_THA_DUOC);
       }
     });
   }
@@ -200,6 +228,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
             <p className="nhan__goi" id={`${HOP}-goi`}>{`Không bắt buộc. ${tenKia} sẽ thấy dưới bầu trời.`}</p>
             <div className="tha__cuoi">
               <button
+                ref={nutThaRef}
                 type="button"
                 className="btn"
                 onClick={tha}
