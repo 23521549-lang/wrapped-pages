@@ -78,6 +78,12 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await expect(dongCuaB).toHaveAttribute("href", `/sach/${id}?trang=1`);
   await expect(dongCuaB.locator(".hoat-dong__chu b")).toHaveText("Chuyện chưa kể");
   await expect(dongCuaB.locator("time")).toHaveAttribute("datetime", new RegExp("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"));
+  // Yeu cau dot ba diem 19: khong gach chan chu o bat ky dau. Dong Hoat dong la mot trong bon cho cu, va no chi do
+  // duoc o day - noi that su co mot dong gan sach. Re chuot thi cau doi sang muc chinh chu khong moc them gach chan.
+  const chu = dongCuaB.locator(".hoat-dong__chu");
+  expect(await chu.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe("none");
+  await dongCuaB.hover();
+  expect(await chu.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe("none");
 
   await a.goto("/ke-sach");
   await expect(cuon(a).getByRole("link", { name: `Bạn đăng ${soTo} trang mới trong Chuyện chưa kể` }))
