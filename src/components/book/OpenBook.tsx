@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LockedBars } from "@/components/reader/LockedSheet";
-import { BiaTuDoi, type BiaChon } from "./BiaTuDoi";
+import { BiaTuDoi, NutDungHieuUng, type BiaChon } from "./BiaTuDoi";
 import { GlyphKhoa, GlyphRieng } from "./ShelfBook";
 
 export type OpenBookProps = {
@@ -9,8 +9,10 @@ export type OpenBookProps = {
   title: string;
   /** Moi o bia DA CO cua cuon, theo thu tu dong thoi gian. Tu hai bia tro len thi khung tu doi bia. */
   covers: readonly BiaChon[];
-  /** Trang nay khong co dai troi, nen khung bia tu dat mot nut tam dung cho rieng no. */
+  /** Trang nay khong co dai troi, nen khung sach tu dat mot nut tam dung cho bia tu doi. */
   tuDatNut: boolean;
+  /** Trang Dau thoi gian cua cuon; bam anh bia thi toi do. */
+  dauHref: string;
   pageCount: number;
   /**
    * To man doc mo khi bam khung: to mang doan trich cua hom nay (doan luon den tu luot dang moi nhat); khong co doan
@@ -65,7 +67,7 @@ function TrangPhai({ excerpt, locked, isPrivate }: Pick<OpenBookProps, "excerpt"
  * Ca khung la mot lien ket toi man doc o dung to cua doan trich (lop phu dau DOM, nut chinh nam tren no va ngoai no),
  * nen khong co lien ket long nhau.
  */
-export function OpenBook({ who, title, covers, tuDatNut, pageCount, position, readHref, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
+export function OpenBook({ who, title, covers, tuDatNut, dauHref, pageCount, position, readHref, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
   return (
     <article className="vua-viet" aria-label="Một trang trong sách">
       <div className="sach-mo">
@@ -77,11 +79,10 @@ export function OpenBook({ who, title, covers, tuDatNut, pageCount, position, re
             <p className="vua-viet__ai"><b>{who}</b> vừa viết</p>
             <h2 className="vua-viet__ten d">{title}</h2>
             <p className="vua-viet__phu">{pageCount} trang, {when}</p>
+            {tuDatNut && covers.length > 1 && <NutDungHieuUng />}
           </div>
           <div className="tranh-dan">
-            <div className="tranh-dan__to">
-              <BiaTuDoi covers={covers} tuDatNut={tuDatNut} />
-            </div>
+            <BiaTuDoi covers={covers} href={dauHref} nhan={`Dấu thời gian của ${title}`} />
           </div>
           <Link className="btn sach-mo__nut" href={action.href}>{action.label}</Link>
         </div>

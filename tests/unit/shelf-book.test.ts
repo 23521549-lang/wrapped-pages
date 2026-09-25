@@ -34,7 +34,7 @@ describe("ShelfBook", () => {
 });
 
 const MO: OpenBookProps = {
-  who: "Linh", title: "Chuyện chưa kể", covers: [{ cover: "trang-nuoc", coverMediaId: null }], tuDatNut: false, pageCount: 4, position: 4,
+  who: "Linh", title: "Chuyện chưa kể", covers: [{ cover: "trang-nuoc", coverMediaId: null }], tuDatNut: false, dauHref: "/dau-thoi-gian/abc", pageCount: 4, position: 4,
   readHref: "/sach/abc?trang=4",
   when: "vừa xong", excerpt: "Dòng chữ thật", locked: false, isPrivate: false, action: { label: "Đọc tiếp", href: "/sach/abc" },
 };
@@ -44,7 +44,11 @@ describe("OpenBook", () => {
   it("trang trai co ai viet, ten, dong phu va mot nut chinh; trang phai la doan trich va so trang", () => {
     const html = mo();
     expect(html).toContain('<article class="vua-viet" aria-label="Một trang trong sách">');
-    expect(html.match(/<a /g)).toHaveLength(2);
+    // Ba lien ket: lop phu toi man doc, anh bia toi trang Dau thoi gian, va nut chinh. Spec 11.1: "Bấm ảnh bìa trên
+    // khung sách lớn ở Kệ sách ... bìa phải là một liên kết riêng, nằm ngoài lớp phủ trong DOM và nằm trên nó theo thứ
+    // tự lớp". Khang dinh ngay duoi (khong lien ket nao nam trong lien ket nao) van giu nguyen.
+    expect(html.match(/<a /g)).toHaveLength(3);
+    expect(html).toContain('<a class="tranh-dan__lien" href="/dau-thoi-gian/abc">');
     // Link phu khung dung dau, chi chua chu an; nut chinh la link rieng, khong link nao nam trong link nao.
     expect(html).toContain('<div class="sach-mo"><a class="sach-mo__lien" href="/sach/abc?trang=4"><span class="sr-only">Đọc Chuyện chưa kể tại trang 4</span></a>');
     expect(html).toContain('<a class="btn sach-mo__nut" href="/sach/abc">Đọc tiếp</a>');

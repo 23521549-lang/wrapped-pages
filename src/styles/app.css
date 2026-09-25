@@ -119,8 +119,17 @@
   background: linear-gradient(100deg, transparent, var(--roi-sang-mau) 45%, var(--roi-sang-mau) 55%, transparent);
 }
 /* Nut tam dung du phong, chi hien khi trang khong co dai troi. Dat NGOAI .tranh-dan (khung tranh dan cho cu bam di
-   xuyen qua bang pointer-events: none), nen no nam ngay duoi dong "N trang, thoi diem". */
-.bia-dung{ justify-self: start; margin-top: var(--space-2xs); }
+   xuyen qua bang pointer-events: none), ngay duoi dong "N trang, thoi diem", va nam TREN lop phu cua khung sach nhu
+   nut chinh. Giam chuyen dong thi khong co gi chay nen nut duoc giau, cung cach voi nut cua dai troi. */
+.bia-dung{ position: relative; z-index: 2; margin-top: var(--space-2xs); }
+@media (prefers-reduced-motion: reduce){ .bia-dung{ display: none; } }
+/* Anh bia tren khung sach lon la mot lien ket rieng toi trang Dau thoi gian: bat lai cu bam o dung phan tu nay (ca
+   .tranh-dan cho cu bam di xuyen qua), va dat no tren lop phu cua khung sach. z-index o ca hai tang: man rong thi
+   .tranh-dan co transform nen la mot ngu canh xep lop rieng, man hep thi no la phan tu tinh va lien ket tu nang minh. */
+.tranh-dan{ z-index: 2; }
+.tranh-dan__lien{ position: relative; z-index: 2; display: block; pointer-events: auto; border-radius: var(--radius-tranh); }
+.tranh-dan__to{ display: block; }
+.tranh-dan__bia{ display: block; }
 /* Doan trich: chu cua to giay man doc, Be Vietnam Pro 400, co 17px, gian dong 1.75, toi da 34ch, 6 dong. */
 .vua-viet__chu{ font-family: var(--font-body); font-weight: 400; font-size: 1.0625rem; line-height: 1.75; max-width: 34ch; color: var(--color-ink); overflow-wrap: anywhere; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 /* rieng tu: chu cua chinh nguoi xem, lam mo cho nguoi sau lung khong doc duoc; nhan nam giua trang, de len */

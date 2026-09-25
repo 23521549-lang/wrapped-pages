@@ -95,6 +95,7 @@ export default async function KeSach() {
                     title={recent.title}
                     covers={biaCuaKhung}
                     tuDatNut={!coDaiTroi}
+                    dauHref={`/dau-thoi-gian/${recent.id}`}
                     pageCount={recent.pageCount}
                     position={recent.excerptPosition}
                     readHref={`/sach/${recent.id}?trang=${recent.excerptPosition}`}

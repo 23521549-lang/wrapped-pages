@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useTamDung } from "@/components/hieu-ung/tam-dung";
 import { giamChuyenDong } from "@/components/tam-trang/hieu-ung-chung";
 import type { CoverKey } from "@/lib/book";
@@ -15,11 +16,10 @@ export type BiaChon = { cover: CoverKey; coverMediaId: string | null };
 export type BiaTuDoiProps = {
   /** Moi o bia DA CO cua cuon, theo thu tu dong thoi gian. Mot bia thi khung dung yen tuyet doi. */
   covers: readonly BiaChon[];
-  /**
-   * Trang nay khong co dai troi (khong ai dang giu tam trang), nen khung tu dat mot nut tam dung cho rieng no. Nut do
-   * doi DUNG lua chon da luu ma dai troi van dung, nen van la mot co che chu khong phai hai (phan quyet B4).
-   */
-  tuDatNut: boolean;
+  /** Trang Dau thoi gian cua cuon: bam anh bia la mot loi vao thang (diem 15 cua chu du an). */
+  href: string;
+  /** Ten doc duoc cua lien ket, vi du "Dấu thời gian của Chuyện chưa kể". */
+  nhan: string;
 };
 
 const NHAN_DUNG = "Tạm dừng hiệu ứng";
@@ -37,11 +37,11 @@ const NHAN_CHAY = "Cho hiệu ứng chạy";
  * trang bi an, con tro dang tren khung, khung dang giu focus, nguoi dung da chon tam dung, hay may dang bat giam
  * chuyen dong - bat ky dieu nao cung lam hen gio khong duoc dat. Het dieu do thi hen gio duoc dat lai.
  */
-export function BiaTuDoi({ covers, tuDatNut }: BiaTuDoiProps) {
+export function BiaTuDoi({ covers, href, nhan }: BiaTuDoiProps) {
   const [hien, setHien] = useState<BiaChon>(covers[0]);
   /** Bia dang mo di trong lan doi nay; null la khong co lan doi nao dang chay. */
   const [cu, setCu] = useState<BiaChon | null>(null);
-  const [dung, datDung] = useTamDung();
+  const [dung] = useTamDung();
   const [giam, setGiam] = useState(false);
   const [an, setAn] = useState(false);
   const [giu, setGiu] = useState(false);
@@ -128,33 +128,49 @@ export function BiaTuDoi({ covers, tuDatNut }: BiaTuDoiProps) {
     };
   }, [chay, cu, hien]);
 
+  // Ca tranh dan la mot lien ket rieng toi trang Dau thoi gian. No nam NGOAI lop phu cua khung sach trong cay (nen khong
+  // co lien ket long nhau) va TREN lop phu theo thu tu lop (app.css), nen nhan duoc cu bam, con tro va focus: nho vay
+  // hen gio moi dung duoc khi con tro dang tren bia hay khi bia dang giu focus.
   return (
-    <>
-      <div
-        ref={khungRef}
-        className={`tranh-dan__bia bia--${hien.cover}`}
-        onPointerEnter={() => setGiu(true)}
-        onPointerLeave={() => setGiu(false)}
-        onFocusCapture={() => setGiu(true)}
-        onBlurCapture={() => setGiu(false)}
-      >
-        <CoverArt cover={hien.cover} />
-        <CoverImage mediaId={hien.coverMediaId} />
-        {cu !== null && (
-          <span className="roi-sang" aria-hidden="true">
-            <span ref={cuRef} className={`roi-sang__cu bia--${cu.cover}`}>
-              <CoverArt cover={cu.cover} />
-              <CoverImage mediaId={cu.coverMediaId} />
+    <Link
+      className="tranh-dan__lien"
+      href={href}
+      onPointerEnter={() => setGiu(true)}
+      onPointerLeave={() => setGiu(false)}
+      onFocus={() => setGiu(true)}
+      onBlur={() => setGiu(false)}
+    >
+      <span className="sr-only">{nhan}</span>
+      <span className="tranh-dan__to">
+        <span ref={khungRef} className={`tranh-dan__bia bia--${hien.cover}`}>
+          <CoverArt cover={hien.cover} />
+          <CoverImage mediaId={hien.coverMediaId} />
+          {cu !== null && (
+            <span className="roi-sang" aria-hidden="true">
+              <span ref={cuRef} className={`roi-sang__cu bia--${cu.cover}`}>
+                <CoverArt cover={cu.cover} />
+                <CoverImage mediaId={cu.coverMediaId} />
+              </span>
+              <span ref={vetRef} className="roi-sang__vet" />
             </span>
-            <span ref={vetRef} className="roi-sang__vet" />
-          </span>
-        )}
-      </div>
-      {tuDatNut && doiDuoc && !giam && (
-        <button type="button" className="btn btn--chu bia-dung" onClick={() => datDung(!dung)}>
-          {dung ? NHAN_CHAY : NHAN_DUNG}
-        </button>
-      )}
-    </>
+          )}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * Nut tam dung du phong cua trang Ke sach, chi dat khi trang khong co dai troi (khong ai dang giu tam trang): khong co
+ * no thi bia tu doi ma khong co duong dung nao, trai WCAG SC 2.2.2. Nut doi DUNG lua chon da luu ma dai troi van dung,
+ * nen van la mot co che chu khong phai hai (phan quyet B4). May bat giam chuyen dong thi khong co gi chay, va nut duoc
+ * giau bang CSS - cung cach voi nut cua dai troi - de HTML may chu va lan ve dau cua trinh duyet khong lech nhau.
+ */
+export function NutDungHieuUng() {
+  const [dung, datDung] = useTamDung();
+  return (
+    <button type="button" className="btn btn--chu bia-dung" onClick={() => datDung(!dung)}>
+      {dung ? NHAN_CHAY : NHAN_DUNG}
+    </button>
   );
 }
