@@ -138,3 +138,29 @@ test("re chuot tren anh bia thi bia khong tu doi", async ({ browser }) => {
   await a.waitForTimeout(11_500);
   expect(await a.locator(".tranh-dan__bia").getAttribute("class")).toBe(truoc);
 });
+
+test("khung chi tiet: anh bia khong de len chu; trang chon cuon: ten sach dai xuong dong tron ven", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  const TEN = "Những bữa sáng ở quán cà phê cũ đầu ngõ";
+  const id = await taoSach(a, TEN, "chia-se");
+  await dangToThang(id, "Lượt đầu tiên.");
+  for (const w of [320, 1280]) {
+    await a.setViewportSize({ width: w, height: 900 });
+
+    // Ten sach la cach duy nhat phan biet hai cuon tren trang chon, nen khong duoc cat bang dau ba cham.
+    await a.goto("/dau-thoi-gian");
+    const ten = a.locator(".dtg-dong .nhap__ten");
+    await expect(ten).toHaveText(TEN);
+    const biCat = await ten.evaluate((el) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
+    expect(biCat, `ten sach bi cat o ${w}px`).toBe(false);
+
+    // Thang mac dinh la thang cua dau moi nhat: o bia mo dau cua cuon vua tao.
+    await a.goto(`/dau-thoi-gian/${id}`);
+    const dong = a.locator(".dtg-ct__dong").first();
+    await expect(dong.locator(".dtg-ct__hinh svg")).toBeVisible();
+    const hinh = await dong.locator(".dtg-ct__hinh").boundingBox();
+    const chu = await dong.locator(".dtg-ct__chu").boundingBox();
+    if (!hinh || !chu) throw new Error("khong thay dong chi tiet");
+    expect(hinh.x + hinh.width, `anh bia de len chu o ${w}px`).toBeLessThanOrEqual(chu.x + 0.5);
+  }
+});

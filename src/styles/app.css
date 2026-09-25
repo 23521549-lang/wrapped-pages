@@ -450,6 +450,9 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
    dau trong app.css (co bai kiem giu). */
 .dtg-dong{ position: relative; }
 .dtg-dong .nhap__ten::after{ content: ''; position: absolute; inset: 0; }
+/* Ten sach la cach duy nhat phan biet hai cuon tren trang chon, nen xuong dong tron ven thay vi cat bang dau ba cham
+   nhu dong cua trang Ban nhap. */
+.dtg-dong .nhap__ten{ white-space: normal; overflow-wrap: anywhere; }
 /* Luoi muoi hai thang cua trang Dau thoi gian: 3 cot o man hep, 4 cot tu 768px. Moi o la mot nut (bam thi khung chi
    tiet doi tai cho, nhu Lich hoa). Khong mot hoat anh nao. */
 .nam-luoi{ border: 0; margin: 0; padding: 0; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); }
@@ -471,7 +474,9 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 /* Khung chi tiet: moi dau mot dong, hinh 96px ben trai. */
 .chi-tiet__trong{ color: var(--color-ink-2); margin-top: var(--space-xs); }
 .dtg-ct{ margin: var(--space-sm) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-md); }
-.dtg-ct__dong{ display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-2xs) var(--space-sm); align-items: start; }
+/* Khung chi tiet muon .chi-tiet cua Lich hoa, ma `.chi-tiet li` (tam-trang.css) dat cot hinh 48px cho bong hoa. Dong
+   dau thoi gian can cot 96px cho anh bia, nen bo chon phai manh hon `.chi-tiet li`, khong thi anh de len chu. */
+.dtg-ct > .dtg-ct__dong{ display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-2xs) var(--space-sm); align-items: start; }
 .dtg-ct__hinh{ position: relative; display: block; width: 96px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
 .dtg-ct__hinh svg{ display: block; width: 100%; height: 100%; }
 .dtg-ct__hinh--nhac{ display: grid; place-items: center; color: var(--color-ink-2); }
