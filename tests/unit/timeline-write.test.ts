@@ -2,11 +2,20 @@ import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { bookCovers, bookTracks, media } from "@/server/db/schema";
-import { coversOfBook, newestCover, newestTrack, setCoverEntry, setTrackEntry, tracksOfBook } from "@/server/library/timeline";
+import { coverSlots, newestCover, newestTrack, setCoverEntry, setTrackEntry, trackSlots } from "@/server/library/timeline";
 import { recordUpload } from "@/server/media/access";
 import type { TestDb } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
 import { luotChu, MOC_LUOT } from "../helpers/round";
+
+/*
+ * coverSlots va trackSlots tra ca cho TRONG cua luot chua co o, vi man Sua sach phai dien vao do duoc. Bai kiem cua
+ * duong ghi chi quan tam cac o THAT, nen hai ham duoi loc bo cho trong.
+ */
+const oBia = async (db: TestDb, bookId: string) =>
+  (await coverSlots(db, bookId)).flatMap((s) => (s.o === null ? [] : [{ roundId: s.roundId, ...s.o }]));
+const oNhac = async (db: TestDb, bookId: string) =>
+  (await trackSlots(db, bookId)).flatMap((s) => (s.o === null ? [] : [{ roundId: s.roundId, ...s.o }]));
 
 /** Cuon chung cua seat1, co o bia mo dau (do createBook chen) va hai luot. */
 async function haiLuot() {
@@ -38,7 +47,7 @@ describe("setCoverEntry", () => {
   it("dien o cua mot luot dang trong", async () => {
     const s = await haiLuot();
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l2, { cover: "hoa-dao", coverMediaId: null })).toBe("saved");
-    expect((await coversOfBook(s.db, s.chung)).map((o) => [o.roundId, o.cover])).toEqual([[null, "nui-xa"], [s.l2, "hoa-dao"]]);
+    expect((await oBia(s.db, s.chung)).map((o) => [o.roundId, o.cover])).toEqual([[null, "nui-xa"], [s.l2, "hoa-dao"]]);
     expect(await newestCover(s.db, s.chung)).toEqual({ cover: "hoa-dao", coverMediaId: null });
   });
 
@@ -47,26 +56,26 @@ describe("setCoverEntry", () => {
     await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "hoa-dao", coverMediaId: null });
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "cau-go", coverMediaId: null })).toBe("saved");
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "doi-thong", coverMediaId: null })).toBe("saved");
-    expect((await coversOfBook(s.db, s.chung)).map((o) => [o.roundId, o.cover])).toEqual([[null, "cau-go"], [s.l1, "doi-thong"]]);
+    expect((await oBia(s.db, s.chung)).map((o) => [o.roundId, o.cover])).toEqual([[null, "cau-go"], [s.l1, "doi-thong"]]);
   });
 
   it("bo mot o khi cuon con o khac", async () => {
     const s = await haiLuot();
     await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "hoa-dao", coverMediaId: null });
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, null)).toBe("saved");
-    expect((await coversOfBook(s.db, s.chung)).map((o) => o.roundId)).toEqual([null]);
+    expect((await oBia(s.db, s.chung)).map((o) => o.roundId)).toEqual([null]);
   });
 
   it("bo o bia CUOI CUNG bi tu choi va khong xoa gi", async () => {
     const s = await haiLuot();
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, null)).toBe("last-cover");
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("don mot cho van con trong khong phai la bo o bia cuoi cung", async () => {
     const s = await haiLuot();
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, null)).toBe("saved");
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("cuon cua nguoi khac tra not-found, y nhu cuon khong ton tai", async () => {
@@ -74,7 +83,7 @@ describe("setCoverEntry", () => {
     expect(await setCoverEntry(s.db, s.seat2.id, s.chung, s.l1, { cover: "hoa-dao", coverMediaId: null })).toBe("not-found");
     expect(await setCoverEntry(s.db, s.seat2.id, s.chung, s.l1, null)).toBe("not-found");
     expect(await setCoverEntry(s.db, s.seat2.id, s.chung, null, { cover: "hoa-dao", coverMediaId: null })).toBe("not-found");
-    expect((await coversOfBook(s.db, s.chung)).map((o) => [o.roundId, o.cover])).toEqual([[null, "nui-xa"]]);
+    expect((await oBia(s.db, s.chung)).map((o) => [o.roundId, o.cover])).toEqual([[null, "nui-xa"]]);
   });
 
   it("nguoi khac khong gan duoc anh bia cua chinh minh vao cuon nguoi ta", async () => {
@@ -82,7 +91,7 @@ describe("setCoverEntry", () => {
     const cuaKia = await taiBia(s.db, s.seat2.id, null);
     expect(await setCoverEntry(s.db, s.seat2.id, s.chung, s.l1, { cover: "hoa-dao", coverMediaId: cuaKia })).toBe("not-found");
     expect(await cuonCuaAnh(s.db, cuaKia)).toBeNull();
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("luot cua cuon khac, luot khong co that, hay ma sai dang: not-found", async () => {
@@ -91,7 +100,7 @@ describe("setCoverEntry", () => {
     for (const r of [laLuot, randomUUID(), "khong-phai-uuid"]) {
       expect(await setCoverEntry(s.db, s.seat1.id, s.chung, r, { cover: "hoa-dao", coverMediaId: null })).toBe("not-found");
     }
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("ma cuon sai dang hay khong co that: not-found", async () => {
@@ -110,7 +119,7 @@ describe("setCoverEntry", () => {
     const s = await haiLuot();
     const cuaKia = await taiBia(s.db, s.seat2.id, null);
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "nui-xa", coverMediaId: cuaKia })).toBe("invalid-cover");
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
     expect(await cuonCuaAnh(s.db, cuaKia)).toBeNull();
   });
 
@@ -120,21 +129,21 @@ describe("setCoverEntry", () => {
     expect(await setCoverEntry(s.db, s.seat1.id, s.rieng, null, { cover: "chim-bay", coverMediaId: bia })).toBe("saved");
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "nui-xa", coverMediaId: bia })).toBe("invalid-cover");
     expect(await cuonCuaAnh(s.db, bia)).toBe(s.rieng);
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("dong media khong phai loai bia: invalid-cover", async () => {
     const s = await haiLuot();
     const anh = await taiAnh(s.db, s.seat1.id, s.chung);
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "nui-xa", coverMediaId: anh })).toBe("invalid-cover");
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("ma anh khong co that la invalid-cover, ma anh sai dang la invalid", async () => {
     const s = await haiLuot();
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "nui-xa", coverMediaId: randomUUID() })).toBe("invalid-cover");
     expect(await setCoverEntry(s.db, s.seat1.id, s.chung, s.l1, { cover: "nui-xa", coverMediaId: "khong-phai-uuid" })).toBe("invalid");
-    expect(await coversOfBook(s.db, s.chung)).toHaveLength(1);
+    expect(await oBia(s.db, s.chung)).toHaveLength(1);
   });
 
   it("anh bia dung duoc thi vao o va duoc gan vao cuon", async () => {
@@ -168,7 +177,7 @@ describe("setTrackEntry", () => {
     const s = await haiLuot();
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, s.l1, { youtubeId: "5qap5aO4i9A" })).toBe("saved");
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, s.l1, { youtubeId: "dQw4w9WgXcQ" })).toBe("saved");
-    expect((await tracksOfBook(s.db, s.chung)).map((o) => [o.roundId, o.youtubeId])).toEqual([[s.l1, "dQw4w9WgXcQ"]]);
+    expect((await oNhac(s.db, s.chung)).map((o) => [o.roundId, o.youtubeId])).toEqual([[s.l1, "dQw4w9WgXcQ"]]);
   });
 
   it("o go nhac: cuon dang co nhac tro nen im tu luot do", async () => {
@@ -177,20 +186,20 @@ describe("setTrackEntry", () => {
     expect(await newestTrack(s.db, s.chung)).toBe("5qap5aO4i9A");
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, s.l2, { youtubeId: null })).toBe("saved");
     expect(await newestTrack(s.db, s.chung)).toBeNull();
-    expect(await tracksOfBook(s.db, s.chung)).toHaveLength(2);
+    expect(await oNhac(s.db, s.chung)).toHaveLength(2);
   });
 
   it("bo o nhac cuoi cung van duoc: nhac khong co bat bien nhu bia", async () => {
     const s = await haiLuot();
     await setTrackEntry(s.db, s.seat1.id, s.chung, null, { youtubeId: "5qap5aO4i9A" });
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, null, null)).toBe("saved");
-    expect(await tracksOfBook(s.db, s.chung)).toEqual([]);
+    expect(await oNhac(s.db, s.chung)).toEqual([]);
   });
 
   it("ma video sai dang bi tu choi truoc khi cham database", async () => {
     const s = await haiLuot();
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, s.l1, { youtubeId: "qua-ngan" })).toBe("invalid");
-    expect(await tracksOfBook(s.db, s.chung)).toEqual([]);
+    expect(await oNhac(s.db, s.chung)).toEqual([]);
   });
 
   it("cuon cua nguoi khac va luot la deu la not-found", async () => {
@@ -199,14 +208,14 @@ describe("setTrackEntry", () => {
     expect(await setTrackEntry(s.db, s.seat2.id, s.chung, s.l1, { youtubeId: "5qap5aO4i9A" })).toBe("not-found");
     expect(await setTrackEntry(s.db, s.seat2.id, s.chung, null, null)).toBe("not-found");
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, laLuot, { youtubeId: "5qap5aO4i9A" })).toBe("not-found");
-    expect(await tracksOfBook(s.db, s.chung)).toEqual([]);
+    expect(await oNhac(s.db, s.chung)).toEqual([]);
   });
 
   it("ma cuon hay ma luot sai dang: not-found", async () => {
     const s = await haiLuot();
     expect(await setTrackEntry(s.db, s.seat1.id, "khong-phai-uuid", null, { youtubeId: "5qap5aO4i9A" })).toBe("not-found");
     expect(await setTrackEntry(s.db, s.seat1.id, s.chung, "khong-phai-uuid", { youtubeId: "5qap5aO4i9A" })).toBe("not-found");
-    expect(await tracksOfBook(s.db, s.chung)).toEqual([]);
+    expect(await oNhac(s.db, s.chung)).toEqual([]);
   });
 
   it("moi luot van chi mot o nhac sau nhieu lan sua", async () => {

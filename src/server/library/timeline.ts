@@ -1,51 +1,17 @@
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { bookCovers, books, bookTracks, rounds } from "@/server/db/schema";
+import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { COVERS, type CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 import { attachCover, lockCover } from "@/server/media/cover";
-import { khoangLuot } from "./rounds";
+import { khoangLuot, roundsOfBook } from "./rounds";
 import { lockOwnBook } from "./remove";
 
 /** Bia hien hanh cua mot cuon, dung ten truong ma giao dien van dung. */
 export type CoverNow = { cover: CoverKey; coverMediaId: string | null };
 export type NewestCover = CoverNow & { bookId: string };
-
-/** Mot o tren dong thoi gian bia. roundId null la o mo dau, khi do ordinal, first va last deu null. */
-export type CoverEntry = {
-  id: string;
-  roundId: string | null;
-  ordinal: number | null;
-  first: number | null;
-  last: number | null;
-  at: Date;
-  cover: CoverKey;
-  coverMediaId: string | null;
-};
-
-/** Mot o tren dong thoi gian nhac. youtubeId null la o GO NHAC: tu luot nay cuon khong con nhac nen. */
-export type TrackEntry = Omit<CoverEntry, "cover" | "coverMediaId"> & { youtubeId: string | null };
-
-/**
- * Cac luot cua mot cuon kem so thu tu va khoang to. Dung lam ve trai cua dong thoi gian, nen mot truy van la du:
- * khong phai doc bang rounds mot lan nua o noi goi.
- */
-function luotCuaCuon(db: AnyDb, bookId: string) {
-  const khoang = khoangLuot(bookId);
-  return db
-    .select({
-      id: rounds.id,
-      publishedAt: rounds.publishedAt,
-      first: khoang.first,
-      last: khoang.last,
-      ordinal: sql<number>`row_number() over (order by ${khoang.first})`.mapWith(Number).as("thu_tu"),
-    })
-    .from(rounds)
-    .innerJoin(khoang, eq(khoang.roundId, rounds.id))
-    .where(eq(rounds.bookId, bookId))
-    .as("luot");
-}
 
 /**
  * Bia moi nhat cua tung cuon, mot dong moi cuon. Khoa sap xep la VI TRI TO DAU cua luot (o mo dau la 0), dung mot khoa
@@ -89,45 +55,69 @@ export async function newestTrack(db: AnyDb, bookId: string): Promise<string | n
   return row?.youtubeId ?? null;
 }
 
-/** Ca dong thoi gian bia cua mot cuon theo thu tu: o mo dau truoc, roi cac o theo vi tri to dau cua luot. */
-export async function coversOfBook(db: AnyDb, bookId: string): Promise<CoverEntry[]> {
-  const luot = luotCuaCuon(db, bookId);
-  return db
-    .select({
-      id: bookCovers.id,
-      roundId: bookCovers.roundId,
-      ordinal: luot.ordinal,
-      first: luot.first,
-      last: luot.last,
-      at: sql<Date>`coalesce(${luot.publishedAt}, ${books.createdAt})`.mapWith(books.createdAt),
-      cover: bookCovers.cover,
-      coverMediaId: bookCovers.coverMediaId,
-    })
-    .from(bookCovers)
-    .innerJoin(books, eq(books.id, bookCovers.bookId))
-    .leftJoin(luot, eq(luot.id, bookCovers.roundId))
-    .where(eq(bookCovers.bookId, bookId))
-    .orderBy(asc(sql`coalesce(${luot.first}, 0)`));
+/**
+ * Mot o cua dong thoi gian, ke ca o CHUA CO GI: luot da dang nhung chua chon bia (hay chua chon nhac) van la mot cho
+ * trong co that ma man Sua sach phai dien vao duoc. roundId null la o mo dau; khi do ordinal, first, last deu null va
+ * moc la luc tao cuon.
+ */
+export type Slot = { roundId: string | null; ordinal: number | null; first: number | null; last: number | null; at: Date };
+export type CoverSlot = Slot & { o: { id: string; cover: CoverKey; coverMediaId: string | null } | null };
+/** o.youtubeId null la O GO NHAC (tu luot nay cuon khong con nhac); o null la luot nay chua dung toi nhac. */
+export type TrackSlot = Slot & { o: { id: string; youtubeId: string | null } | null };
+
+/**
+ * Khung cho cua ca hai dong thoi gian: o mo dau roi tung luot theo dung thu tu cua roundsOfBook. Thu tu luot chi duoc
+ * tinh o MOT cho trong ca du an (roundsOfBook), nen ke sach va man Sua sach khong the xep khac nhau.
+ */
+async function khungCho(db: AnyDb, bookId: string): Promise<Slot[]> {
+  if (!isUuid(bookId)) return [];
+  const [cuon, luot] = await Promise.all([
+    db.select({ createdAt: books.createdAt }).from(books).where(eq(books.id, bookId)),
+    roundsOfBook(db, bookId),
+  ]);
+  if (cuon.length === 0) return [];
+  return [
+    { roundId: null, ordinal: null, first: null, last: null, at: cuon[0].createdAt },
+    ...luot.map((r) => ({ roundId: r.id, ordinal: r.ordinal, first: r.first, last: r.last, at: r.publishedAt })),
+  ];
 }
 
-/** Ca dong thoi gian nhac cua mot cuon, cung thu tu voi coversOfBook. Giu ca o go nhac. */
-export async function tracksOfBook(db: AnyDb, bookId: string): Promise<TrackEntry[]> {
-  const luot = luotCuaCuon(db, bookId);
-  return db
-    .select({
-      id: bookTracks.id,
-      roundId: bookTracks.roundId,
-      ordinal: luot.ordinal,
-      first: luot.first,
-      last: luot.last,
-      at: sql<Date>`coalesce(${luot.publishedAt}, ${books.createdAt})`.mapWith(books.createdAt),
-      youtubeId: bookTracks.youtubeId,
-    })
-    .from(bookTracks)
-    .innerJoin(books, eq(books.id, bookTracks.bookId))
-    .leftJoin(luot, eq(luot.id, bookTracks.roundId))
-    .where(eq(bookTracks.bookId, bookId))
-    .orderBy(asc(sql`coalesce(${luot.first}, 0)`));
+/** Ghep cac o da co vao khung cho, khop theo luot. Khoa cua o mo dau la chuoi rong vi Map khong nhan null lan string. */
+function ghepO<T extends { roundId: string | null }, S>(cho: Slot[], os: T[], lay: (o: T) => S): (Slot & { o: S | null })[] {
+  const theoLuot = new Map(os.map((o) => [o.roundId ?? "", o]));
+  return cho.map((c) => {
+    const o = theoLuot.get(c.roundId ?? "");
+    return { ...c, o: o === undefined ? null : lay(o) };
+  });
+}
+
+/**
+ * Ca dong thoi gian bia cua mot cuon, gom ca o trong. Doc trong MOT anh chup de khung cho va cac o luon den tu cung mot
+ * trang thai: mot lan Dang chen vao giua khong the them mot luot ma o cua no chua kip hien.
+ */
+export async function coverSlots(db: AnyDb, bookId: string): Promise<CoverSlot[]> {
+  return readSnapshot(db, async (tx) => {
+    const cho = await khungCho(tx, bookId);
+    if (cho.length === 0) return [];
+    const os = await tx
+      .select({ id: bookCovers.id, roundId: bookCovers.roundId, cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId })
+      .from(bookCovers)
+      .where(eq(bookCovers.bookId, bookId));
+    return ghepO(cho, os, (o) => ({ id: o.id, cover: o.cover, coverMediaId: o.coverMediaId }));
+  });
+}
+
+/** Ca dong thoi gian nhac cua mot cuon, cung khung cho voi coverSlots. Giu ca o go nhac. */
+export async function trackSlots(db: AnyDb, bookId: string): Promise<TrackSlot[]> {
+  return readSnapshot(db, async (tx) => {
+    const cho = await khungCho(tx, bookId);
+    if (cho.length === 0) return [];
+    const os = await tx
+      .select({ id: bookTracks.id, roundId: bookTracks.roundId, youtubeId: bookTracks.youtubeId })
+      .from(bookTracks)
+      .where(eq(bookTracks.bookId, bookId));
+    return ghepO(cho, os, (o) => ({ id: o.id, youtubeId: o.youtubeId }));
+  });
 }
 
 /** Ket qua sua mot o. "last-cover" chi setCoverEntry moi tra: don o bia cuoi cung se pha bat bien cua book_covers. */

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
-import { coversOfBook, newestCover, newestCovers, newestTrack, tracksOfBook } from "@/server/library/timeline";
+import { coverSlots, newestCover, newestCovers, newestTrack, trackSlots } from "@/server/library/timeline";
 import type { TestDb } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
 import { luotChu, MOC_LUOT } from "../helpers/round";
@@ -94,7 +94,11 @@ describe("newestTrack", () => {
   });
 });
 
-describe("coversOfBook va tracksOfBook", () => {
+/*
+ * Hai ham nay tra CA O TRONG: mot luot da dang nhung chua chon bia van la mot cho trong co that ma man Sua sach phai
+ * dien vao duoc. Vi vay do dai mang luon bang so luot cong mot, con o da co thi nam trong truong o.
+ */
+describe("coverSlots va trackSlots", () => {
   it("o mo dau dung truoc, cac o sau xep theo to dau cua luot, kem so thu tu va khoang to", async () => {
     const s = await haiCuon();
     await oMoDau(s.db, s.chung, "nui-xa");
@@ -102,11 +106,37 @@ describe("coversOfBook va tracksOfBook", () => {
     const l2 = await luotChu(s.db, s.chung, 3, 5, new Date(MOC_LUOT.getTime() + 60_000));
     await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l2, cover: "cau-go" });
     await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l1, cover: "hoa-dao" });
-    const ds = await coversOfBook(s.db, s.chung);
-    expect(ds.map((o) => [o.roundId, o.ordinal, o.first, o.last, o.cover])).toEqual([
+    const ds = await coverSlots(s.db, s.chung);
+    expect(ds.map((o) => [o.roundId, o.ordinal, o.first, o.last, o.o?.cover])).toEqual([
       [null, null, null, null, "nui-xa"],
       [l1, 1, 1, 2, "hoa-dao"],
       [l2, 2, 3, 5, "cau-go"],
+    ]);
+  });
+
+  it("luot chua co o bia van giu cho cua no, khong bien mat khoi danh sach", async () => {
+    const s = await haiCuon();
+    await oMoDau(s.db, s.chung, "nui-xa");
+    const l1 = await luotChu(s.db, s.chung, 1, 2);
+    const l2 = await luotChu(s.db, s.chung, 3, 5, new Date(MOC_LUOT.getTime() + 60_000));
+    await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l2, cover: "cau-go" });
+    const ds = await coverSlots(s.db, s.chung);
+    expect(ds).toHaveLength(3);
+    expect(ds[1].roundId).toBe(l1);
+    expect(ds[1].o).toBeNull();
+    expect(ds[2].o?.cover).toBe("cau-go");
+  });
+
+  it("o go nhac khac han o chua dung toi nhac", async () => {
+    const s = await haiCuon();
+    const l1 = await luotChu(s.db, s.chung, 1, 1);
+    const l2 = await luotChu(s.db, s.chung, 2, 2, new Date(MOC_LUOT.getTime() + 60_000));
+    await s.db.insert(bookTracks).values({ bookId: s.chung, roundId: l1, youtubeId: null });
+    const ds = await trackSlots(s.db, s.chung);
+    expect(ds.map((o) => [o.roundId, o.o])).toEqual([
+      [null, null],
+      [l1, { id: expect.any(String), youtubeId: null }],
+      [l2, null],
     ]);
   });
 
@@ -119,27 +149,46 @@ describe("coversOfBook va tracksOfBook", () => {
     const moc = new Date(cuon.createdAt.getTime() + 60_000);
     const l1 = await luotChu(s.db, s.chung, 1, 1, moc);
     await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l1, cover: "hoa-dao" });
-    const ds = await coversOfBook(s.db, s.chung);
+    const ds = await coverSlots(s.db, s.chung);
     expect(ds[0].at).toEqual(cuon.createdAt);
     expect(ds[1].at).toEqual(moc);
   });
 
-  it("dong thoi gian nhac giu ca o go nhac, va cuon khong o nao thi rong", async () => {
+  it("dong thoi gian nhac giu ca o go nhac, va cuon chua co luot nao chi con o mo dau", async () => {
     const s = await haiCuon();
     const l1 = await luotChu(s.db, s.chung, 1, 1);
     await s.db.insert(bookTracks).values({ bookId: s.chung, roundId: null, youtubeId: "5qap5aO4i9A" });
     await s.db.insert(bookTracks).values({ bookId: s.chung, roundId: l1, youtubeId: null });
-    expect((await tracksOfBook(s.db, s.chung)).map((o) => [o.roundId, o.ordinal, o.youtubeId])).toEqual([
+    expect((await trackSlots(s.db, s.chung)).map((o) => [o.roundId, o.ordinal, o.o?.youtubeId ?? null])).toEqual([
       [null, null, "5qap5aO4i9A"],
       [l1, 1, null],
     ]);
-    expect(await tracksOfBook(s.db, s.rieng)).toEqual([]);
+    const rieng = await trackSlots(s.db, s.rieng);
+    expect(rieng).toHaveLength(1);
+    expect(rieng[0].o).toBeNull();
   });
 
   it("chi doc dung cuon duoc hoi", async () => {
     const s = await haiCuon();
     await oMoDau(s.db, s.chung, "nui-xa");
     await oMoDau(s.db, s.rieng, "hoa-dao");
-    expect((await coversOfBook(s.db, s.rieng)).map((o) => o.cover)).toEqual(["hoa-dao"]);
+    expect((await coverSlots(s.db, s.rieng)).map((o) => o.o?.cover)).toEqual(["hoa-dao"]);
+  });
+
+  it("cuon khong ton tai tra danh sach rong chu khong nem loi", async () => {
+    const s = await haiCuon();
+    expect(await coverSlots(s.db, randomUUID())).toEqual([]);
+    expect(await trackSlots(s.db, randomUUID())).toEqual([]);
+  });
+
+  it("o cuoi cung co bia cua coverSlots chinh la bia newestCover tra ve", async () => {
+    const s = await haiCuon();
+    await oMoDau(s.db, s.chung, "nui-xa");
+    const l1 = await luotChu(s.db, s.chung, 1, 2);
+    const l2 = await luotChu(s.db, s.chung, 3, 5, new Date(MOC_LUOT.getTime() + 60_000));
+    await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l1, cover: "hoa-dao" });
+    await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l2, cover: "cau-go" });
+    const daCo = (await coverSlots(s.db, s.chung)).filter((o) => o.o !== null);
+    expect(daCo.at(-1)?.o?.cover).toBe((await newestCover(s.db, s.chung))?.cover);
   });
 });
