@@ -215,9 +215,10 @@ export function KhungViet({ ten }: { ten: string }) {
 }
 
 /** Lich hoa: dau man, dong thang, luoi tuan, khung chi tiet. Nhu trang that, khong muc nao cua thanh dieu huong duoc danh dau. */
-export function KhungLichHoa() {
+/** Mot trang lich: dong dau co hai mui ten, luoi ben trai, khung chi tiet ben phai. Lich hoa va Dau thoi gian. */
+export function KhungLich({ ten, current }: { ten: string; current: NavSection | null }) {
   return (
-    <Khung ten="lịch hoa" current={null}>
+    <Khung ten={ten} current={current}>
       <Dau />
       <div className="lich-trang">
         <div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { actionRemoveTrackEntry, actionSetTrackEntry } from "@/app/actions/library";
 import { Button } from "@/components/Button";
+import { NotNhac } from "@/components/glyph";
 import { pageRange } from "@/lib/seal/reader";
 import { youtubeLink } from "@/lib/youtube";
 import { dateLabel } from "@/lib/when";
@@ -15,18 +16,6 @@ export type TrackTimelineProps = {
   slots: readonly TrackSlot[];
   now: Date;
 };
-
-/** Not nhac, cung co 12px voi cac dau hieu trang thai: khong nen, khong vien, khong bo tron. */
-function NotNhac({ go = false }: { go?: boolean }) {
-  return (
-    <svg className="o__ky" viewBox="0 0 12 12" aria-hidden="true">
-      <path d="M4.5 9V2.5l5-1V8" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="3" cy="9" r="1.6" fill="currentColor" />
-      <circle cx="8" cy="8" r="1.6" fill="currentColor" />
-      {go && <path d="M1.5 10.5L10.5 1.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />}
-    </svg>
-  );
-}
 
 /**
  * Mo mot dong ra thi keo chinh dong do vao tam nhin dung MOT lan, va chi khi no chua nam tron trong khung

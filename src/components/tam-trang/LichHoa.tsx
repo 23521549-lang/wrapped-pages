@@ -2,20 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { MuiTen } from "@/components/glyph";
 import { tenNgay, type HoaNgay, type NgayLich, type Thang, type TuanLich } from "@/lib/tam-trang/lich";
 import { TROI, WEATHERS } from "@/lib/tam-trang/troi";
 import { Hoa } from "./HoaEp";
 
 const THU = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const TRONG: NgayLich = { kia: null, minh: null };
-
-function MuiTen({ huong }: { huong: "trai" | "phai" }) {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d={huong === "trai" ? "M12.5 4.5 L7 10 L12.5 15.5" : "M7.5 4.5 L13 10 L7.5 15.5"} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 /** Mot lan cua o ngay: bong hoa ep (xoay nhe nhu ep tay) hoac vong cham trong. */
 function Lan({ hoa }: { hoa: HoaNgay | null }) {
