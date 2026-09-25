@@ -32,7 +32,7 @@ Cả ba cấp dùng chung: chữ Be Vietnam Pro 600, cỡ `--text-sm`, bán kín
 |---|---|---|---|
 | Chính | `.btn` | Nền `--blue-2`, viền `--blue-line`, chữ `--blue-ink`; rê chuột thì nền `--blue-3` | Hành động quan trọng nhất của màn. Mỗi màn chỉ nên có một nút cấp này. |
 | Viền | `.btn--quiet` (và `.btn--line`, cùng một kiểu) | Nền trong suốt, viền mảnh `--color-rule-ui`, chữ mực; rê chuột thì nền `--color-paper-2` | Hành động phụ nhưng vẫn cần thấy rõ: "Sách mới", "Để sau", "Huỷ". |
-| Chữ | `.btn--chu` | Chỉ là chữ đậm màu mực, gạch chân hiện khi rê chuột | Hành động luôn có mặt nhưng không được tranh chỗ với nội dung, ví dụ "Trang mới" trên thanh điều hướng. |
+| Chữ | `.btn--chu` | Chỉ là chữ đậm màu mực, đậm thêm một bậc khi rê chuột hay khi đi tới bằng phím. Không gạch chân ở bất cứ trạng thái nào | Hành động luôn có mặt nhưng không được tranh chỗ với nội dung, ví dụ "Trang mới" trên thanh điều hướng, hay "Đổi ở trang Viết tiếp" ở bước đăng. |
 
 `.btn--sm` và `.btn--icon` vẫn ghép được với cả ba cấp.
 
@@ -187,15 +187,42 @@ Khung sách trên Kệ sách luôn lấy đoạn từ lượt đăng mới nhấ
 - **Lượt mới nhất còn niêm phong.** Không hiện chữ nào, chỉ dòng hé lộ như trước.
 - **Trang mới.** Bấm khung mở thẳng tới tờ chứa đoạn, và chỉ những tờ thật sự lật qua mới tính là đã đọc; các tờ bị nhảy cóc vẫn là trang mới trên kệ.
 
-## 15. Đổi bìa, tên, nhạc ngay ở bước đăng
+## 15. Bìa và nhạc theo từng lượt đăng
 
-Bước xác nhận đăng trang của cuốn đã có tờ có thêm mục gập "Đổi bìa, tên, nhạc", dưới hai nút "Đăng" và "Để sau".
+Một cuốn không còn đúng một bìa và một bản nhạc. Mỗi cuốn giữ **hai dòng thời gian**: một danh sách ô bìa và một danh sách ô nhạc, mỗi lượt đăng nhiều nhất một ô, cộng đúng một ô mở đầu lúc tạo sách. Bìa và nhạc cuốn đang dùng là ô mới nhất của mỗi dòng.
 
-- Đóng lại thì bước đăng dài đúng như cũ. Mở ra là các ô quen thuộc của trang Sửa sách, điền sẵn giá trị hiện tại: tên sách, bảng bìa (kể cả bìa tự tải lên), nhạc nền YouTube.
-- Không mở thì không gửi gì. Mở ra thì đăng và đổi sách nằm trong cùng một giao dịch: hỏng một phần là không phần nào được ghi.
-- Chế độ chia sẻ hay riêng tư không nằm ở đây: đổi chế độ có hệ quả riêng tư riêng, vẫn làm ở trang Sửa sách.
-- Dòng Hoạt động vẫn chỉ ghi sự kiện đăng trang.
+Mục gập "Đổi bìa, tên, nhạc" ở bước đăng **đã bị bỏ hẳn**. Ba chỗ trùng việc trước đây (Sửa sách / Viết tiếp / mục gập) nay chia rành mạch:
+
+**Trang Viết tiếp** (`/sach/[id]/viet-tiep`). Mọi nút "Viết tiếp" và "Viết trang đầu" dẫn về đây trước khi vào màn viết.
+
+- Cùng khung `.tao` với trang Sách mới, nhưng **không có ô tên sách và không có mục "Ai đọc được"**: hai thứ đó là thuộc tính của cả cuốn, đổi chúng vẫn ở Sửa sách.
+- Chỉ hai thứ: bảng chọn bìa và ô nhạc nền. Cả hai để trống được; trống nghĩa là lượt này không thêm ô nào và cuốn giữ nguyên bìa với nhạc đang có.
+- Ô đầu tiên của bảng bìa là **"Giữ bìa đang dùng"**, một ô nét đứt cùng dáng với ô chọn tệp. Nó có ở đây và chỉ ở đây: trang Sách mới và ô sửa trong Sửa sách bắt buộc phải có bìa.
+- Cuốn đang có nhạc thì dưới ô nhạc có ô đánh dấu "Gỡ nhạc nền cho lượt này". Bật thì ô nhập nhạc khóa lại và xóa trắng; ô nhạc của lượt này thành **ô gỡ nhạc**, tức từ lượt đó cuốn im.
+- Hai nút: "Viết trang" (nút chính, được đưa focus ngay khi trang mở, nên bấm Enter là đi thẳng vào màn viết) và "Thôi" (về màn đọc của chính cuốn đó).
+- Ô xem trước bên phải vẽ thẻ sách với bìa đang chọn kèm câu "Bìa này bắt đầu từ lượt bạn sắp đăng.", hoặc bìa hiện hành kèm "Cuốn giữ bìa đang dùng.".
+- Lựa chọn được giữ trong chính bản nháp của cuốn, chưa thành ô thật. Quay lại trang này giữa chừng thì các ô điền sẵn theo nháp đang có, không phải theo bìa hiện hành. Lúc bấm Đăng nó mới thành ô thật gắn với lượt vừa sinh; bỏ bản nháp là bỏ luôn lựa chọn.
+
+**Bước đăng** có **một dòng chữ tĩnh** thay chỗ mục gập: "Lượt này thêm bìa Cành hoa đào và nhạc nền." (hoặc "Lượt này không thêm bìa hay nhạc.") kèm liên kết cấp chữ "Đổi ở trang Viết tiếp". Chỉ đọc, không ô nhập nào, nên bước đăng ngắn đi chứ không dài ra.
+
+**Màn Sửa sách** giữ tên sách và "Ai đọc được" ở phần trên, rồi thêm hai mục danh sách trước mục "Nội dung":
+
+- **"Bìa theo lượt"** và **"Nhạc theo lượt"**: mỗi ô của dòng thời gian một dòng, **kể cả ô trống** của lượt chưa chọn gì. Dòng ghi "Lúc tạo sách" hoặc "Lượt 3, trang 12 tới 17, 20.09" (nối bằng dấu phẩy), dòng dưới là tên tranh, "Ảnh của bạn", "Gỡ nhạc nền", "Chưa có bìa" hay "Chưa dùng tới nhạc".
+- Hình dáng giống mục "Nội dung": một vạch mảnh giữa các dòng, không thẻ bo tròn riêng, không bóng. Mục bìa có hình bìa nhỏ 96px tỉ lệ 5:3 ở đầu dòng; mục nhạc có một nốt nhạc 12px cùng kiểu với các dấu hiệu trạng thái (nốt gạch chéo cho ô gỡ nhạc).
+- Bấm "Đổi bìa này" hay "Đổi nhạc này" thì khung sửa mở ra **ngay trong chính dòng đó**, chiếm cả bề ngang của dòng nên các dòng dưới không bị đẩy ngang.
+- Mỗi ô là một lần gửi riêng, một giao dịch riêng. Một ô hỏng không kéo theo ô khác; câu báo lỗi hiện ngay trong dòng đó.
+- Cuốn chỉ còn **một** ô bìa thì không dòng nào có nút "Bỏ ô này": mỗi cuốn luôn phải còn ít nhất một bìa. Máy chủ vẫn là nơi quyết. Nhạc không có luật đó, nên ô nhạc nào cũng bỏ được.
+
+**Bảng chọn bìa thành kho ảnh.** Bảng có mười tranh vẽ, rồi **mọi ảnh bìa của cuốn** (mới nhất trước), rồi một ô chọn tệp ở cuối.
+
+- Tải ảnh lên là **không giới hạn** và chỉ **thêm** một ô vào bảng; không ảnh nào bị thế chỗ, kể cả ảnh không ô nào đang chọn. Ảnh bìa đã thuộc một cuốn thì bước dọn rác không bao giờ chạm tới.
+- Mỗi ô ảnh có nhãn riêng ("Ảnh của bạn, tải 20.09") để trình đọc màn hình phân biệt được.
+- Ô ảnh vẫn mang giá trị là một tranh vẽ dự phòng, nên trường `cover` của biểu mẫu luôn là một tranh; id ảnh đi trong trường ẩn `coverMedia`.
+- Cả bảng nằm trong một vùng cuộn cao tối đa 300px, **không thấy thanh cuộn**: `scrollbar-width: none` cộng `::-webkit-scrollbar { display: none }`. Dấu hiệu "còn nữa" là một dải mờ dính ở mép dưới, kéo ngược lên đúng chiều cao của nó, còn lưới ô có đúng chừng ấy đệm dưới, nên cuộn tới đáy thì dải mờ nằm trọn trên khoảng trống và không còn nhìn thấy. **Cùng một cơ chế với cột Hoạt động (mục 8), làm bằng CSS thuần**: không nghe sự kiện cuộn, không đọc bố cục lúc cuộn, không có gì phải dọn.
+- Vùng cuộn có đệm 6px ba phía để vòng focus của ô không bị cắt mất, vì `overflow-y: auto` cắt cả hai chiều.
+- Khi bảng mở, ô đang chọn được kéo vào tầm nhìn bằng cách gán `scrollTop` của chính vùng cuộn, không dùng `scrollIntoView` (hàm đó cuộn cả trang và làm màn nhảy).
+- Đợt này **không** có đường xóa ảnh khỏi kho: xóa một ảnh đang nằm trong một ô của dòng thời gian sẽ làm thủng một ô lịch sử.
 
 ## 16. Việc còn lại
 
-`BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của form tạo và sửa sách. Khi màn form được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
+`BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của ba màn: tạo sách, sửa sách và Viết tiếp. Khi ba màn đó được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
