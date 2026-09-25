@@ -24,6 +24,16 @@ describe("soCot", () => {
     expect(soCot("   ")).toBe(1);
     expect(soCot("none")).toBe(1);
   });
+
+  it("luoi chua duoc ve tra ve gia tri khai bao chu khong phai do rong: coi nhu mot cot, khong dem khoang trang", () => {
+    // Dem khoang trang trong chuoi nay ra ba "cot" o mot luoi hai cot.
+    expect(soCot("repeat(2, minmax(0px, 1fr))")).toBe(1);
+    expect(soCot("repeat(auto-fill, minmax(min(200px, 44%), 1fr))")).toBe(1);
+  });
+
+  it("ten duong ke trong ngoac vuong khong phai la cot", () => {
+    expect(soCot("[dau] 200px 200px [cuoi]")).toBe(2);
+  });
 });
 
 describe("soCuonCuaTang", () => {
