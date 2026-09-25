@@ -74,10 +74,9 @@ export const giamChuyenDong = (): boolean =>
  * Cac dong chu cua mot bau troi, theo dung thu tu tren duoi. Ca hai hieu ung dung chung ham nay: song.ts do khoang
  * cach tu tam song toi tung dong roi hien chu theo mep song, loang.ts lam chuyen do cho ca chu cu lan chu moi.
  *
- * Bo chon ke ca `.troi__kho .troi__that > *`: tu Task 6 phan tho, giai nghia, nguon va loi nhan nam trong mot kho
- * chu (mot o luoi giu san chieu cao cua ban cao nhat), con nhan "Ban" va hang cuoi van nam thang trong `.troi__noi`.
- * querySelectorAll luon tra ve theo thu tu tai lieu, nen hai nhanh gop lai van dung thu tu tren duoi.
+ * Luon goi voi mot the `.troi` (mot bau troi), khong phai ca dai troi: khuon giu cho chieu cao cung co mot `.troi__noi`
+ * cua rieng no, ma khuon thi khong duoc chay hoat hinh nao.
  */
 export function dongChu(sec: ParentNode): HTMLElement[] {
-  return [...sec.querySelectorAll<HTMLElement>(".troi__noi > *:not(.troi__kho), .troi__kho .troi__that > *")];
+  return [...sec.querySelectorAll<HTMLElement>(".troi__noi > *")];
 }

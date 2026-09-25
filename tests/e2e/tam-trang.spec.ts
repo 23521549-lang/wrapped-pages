@@ -271,7 +271,10 @@ test("giam chuyen dong: bau troi dung yen, chop va vet sang an, hat mua nam rai 
   expect(Math.min(hopNut?.width ?? 0, hopNut?.height ?? 0), "vung bam nut tam dung").toBeGreaterThanOrEqual(44);
   await expect(hat).toHaveCSS("animation-play-state", "running");
   await nutDung.click();
-  await expect(troi).toHaveClass(/troi-dung/);
+  // Lop `troi-dung` nam tren the boc .troi-dai chu khong tren chinh the <section class="troi">: tu khi co khuon giu
+  // cho chieu cao, dai troi luon co the boc chung cho ca che do mot troi lan che do hai troi. Van la dung mot lop ay,
+  // va no van dung moi net ve - dong ngay duoi do chinh la phep do do.
+  await expect(b.locator(".troi-dai")).toHaveClass(/troi-dung/);
   await expect(hat).toHaveCSS("animation-play-state", "paused");
   await expect(b.getByText("Hiệu ứng đã tạm dừng.")).toBeAttached();
   await b.reload();

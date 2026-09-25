@@ -71,11 +71,6 @@
 .troi--giong .troi__phu{ color: var(--troi-giong-ink2); }
 .troi--suong-mu .troi__phu{ color: var(--troi-suong-mu-ink2); }
 .troi--cau-vong .troi__phu{ color: var(--troi-cau-vong-ink2); }
-/* Dai troi dung ngay tren dau ke: keo dong tieu de len sat bau troi. Quy tac nay chua cham toi phan tu nao cho toi khi
-   dau ke sach doc tam trang va dat dai troi ngay truoc .shell chua .ke-dau; viet ngay tai day de no nam cung cho voi
-   quy tac song doi ".troi-cua-so + .shell .ke-dau" cua che do hai troi, khong de hai che do lech nhau mot nua. */
-.troi + .shell .ke-dau{ padding-top: 0; margin-top: calc(var(--space-lg) * -1); }
-
 /* hai cau tho moi cau mot khoi, can doi khi xuong dong */
 .troi__cau{ display: block; text-wrap: balance; }
 /* nhan chu nho "Ban" khi troi lon la cua chinh nguoi xem */
@@ -121,15 +116,28 @@
   .cua-so .cua-so__hoa{ width: 58px; height: 58px; }
 }
 /*
- * Doi cho bang song nuoc. Ca hai bau troi duoc ve san va xep chong trong CUNG mot o luoi, nen chieu cao dai troi luon
- * bang troi cao hon va khong bao gio doi khi doi cho: khong gi ben duoi bi xo dich. Troi dang xem nam tren, troi kia bi
- * cat ve 0 va tro nang (inert). Doi cho chi la bat/tat lop va chay hoat hinh clip-path lan tu tam o cua so.
+ * Dai troi: the boc chung cua mot hay hai bau troi va cua khuon giu cho. Moi bau troi nam trong CUNG mot o luoi voi
+ * khuon, nen chieu cao dai troi bang phan tu cao nhat trong o va khong bao gio doi: khong khi doi cho hai troi, khong
+ * khi thay mot tam trang. Khong gi ben duoi bi xo dich. Troi dang xem nam tren, troi kia bi cat ve 0 va tro nang
+ * (inert). Doi cho chi la bat/tat lop va chay hoat hinh clip-path lan tu tam o cua so.
  */
 /* nut o cua so phai nam tren cac doan chu de ca nut deu bam duoc */
 .cua-so{ position: relative; z-index: 1; touch-action: manipulation; }
-.troi-cua-so{ position: relative; isolation: isolate; overflow: clip; display: grid; grid-template-columns: minmax(0, 1fr); }
-.troi-cua-so > .troi{ grid-area: 1 / 1; display: flex; flex-direction: column; z-index: 1; }
-.troi-cua-so > .troi > .troi__chu{ flex: 1 0 auto; }
+.troi-dai{ position: relative; isolation: isolate; overflow: clip; display: grid; grid-template-columns: minmax(0, 1fr); }
+.troi-dai > .troi{ grid-area: 1 / 1; display: flex; flex-direction: column; z-index: 1; }
+.troi-dai > .troi > .troi__chu{ flex: 1 0 auto; }
+/*
+ * Khuon giu cho (BauTroi.tsx, ham KhuonTroi): chin ban tho chong len nhau, dat san chieu cao cho ban cao nhat tai
+ * chinh be rong va co chu dang dung. Du an da hai lan bi bac vi tieu de "Ke sach" nhuc nhich khi doi tam trang, nen
+ * cho nay do bang khuon that chu khong bang mot con so px viet tay: khuon tu tinh lai khi doi be rong, doi co chu,
+ * hay khi font ve muon. Khuon mang ca lop `troi` nen no nhan dung moi quy tac cua mot bau troi that o tren.
+ *
+ * An bang visibility chu KHONG bang display: none - display: none thi khuon khong con do gi nua. visibility: hidden
+ * da du de trinh doc man hinh bo qua va de moi thu ben trong ra khoi luot Tab; aria-hidden va inert la lop thu hai.
+ */
+.troi-dai > .troi-dai__khuon{ visibility: hidden; }
+.troi-dai__chong{ display: grid; grid-template-columns: minmax(0, 1fr); }
+.troi-dai__chong > *{ grid-area: 1 / 1; }
 /* troi dang an: cat ve 0 bang clip-path chu khong phai visibility, nen bo an chi la hoat hinh clip-path cua dung mot
    phan tu, khong phai tinh lai style ke thua cho hang tram net ve ben trong (do duoc: visibility ton 11 toi 90ms ngay
    luc bam, CPU cham gap bon) */
@@ -139,15 +147,16 @@
 .troi-cua-so:not(.troi-cua-so--san) > .troi--an:not(.troi--dang-song) .m{ animation-play-state: paused; }
 /*
  * Nut "Tam dung hieu ung" (WCAG SC 2.2.2, phan quyet B4: mot cong tac cho moi hieu ung tu chay cua trang, nguon o
- * src/components/hieu-ung/tam-dung.ts). Lop nay do BauTroi.tsx dat bang classList len dai troi - la .troi-cua-so o
- * che do hai troi, la chinh the .troi o che do mot troi - nen mot quy tac phu ca hai. No dung MOI net ve, ke ca troi
- * thu nho trong o cua so. Do sau hai lop, lon hon moi quy tac .m-* (mot lop), nen khong phu thuoc thu tu trong tep.
- * Vong song cua lan doi cho chay bang Web Animations va khong nam trong .m, nen doi cho van binh thuong khi dang dung.
+ * src/components/hieu-ung/tam-dung.ts). Lop nay do BauTroi.tsx dat bang classList len the boc .troi-dai, o ca hai
+ * che do. No dung MOI net ve, ke ca troi thu nho trong o cua so. Do sau hai lop, lon hon moi quy tac .m-* (mot lop),
+ * nen khong phu thuoc thu tu trong tep. Vong song cua lan doi cho chay bang Web Animations va khong nam trong .m,
+ * nen doi cho van binh thuong khi dang dung.
  */
 .troi-dung .m{ animation-play-state: paused; }
 /* chu bam dinh, o cua so (may tinh) nam giua chieu cao chung: hai troi dat o cua so dung cung mot cho */
-.troi-cua-so .troi__noi{ align-self: start; }
-.troi-cua-so + .shell .ke-dau{ padding-top: 0; margin-top: calc(var(--space-lg) * -1); }
+.troi-dai .troi__noi{ align-self: start; }
+/* Dai troi dung ngay tren dau ke: keo dong tieu de len sat bau troi. */
+.troi-dai + .shell .ke-dau{ padding-top: 0; margin-top: calc(var(--space-lg) * -1); }
 /* bam chuot thi khong hien vong focus (nhu luat :focus-visible cua ca web); go bang phim thi hien lai */
 .cua-so--im:focus-visible .cua-so__kinh{ outline: none; }
 
@@ -248,8 +257,9 @@
   .song-vong, .song-kinh-cu, .song-kinh-vong{ display: none; }
   .cua-so__kinh{ transition: none; }
   /* Khong con gi chay de ma tam dung (globals.css da tat moi animation): giau han nut thay vi de mot cong tac khong
-     lam gi trong hang cuoi. display: none nen no cung ra khoi luot Tab, khong phai mot diem dung vo nghia. */
-  .nut-dung{ display: none; }
+     lam gi trong hang cuoi. display: none nen no cung ra khoi luot Tab, khong phai mot diem dung vo nghia. O giu cho
+     cua nut trong khuon (.nut-cho) phai bien cung luc, neu khong khuon giu mot cho khong ai dung toi. */
+  .nut-dung, .nut-cho{ display: none; }
 }
 
 /* ---------- dau ke sach: nut Tha tam trang canh Sach moi, hop chon (ThaTamTrang.tsx) ---------- */

@@ -263,7 +263,7 @@ describe("ThaTamTrang: chon o troi khong dung lai cay DOM", () => {
 });
 
 describe("ke sach va khung giu cho", () => {
-  // Dai troi phai dung NGAY TRUOC .shell chua .ke-dau: quy tac ".troi + .shell .ke-dau" cua tam-trang.css keo dong
+  // Dai troi phai dung NGAY TRUOC .shell chua .ke-dau: quy tac ".troi-dai + .shell .ke-dau" cua tam-trang.css keo dong
   // tieu de len sat bau troi, va no chi cham toi phan tu nao khi hai the nay la anh em ke nhau.
   it("dai troi dung ngay truoc khoi .shell cua ke sach", () => {
     const src = readFileSync("src/app/ke-sach/page.tsx", "utf8");
