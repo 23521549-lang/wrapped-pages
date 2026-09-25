@@ -43,7 +43,8 @@ Cả ba cấp dùng chung: chữ Be Vietnam Pro 600, cỡ `--text-sm`, bán kín
 - Người đang vào hiện bằng chữ: "Đang vào: **tên**". Không có ô tròn chữ cái. Từ 600px trở xuống dòng này ẩn đi.
 - "Trang mới" là nút cấp chữ.
 - Logo "sách thắt nơ" (`src/components/Logo.tsx`) đứng trước tên web, cao 30px, màu `--blue-ink`, dùng bộ lọc mực nhẹ `#muc-logo`. Biểu tượng tab (`src/app/icon.svg`) là cùng hình với nét dày hơn và không có bộ lọc để vẫn rõ ở 16px.
-- Từ 700px trở xuống, ba liên kết xuống hàng riêng dưới tên web, mỗi liên kết cao 44px.
+- Bốn mục: Kệ sách, Bản nháp, Dấu thời gian, Cài đặt.
+- Từ 700px trở xuống, bốn liên kết xuống hàng riêng dưới tên web, mỗi liên kết cao 44px, dàn đều cả hàng với khe hẹp để vừa một hàng ở 320px. Người dùng phóng to chữ thì liên kết được xuống hàng thay vì tràn ngang.
 - Giữ nguyên: `aria-current="page"` cho màn đang ở, `"true"` cho màn con; thanh dính đầu trang trừ khi `sticky={false}` (màn viết, màn đọc có nhạc: thanh không bao giờ đè lên trình phát YouTube).
 
 ## 4. Giấy và cuốn sách mở
@@ -235,6 +236,27 @@ Mục gập "Đổi bìa, tên, nhạc" ở bước đăng **đã bị bỏ hẳ
 - Khi bảng mở, ô đang chọn được kéo vào tầm nhìn bằng cách gán `scrollTop` của chính vùng cuộn, không dùng `scrollIntoView` (hàm đó cuộn cả trang và làm màn nhảy).
 - Đợt này **không** có đường xóa ảnh khỏi kho: xóa một ảnh đang nằm trong một ô của dòng thời gian sẽ làm thủng một ô lịch sử.
 
-## 16. Việc còn lại
+## 16. Trang Dấu thời gian
+
+Hai dòng thời gian bìa và nhạc của **một** cuốn, gom theo tháng của một năm, cùng tinh thần với Lịch hoa.
+
+**Ba lối vào**, không lối nào đặt ở đầu màn đọc (chủ dự án bác chỗ đó):
+
+- Mục **"Dấu thời gian"** trên thanh điều hướng dẫn tới **trang chọn cuốn** (`/dau-thoi-gian`): đúng những cuốn người xem thấy được trên kệ, mỗi dòng một bìa nhỏ, tên sách và dòng phụ "Bạn, 4 bìa, 2 bản nhạc". Ô gỡ nhạc không tính là một bản nhạc. Dòng dùng lại hình dáng dòng của trang Bản nháp; cả dòng là vùng bấm và vòng focus bao quanh cả dòng.
+- Bấm **ảnh bìa** trên khung sách lớn ở Kệ sách. Ảnh bìa là một liên kết riêng ("Dấu thời gian của <tên sách>"), nằm ngoài lớp phủ của khung sách trong cây và nằm trên nó theo thứ tự lớp, nên không có liên kết lồng nhau và bấm chỗ khác trên khung vẫn tới màn đọc.
+- Bấm **tiêu đề "Nhạc nền"** của thẻ nhạc ở màn đọc. Chỉ dòng tiêu đề là liên kết, không phải cả thẻ: khung YouTube nằm ngay dưới và không lớp nào được đè lên nó. Liên kết cao 44px, đậm thêm một bậc khi rê chuột hay đi tới bằng phím, không gạch chân.
+
+**Trang của một cuốn** (`/dau-thoi-gian/[id]`), bố cục C mà chủ dự án chọn:
+
+- Đầu trang: tên sách, rồi "Sách của <ai>. Bìa và nhạc của cuốn này theo thời gian."
+- Dòng đầu lưới dùng lại `.thang` của Lịch hoa: hai nút mũi tên đổi năm bằng **liên kết thật** (`?nam=YYYY`), tên năm ở giữa, số dấu trong năm ở bên phải. Năm sớm nhất là năm cuốn được tạo, năm muộn nhất là năm nay; nút ở hai đầu tắt.
+- **Lưới mười hai tháng**: 3 cột ở màn hẹp, 4 cột từ 768px. Mỗi ô là một nút cao tối thiểu 64px, có tên tháng và bên dưới là các dấu: tem bìa tỉ lệ 5:3 cao 26px cho mỗi ô bìa, nốt nhạc 12px cho mỗi ô nhạc, nốt gạch chéo cho ô gỡ nhạc. Tháng không có dấu nào chỉ còn tên tháng nhạt. Ô đang chọn nền `--blue-1`, viền `--blue-line`.
+- **Khung chi tiết** bên phải (bên dưới ở màn hẹp) dùng lại `.chi-tiet` của Lịch hoa: bấm một tháng thì khung đổi **tại chỗ**, và nó là vùng `aria-live="polite"`. Mỗi dấu một dòng theo thứ tự lượt: hình bìa 96px hoặc nốt nhạc, "Lượt 3, trang 12 tới 17" (ô mở đầu là "Lúc tạo sách"), ngày theo định dạng chung, và liên kết cấp chữ "Đọc từ trang 12".
+- Năm mặc định là năm của lượt mới nhất; tháng chọn sẵn là tháng của dấu mới nhất trong năm đó.
+- **Không đường ra ngoài**: ô nhạc dẫn về màn đọc, nơi trình phát và nghi thức "chỉ phát sau khi bấm Mở sách" đã có sẵn. CSP không nới một dòng nào.
+- Cuốn riêng tư của người kia không có trong trang chọn cuốn, và trang của nó trả 404 thật (trang chọn cuốn nằm trong nhóm tuyến riêng để khung giữ chỗ của nó không bọc trang của một cuốn).
+- Trang tĩnh: không hoạt ảnh nào ngoài vi tương tác của nút.
+
+## 17. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của ba màn: tạo sách, sửa sách và Viết tiếp. Khi ba màn đó được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
