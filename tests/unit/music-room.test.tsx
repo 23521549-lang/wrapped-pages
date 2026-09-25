@@ -95,7 +95,7 @@ type Phong = { gate?: boolean; initialMuted?: boolean; videoId?: string; side?: 
 /** MusicRoom voi tam bia gia; noi dung sach mac dinh la mot vung sach gia. */
 function phong({ gate = true, initialMuted = false, videoId = ID, side, children }: Phong = {}) {
   return (
-    <MusicRoom videoId={videoId} initialMuted={initialMuted} gate={gate} cover={<p>Tranh bìa</p>} side={side}>
+    <MusicRoom videoId={videoId} initialMuted={initialMuted} gate={gate} cover={<p>Tranh bìa</p>} side={side} dauHref="/dau-thoi-gian/s1">
       {children ?? <button type="button" className="doc__khung">Trang sách</button>}
     </MusicRoom>
   );
@@ -453,5 +453,31 @@ describe("CSS mo sach", () => {
       .split(String.fromCharCode(10))
       .find((l) => l.startsWith("@keyframes mo-sach"));
     expect(dong?.match(/[a-z-]+(?=:)/g)).toEqual(["opacity", "transform"]);
+  });
+});
+
+/*
+ * Loi vao thu ba cua trang Dau thoi gian (diem 15 cua chu du an): bam tieu de the Nhac nen. CLAUDE.md muc 1 cam moi lop
+ * de len khung YouTube, nen chi DONG TIEU DE la lien ket, khong phai ca the.
+ */
+describe("tieu de the nhac la loi vao trang Dau thoi gian", () => {
+  it("lien ket nam trong dong tieu de, tro dung trang Dau thoi gian cua cuon", async () => {
+    await ve();
+    const the = screen.getByRole("complementary", { name: "Nhạc nền" });
+    const lien = the.querySelector("h2 a");
+    expect(lien?.getAttribute("href")).toBe("/dau-thoi-gian/s1");
+  });
+
+  it("chi tieu de la lien ket: khung phat khong nam trong lien ket nao", async () => {
+    await ve();
+    const the = screen.getByRole("complementary", { name: "Nhạc nền" });
+    expect(the.querySelector(".nhac-the__may")?.closest("a")).toBeNull();
+    expect(the.querySelectorAll("a")).toHaveLength(1);
+  });
+
+  it("ten vung van dung la Nhac nen; lien ket doc them no dan toi dau", async () => {
+    await ve();
+    expect(screen.getByRole("complementary", { name: "Nhạc nền" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Nhạc nền, xem dấu thời gian của cuốn này" })).toBeTruthy();
   });
 });

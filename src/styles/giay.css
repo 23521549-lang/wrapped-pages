@@ -153,6 +153,10 @@
 .doc-luoi__phu--nhac .hoi-dap__o,
 .doc-luoi__phu--nhac .hoi-dap__loi{ scroll-margin-top: 23rem; }
 .nhac-the__t{ font-size: var(--text-base); line-height: 1.3; }
+/* Tieu de the nhac la lien ket toi trang Dau thoi gian: vung bam 44px, khong gach chan (luat cua ca web), dam them mot
+   bac khi re chuot hay khi di toi bang phim nhu moi nut chu. Nam tron phia TREN khung phat, khong de len no. */
+.nhac-the__lien{ display: inline-flex; align-items: center; min-height: 44px; color: inherit; }
+.nhac-the__lien:hover, .nhac-the__lien:focus-visible{ color: var(--color-ink-dam); }
 .nhac-the__may{ position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 200px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-paper-3); }
 .nhac-the__may iframe{ position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .nhac-the__dk{ display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-xs) var(--space-sm); min-height: 44px; }

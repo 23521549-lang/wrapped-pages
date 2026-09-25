@@ -124,6 +124,7 @@ export default async function DocSach({ params, searchParams }: {
               gate={musicGate(muted, query)}
               cover={<BookCover title={book.title} cover={book.cover} coverMediaId={book.coverMediaId} owner={owner} />}
               side={hoiDap}
+              dauHref={`/dau-thoi-gian/${book.id}`}
             >
               {noiDung}
             </MusicRoom>

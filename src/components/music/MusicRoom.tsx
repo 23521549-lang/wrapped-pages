@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { flushSync } from "react-dom";
 import { CHUA_LUU_NHAC } from "@/app/actions/messages";
 import { actionSetMusicMuted } from "@/app/actions/music";
@@ -26,6 +27,11 @@ export type MusicRoomProps = {
    * nguoi xem chua doc to nao.
    */
   side?: ReactNode;
+  /**
+   * Trang Dau thoi gian cua cuon. Tieu de "Nhạc nền" cua the la mot loi vao thang (diem 15 cua chu du an). Chi DONG
+   * TIEU DE la lien ket, khong phai ca the: khung YouTube nam ngay duoi va khong lop nao duoc de len no.
+   */
+  dauHref: string;
 };
 
 function dongTrangThai(state: MusicState, tat: boolean, conBia: boolean): string {
@@ -53,7 +59,7 @@ function IconLoa({ dangPhat }: { dangPhat: boolean }) {
  * Con cong thi noi dung sach chua gan: chua co phim mui ten, chua ghi to da xem, chua chay nghi thuc.
  * Chi phat bang script khi hon nua khung trinh phat dang nam trong khung nhin (Required Minimum Functionality).
  */
-export function MusicRoom({ videoId, initialMuted, gate, cover, children, side }: MusicRoomProps) {
+export function MusicRoom({ videoId, initialMuted, gate, cover, children, side, dauHref }: MusicRoomProps) {
   const tieuDe = useId();
   const chinhRef = useRef<HTMLDivElement>(null);
   const mayRef = useRef<HTMLDivElement>(null);
@@ -132,7 +138,13 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children, side }
       {/* Cot phai luon co mat va the nhac luon la con dau cua no: side chen SAU the nhac, nen iframe khong doi cho. */}
       <div className="doc-luoi__phu doc-luoi__phu--nhac">
         <aside className="nhac-the" aria-labelledby={tieuDe}>
-          <h2 className="d nhac-the__t" id={tieuDe}>Nhạc nền</h2>
+          {/* Ten vung (aria-labelledby) chi lay chu "Nhạc nền"; lien ket thi doc them no dan toi dau. */}
+          <h2 className="d nhac-the__t">
+            <Link className="nhac-the__lien" href={dauHref}>
+              <span id={tieuDe}>Nhạc nền</span>
+              <span className="sr-only">, xem dấu thời gian của cuốn này</span>
+            </Link>
+          </h2>
           <div ref={mayRef} className="nhac-the__may" />
           <div className="nhac-the__dk">
             <p className={state === "loi" ? "nhac-the__chu nhac-the__chu--loi" : "nhac-the__chu"} aria-live="polite">
