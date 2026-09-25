@@ -70,4 +70,11 @@ describe("taoTuiXao", () => {
     rut();
     expect(goc).toEqual(["a", "b", "c"]);
   });
+
+  it("truyen phan tu dang hien thi lan rut dau tien cung khong trung no", () => {
+    // Khong co tham so nay thi lan rut dau co the tra ve dung cai dang hien, va nguoi dung thay mot lan doi ma
+    // khong doi gi. 0.0 va 0.5 xao ["a","b","c"] thanh ["c","b","a"], tuc lan rut dau von la "a".
+    const rut = taoTuiXao(["a", "b", "c"], soGia(0.0, 0.5), "a");
+    expect(rut()).not.toBe("a");
+  });
 });

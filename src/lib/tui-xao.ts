@@ -8,12 +8,15 @@
  * phan tu dau tui moi trung phan tu vua rut cuoi cung thi doi cho no voi mot phan tu khac trong tui - nho vay hai lan
  * rut lien nhau khong bao gio trung, ke ca ngay ranh gioi hai vong.
  * `ngauNhien` tra mot so trong [0, 1); tach ra thanh tham so de bai kiem chay duoc tat dinh.
+ * `dangHien` la phan tu nguoi dung DANG nhin thay truoc lan rut dau tien. Truyen no vao thi lan rut dau cung khong
+ * trung no - khong co no thi lan rut dau tien co the tra ve dung cai dang hien, va nguoi dung thay mot lan "doi" ma
+ * khong doi gi.
  * Danh sach rong nem loi: khong co gi de rut, va tra undefined lang le se de lot mot o trong xuong toi giao dien.
  */
-export function taoTuiXao<T>(items: readonly T[], ngauNhien: () => number = Math.random): () => T {
+export function taoTuiXao<T>(items: readonly T[], ngauNhien: () => number = Math.random, dangHien?: T): () => T {
   if (items.length === 0) throw new Error("tui xao can it nhat mot phan tu");
   let tui: T[] = [];
-  let vuaRut: T | undefined;
+  let vuaRut: T | undefined = dangHien;
 
   function xaoLai(): void {
     tui = [...items];

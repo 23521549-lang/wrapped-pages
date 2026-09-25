@@ -1,16 +1,16 @@
 import Link from "next/link";
-import type { CoverKey } from "@/lib/book";
 import { LockedBars } from "@/components/reader/LockedSheet";
-import { CoverArt } from "./CoverArt";
-import { CoverImage } from "./CoverImage";
+import { BiaTuDoi, type BiaChon } from "./BiaTuDoi";
 import { GlyphKhoa, GlyphRieng } from "./ShelfBook";
 
 export type OpenBookProps = {
   /** "Bạn" khi la cuon cua nguoi xem, con lai la biet danh chu sach. */
   who: string;
   title: string;
-  cover: CoverKey;
-  coverMediaId: string | null;
+  /** Moi o bia DA CO cua cuon, theo thu tu dong thoi gian. Tu hai bia tro len thi khung tu doi bia. */
+  covers: readonly BiaChon[];
+  /** Trang nay khong co dai troi, nen khung bia tu dat mot nut tam dung cho rieng no. */
+  tuDatNut: boolean;
   pageCount: number;
   /**
    * To man doc mo khi bam khung: to mang doan trich cua hom nay (doan luon den tu luot dang moi nhat); khong co doan
@@ -65,7 +65,7 @@ function TrangPhai({ excerpt, locked, isPrivate }: Pick<OpenBookProps, "excerpt"
  * Ca khung la mot lien ket toi man doc o dung to cua doan trich (lop phu dau DOM, nut chinh nam tren no va ngoai no),
  * nen khong co lien ket long nhau.
  */
-export function OpenBook({ who, title, cover, coverMediaId, pageCount, position, readHref, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
+export function OpenBook({ who, title, covers, tuDatNut, pageCount, position, readHref, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
   return (
     <article className="vua-viet" aria-label="Một trang trong sách">
       <div className="sach-mo">
@@ -80,10 +80,7 @@ export function OpenBook({ who, title, cover, coverMediaId, pageCount, position,
           </div>
           <div className="tranh-dan">
             <div className="tranh-dan__to">
-              <div className={`tranh-dan__bia bia--${cover}`}>
-                <CoverArt cover={cover} />
-                <CoverImage mediaId={coverMediaId} />
-              </div>
+              <BiaTuDoi covers={covers} tuDatNut={tuDatNut} />
             </div>
           </div>
           <Link className="btn sach-mo__nut" href={action.href}>{action.label}</Link>

@@ -108,6 +108,19 @@
 .tranh-dan__to{ padding: 6px; background: var(--color-paper); border-radius: var(--radius-tranh); box-shadow: var(--bong-tranh); transform: rotate(var(--tranh-nghieng)); transform-origin: 30% 20%; transition: transform var(--dur-short) var(--ease-out); }
 .tranh-dan__bia{ position: relative; aspect-ratio: 5 / 3; overflow: hidden; border-radius: 1px; color: var(--blue-ink); }
 .vua-viet:hover .tranh-dan__to, .vua-viet:focus-within .tranh-dan__to{ transform: rotate(0deg); }
+/* Hieu ung ROI SANG khi khung sach lon doi bia: mot vet sang truot ngang, bia cu mo di ngay sau vet, bia moi nam san
+   o duoi va khong bi dong vao. Lop tam nam dung trong khung bia nen khung giu nguyen aspect-ratio, khong xo dich mot
+   diem anh nao. Chi transform va opacity chay; nhip nam o src/lib/roi-sang.ts. */
+.roi-sang{ position: absolute; inset: 0; display: block; overflow: hidden; pointer-events: none; }
+.roi-sang__cu{ position: absolute; inset: 0; display: block; }
+.roi-sang__cu svg, .roi-sang__cu img{ display: block; width: 100%; height: 100%; }
+.roi-sang__vet{
+  position: absolute; top: -20%; bottom: -20%; left: 0; width: 42%; display: block; opacity: 0;
+  background: linear-gradient(100deg, transparent, var(--roi-sang-mau) 45%, var(--roi-sang-mau) 55%, transparent);
+}
+/* Nut tam dung du phong, chi hien khi trang khong co dai troi. Dat NGOAI .tranh-dan (khung tranh dan cho cu bam di
+   xuyen qua bang pointer-events: none), nen no nam ngay duoi dong "N trang, thoi diem". */
+.bia-dung{ justify-self: start; margin-top: var(--space-2xs); }
 /* Doan trich: chu cua to giay man doc, Be Vietnam Pro 400, co 17px, gian dong 1.75, toi da 34ch, 6 dong. */
 .vua-viet__chu{ font-family: var(--font-body); font-weight: 400; font-size: 1.0625rem; line-height: 1.75; max-width: 34ch; color: var(--color-ink); overflow-wrap: anywhere; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 /* rieng tu: chu cua chinh nguoi xem, lam mo cho nguoi sau lung khong doc duoc; nhan nam giua trang, de len */
@@ -186,6 +199,30 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .ngan__trong{ display: grid; gap: var(--space-xs); color: var(--color-ink-2); }
 /* mep ke: vach 1px xam am va bong mem ngan ngay duoi, chi bang nen chuyen mau */
 .ke-mep{ display: block; width: min(420px, 100%); height: 5px; background: linear-gradient(var(--ke-mep) 0 1px, var(--ke-mep-bong) 1px, transparent 5px); }
+/* Moi hang sach dung tren mot mep ke, nen mot hang doc ra la mot tang. Khoang cach doc giua hai tang rong hon mot
+   chut cho mep ke ra hinh, dung y cua chu du an o diem 14. */
+.ngan .hang{ row-gap: var(--space-xl); }
+/* May chu cat san con ba tang bang CSS, cho toi khi trinh duyet do duoc so cot that va cat danh sach that. Khong co
+   JavaScript thi nguoi dung van thay dung ba tang, va khong thay mot nut vo dung nao. */
+.ngan__gon{ overflow: clip; max-height: calc(3 * var(--tang-cao) + 2 * var(--space-xl)); }
+/* Dai nut an: cao co dinh 44px du chu hien hay khong, nen luc chu hien ra khong co gi xo dich. An bang opacity chu
+   khong bang display none hay visibility hidden: phim Tab phai di vao duoc no (diem 18). */
+.ke-nut{
+  position: relative; display: grid; place-items: center; width: 100%; min-height: 44px; margin-top: var(--space-2xs);
+  padding: 0; border: 0; background: none; color: var(--color-ink-2); cursor: pointer;
+  font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; line-height: 1.4;
+}
+.ke-nut__chu{ opacity: 0; transition: opacity var(--dur-short) var(--ease-out); }
+.ke-nut:hover .ke-nut__chu, .ke-nut:focus-visible .ke-nut__chu{ opacity: 1; }
+/* Goi y rat nhe o trang thai thu gon: mot dai cao 10px ngay duoi mep ke cuoi cho thay mep tren cua hang ke tiep, nhu
+   sach tho ra khoi tang ke. Nam trong long dai nut 44px nen khong chiem them chieu cao nao. */
+.ke-nut--gon::before{
+  content: ''; position: absolute; top: 0; width: min(62%, 18rem); height: 10px;
+  border-radius: var(--radius-sach); background: var(--ke-mep-bong); pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce){
+  .ke-nut__chu{ transition: none; }
+}
 .hang{ --hang-khe: var(--space-lg); display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 44%), 1fr)); gap: var(--space-sm) var(--hang-khe); overflow-x: clip; }
 
 /*

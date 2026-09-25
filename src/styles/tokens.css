@@ -83,6 +83,10 @@
   --radius-nut: 8px;
 
   /* Ke sach: mep ke xam am rat nhat 1px va bong mem ngay duoi, goc gay sach, vet gay moi bia. */
+  /* Vet sang cua lan doi bia tren khung sach lon: mot dai sang mong, khong phai mang mau dam. */
+  --roi-sang-mau: oklch(99.4% 0.005 235 / .62);
+  /* Chieu cao mot tang ke: bia 5:3 cong hai dong chu va cac dau hieu. Chi dung de may chu cat san ba tang. */
+  --tang-cao: 15.5rem;
   --ke-mep: oklch(91.5% 0.012 75);
   --ke-mep-bong: oklch(96.5% 0.007 75);
   --radius-sach: 2px 5px 5px 2px;

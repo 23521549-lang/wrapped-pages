@@ -3,52 +3,19 @@ import { connection } from "next/server";
 import { db } from "@/server/db";
 import { listActivity } from "@/server/feed/list";
 import { listShelf, type ShelfBook as Sach } from "@/server/library/shelf";
+import { coverSlots } from "@/server/library/timeline";
 import { currentMoods } from "@/server/mood/moods";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { OpenBook } from "@/components/book/OpenBook";
-import { GlyphKhoa, GlyphRieng, ShelfBook } from "@/components/book/ShelfBook";
+import { Ngan } from "@/components/book/Ngan";
+import { GlyphKhoa, GlyphRieng } from "@/components/book/ShelfBook";
 import { ActivityPanel } from "@/components/feed/ActivityPanel";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
 import { chiaTamTrang, conLai, troiHien } from "@/lib/tam-trang/lich";
 import { timeAgo } from "@/lib/when";
-
-/** Mot ngan ke: tieu de, so cuon, hang sach. Ngan trong van giu mep ke va mot dong chu. */
-function Ngan({ ten, books, trong, when }: { ten: string; books: Sach[]; trong: string; when: (b: Sach) => string }) {
-  return (
-    <section className="ngan" aria-label={ten}>
-      <div className="ngan__dau">
-        <h2 className="d">{ten}</h2>
-        <span className="ngan__dem">{books.length} cuốn</span>
-      </div>
-      {books.length === 0 ? (
-        <div className="ngan__trong">
-          <p>{trong}</p>
-          <span className="ke-mep" aria-hidden="true" />
-        </div>
-      ) : (
-        <ul className="hang">
-          {books.map((b) => (
-            <ShelfBook
-              key={b.id}
-              title={b.title}
-              href={`/sach/${b.id}`}
-              cover={b.cover}
-              coverMediaId={b.coverMediaId}
-              pageCount={b.pageCount}
-              when={when(b)}
-              newCount={b.newCount}
-              lockedCount={b.lockedCount}
-              isPrivate={b.mode === "rieng-tu"}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
 
 export default async function KeSach() {
   await connection();
@@ -66,6 +33,10 @@ export default async function KeSach() {
   const when = (b: Sach) => timeAgo(b.lastPublishedAt ?? b.createdAt, now);
   // listShelf sap theo to dang gan nhat, nen cuon dau tien co to chinh la cuon co trang gan nhat.
   const recent = shelf.find((b) => b.pageCount > 0);
+  // Dong thoi gian bia doc cho DUNG MOT cuon: chi khung sach lon moi tu doi bia, the tren ke luon giu bia moi nhat.
+  const biaCuaKhung = recent === undefined ? [] : (await coverSlots(db, recent.id)).flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]));
+  // Khong ai giu tam trang thi dai troi khong hien, tuc khong con nut tam dung nao tren trang: khung bia tu dat mot nut.
+  const coDaiTroi = minh !== null || kia !== null;
   const fresh = shelf.reduce((n, b) => n + b.newCount, 0);
   // Chia hai ngan ngay tai day, giu nguyen thu tu listShelf tra ve.
   const cuaBan = shelf.filter((b) => b.mine);
@@ -114,8 +85,8 @@ export default async function KeSach() {
                   <OpenBook
                     who={recent.mine ? "Bạn" : recent.ownerNickname}
                     title={recent.title}
-                    cover={recent.cover}
-                    coverMediaId={recent.coverMediaId}
+                    covers={biaCuaKhung}
+                    tuDatNut={!coDaiTroi}
                     pageCount={recent.pageCount}
                     position={recent.excerptPosition}
                     readHref={`/sach/${recent.id}?trang=${recent.excerptPosition}`}

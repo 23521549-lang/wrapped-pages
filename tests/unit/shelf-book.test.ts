@@ -34,7 +34,7 @@ describe("ShelfBook", () => {
 });
 
 const MO: OpenBookProps = {
-  who: "Linh", title: "Chuyện chưa kể", cover: "trang-nuoc", coverMediaId: null, pageCount: 4, position: 4,
+  who: "Linh", title: "Chuyện chưa kể", covers: [{ cover: "trang-nuoc", coverMediaId: null }], tuDatNut: false, pageCount: 4, position: 4,
   readHref: "/sach/abc?trang=4",
   when: "vừa xong", excerpt: "Dòng chữ thật", locked: false, isPrivate: false, action: { label: "Đọc tiếp", href: "/sach/abc" },
 };
