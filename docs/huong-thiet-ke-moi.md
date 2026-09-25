@@ -72,6 +72,16 @@ Ba trạng thái của trang phải:
 - Dưới mép kệ: tên sách (tối đa 2 dòng), dòng "N trang, thời điểm" hoặc "Chưa có trang, thời điểm", rồi các dấu hiệu trạng thái.
 - Cả cuốn là một liên kết tới màn đọc, nên vùng bấm là toàn bộ cuốn sách và vòng focus bao quanh cả cuốn.
 - Màn rộng tự chia cột (mỗi cột tối thiểu 200px); từ 420px trở xuống luôn 2 cuốn mỗi hàng.
+- **Kệ chia tầng.** Mỗi hàng sách đứng trên một mép kệ, nên một hàng đọc ra là một tầng; khoảng cách dọc giữa hai tầng là `--space-xl`. Mỗi ngăn (của mình, của người kia) **thu gọn riêng còn ba tầng**. Số cột là sự thật của trình duyệt (đổi theo bề rộng và theo cỡ chữ), nên được đọc từ `grid-template-columns` đã tính chứ không chép lại bằng media query; sách bị gọn **không có trong cây** để phím Tab không đi vào chỗ không nhìn thấy. Trước khi trình duyệt chạy xong, máy chủ cắt sẵn ba tầng bằng CSS (`.ngan__gon`), nên không có JavaScript vẫn thấy đúng ba tầng.
+- **Dải nút ẩn.** Đúng một dải cho mỗi ngăn, cao cố định 44px, ngay dưới tầng cuối đang hiện. Chữ "Mở rộng" / "Thu gọn" trong suốt cho tới khi rê chuột hoặc đi tới bằng phím Tab (`opacity`, 120ms), không bao giờ ẩn bằng `display: none` hay `visibility: hidden`. Tên đọc được: "Mở rộng kệ của bạn, còn 7 cuốn" / "Thu gọn kệ của bạn", kèm `aria-expanded`. Ở trạng thái thu gọn, một dải 10px màu `--ke-mep-bong` ngay dưới mép kệ gợi ý hàng sách kế tiếp thò ra, nằm trong lòng dải nút nên không chiếm thêm chỗ. Ba tầng trở xuống thì không có dải nút nào.
+- Thành phần trình duyệt của ngăn chỉ nhận **đúng chín trường** một thẻ sách vẽ ra (`SachTrenKe`). Mọi prop của thành phần trình duyệt được chép vào gói dữ liệu gửi xuống, nên đưa cả dòng kệ vào là gửi kèm đoạn trích, kể cả của lượt còn niêm phong.
+
+### Bìa tự đổi trên khung sách lớn
+
+- Chỉ khung sách lớn ("X vừa viết") tự đổi bìa, và chỉ khi cuốn có **từ hai ô bìa trở lên**. Thẻ sách trên kệ luôn giữ bìa mới nhất.
+- Nhịp **mười giây**, hiệu ứng **rọi sáng** dài 1,02 giây: một vệt sáng mỏng `--roi-sang-mau` trượt ngang, bìa cũ mờ đi ngay sau vệt, bìa mới nằm sẵn ở dưới và không bị động vào. Chỉ `transform` và `opacity`; lớp tạm nằm trong chính khung bìa nên khung không xê dịch một điểm ảnh nào. Dọn trong một lượt: trả mặt bìa mới, gỡ lớp tạm, hủy mọi hoạt ảnh.
+- Bìa rút theo túi xáo: đi hết danh sách rồi mới lặp, và không bao giờ hiện lại bìa vừa hiện, kể cả lần đổi đầu tiên.
+- Dừng được, theo WCAG SC 2.2.2: không đổi khi trang bị ẩn, khi con trỏ đang trên khung, khi khung giữ focus, khi đã chọn tạm dừng, và không bao giờ đổi khi máy bật giảm chuyển động. Nút "Tạm dừng hiệu ứng" là **một** công tắc dùng chung với bầu trời; khi không ai giữ tâm trạng (không có dải trời) thì khung sách tự đặt một nút cấp chữ cùng công tắc đó ngay dưới nó.
 
 ## 6. Dấu hiệu trạng thái
 
@@ -114,7 +124,9 @@ Chỉ có hai vi tương tác trên kệ, cả hai do người dùng kích hoạ
 - **Rút sách**: rê chuột hoặc focus vào một cuốn thì bìa nhích lên 6px và xoay nhẹ quanh gáy (`rotateY(-6deg)`), 220ms, `--ease-out`, kèm bóng `--bong-rut-sach`.
 - **Tranh dán đặt thẳng**: rê chuột hoặc focus vào cuốn sách mở thì tranh dán xoay từ `--tranh-nghieng` về 0.
 
-Với `prefers-reduced-motion: reduce`: sách không rút ra (chỉ còn bóng đổi màu 150ms), tranh dán giữ nguyên góc nghiêng. Không thêm hiệu ứng tự chạy, không hiện dần từng khối khi cuộn.
+Với `prefers-reduced-motion: reduce`: sách không rút ra (chỉ còn bóng đổi màu 150ms), tranh dán giữ nguyên góc nghiêng. Không hiện dần từng khối khi cuộn.
+
+Trang Kệ sách có đúng hai hiệu ứng **tự chạy**, cả hai được chủ dự án chọn có chủ ý và cả hai nghe **một** công tắc "Tạm dừng hiệu ứng": nét vẽ của bầu trời trong dải trời, và bìa tự đổi của khung sách lớn (mục 5). Cả hai đứng yên hẳn khi máy bật giảm chuyển động. Không thêm hiệu ứng tự chạy nào khác.
 
 ## 10. Chữ trên giao diện
 
