@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
-import { coverSlots, newestCover, newestCovers, newestTrack, trackSlots } from "@/server/library/timeline";
+import { coverSlots, demO, newestCover, newestCovers, newestTrack, trackSlots } from "@/server/library/timeline";
 import type { TestDb } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
 import { luotChu, MOC_LUOT } from "../helpers/round";
@@ -190,5 +190,34 @@ describe("coverSlots va trackSlots", () => {
     await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l2, cover: "cau-go" });
     const daCo = (await coverSlots(s.db, s.chung)).filter((o) => o.o !== null);
     expect(daCo.at(-1)?.o?.cover).toBe((await newestCover(s.db, s.chung))?.cover);
+  });
+});
+
+/*
+ * Trang chon cuon cua Dau thoi gian ghi duoi moi cuon mot dong "4 bìa, 2 bản nhạc". Dem cho ca danh sach bang hai cau
+ * lenh gom nhom, khong mot cau theo tung cuon.
+ */
+describe("demO", () => {
+  it("dem o bia va o nhac cua tung cuon; o go nhac khong tinh la mot ban nhac", async () => {
+    const s = await haiCuon();
+    const l1 = await luotChu(s.db, s.chung, 1, 1);
+    const l2 = await luotChu(s.db, s.chung, 2, 2, new Date(MOC_LUOT.getTime() + 60_000));
+    await s.db.insert(bookCovers).values({ bookId: s.chung, roundId: l1, cover: "hoa-dao" });
+    await s.db.insert(bookTracks).values({ bookId: s.chung, roundId: null, youtubeId: "dQw4w9WgXcQ" });
+    await s.db.insert(bookTracks).values({ bookId: s.chung, roundId: l2, youtubeId: null });
+    const kq = await demO(s.db, [s.chung, s.rieng]);
+    expect(kq.get(s.chung)).toEqual({ bia: 2, nhac: 1 });
+    expect(kq.get(s.rieng)).toEqual({ bia: 1, nhac: 0 });
+  });
+
+  it("danh sach rong tra Map rong, khong cham database", async () => {
+    const s = await haiCuon();
+    expect((await demO(s.db, [])).size).toBe(0);
+  });
+
+  it("cuon co trong danh sach ma khong co o nao van co mat, dem bang 0", async () => {
+    const s = await haiCuon();
+    const la = randomUUID();
+    expect((await demO(s.db, [la])).get(la)).toEqual({ bia: 0, nhac: 0 });
   });
 });

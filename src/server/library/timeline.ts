@@ -207,3 +207,31 @@ export async function setTrackEntry(
     return "saved";
   });
 }
+
+/** So o cua hai dong thoi gian cua mot cuon, cho dong phu cua trang chon cuon: "4 bìa, 2 bản nhạc". */
+export type DemO = { bia: number; nhac: number };
+
+/**
+ * Dem o bia va o nhac cua nhieu cuon: HAI cau lenh gom nhom cho ca danh sach, khong mot cau theo tung cuon. O go nhac
+ * khong tinh la mot ban nhac. Cuon khong co o nao trong mot bang thi dem bang 0 cho bang do.
+ * Chi doc theo ma cuon, khong tu kiem quyen: noi goi chi dua vao nhung cuon nguoi xem doc duoc (listShelf).
+ */
+export async function demO(db: AnyDb, bookIds: readonly string[]): Promise<Map<string, DemO>> {
+  const kq = new Map<string, DemO>(bookIds.map((id) => [id, { bia: 0, nhac: 0 }]));
+  if (bookIds.length === 0) return kq;
+  const [bia, nhac] = await Promise.all([
+    db.select({ bookId: bookCovers.bookId, n: count() }).from(bookCovers)
+      .where(inArray(bookCovers.bookId, [...bookIds])).groupBy(bookCovers.bookId),
+    db.select({ bookId: bookTracks.bookId, n: count() }).from(bookTracks)
+      .where(and(inArray(bookTracks.bookId, [...bookIds]), sql`${bookTracks.youtubeId} is not null`)).groupBy(bookTracks.bookId),
+  ]);
+  for (const r of bia) {
+    const o = kq.get(r.bookId);
+    if (o) o.bia = r.n;
+  }
+  for (const r of nhac) {
+    const o = kq.get(r.bookId);
+    if (o) o.nhac = r.n;
+  }
+  return kq;
+}

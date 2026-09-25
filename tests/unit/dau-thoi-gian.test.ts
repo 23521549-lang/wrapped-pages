@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  docNam, docThang, gomTheoThang, namCo, namMacDinh, namThang, thangMacDinh, type Dau,
+  docNam, gomTheoThang, namCo, namMacDinh, namThang, thangMacDinh, type Dau,
 } from "@/lib/dau-thoi-gian";
 
 /*
@@ -92,9 +92,4 @@ describe("doc tham so tu duong dan", () => {
     }
   });
 
-  it("thang 1 toi 12, sai thi ve mac dinh", () => {
-    expect(docThang("7", 3)).toBe(7);
-    expect(docThang("12", 3)).toBe(12);
-    for (const raw of ["0", "13", "x", "", undefined, "7.5"]) expect(docThang(raw, 3), String(raw)).toBe(3);
-  });
 });

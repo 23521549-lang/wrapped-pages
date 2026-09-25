@@ -76,10 +76,3 @@ export function docNam(raw: unknown, namTao: number, namNay: number, macDinh: nu
   const n = Number(raw);
   return n < namTao || n > namNay ? macDinh : n;
 }
-
-/** Doc tham so `?thang=`: 1 toi 12, khong thi ve thang mac dinh cua nam dang xem. */
-export function docThang(raw: unknown, macDinh: number | null): number | null {
-  if (typeof raw !== "string" || !/^[0-9]{1,2}$/.test(raw)) return macDinh;
-  const n = Number(raw);
-  return n >= 1 && n <= 12 ? n : macDinh;
-}
