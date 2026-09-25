@@ -247,3 +247,33 @@ test("sach co nhac: khung chi hien sau Mo sach, nam ngay duoi the nhac, khong de
     expect(await tranNgang(b)).toEqual([]);
   }
 });
+
+test("cuon toi cuoi cuon sach o 1280x720: khung hoi dap dinh ngay duoi the nhac, hay duoi thanh dieu huong khi khong nhac, khong bi gi che", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const { a, b } = await haiNguoiDaVao(browser);
+  const coNhac = await taoSach(a, "Chuyện chưa kể", "chia-se");
+  await dangToThang(coNhac, "Tờ một", "Tờ hai", "Tờ ba");
+  await datNhac(coNhac, MA);
+  const khongNhac = await taoSach(a, "Sổ tay chạy bộ", "chia-se");
+  await dangToThang(khongNhac, "Tờ một", "Tờ hai", "Tờ ba");
+  await giaYoutube(b);
+  await b.setViewportSize({ width: 1280, height: 720 });
+
+  const cacCuon = [
+    { id: coNhac, ten: "the nhac", tren: b.getByRole("complementary", { name: "Nhạc nền" }) },
+    { id: khongNhac, ten: "thanh dieu huong", tren: b.getByRole("navigation", { name: "Điều hướng chính" }) },
+  ];
+  for (const { id, ten, tren } of cacCuon) {
+    await docSach(b, id);
+    await expect(khung(b).getByLabel("Viết lời hồi đáp")).toBeVisible();
+    await b.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(async () => {
+      // Trang phai that su da cuon, khong thi phep do duoi chi la do luc chua ai cuon.
+      expect(await b.evaluate(() => window.scrollY), `${ten}: trang da cuon`).toBeGreaterThan(100);
+      const [k, t] = await Promise.all([hop(khung(b)), hop(tren)]);
+      expect(k.y, `khung hoi dap nam tron duoi ${ten}`).toBeGreaterThanOrEqual(t.y + t.height);
+      expect(k.y + k.height, `${ten}: khung hoi dap nam tron trong khung nhin`).toBeLessThanOrEqual(720 + 1);
+    }).toPass();
+    await expect(khung(b).getByRole("button", { name: "Gửi", exact: true })).toBeInViewport();
+  }
+});
