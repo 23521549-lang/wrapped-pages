@@ -27,7 +27,7 @@ test("chu sach bam vao khung sach mo: man doc mo dung to cua doan trich; nut Vie
   await expect(ganNhat.locator(".vua-viet__chu")).toHaveText(CAC_TO[so - 1]);
   await expect(ganNhat.locator(".sach-mo__so")).toHaveText(String(so));
   const vietTiep = ganNhat.getByRole("link", { name: "Viết tiếp" });
-  await expect(vietTiep).toHaveAttribute("href", `/sach/${id}/viet`);
+  await expect(vietTiep).toHaveAttribute("href", `/sach/${id}/viet-tiep`);
   expect(await ganNhat.locator("a a").count(), "khong co lien ket long trong lien ket").toBe(0);
 
   // Cung ngay tai lai van la to do.
@@ -53,7 +53,7 @@ test("chu sach bam vao khung sach mo: man doc mo dung to cua doan trich; nut Vie
   const nut = await vietTiep.boundingBox();
   if (!nut) throw new Error("khong thay nut Viet tiep");
   await a.mouse.click(nut.x + nut.width / 2, nut.y + nut.height / 2);
-  await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet$`));
+  await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet-tiep$`));
 
   await a.goto("/ke-sach");
   for (const width of BE_RONG) {

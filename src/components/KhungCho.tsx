@@ -149,24 +149,28 @@ export function KhungCaiDat() {
 }
 
 /** Form sua sach: cac o ben trai, o xem truoc bia ben phai. */
-export function KhungFormSach() {
+export function KhungFormSach({ ten = "sách", oTen = true }: { ten?: string; oTen?: boolean } = {}) {
   const o = (
     <div className="field">
       <V c="vach-cho--nhan" />
       <V c="vach-cho--o" />
     </div>
   );
+  // Trang Viet tiep khong co o ten sach va khong co muc Ai doc duoc: khung giu cho phai ve dung chung ay khoi, khong
+  // thi bo cuc nhay mot nhip dung luc trang that thay vao - dung cai ma khung giu cho sinh ra de tranh.
   return (
-    <Khung ten="sách" current="ke-sach">
+    <Khung ten={ten} current="ke-sach">
       <Dau />
       <div className="tao">
         <div className="form">
-          {o}
-          <div className="field">
-            <V c="vach-cho--nhan" />
-            <V c="vach-cho--the" />
-            <V c="vach-cho--the" />
-          </div>
+          {oTen && o}
+          {oTen && (
+            <div className="field">
+              <V c="vach-cho--nhan" />
+              <V c="vach-cho--the" />
+              <V c="vach-cho--the" />
+            </div>
+          )}
           <div className="picker">{KHOA.slice(0, 4).map((k) => <span key={k} className="bia-cho" />)}</div>
           {o}
         </div>

@@ -92,7 +92,7 @@ test("cuon vua tao, chua viet chu nao: co the Chua viet chu nao o Ban nhap va xo
   await expect(a.getByText("1 cuốn chưa viết · chỉ mình bạn thấy")).toBeVisible();
   const muc = a.getByRole("listitem").filter({ hasText: "Sổ mới tinh" });
   await expect(muc.locator(".nhap__m")).toHaveText("Chưa viết chữ nào");
-  await expect(muc.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${id}/viet`);
+  await expect(muc.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${id}/viet-tiep`);
   await muc.getByRole("button", { name: "Xóa sách" }).click();
   await muc.getByRole("group", { name: "Xóa hẳn cuốn sách này?" }).getByRole("button", { name: "Xóa", exact: true }).click();
   await expect(muc).toHaveCount(0);

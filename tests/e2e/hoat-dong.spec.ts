@@ -106,7 +106,7 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveAttribute("aria-hidden", "true");
   await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveText(HOP_THOI_GIAN);
   await expect(ganNhat.locator(".trang-che--giua")).toHaveText("Riêng tưMở sách để đọc");
-  await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${rieng}/viet`);
+  await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${rieng}/viet-tiep`);
 
   await b.goto("/ke-sach");
   await expect(cuon(b).getByRole("listitem")).toHaveCount(1);

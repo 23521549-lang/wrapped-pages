@@ -64,7 +64,7 @@ export default async function DocSach({ params, searchParams }: {
         </div>
         {mine && (
           <div className="doc-head__nut">
-            <Link className="btn" href={`/sach/${book.id}/viet`}>Viết tiếp</Link>
+            <Link className="btn" href={`/sach/${book.id}/viet-tiep`}>Viết tiếp</Link>
             <Link className="btn btn--line" href={`/sach/${book.id}/sua`}>Sửa sách</Link>
           </div>
         )}
@@ -75,7 +75,7 @@ export default async function DocSach({ params, searchParams }: {
           <div className={`trong__hinh bia bia--${book.cover}`}><CoverArt cover={book.cover} /><CoverImage mediaId={book.coverMediaId} /></div>
           <h2 className="trong__t d">Chưa có trang nào.</h2>
           <p>{mine ? "Viết trang đầu rồi bấm Đăng trang, trang sẽ hiện ở đây." : `${owner} chưa đăng trang nào trong cuốn này.`}</p>
-          {mine && <Link className="btn" href={`/sach/${book.id}/viet`}>Viết trang đầu</Link>}
+          {mine && <Link className="btn" href={`/sach/${book.id}/viet-tiep`}>Viết trang đầu</Link>}
         </div>
       ) : (
         <Reader

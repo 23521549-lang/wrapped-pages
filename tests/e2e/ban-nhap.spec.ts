@@ -32,7 +32,10 @@ test("ban nhap cua minh: gio luu, so trang nhap, doan trich, Viet tiep; nguoi ki
     await a.setViewportSize({ width, height: 900 });
     expect(await tranNgang(a), `tran ngang o ${width}px`).toEqual([]);
   }
+  // Nut Viet tiep dua toi trang chon bia va nhac cho luot sap dang; bam Viet trang o do moi sang man viet.
   await muc.getByRole("link", { name: "Viết tiếp" }).click();
+  await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet-tiep$`));
+  await a.getByRole("button", { name: "Viết trang" }).click();
   await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet$`));
 
   await b.goto("/ban-nhap");

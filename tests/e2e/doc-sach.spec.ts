@@ -64,7 +64,7 @@ test("chu sach: Viet tiep va Sua sach, mo dung ?trang, man hep mot trang, giam c
 
   await a.goto(`/sach/${id}?trang=2`);
   await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 3 trang · ${tenCuaB} đọc được`);
-  await expect(a.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${id}/viet`);
+  await expect(a.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${id}/viet-tiep`);
   await expect(a.getByRole("link", { name: "Sửa sách" })).toHaveAttribute("href", `/sach/${id}/sua`);
   const dem = a.locator(".doc__dem");
   await expect(dem).toHaveText("Trang 2 / 3");
@@ -105,5 +105,5 @@ test("sach rieng tu cua nguoi kia va ma rac la 404; cuon chua co to thi hien loi
 
   await a.goto(`/sach/${rieng}`);
   await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 0 trang · Chỉ mình bạn đọc`);
-  await expect(a.getByRole("link", { name: "Viết trang đầu" })).toHaveAttribute("href", `/sach/${rieng}/viet`);
+  await expect(a.getByRole("link", { name: "Viết trang đầu" })).toHaveAttribute("href", `/sach/${rieng}/viet-tiep`);
 });

@@ -124,7 +124,7 @@ export default async function KeSach() {
                     locked={recent.excerptLocked}
                     isPrivate={recent.mode === "rieng-tu"}
                     action={recent.mine
-                      ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet` }
+                      ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet-tiep` }
                       : { label: "Đọc tiếp", href: `/sach/${recent.id}` }}
                   />
                 )}

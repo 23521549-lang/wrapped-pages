@@ -52,7 +52,7 @@ export default async function BanNhap() {
                 <p className="nhap__m">{savedLabel(d.updatedAt, now)} · {d.sheetCount} trang nháp</p>
                 {d.excerpt && <p className="nhap__x">{d.excerpt}</p>}
                 <DraftRemove bookId={d.bookId} hasPages={d.hasPages} headingId={TIEU_DE}>
-                  <Link className="btn btn--sm" href={`/sach/${d.bookId}/viet`}>Viết tiếp</Link>
+                  <Link className="btn btn--sm" href={`/sach/${d.bookId}/viet-tiep`}>Viết tiếp</Link>
                 </DraftRemove>
               </li>
             ))}
@@ -65,7 +65,7 @@ export default async function BanNhap() {
                 </p>
                 <p className="nhap__m">Chưa viết chữ nào</p>
                 <DraftRemove bookId={c.bookId} hasPages={false} headingId={TIEU_DE}>
-                  <Link className="btn btn--sm" href={`/sach/${c.bookId}/viet`}>Viết tiếp</Link>
+                  <Link className="btn btn--sm" href={`/sach/${c.bookId}/viet-tiep`}>Viết tiếp</Link>
                 </DraftRemove>
               </li>
             ))}
