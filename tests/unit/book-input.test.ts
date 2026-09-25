@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { COVERS, MODES, TITLE_MAX, parseBookInput, parseBookSettings } from "@/lib/book";
+import { COVERS, MODES, TITLE_MAX, parseBookInput, parseBookSettings, parseTrimInput } from "@/lib/book";
 import { YOUTUBE_LINK_ERROR } from "@/lib/youtube";
 
 function form(fields: Record<string, string>): FormData {
@@ -93,5 +93,70 @@ describe("parseBookSettings", () => {
     expect(parseBookSettings(form({ title: "a".repeat(TITLE_MAX + 1), mode: "rieng-tu" }))).toEqual(sai);
     expect(parseBookSettings(form({ title: `A${String.fromCharCode(0)}`, mode: "rieng-tu" }))).toEqual(sai);
     expect(parseBookSettings(form({ title: "a".repeat(TITLE_MAX), mode: "rieng-tu" }))).not.toHaveProperty("error");
+  });
+});
+
+/*
+ * Bo kiem cua trang Viet tiep. Khac parseBookInput o cho CA HAI o deu bo trong duoc: bo trong nghia la luot nay khong
+ * them o nao va cuon giu nguyen bia voi nhac dang co.
+ */
+describe("parseTrimInput", () => {
+  const ANH = "11111111-1111-4111-8111-111111111111";
+
+  it("khong chon gi: ca hai o deu trong", () => {
+    expect(parseTrimInput(form({ cover: "", coverMedia: "", music: "" })))
+      .toEqual({ cover: null, coverMediaId: null, youtubeId: null, dropTrack: false });
+  });
+
+  it("thieu han cac truong cung la khong chon gi", () => {
+    expect(parseTrimInput(new FormData()))
+      .toEqual({ cover: null, coverMediaId: null, youtubeId: null, dropTrack: false });
+  });
+
+  it("chon mot tranh ve", () => {
+    expect(parseTrimInput(form({ cover: "hoa-dao", coverMedia: "", music: "" })))
+      .toEqual({ cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false });
+  });
+
+  it("chon mot anh trong kho: tranh du phong van di kem", () => {
+    expect(parseTrimInput(form({ cover: "hoa-dao", coverMedia: ANH, music: "" })))
+      .toEqual({ cover: "hoa-dao", coverMediaId: ANH, youtubeId: null, dropTrack: false });
+  });
+
+  it("co anh ma khong co tranh du phong bi tu choi, dung luat cua CHECK drafts_cover_media", () => {
+    expect(parseTrimInput(form({ cover: "", coverMedia: ANH, music: "" }))).toEqual({ error: "Chọn một bìa cho cuốn sách." });
+  });
+
+  it("id anh khong phai uuid bi tu choi", () => {
+    expect(parseTrimInput(form({ cover: "hoa-dao", coverMedia: "khong-phai-uuid", music: "" })))
+      .toEqual({ error: "Chọn một bìa cho cuốn sách." });
+  });
+
+  it("tranh khong co that bi tu choi", () => {
+    expect(parseTrimInput(form({ cover: "khong-co", coverMedia: "", music: "" }))).toEqual({ error: "Chọn một bìa cho cuốn sách." });
+  });
+
+  it("nhan link nhac dung va chi giu ma video", () => {
+    expect(parseTrimInput(form({ cover: "", coverMedia: "", music: "https://youtu.be/dQw4w9WgXcQ" })))
+      .toEqual({ cover: null, coverMediaId: null, youtubeId: "dQw4w9WgXcQ", dropTrack: false });
+  });
+
+  it("link nhac hong bi tu choi bang chinh cau cua parseYoutubeLink", () => {
+    expect(parseTrimInput(form({ cover: "", coverMedia: "", music: "https://vi.wikipedia.org" })))
+      .toEqual({ error: YOUTUBE_LINK_ERROR });
+  });
+
+  it("go nhac: khong di kem ma video", () => {
+    expect(parseTrimInput(form({ cover: "", coverMedia: "", music: "", dropTrack: "1" })))
+      .toEqual({ cover: null, coverMediaId: null, youtubeId: null, dropTrack: true });
+  });
+
+  it("vua go nhac vua dan link bi tu choi", () => {
+    expect(parseTrimInput(form({ cover: "", coverMedia: "", music: "https://youtu.be/dQw4w9WgXcQ", dropTrack: "1" })))
+      .toEqual({ error: "Bỏ dấu gỡ nhạc nếu bạn muốn dán một bản nhạc mới." });
+  });
+
+  it("moi tranh trong COVERS deu qua duoc", () => {
+    for (const c of COVERS) expect(parseTrimInput(form({ cover: c, coverMedia: "", music: "" }))).not.toHaveProperty("error");
   });
 });

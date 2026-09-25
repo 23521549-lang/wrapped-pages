@@ -4,10 +4,10 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent }
 import { actionUploadMedia } from "@/app/actions/media";
 import { IconAnh } from "@/components/media/icons";
 import { UploadFailure, UploadProgress } from "@/components/media/UploadLine";
-import { COVERS, type CoverKey } from "@/lib/book";
+import { COVERS, COVER_LABEL, COVER_NAME, type CoverKey } from "@/lib/book";
 import type { CropRect, ImageSize } from "@/lib/media/crop";
 import { HEIF_LOADER_FAILURE, IMAGE_ACCEPT, IMAGE_ERRORS, IMAGE_HINTS, type ImageFailure } from "@/lib/media/image";
-import { COVER_LABEL, COVER_NAME, CoverArt } from "./CoverArt";
+import { CoverArt } from "./CoverArt";
 import { CoverCrop } from "./CoverCrop";
 import { CoverImage } from "./CoverImage";
 import { encodeCover, readSourceImage, releaseSourceImage, type SourceImage } from "./coverFile";

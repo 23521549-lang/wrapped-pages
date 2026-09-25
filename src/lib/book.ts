@@ -7,6 +7,26 @@ export const COVERS = [
 ] as const;
 export type CoverKey = (typeof COVERS)[number];
 
+/**
+ * Ten tranh ve cua tung bia, dung giua cau. Du lieu thuan nen o day chu khong o tep ve: cau tinh o buoc dang can no, ma
+ * src/lib khong duoc nhap @/components.
+ */
+export const COVER_NAME: Record<CoverKey, string> = {
+  "nui-xa": "Núi xa",
+  "khom-truc": "Khóm trúc",
+  "trang-nuoc": "Trăng trên nước",
+  "chim-bay": "Chim bay qua bờ nước",
+  "hoa-dao": "Cành hoa đào",
+  "doi-chim": "Đôi chim sẻ trên cành",
+  "thuyen-trang": "Thuyền nhỏ dưới trăng",
+  "cau-go": "Cầu gỗ qua suối",
+  "doi-thong": "Đồi thông trong sương",
+  "meo-mai": "Mèo ngủ trên mái ngói",
+};
+
+/** Nhan cho nguoi dung trinh doc man hinh, dung o bo chon bia: chu Bia kem ten tranh viet thuong. */
+export const COVER_LABEL = Object.fromEntries(COVERS.map((c) => [c, `Bìa ${COVER_NAME[c].toLowerCase()}`])) as Record<CoverKey, string>;
+
 export const MODES = ["chia-se", "rieng-tu"] as const;
 export type BookMode = (typeof MODES)[number];
 
@@ -63,4 +83,40 @@ export function parseBookSettings(fd: FormData): BookSettings | { error: string 
   if (!isOneOf(MODES, mode)) return { error: CHE_DO_SAI };
   const ten = parseTitle(String(fd.get("title") ?? ""));
   return ten === null ? { error: TEN_SAI } : { title: ten, mode };
+}
+
+/** Hai o ma nguoi viet chon cho luot sap dang. cover null la luot nay khong them o bia nao. */
+export type TrimInput = { cover: CoverKey | null; coverMediaId: string | null; youtubeId: string | null; dropTrack: boolean };
+
+const GO_NHAC_SAI = "Bỏ dấu gỡ nhạc nếu bạn muốn dán một bản nhạc mới.";
+
+/**
+ * Kiem bieu mau cua trang Viet tiep. Khac parseBookInput o cho ca hai o deu bo trong duoc: bo trong nghia la luot nay
+ * khong them o nao va cuon giu nguyen bia voi nhac dang co. Anh bia van phai di kem mot tranh du phong, dung luat cua
+ * CHECK drafts_cover_media, nen giao dien khong bao gio gui mot gia tri ma may chu se tu choi.
+ */
+export function parseTrimInput(fd: FormData): TrimInput | { error: string } {
+  const raw = String(fd.get("cover") ?? "");
+  const coverMedia = String(fd.get("coverMedia") ?? "");
+  const dropTrack = fd.get("dropTrack") !== null;
+  if (raw !== "" && !isOneOf(COVERS, raw)) return { error: BIA_SAI };
+  const cover = raw === "" ? null : raw;
+  if (coverMedia !== "" && (cover === null || !isUuid(coverMedia))) return { error: BIA_SAI };
+  const nhac = parseYoutubeLink(String(fd.get("music") ?? ""));
+  if (!nhac.ok) return { error: nhac.error };
+  if (dropTrack && nhac.id !== null) return { error: GO_NHAC_SAI };
+  return { cover, coverMediaId: coverMedia === "" ? null : coverMedia, youtubeId: nhac.id, dropTrack };
+}
+
+/**
+ * Cau chi doc o buoc dang, noi gon mot dong luot sap dang se them gi. Thay cho muc gap "Doi bia, ten, nhac" da bo:
+ * buoc dang chi bao lai lua chon, con doi thi o trang Viet tiep.
+ */
+export function cauOLuot(trim: TrimInput): string {
+  const bia = trim.cover === null ? null : trim.coverMediaId !== null ? "Ảnh của bạn" : COVER_NAME[trim.cover];
+  const nhac = trim.dropTrack ? "gỡ nhạc nền" : trim.youtubeId !== null ? "thêm nhạc nền" : null;
+  if (bia === null && nhac === null) return "Lượt này không thêm bìa hay nhạc.";
+  if (bia === null) return `Lượt này ${nhac}.`;
+  if (nhac === null) return `Lượt này thêm bìa ${bia}.`;
+  return `Lượt này thêm bìa ${bia} và ${nhac === "thêm nhạc nền" ? "nhạc nền" : nhac}.`;
 }

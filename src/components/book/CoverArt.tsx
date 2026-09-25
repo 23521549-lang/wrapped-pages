@@ -1,26 +1,9 @@
 import type { ReactNode } from "react";
 import { MUC_LOGO } from "@/components/Logo";
-import { COVERS, type CoverKey } from "@/lib/book";
+import type { CoverKey } from "@/lib/book";
 
 /** Id cua bo loc muc loang, khai mot lan trong InkDefs (layout goc), moi bia tro toi no. */
 export const MUC_LOANG = "muc-loang";
-
-/** Ten tranh ve cua tung bia, dung giua cau (dong bia du phong cua bia anh). */
-export const COVER_NAME: Record<CoverKey, string> = {
-  "nui-xa": "Núi xa",
-  "khom-truc": "Khóm trúc",
-  "trang-nuoc": "Trăng trên nước",
-  "chim-bay": "Chim bay qua bờ nước",
-  "hoa-dao": "Cành hoa đào",
-  "doi-chim": "Đôi chim sẻ trên cành",
-  "thuyen-trang": "Thuyền nhỏ dưới trăng",
-  "cau-go": "Cầu gỗ qua suối",
-  "doi-thong": "Đồi thông trong sương",
-  "meo-mai": "Mèo ngủ trên mái ngói",
-};
-
-/** Nhan cho nguoi dung trinh doc man hinh, dung o bo chon bia: chu Bia kem ten tranh viet thuong. */
-export const COVER_LABEL = Object.fromEntries(COVERS.map((c) => [c, `Bìa ${COVER_NAME[c].toLowerCase()}`])) as Record<CoverKey, string>;
 
 /**
  * Net ve cua moi bia, ve tay co tinh khong deu. Moi bia boc trong mot <g> dung bo loc muc loang (#muc-loang) khai

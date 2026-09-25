@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { COVER_LABEL, COVER_NAME, CoverArt, MUC_LOANG } from "@/components/book/CoverArt";
-import { COVERS, type CoverKey } from "@/lib/book";
+import { CoverArt, MUC_LOANG } from "@/components/book/CoverArt";
+import { COVERS, COVER_LABEL, COVER_NAME, type CoverKey } from "@/lib/book";
 
 /*
  * Moi bia ve cung mot ky thuat: net va mang currentColor, dam nhat bang opacity trong mot dai hep, nham chung bo loc

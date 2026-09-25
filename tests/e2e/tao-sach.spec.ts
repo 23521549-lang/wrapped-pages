@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { COVER_LABEL } from "@/components/book/CoverArt";
+import { COVER_LABEL } from "@/lib/book";
 import { COVERS } from "@/lib/book";
 import { resetDb } from "./db";
 import { dongContextCu, haiNguoiDaVao, nhacCua, taoSach, tranNgang } from "./kho-sach";
