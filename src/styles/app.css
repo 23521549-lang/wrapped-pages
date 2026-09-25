@@ -384,6 +384,8 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .thanh-truot{ flex: 1 1 auto; min-width: 0; height: 24px; margin: 0; accent-color: var(--blue-mark); cursor: pointer; }
 .cat-bia__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 
+/* O danh dau cua trang Viet tiep: vung bam 44px nhu moi vung bam khac tren man cam ung. */
+.danh-dau{ display: flex; align-items: center; gap: var(--space-xs); min-height: 44px; cursor: pointer; }
 .form__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 .form__loi{ font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink); font-weight: 600; }
 .xem-truoc{ position: sticky; top: calc(var(--space-2xl) + var(--space-md)); display: grid; gap: var(--space-sm); }
@@ -438,6 +440,26 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .muc__x b{ color: var(--color-ink); font-weight: 600; }
 .muc .form{ gap: var(--space-md); margin-top: var(--space-2xs); }
 /* Muc Noi dung cua man sua sach: moi luot dang mot dong, nut sua hay dong niem phong o ben phai, cung khung voi .nhap-ds. */
+/* Hai muc dong thoi gian cua man Sua sach: cung dang voi muc Noi dung (.luot-ds) - mot vach manh giua cac dong, khong
+   the bo tron rieng, khong bong. Moi dong la mot o cua dong thoi gian, ke ca o chua co gi. */
+.o-muc{ margin-top: var(--space-2xl); }
+.o-ds{ margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
+.o{ display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2xs) var(--space-md); padding: var(--space-sm) var(--space-md); }
+.o + .o{ border-top: 1px solid var(--color-rule); }
+.o__hinh{ position: relative; display: block; width: 96px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
+.o__hinh--trong{ border: 1px dashed var(--color-rule-ui); }
+.o__hinh--nhac{ display: grid; place-content: center; width: 96px; aspect-ratio: 5 / 3; color: var(--color-ink-2); }
+.o__ky{ width: 12px; height: 12px; }
+.o__chu{ margin: 0; min-width: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.o__phu{ display: block; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); overflow-wrap: anywhere; }
+.o__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+/* Khung mo ra chiem ca be ngang cua dong, nen cac dong duoi khong bi day ngang; chieu cao cua no la cua rieng dong nay. */
+.o__mo{ grid-column: 1 / -1; padding-top: var(--space-sm); }
+.o__loi{ grid-column: 1 / -1; margin: 0; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink); font-weight: 600; }
+@media (max-width: 560px){
+  .o{ grid-template-columns: auto minmax(0, 1fr); }
+  .o__nut{ grid-column: 1 / -1; }
+}
 .luot-muc{ margin-top: var(--space-2xl); }
 .luot-ds{ margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
 .luot{ display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2xs) var(--space-md); padding: var(--space-sm) var(--space-md); }

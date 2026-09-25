@@ -85,7 +85,9 @@ export function CoverPicker({ value, onChange, photos, giuDuoc, bookId, mediaEna
   const baoBan = useRef(onBusyChange);
 
   const uploading = step.kind === "tai";
-  const kho = [...them, ...photos];
+  // Anh tai trong phien nay bi bo ra khoi phan "them" ngay khi may chu da gui no ve trong kho: khong the thi mot lan
+  // lam moi trang (vi du luu mot o khac trong cung man Sua sach) se liet ke no hai lan.
+  const kho = [...them.filter((t) => !photos.some((p) => p.id === t.id)), ...photos];
   const duPhong = value.cover ?? COVERS[0];
 
   // Focus sau khi DOM da doi: ve o anh vua tai xong, ve o chon tep khi huy.

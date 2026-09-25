@@ -613,4 +613,40 @@ describe("o Giu bia dang dung", () => {
     picker(true);
     expect(document.querySelector<HTMLInputElement>('input[name="coverMedia"]')?.value).toBe("");
   });
+
+  it("anh vua tai khong bi liet ke hai lan sau khi may chu gui lai kho", async () => {
+    const xong = taiTreo();
+    const { rerender } = render(
+      <CoverPicker
+        value={{ cover: "nui-xa", photoId: null }}
+        onChange={() => {}}
+        photos={[]}
+        giuDuoc={false}
+        bookId="sach-1"
+        mediaEnabled
+        disabled={false}
+        onBusyChange={() => {}}
+      />,
+    );
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(1));
+    await xong({ id: BIA, w: 1200, h: 720 });
+    expect(COVER_RADIOS().filter((r) => r.getAttribute("data-anh") === BIA)).toHaveLength(1);
+
+    // May chu lam moi trang va gui kho da co anh do: bang van chi ve no MOT lan.
+    rerender(
+      <CoverPicker
+        value={{ cover: "nui-xa", photoId: BIA }}
+        onChange={() => {}}
+        photos={[{ id: BIA, nhan: "Ảnh của bạn, tải 25.09" }]}
+        giuDuoc={false}
+        bookId="sach-1"
+        mediaEnabled
+        disabled={false}
+        onBusyChange={() => {}}
+      />,
+    );
+    expect(COVER_RADIOS().filter((r) => r.getAttribute("data-anh") === BIA)).toHaveLength(1);
+  });
 });

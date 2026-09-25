@@ -267,6 +267,11 @@ const MIEN_TRU: MienTru[] = [
       ".foot",
       ".nhap + .nhap",
       ".luot + .luot",
+      // Hai muc dong thoi gian cua man Sua sach (CoverTimeline.tsx, TrackTimeline.tsx): cung vai tro va cung hinh
+      // dang voi .luot-ds ngay tren no, khung noi dung tinh cong vach chia giua cac dong. Moi dieu khien ben trong
+      // (nut, o chon bia, o nhap nhac) co vien va trang thai rieng dat nguong.
+      ".o-ds",
+      ".o + .o",
       ".go-cua__dong + .go-cua__dong",
       // Vach chia giua cac cot cua khung dang trang (PublishBar.tsx PublishPanel): tach cot chon loai, cot cac o va
       // cot to giay, va tach cau xac nhan khoi danh sach loai. Moi dieu khien ben trong (radio, o nhap, nut) co
