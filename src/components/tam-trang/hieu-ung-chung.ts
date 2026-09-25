@@ -48,8 +48,42 @@ export function ghi(w: HTMLElement, cua: Set<Animation>, a: Animation | undefine
   cua.add(a);
 }
 
+/*
+ * Khoa dung chung cua mot dai troi: ten hieu ung dang chiem no.
+ *
+ * Hai hieu ung ve len CUNG mot dai va ghi vao CUNG mot so hoat hinh, nen chung khong duoc chay chong nhau. Vong song
+ * mo dau bang viec huy sach so hoat hinh dang cho, tuc no dong bang may chuc vet nuoc cua mot lan loang dang do;
+ * nguoc lai, trong lan loang o cua so co HAI o kinh xep chong nen mot vong song bat dau giua chung se doc nham o kinh
+ * sap bi go (phat hien N1).
+ *
+ * MOT khoa cho ca hai chu khong phai moi ben mot co rieng: hai co rieng thi ben nao cung chi thay minh dang chay, ma
+ * do dung la tinh huong hong. Khoa ghi TEN chu dang giu chu khong chi ghi "co ai do", de mot lan loang moi van thay
+ * the duoc lan loang cu - nguoi dung thay tam trang hai lan lien la viec binh thuong - trong khi mot vong song thi
+ * khong.
+ */
+export const SONG = "song";
+export const LOANG = "loang";
+
+const chuCua = new WeakMap<HTMLElement, string>();
+
+/** Ten hieu ung dang giu dai troi, undefined khi dai dang ranh. */
+export function chuDai(w: HTMLElement): string | undefined {
+  return chuCua.get(w);
+}
+
+export function giuDai(w: HTMLElement, ten: string): void {
+  chuCua.set(w, ten);
+}
+
+/** Nha dai troi, nhung chi khi no van con la cua `ten`: cai hen don dep cua mot hieu ung da tan khong duoc nha ho. */
+export function nhaDai(w: HTMLElement, ten: string): void {
+  if (chuCua.get(w) === ten) chuCua.delete(w);
+}
+
 /** Huy sach moi viec dang cho cua mot dai troi va xoa so. Goi khi thanh phan roi trang. */
 export function goViec(w: HTMLElement): void {
+  // Nha ca khoa: da huy sach hen gio va hoat hinh thi khong con hieu ung nao dang chay tren dai nay nua.
+  chuCua.delete(w);
   const v = viecCua.get(w);
   if (v === undefined) return;
   for (const id of v.hen) clearTimeout(id);

@@ -9,7 +9,7 @@ import { doHinh } from "@/components/tam-trang/song";
 import { NOTE_MAX } from "@/lib/tam-trang/input";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { netTroi } from "@/lib/tam-trang/net-troi";
-import { LOANG_HET_MS } from "@/lib/tam-trang/loang-nhip";
+import { LOANG_HET_MS, NEN_MS, NEN_TRE_MS } from "@/lib/tam-trang/loang-nhip";
 import { CHU_MS, SONG_HET, SONG_MS } from "@/lib/tam-trang/song-nhip";
 import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 import { boComment, THU_MUC_CSS } from "../helpers/bang-token";
@@ -822,6 +822,65 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     expect(dai.querySelector(".troi[data-mat=\"minh\"]")?.classList.contains("troi--giong")).toBe(true);
   });
 
+  /*
+   * Yeu cau diem 20 cua chu du an va spec muc 3.4: "loang chay tren dung mat dang mang troi cua nguoi vua tha - dai
+   * lon neu troi cua ho dang la troi lon, o cua so tron neu no dang o o". Truoc task nay nhanh o cua so trao thang.
+   */
+  it("troi cua minh dang o o cua so: hai o kinh xep chong, loang chay trong o kinh moi", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = ve(KIA, MINH);
+    rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    // O cua so cua mat "kia" la noi troi cua nguoi xem dang thu nho lai.
+    const o = dai.querySelector(".troi[data-mat=\"kia\"] .cua-so__o") as HTMLElement;
+    const kinh = [...o.querySelectorAll<HTMLElement>(".cua-so__kinh")];
+    expect(kinh).toHaveLength(2);
+    expect(kinh[0].getAttribute("class")).toBe("cua-so__kinh cua-so__kinh--cu troi--nang-am");
+    expect(kinh[1].getAttribute("class")).toBe("cua-so__kinh troi--giong cua-so__kinh--loang");
+    // Phan quyet M3: khang dinh lop loang CO that truoc da, roi moi dem vet nuoc.
+    expect(lopLoang(kinh[1]).querySelectorAll(".giot").length).toBeGreaterThan(0);
+
+    // Net ve thu nho va bong hoa ep cua troi moi deu hien lai theo nhip cua chung, khong cai nao bi bo lai cho buoc
+    // don (phan quyet M1: mot cum bat ra cung mot luc la dung cai giat ma ca hieu ung muon tranh).
+    const hienLai = (el: Element | null) => daGoi.some((g) => g.el === el && g.ken.duration === NEN_MS && g.ken.delay === NEN_TRE_MS);
+    const net = [...kinh[1].querySelectorAll(".cua-so__nen .m")];
+    expect(net).toHaveLength(SO_NET.giong);
+    expect(net.every((el) => hienLai(el))).toBe(true);
+    expect(hienLai(kinh[1].querySelector(".cua-so__hoa"))).toBe(true);
+
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+    expect(o.querySelectorAll(".cua-so__kinh")).toHaveLength(1);
+    expect(dai.querySelector(".loang")).toBeNull();
+    expect(dai.querySelector(".cua-so__kinh--loang")).toBeNull();
+    expect(soHoatDangGiu(dai)).toBe(0);
+  });
+
+  /*
+   * Phat hien N1: hai hieu ung bau troi ve len CUNG mot dai va ghi vao CUNG mot so hoat hinh, nen chung phai co mot
+   * khoa dung chung. Khong co khoa thi mot cu cham giua lan loang bat mot vong song doc tren mot o kinh sap bi go, va
+   * viec dau tien vong song lam la huy sach so hoat hinh - tuc dong bang may chuc vet nuoc dang loang do.
+   */
+  it("cham o cua so giua lan loang: khong vong song nao, hai bau troi giu nguyen cho; tan roi thi cham lai duoc", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = ve(KIA, MINH);
+    rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    // Phan quyet M3: chung minh lan loang DANG chay that, neu khong ca bai chi la mot cu cham vao dai troi dung yen.
+    expect(lopLoang(dai).querySelectorAll(".giot").length).toBeGreaterThan(0);
+    const mat = [...dai.querySelectorAll(".troi[data-mat]")];
+    const lopTruoc = mat.map((s) => s.className);
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    expect(dai.querySelector(".song-vong")).toBeNull();
+    expect(mat.map((s) => s.className)).toEqual(lopTruoc);
+
+    // Lan loang tan thi khoa duoc nha: cham tiep la doi cho binh thuong, khong ket lai.
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
+    expect(dai.querySelector(".song-vong")).not.toBeNull();
+  });
+
   it("troi cua nguoi kia doi thi khong loang: chi tam trang cua chinh nguoi xem moi co lan loang", () => {
     const { container, rerender } = ve(KIA, null);
     rerender(<BauTroi tenKia="Linh" kia={{ ...KIA, weather: "giong", gio: "09:00", tha: "Thả lúc 09:00" }} minh={null} />);
@@ -883,6 +942,23 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     expect(luat(".troi-dai > .troi")).toContain("grid-area: 1 / 1");
     expect(luat(".troi-dai > .troi--cu")).toContain("z-index: 0");
     expect(luat(".troi-dai > .troi--dang-loang")).toContain("z-index: 3");
+  });
+
+  /*
+   * Phat hien N3. O nhanh dai lon, lop loang nam CANH bau troi moi va bau troi moi nam tren no, nen net ve hien lai
+   * ngay tren nuoc. O nhanh o cua so thi lop loang nam BEN TRONG o kinh (z-index 2, trong mot o kinh dang
+   * isolation: isolate), nen bong hoa ep (z-index auto) va khung net ve thu nho (z-index -1) deu nam DUOI may chuc
+   * vet nuoc: hoat hinh hien lai cua chung khong ai thay duoc, roi toi buoc don ca cum bat ra cung mot luc - dung cai
+   * giat ma phan quyet M1 cam. Hai o kinh cung phai xep dung thu tu tren duoi.
+   */
+  it("trong o kinh dang loang: bong hoa va net ve thu nho nam TREN lop vet nuoc, kinh cu nam duoi kinh moi", () => {
+    expect(luat(".loang")).toContain("z-index: 2");
+    expect(luat(".cua-so__kinh--loang > .cua-so__nen")).toContain("z-index: 3");
+    expect(luat(".cua-so__kinh--loang > .cua-so__hoa")).toContain("z-index: 4");
+    expect(luat(".cua-so__kinh--cu")).toContain("z-index: 0");
+    expect(luat(".cua-so__kinh--loang")).toContain("z-index: 1");
+    // Hai o kinh phai nam trong CUNG mot o luoi, neu khong o cua so cao gap doi trong ba giay va day ca dai troi.
+    expect(luat(".cua-so__o > .cua-so__kinh")).toContain("grid-area: 1 / 1");
   });
 });
 

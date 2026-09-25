@@ -90,6 +90,11 @@
  */
 .troi--cua-so .troi__chu{ display: flow-root; }
 .cua-so{ float: right; display: grid; justify-items: center; gap: 6px; margin: 2px 0 var(--space-xs) var(--space-md); padding: 4px; min-width: 44px; min-height: 44px; border: 0; border-radius: var(--radius-sm); background: none; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* the boc hai o kinh: ngoai luc loang chi co mot o kinh trong no, luc loang thi kinh cu va kinh moi xep chong trong
+   CUNG mot o luoi. Co y KHONG dinh vi the nay, nen offsetLeft/offsetTop cua o kinh van do tu .cua-so y nhu truoc -
+   song.ts do bo cuc cua lan doi cho bang chinh hai so do (phat hien N2) */
+.cua-so__o{ display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.cua-so__o > .cua-so__kinh{ grid-area: 1 / 1; }
 .cua-so__kinh{
   position: relative; display: grid; place-items: center; width: 72px; aspect-ratio: 1; border-radius: 50%; overflow: clip; isolation: isolate;
   background: linear-gradient(180deg, var(--t1), var(--t2) 80%);
@@ -210,6 +215,20 @@
  * hinh cua tung net thanh hoat hinh rong, va toi buoc don ca tram net bat ra cung mot luc (phan quyet M1).
  */
 .troi--dang-loang > .troi__nen{ background: none; }
+/*
+ * Nhanh o cua so: lop loang nam trong CHINH o kinh, nen o kinh moi tat nen chuyen sac cua no di cho may chuc vet nuoc
+ * to (cung mot ly le voi quy tac ngay tren), con o kinh cu nam duoi cho vet nuoc phu dan len.
+ *
+ * Bong hoa ep va khung net ve thu nho phai duoc day len TREN lop loang: o kinh la mot vung xep lop rieng
+ * (isolation: isolate) ma lop loang trong no mang z-index 2, con bong hoa la z-index auto va khung net ve la -1 - de
+ * nguyen thi ca hai nam duoi may chuc vet nuoc, hoat hinh hien lai cua chung khong ai thay, roi toi buoc don ca cum
+ * bat ra cung mot luc, dung cai giat ma phan quyet M1 cam. Bong hoa la con cua mot the luoi nen z-index an ngay,
+ * khong can dinh vi them; khung net ve thi da position: absolute san.
+ */
+.cua-so__kinh--cu{ z-index: 0; }
+.cua-so__kinh--loang{ background: none; z-index: 1; }
+.cua-so__kinh--loang > .cua-so__nen{ z-index: 3; }
+.cua-so__kinh--loang > .cua-so__hoa{ z-index: 4; }
 /* troi moi nam tren lop loang, troi cu nam duoi cung: thu tu nay khong phu thuoc thu tu the trong cay DOM */
 .troi-dai > .troi--dang-loang{ z-index: 3; }
 .troi-dai > .troi--cu{ z-index: 0; }

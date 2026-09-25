@@ -65,7 +65,7 @@ function KhuonTroi({ tenKia, caHai }: { tenKia: string; caHai: boolean }) {
              dong. Nhan lay ten nguoi kia chu khong lay chu "ban": khi ten du dai de quyet dinh be rong o thi no luon
              dai hon "Trời của bạn", con khi no ngan thi ca hai deu hep hon o kinh nen be rong khong doi. */
           <span className="cua-so">
-            <span className="cua-so__kinh" />
+            <span className="cua-so__o"><span className="cua-so__kinh" /></span>
             <span className="cua-so__chu troi__phu">
               {`Trời của ${tenKia}`}
               <span className="cua-so__gio">00:00</span>
@@ -99,11 +99,13 @@ function KhuonTroi({ tenKia, caHai }: { tenKia: string; caHai: boolean }) {
 }
 
 /** Mot bau troi: nen, hai cau tho, nguon, loi nhan, luc tha; o cua so dung truoc phan chu. */
-function MotTroi({ m, an, cu, dung, doiDung }: {
+function MotTroi({ m, an, cu, cuaSoCu = null, dung, doiDung }: {
   m: Mat;
   an: boolean;
   /** Trai troi cu trong lan loang: nam duoi troi moi, tro nang, va se bi go o buoc don. */
   cu?: boolean;
+  /** Troi cu cua o cua so trong lan loang: mot o kinh nua nam duoi o kinh moi, cung o luoi, go o buoc don. */
+  cuaSoCu?: TroiHien | null;
   dung: boolean;
   doiDung: () => void;
 }) {
@@ -126,9 +128,20 @@ function MotTroi({ m, an, cu, dung, doiDung }: {
       <div className="shell troi__chu">
         {m.cuaSo && (
           <button type="button" className="cua-so" aria-label={`Xem trời của ${m.aiCuaSo}`}>
-            <span className={`cua-so__kinh troi--${m.cuaSo.weather}`} aria-hidden="true">
-              <span className="cua-so__nen"><NetTroi weather={m.cuaSo.weather} /></span>
-              <Hoa weather={m.cuaSo.weather} className="cua-so__hoa" />
+            {/* Hai o kinh xep chong trong CUNG mot o luoi khi dang loang: kinh cu nam duoi, kinh moi nam tren va lan
+                loang chay ben trong no. The boc nay khong duoc dinh vi, nen offsetLeft/offsetTop cua o kinh van do tu
+                .cua-so y nhu truoc - song.ts do bo cuc cua lan doi cho bang chinh hai so do (phat hien N2). */}
+            <span className="cua-so__o">
+              {cuaSoCu !== null && (
+                <span className={`cua-so__kinh cua-so__kinh--cu troi--${cuaSoCu.weather}`} aria-hidden="true">
+                  <span className="cua-so__nen"><NetTroi weather={cuaSoCu.weather} /></span>
+                  <Hoa weather={cuaSoCu.weather} className="cua-so__hoa" />
+                </span>
+              )}
+              <span className={`cua-so__kinh troi--${m.cuaSo.weather}`} data-k={m.cuaSo.weather} aria-hidden="true">
+                <span className="cua-so__nen"><NetTroi weather={m.cuaSo.weather} /></span>
+                <Hoa weather={m.cuaSo.weather} className="cua-so__hoa" />
+              </span>
             </span>
             <span className="cua-so__chu troi__phu" aria-hidden="true">
               {`Trời của ${m.aiCuaSo}`}
@@ -180,11 +193,37 @@ function khacTroi(a: TroiHien | null, b: TroiHien | null): boolean {
  * Cac the ma lan loang can, tren mat dang mang troi cua nguoi vua tha. Tra ve null khi khong tim thay du the: luc do
  * nguoi goi trao thang chu khong loang - tha mot lan bam hong hon la ve sai.
  *
- * Bo chon neo vao `[data-k]` de bo qua khuon giu cho chieu cao (khuon cung mang lop `troi` nhung khong co data-k), bo
- * qua trai troi cu, va bo qua mat dang bi cat ve 0 o che do o cua so.
+ * Nhanh dai lon: bo chon neo vao `[data-k]` de bo qua khuon giu cho chieu cao (khuon cung mang lop `troi` nhung khong
+ * co data-k), bo qua trai troi cu, va bo qua mat dang bi cat ve 0 o che do o cua so.
  */
 function matLoang(w: HTMLElement, cu: TroiCu): MatLoang | null {
-  if (!cu.lon) return null;
+  if (!cu.lon) {
+    /*
+     * Troi cua nguoi xem dang thu nho trong o cua so cua mat nguoi kia, nen lan loang chay trong chinh o kinh do:
+     * cung mot ngon ngu hinh o moi noi (yeu cau diem 20). Mat "kia" la mat dang lon nen no khong mang troi--an; bo
+     * chon viet ca dieu do ra de neu mot ngay nao do no khong con dung, lan loang bo qua chu khong ve nham cho.
+     *
+     * Khuon vet co theo canh ngan cua o (khuonO), nen day la vai chuc vet chu khong phai ca tram nhu o dai lon.
+     */
+    const kinh = w.querySelector<HTMLElement>(
+      ".troi[data-mat=\"kia\"]:not(.troi--an) .cua-so__o > .cua-so__kinh:not(.cua-so__kinh--cu)",
+    );
+    if (kinh === null) return null;
+    // O kinh to nen bang CHINH no chu khong bang mot the con, nen tat nen bang mot lop chu khong bang opacity: dat
+    // opacity 0 len o kinh la giau luon may chuc vet nuoc nam ben trong no (cung mot ly le voi phan quyet M1).
+    kinh.classList.add("cua-so__kinh--loang");
+    return {
+      khung: kinh,
+      kieu: kinh.dataset.k ?? "",
+      // Net ve thu nho va bong hoa ep deu hien lai theo nhip cua chung tren nen vet nuoc. CSS day ca hai len tren lop
+      // loang: de nguyen thi chung nam duoi may chuc vet nuoc va chi bat ra mot luot o buoc don (phat hien N3).
+      net: [...kinh.querySelectorAll<HTMLElement>(".cua-so__nen .m, .cua-so__hoa")],
+      // O kinh khong chua dong chu nao: chu "Troi cua ban" va gio tha nam ngoai o kinh.
+      chuMoi: [],
+      chuCu: [],
+      nho: true,
+    };
+  }
   const moi = w.querySelector<HTMLElement>(".troi[data-k]:not(.troi--cu):not(.troi--an)");
   const cuEl = w.querySelector<HTMLElement>(".troi--cu");
   if (moi === null || cuEl === null) return null;
@@ -347,7 +386,9 @@ export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien |
     // day: goi flushSync tu trong mot lifecycle thi React in canh bao, ma luc do cung khong co khung hinh nao de giu.
     let dongBo = true;
     loangTroi(w, mat, () => {
-      w.querySelector(".troi--dang-loang")?.classList.remove("troi--dang-loang");
+      // Mot cau go duoc dau "dang loang" cua ca hai nhanh: dai lon danh dau tren chinh bau troi moi, o cua so danh
+      // dau tren o kinh moi, va khong bao gio co ca hai cung luc.
+      w.querySelector(".troi--dang-loang, .cua-so__kinh--loang")?.classList.remove("troi--dang-loang", "cua-so__kinh--loang");
       // flushSync de React go trai troi cu NGAY trong luot nay: de vong ve lai binh thuong thi giua luc go lop loang
       // va luc go troi cu se lot mot khung hinh co ca hai.
       if (dongBo) setCu(null);
@@ -393,7 +434,18 @@ export function BauTroi({ tenKia, kia, minh }: { tenKia: string; kia: TroiHien |
   // ".troi ..." khong neo vao [data-mat] deu tim thay bau troi that truoc (bai kiem va song.ts deu dua vao dieu nay).
   return (
     <div className={caHai ? "troi-dai troi-cua-so" : "troi-dai"} ref={batDai}>
-      {matKia !== null && <MotTroi m={caHai ? matKia : { ...matKia, cuaSo: null }} an={false} dung={dung} doiDung={doiDung} />}
+      {/* O cua so cua mat nguoi kia luon mang troi cua chinh nguoi xem, nen trai troi cu cua mot lan loang nho nam o
+          day. Mat "minh" khong bao gio can no: o cua so cua mat do mang troi cua nguoi kia, thu khong doi trong lan
+          thay tam trang nay. */}
+      {matKia !== null && (
+        <MotTroi
+          m={caHai ? matKia : { ...matKia, cuaSo: null }}
+          an={false}
+          cuaSoCu={cu !== null && !cu.lon ? cu.troi : null}
+          dung={dung}
+          doiDung={doiDung}
+        />
+      )}
       {matMinh !== null && <MotTroi m={caHai ? matMinh : { ...matMinh, cuaSo: null }} an={caHai} dung={dung} doiDung={doiDung} />}
       <KhuonTroi tenKia={tenKia} caHai={caHai} />
       {caHai && <p className="sr-only troi-cua-so__bao" aria-live="polite" />}

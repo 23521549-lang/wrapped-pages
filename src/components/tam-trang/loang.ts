@@ -2,7 +2,7 @@ import {
   CHU_MS, CHU_TRE_MS, CU_MS, CUA_MS, hatTu, KHUNG_NGOAI, KHUNG_TRONG, khuonO, lanF, LOANG_HET_MS, luoiGiot, NEN_MS,
   NEN_TRE_MS, RV_HE, tien,
 } from "@/lib/tam-trang/loang-nhip";
-import { ghi, giamChuyenDong, hen, viec } from "./hieu-ung-chung";
+import { chuDai, ghi, giamChuyenDong, giuDai, hen, LOANG, nhaDai, SONG, viec } from "./hieu-ung-chung";
 
 /*
  * Hieu ung C - "giay tham nuoc": THAY mot tam trang. Troi moi no ra thanh may chuc vet nuoc tron mep mem, bung dan tu
@@ -29,7 +29,7 @@ type Lan = { lop: HTMLElement; cua: Set<Animation> };
 const lanCua = new WeakMap<HTMLElement, Lan>();
 
 export function dangLoang(w: HTMLElement): boolean {
-  return lanCua.has(w);
+  return chuDai(w) === LOANG;
 }
 
 /** Mot mat dang doi troi: khung se phu day vet nuoc, va nhung the ma lan loang can dong toi. */
@@ -59,6 +59,7 @@ function donLan(w: HTMLElement): void {
   const lan = lanCua.get(w);
   if (lan === undefined) return;
   lanCua.delete(w);
+  nhaDai(w, LOANG);
   lan.lop.remove();
   const v = viec(w);
   for (const a of lan.cua) a.cancel();
@@ -73,6 +74,12 @@ function donLan(w: HTMLElement): void {
  */
 export function loangTroi(w: HTMLElement, m: MatLoang, xong: () => void): void {
   if (giamChuyenDong()) {
+    xong();
+    return;
+  }
+  // Mot vong song doi cho hai bau troi dang lan tren chinh dai nay: no mo dau bang viec huy sach so hoat hinh dang
+  // cho, nen hai hieu ung chay chong nhau la ca hai cung hong. Tam trang moi van hien ra, chi la trao thang (N1).
+  if (chuDai(w) === SONG) {
     xong();
     return;
   }
@@ -125,6 +132,7 @@ export function loangTroi(w: HTMLElement, m: MatLoang, xong: () => void): void {
   khung.append(lop);
   const lan: Lan = { lop, cua };
   lanCua.set(w, lan);
+  giuDai(w, LOANG);
 
   // Chu cua troi cu tan di dung luc mep loang di qua dong do; chu cua troi moi hien ngay sau mep, nen dai troi khong
   // bao gio trong chu lau (phan quyet 23).
