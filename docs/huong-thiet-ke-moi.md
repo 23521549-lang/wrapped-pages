@@ -7,7 +7,7 @@ Tài liệu này ghi lại các quyết định giao diện đang áp dụng, b�
 | Token | Giá trị | Dùng cho |
 |---|---|---|
 | `--radius-nut` | `8px` | Cả ba cấp nút |
-| `--ke-mep` | `oklch(62% 0.07 78)` | Mép kệ: một đường vàng ấm mức vừa, dày 1px, vẽ bằng viền thật để cổng tương phản đo được; qua 3:1 trên cả ba bề mặt giấy |
+| `--ke-mep` | `oklch(91.5% 0.012 75)` | Vạch mép kệ, vàng ấm rất nhạt, dày 1px. Chủ dự án chọn lại màu này ngày 26/09 thay cho nét vàng đậm qua cổng 3:1; nét trang trí nên không thuộc cổng tương phản |
 | `--ke-mep-bong` | `oklch(96.5% 0.007 75)` | Bóng mềm ngay dưới mép kệ, ngắn 4px |
 | `--radius-sach` | `2px 5px 5px 2px` | Góc bìa sách trên kệ: gáy vuông hơn mép ngoài |
 | `--gay-sach-pha` | `90%` | Gáy sách = màu nền dưới của chính bìa pha 10% mực |
