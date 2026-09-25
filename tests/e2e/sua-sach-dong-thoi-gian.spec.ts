@@ -44,7 +44,7 @@ test("doi bia cua mot luot cu: the tren ke khong doi, vi ke lay bia moi nhat", a
   // Dat mot o bia cho luot thu hai qua trang Viet tiep thi phai dang them mot luot nua; thay vao do dien thang o TRONG
   // cua luot thu hai ngay tren man Sua sach, dung duong ma muc nay sinh ra.
   await a.goto(`/sach/${id}/sua`);
-  const dong = a.locator(".o-ds").first().getByRole("listitem");
+  const dong = a.locator(".moc-ds").first().getByRole("listitem");
   await expect(dong).toHaveCount(3);
 
   // Dong cuoi la luot thu hai, dang trong.
@@ -59,7 +59,7 @@ test("doi bia cua mot luot cu: the tren ke khong doi, vi ke lay bia moi nhat", a
 
   // Doi o MO DAU (bia cu nhat): ke van ve bia moi nhat, khong doi.
   await a.goto(`/sach/${id}/sua`);
-  const dong2 = a.locator(".o-ds").first().getByRole("listitem");
+  const dong2 = a.locator(".moc-ds").first().getByRole("listitem");
   await dong2.first().getByRole("button", { name: /Đổi bìa này/ }).click();
   await chonBiaVe(dong2.first(), "trang-nuoc", "Bìa trăng trên nước");
   await dong2.first().getByRole("button", { name: "Lưu" }).click();
@@ -74,9 +74,9 @@ test("bo mot o bia, va bi chan khi chi con mot o", async ({ browser }) => {
   const id = await haiLuot(a, "Chuyện chưa kể");
 
   await a.goto(`/sach/${id}/sua`);
-  const dong = a.locator(".o-ds").first().getByRole("listitem");
+  const dong = a.locator(".moc-ds").first().getByRole("listitem");
   // Moi co mot o bia (o mo dau): khong dong nao cho bo.
-  await expect(a.locator(".o-ds").first().getByRole("button", { name: /Bỏ ô này/ })).toHaveCount(0);
+  await expect(a.locator(".moc-ds").first().getByRole("button", { name: /Bỏ ô này/ })).toHaveCount(0);
 
   // Dien them mot o cho luot thu hai roi bo no di.
   await dong.last().getByRole("button", { name: /Thêm bìa/ }).click();
@@ -84,12 +84,12 @@ test("bo mot o bia, va bi chan khi chi con mot o", async ({ browser }) => {
   await dong.last().getByRole("button", { name: "Lưu" }).click();
   await expect.poll(async () => (await biaCua(id)).length).toBe(2);
 
-  const bo = a.locator(".o-ds").first().getByRole("button", { name: /Bỏ ô này/ });
+  const bo = a.locator(".moc-ds").first().getByRole("button", { name: /Bỏ ô này/ });
   await expect(bo).toHaveCount(2);
   await bo.last().click();
   await expect.poll(async () => (await biaCua(id)).map((o) => o.cover)).toEqual(["nui-xa"]);
   // Con dung mot o: nut bo bien mat tren ca hai dong.
-  await expect(a.locator(".o-ds").first().getByRole("button", { name: /Bỏ ô này/ })).toHaveCount(0);
+  await expect(a.locator(".moc-ds").first().getByRole("button", { name: /Bỏ ô này/ })).toHaveCount(0);
 });
 
 test("go nhac tu mot luot: man doc khong con khung nhac nen", async ({ browser }) => {
@@ -100,7 +100,7 @@ test("go nhac tu mot luot: man doc khong con khung nhac nen", async ({ browser }
   await expect(a.getByRole("heading", { name: "Nhạc nền" })).toBeVisible();
 
   await a.goto(`/sach/${id}/sua`);
-  const nhac = a.locator(".o-ds").nth(1).getByRole("listitem");
+  const nhac = a.locator(".moc-ds").nth(1).getByRole("listitem");
   await expect(nhac).toHaveCount(3);
   await expect(nhac.first()).toContainText(`https://youtu.be/${MA}`);
   await nhac.last().getByRole("button", { name: /Gỡ nhạc từ lượt này/ }).click();

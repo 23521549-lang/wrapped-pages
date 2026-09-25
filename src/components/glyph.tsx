@@ -15,7 +15,7 @@ export function MuiTen({ huong }: { huong: "trai" | "phai" }) {
 /** Not nhac, cung co 12px voi cac dau hieu trang thai: khong nen, khong vien, khong bo tron. */
 export function NotNhac({ go = false }: { go?: boolean }) {
   return (
-    <svg className="o__ky" viewBox="0 0 12 12" aria-hidden="true">
+    <svg viewBox="0 0 12 12" aria-hidden="true">
       <path d="M4.5 9V2.5l5-1V8" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="3" cy="9" r="1.6" fill="currentColor" />
       <circle cx="8" cy="8" r="1.6" fill="currentColor" />

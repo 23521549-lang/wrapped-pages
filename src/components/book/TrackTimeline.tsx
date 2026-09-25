@@ -69,17 +69,17 @@ function Dong({ s, bookId, now }: { s: TrackSlot; bookId: string; now: Date }) {
   }
 
   return (
-    <li className="o" ref={dongRef}>
-      <span className="o__hinh o__hinh--nhac" aria-hidden="true">
+    <li className="moc" ref={dongRef}>
+      <span className="moc__hinh moc__hinh--nhac" aria-hidden="true">
         {s.o !== null && <NotNhac go={goNhac} />}
       </span>
-      <p className="o__chu">
+      <p className="moc__chu">
         {ten}
-        <span className="o__phu">
+        <span className="moc__phu">
           {s.o === null ? "Chưa dùng tới nhạc" : s.o.youtubeId === null ? "Gỡ nhạc nền" : youtubeLink(s.o.youtubeId)}
         </span>
       </p>
-      <div className="o__nut">
+      <div className="moc__nut">
         <button type="button" className="btn btn--line" disabled={dang} onClick={() => setMo((v) => !v)} aria-expanded={mo}>
           {s.o === null ? "Thêm nhạc" : "Đổi nhạc này"}
           <span className="sr-only"> cho {ten.toLowerCase()}</span>
@@ -98,7 +98,7 @@ function Dong({ s, bookId, now }: { s: TrackSlot; bookId: string; now: Date }) {
         )}
       </div>
       {mo && (
-        <div className="o__mo">
+        <div className="moc__mo">
           <form className="form" onSubmit={submit} noValidate>
             <MusicField state={nhac} disabled={dangLuu} />
             <div className="form__nut">
@@ -109,7 +109,7 @@ function Dong({ s, bookId, now }: { s: TrackSlot; bookId: string; now: Date }) {
           </form>
         </div>
       )}
-      {loi !== null && <p className="o__loi" role="alert">{loi}</p>}
+      {loi !== null && <p className="moc__loi" role="alert">{loi}</p>}
     </li>
   );
 }
@@ -121,10 +121,10 @@ function Dong({ s, bookId, now }: { s: TrackSlot; bookId: string; now: Date }) {
  */
 export function TrackTimeline({ bookId, slots, now }: TrackTimelineProps) {
   return (
-    <section className="muc o-muc" aria-labelledby="nhac-theo-luot">
+    <section className="muc moc-muc" aria-labelledby="nhac-theo-luot">
       <h2 className="muc__t d" id="nhac-theo-luot">Nhạc theo lượt</h2>
       <p className="muc__x">Cuốn phát bản nhạc mới nhất. Gỡ nhạc từ một lượt thì từ lượt đó cuốn im.</p>
-      <ol className="o-ds">
+      <ol className="moc-ds">
         {slots.map((s) => <Dong key={s.roundId ?? "mo-dau"} s={s} bookId={bookId} now={now} />)}
       </ol>
     </section>

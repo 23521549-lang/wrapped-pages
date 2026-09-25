@@ -59,7 +59,7 @@ describe("muc Bia theo luot", () => {
     ve([moDau(), cuaLuot(L1, 1, 1, 2, null)]);
     const dong = screen.getAllByRole("listitem")[1];
     expect(dong.textContent).toContain("Chưa có bìa");
-    expect(dong.querySelector(".o__hinh--trong")).not.toBeNull();
+    expect(dong.querySelector(".moc__hinh--trong")).not.toBeNull();
     expect(screen.getByRole("button", { name: /Thêm bìa/ })).toBeTruthy();
   });
 
@@ -84,11 +84,11 @@ describe("muc Bia theo luot", () => {
     ve([moDau(), cuaLuot(L1, 1, 1, 2, { id: "o1", cover: "hoa-dao", coverMediaId: null })]);
     const dong = screen.getAllByRole("listitem")[1];
     fireEvent.click(screen.getAllByRole("button", { name: /Đổi bìa này/ })[1]);
-    const mo = dong.querySelector(".o__mo");
+    const mo = dong.querySelector(".moc__mo");
     expect(mo).not.toBeNull();
     expect(mo?.querySelector(".picker")).not.toBeNull();
     // Khung mo ra nam TRONG chinh dong do, nen cac dong duoi khong bi day ngang.
-    expect(screen.getAllByRole("listitem")[0].querySelector(".o__mo")).toBeNull();
+    expect(screen.getAllByRole("listitem")[0].querySelector(".moc__mo")).toBeNull();
     expect(screen.getByRole("button", { name: "Lưu" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Hủy" })).toBeTruthy();
   });
@@ -135,7 +135,7 @@ describe("muc Bia theo luot", () => {
 
   it("bia anh cua mot o hien ca tranh du phong lan anh", () => {
     ve([moDau({ id: "o0", cover: "nui-xa", coverMediaId: ANH })]);
-    const hinh = screen.getAllByRole("listitem")[0].querySelector(".o__hinh");
+    const hinh = screen.getAllByRole("listitem")[0].querySelector(".moc__hinh");
     expect(hinh?.classList.contains("bia--nui-xa")).toBe(true);
     expect(hinh?.querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${ANH}`);
     expect(screen.getAllByRole("listitem")[0].textContent).toContain("Ảnh của bạn");
@@ -144,9 +144,9 @@ describe("muc Bia theo luot", () => {
   it("luu duoc thi khung sua dong lai", async () => {
     ve([moDau(), cuaLuot(L1, 1, 1, 2, { id: "o1", cover: "hoa-dao", coverMediaId: null })]);
     fireEvent.click(screen.getAllByRole("button", { name: /Đổi bìa này/ })[1]);
-    expect(screen.getAllByRole("listitem")[1].querySelector(".o__mo")).not.toBeNull();
+    expect(screen.getAllByRole("listitem")[1].querySelector(".moc__mo")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-    await waitFor(() => expect(screen.getAllByRole("listitem")[1].querySelector(".o__mo")).toBeNull());
+    await waitFor(() => expect(screen.getAllByRole("listitem")[1].querySelector(".moc__mo")).toBeNull());
   });
 
   it("may chu tu choi thi khung van mo de sua tiep, kem cau bao trong chinh dong do", async () => {
@@ -155,7 +155,7 @@ describe("muc Bia theo luot", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Đổi bìa này/ })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Ảnh bìa không dùng được nữa");
-    expect(screen.getAllByRole("listitem")[1].querySelector(".o__mo")).not.toBeNull();
+    expect(screen.getAllByRole("listitem")[1].querySelector(".moc__mo")).not.toBeNull();
   });
 
   it("bam Huy tra o ve dung bia dang luu, khong giu lua chon dang do", () => {

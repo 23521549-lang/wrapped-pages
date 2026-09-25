@@ -68,8 +68,8 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
   }
 
   return (
-    <li className="o" ref={dongRef}>
-      <span className={s.o === null ? "o__hinh o__hinh--trong" : `o__hinh bia--${s.o.cover}`} aria-hidden="true">
+    <li className="moc" ref={dongRef}>
+      <span className={s.o === null ? "moc__hinh moc__hinh--trong" : `moc__hinh bia--${s.o.cover}`} aria-hidden="true">
         {s.o !== null && (
           <>
             <CoverArt cover={s.o.cover} />
@@ -77,11 +77,11 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
           </>
         )}
       </span>
-      <p className="o__chu">
+      <p className="moc__chu">
         {ten}
-        <span className="o__phu">{s.o === null ? "Chưa có bìa" : s.o.coverMediaId !== null ? "Ảnh của bạn" : COVER_NAME[s.o.cover]}</span>
+        <span className="moc__phu">{s.o === null ? "Chưa có bìa" : s.o.coverMediaId !== null ? "Ảnh của bạn" : COVER_NAME[s.o.cover]}</span>
       </p>
-      <div className="o__nut">
+      <div className="moc__nut">
         <button type="button" className="btn btn--line" disabled={dang} onClick={() => setMo((v) => !v)} aria-expanded={mo}>
           {s.o === null ? "Thêm bìa" : "Đổi bìa này"}
           <span className="sr-only"> cho {ten.toLowerCase()}</span>
@@ -94,7 +94,7 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
         )}
       </div>
       {mo && (
-        <div className="o__mo">
+        <div className="moc__mo">
           <form className="form" onSubmit={submit} noValidate>
             <CoverPicker
               value={chon}
@@ -114,7 +114,7 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
           </form>
         </div>
       )}
-      {loi !== null && <p className="o__loi" role="alert">{loi}</p>}
+      {loi !== null && <p className="moc__loi" role="alert">{loi}</p>}
     </li>
   );
 }
@@ -128,10 +128,10 @@ function Dong({ s, bookId, photos, mediaEnabled, now, boDuoc }: {
 export function CoverTimeline({ bookId, slots, photos, mediaEnabled, now }: CoverTimelineProps) {
   const daCo = slots.filter((s) => s.o !== null).length;
   return (
-    <section className="muc o-muc" aria-labelledby="bia-theo-luot">
+    <section className="muc moc-muc" aria-labelledby="bia-theo-luot">
       <h2 className="muc__t d" id="bia-theo-luot">Bìa theo lượt</h2>
       <p className="muc__x">Mỗi lượt đăng giữ được một bìa riêng. Bìa mới nhất là bìa cuốn đang dùng.</p>
-      <ol className="o-ds">
+      <ol className="moc-ds">
         {slots.map((s) => (
           <Dong
             key={s.roundId ?? "mo-dau"}

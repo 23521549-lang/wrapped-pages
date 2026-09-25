@@ -122,7 +122,7 @@ describe("muc Nhac theo luot", () => {
     fireEvent.click(screen.getByRole("button", { name: /Thêm nhạc/ }));
     fireEvent.change(screen.getByLabelText("Nhạc nền"), { target: { value: `https://youtu.be/${MA}` } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
-    await waitFor(() => expect(document.querySelector(".o__mo")).toBeNull());
+    await waitFor(() => expect(document.querySelector(".moc__mo")).toBeNull());
   });
 
   it("may chu tu choi thi khung van mo de sua tiep", async () => {
@@ -132,7 +132,7 @@ describe("muc Nhac theo luot", () => {
     fireEvent.change(screen.getByLabelText("Nhạc nền"), { target: { value: `https://youtu.be/${MA}` } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect((await screen.findByRole("alert")).textContent).toBe("Không tìm thấy cuốn sách này.");
-    expect(document.querySelector(".o__mo")).not.toBeNull();
+    expect(document.querySelector(".moc__mo")).not.toBeNull();
   });
 
   it("bam Huy tra o ve dung link dang luu, khong giu chu dang go do", () => {

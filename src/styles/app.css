@@ -525,24 +525,25 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .muc .form{ gap: var(--space-md); margin-top: var(--space-2xs); }
 /* Muc Noi dung cua man sua sach: moi luot dang mot dong, nut sua hay dong niem phong o ben phai, cung khung voi .nhap-ds. */
 /* Hai muc dong thoi gian cua man Sua sach: cung dang voi muc Noi dung (.luot-ds) - mot vach manh giua cac dong, khong
-   the bo tron rieng, khong bong. Moi dong la mot o cua dong thoi gian, ke ca o chua co gi. */
-.o-muc{ margin-top: var(--space-2xl); }
-.o-ds{ margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
-.o{ display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2xs) var(--space-md); padding: var(--space-sm) var(--space-md); }
-.o + .o{ border-top: 1px solid var(--color-rule); }
-.o__hinh{ position: relative; display: block; width: 96px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
-.o__hinh--trong{ border: 1px dashed var(--color-rule-ui); }
-.o__hinh--nhac{ display: grid; place-content: center; width: 96px; aspect-ratio: 5 / 3; color: var(--color-ink-2); }
-.o__ky{ width: 12px; height: 12px; }
-.o__chu{ margin: 0; min-width: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.o__phu{ display: block; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); overflow-wrap: anywhere; }
-.o__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+   the bo tron rieng, khong bong. Moi dong la mot moc cua dong thoi gian, ke ca moc chua co gi. Ten khoi la .moc,
+   khong phai .o: .o la o chon troi cua hop Tha tam trang (tam-trang.css), hai khoi trung ten thi luat cua nhau de len nhau. */
+.moc-muc{ margin-top: var(--space-2xl); }
+.moc-ds{ margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
+.moc{ display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2xs) var(--space-md); padding: var(--space-sm) var(--space-md); }
+.moc + .moc{ border-top: 1px solid var(--color-rule); }
+.moc__hinh{ position: relative; display: block; width: 96px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
+.moc__hinh--trong{ border: 1px dashed var(--color-rule-ui); }
+.moc__hinh--nhac{ display: grid; place-content: center; width: 96px; aspect-ratio: 5 / 3; color: var(--color-ink-2); }
+.moc__hinh--nhac svg{ width: 12px; height: 12px; }
+.moc__chu{ margin: 0; min-width: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.moc__phu{ display: block; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); overflow-wrap: anywhere; }
+.moc__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 /* Khung mo ra chiem ca be ngang cua dong, nen cac dong duoi khong bi day ngang; chieu cao cua no la cua rieng dong nay. */
-.o__mo{ grid-column: 1 / -1; padding-top: var(--space-sm); }
-.o__loi{ grid-column: 1 / -1; margin: 0; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink); font-weight: 600; }
+.moc__mo{ grid-column: 1 / -1; padding-top: var(--space-sm); }
+.moc__loi{ grid-column: 1 / -1; margin: 0; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink); font-weight: 600; }
 @media (max-width: 560px){
-  .o{ grid-template-columns: auto minmax(0, 1fr); }
-  .o__nut{ grid-column: 1 / -1; }
+  .moc{ grid-template-columns: auto minmax(0, 1fr); }
+  .moc__nut{ grid-column: 1 / -1; }
 }
 .luot-muc{ margin-top: var(--space-2xl); }
 .luot-ds{ margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
