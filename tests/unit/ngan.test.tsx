@@ -150,11 +150,13 @@ describe("dai nut trong app.css", () => {
     expect(CSS).toContain(".ke-nut:hover .ke-nut__chu, .ke-nut:focus-visible .ke-nut__chu{ opacity: 1; }");
   });
 
-  it("goi y he sach khong nhan cu bam va khong chiem them chieu cao", () => {
-    const i = CSS.indexOf(".ke-nut--gon::before{");
-    expect(i).toBeGreaterThan(-1);
-    const than = CSS.slice(i, CSS.indexOf("}", i));
-    expect(than).toContain("position: absolute");
-    expect(than).toContain("pointer-events: none");
+  it("dai nut gon va dai nut mo trong y nhau: khong co thanh he sach nao (chu du an bo goi y do ngay 26/09)", () => {
+    expect(CSS).not.toContain("ke-nut--gon");
+    ve(nhieu(20));
+    const n = nut() as HTMLButtonElement;
+    const gon = n.className;
+    fireEvent.click(n);
+    expect(n.getAttribute("aria-expanded")).toBe("true");
+    expect(n.className).toBe(gon);
   });
 });

@@ -120,7 +120,7 @@ export function Ngan({ ten, books, trong }: NganProps) {
           {gonDuoc && (
             <button
               type="button"
-              className={mo ? "ke-nut" : "ke-nut ke-nut--gon"}
+              className="ke-nut"
               aria-expanded={mo}
               onClick={() => setMo((v) => !v)}
             >

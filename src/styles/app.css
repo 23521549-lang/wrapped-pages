@@ -223,12 +223,6 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 }
 .ke-nut__chu{ opacity: 0; transition: opacity var(--dur-short) var(--ease-out); }
 .ke-nut:hover .ke-nut__chu, .ke-nut:focus-visible .ke-nut__chu{ opacity: 1; }
-/* Goi y rat nhe o trang thai thu gon: mot dai cao 10px ngay duoi mep ke cuoi cho thay mep tren cua hang ke tiep, nhu
-   sach tho ra khoi tang ke. Nam trong long dai nut 44px nen khong chiem them chieu cao nao. */
-.ke-nut--gon::before{
-  content: ''; position: absolute; top: 0; width: min(62%, 18rem); height: 10px;
-  border-radius: var(--radius-sach); background: var(--ke-mep-bong); pointer-events: none;
-}
 @media (prefers-reduced-motion: reduce){
   .ke-nut__chu{ transition: none; }
 }
