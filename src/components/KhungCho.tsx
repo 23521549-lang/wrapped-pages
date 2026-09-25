@@ -111,9 +111,10 @@ export function KhungKeSach() {
   );
 }
 
-export function KhungBanNhap() {
+/** Mot danh sach sach co bia nho o dau dong: trang Ban nhap, va trang chon cuon cua Dau thoi gian. */
+export function KhungDanhSach({ ten, current }: { ten: string; current: NavSection }) {
   return (
-    <Khung ten="bản nháp" current="ban-nhap">
+    <Khung ten={ten} current={current}>
       <Dau />
       <ul className="nhap-ds">
         {KHOA.slice(0, 3).map((k) => (

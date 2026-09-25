@@ -1,5 +1,5 @@
 import { KhungDanhSach } from "@/components/KhungCho";
 
 export default function Loading() {
-  return <KhungDanhSach ten="bản nháp" current="ban-nhap" />;
+  return <KhungDanhSach ten="dấu thời gian" current="dau-thoi-gian" />;
 }
