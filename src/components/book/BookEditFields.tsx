@@ -13,6 +13,7 @@ const NHAC_DA_NHAN = "Nhạc phát khi mở bìa sách.";
 /** Gia tri hien tai cua mot cuon, de dien san. null la cuon moi, chua co gi. */
 type BookNow = { title: string; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null } | null;
 
+type MusicState = ReturnType<typeof useMusicField>;
 type BookEditState = ReturnType<typeof useBookEdit>;
 
 /** Dong duoi o nhac nen: loi sau lan roi o dau tien, chip khi link doc ra mot video, con lai la goi y. */
@@ -35,38 +36,52 @@ function MusicHelp({ id, check, touched }: { id: string; check: YoutubeLink; tou
 }
 
 /**
- * Trang thai cua bon truong doi duoc cua mot cuon: ten, tranh bia, bia tu tai len, nhac nen. Dung cho form tao va sua
- * sach. Che do chia se hay rieng tu khong o day: chi form sach moi doi duoc (spec).
+ * Trang thai cua rieng o nhac nen. Tach khoi useBookEdit vi co man chi co o nay ma khong co ten sach (trang Viet tiep,
+ * mot dong cua muc Nhac theo luot): gop chung thi nhung man do phai mang theo mot o ten sach khong bao gio dung toi, va
+ * phep kiem cua no se chan lan gui.
  */
-export function useBookEdit(book: BookNow) {
-  const [title, setTitle] = useState(book?.title ?? "");
-  const [bia, setBia] = useState<CoverValue>({
-    cover: book?.cover ?? COVERS[0], photo: book?.coverMediaId ?? null, photoChosen: Boolean(book?.coverMediaId),
-  });
-  const [music, setMusic] = useState(book?.youtubeId ? youtubeLink(book.youtubeId) : "");
-  const [touched, setTouched] = useState(false);
+export function useMusicField(youtubeId: string | null) {
+  const [music, setMusic] = useState(youtubeId ? youtubeLink(youtubeId) : "");
   const [musicTouched, setMusicTouched] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const titleRef = useRef<HTMLInputElement>(null);
   const musicRef = useRef<HTMLInputElement>(null);
-  // Cung ham kiem voi may chu (parseBookInput), nen giao dien khong bao gio nhan mot gia tri ma may chu se tu choi.
+  // Cung ham kiem voi may chu (parseYoutubeLink), nen giao dien khong bao gio nhan mot gia tri ma may chu se tu choi.
   const musicCheck = parseYoutubeLink(music);
   return {
-    title, setTitle, bia, setBia, music, setMusic, touched, setTouched, musicTouched, setMusicTouched, busy, setBusy,
-    titleRef, musicRef, musicCheck,
-    /** Kiem tai cho va dua focus toi o sai dau tien. false la con sai, dung gui. */
+    music, setMusic, musicTouched, setMusicTouched, musicRef, musicCheck,
+    /** Kiem tai cho va dua focus toi o nhac neu sai. false la con sai, dung gui. */
     check: (): boolean => {
-      setTouched(true);
       setMusicTouched(true);
-      if (title.trim() === "") {
-        titleRef.current?.focus();
-        return false;
-      }
       if (!musicCheck.ok) {
         musicRef.current?.focus();
         return false;
       }
       return true;
+    },
+  };
+}
+
+/**
+ * Trang thai cua bon truong doi duoc cua mot cuon: ten, tranh bia, bia tu tai len, nhac nen. Dung cho form tao sach.
+ * Che do chia se hay rieng tu khong o day: chi form sach moi doi duoc (spec).
+ */
+export function useBookEdit(book: BookNow) {
+  const [title, setTitle] = useState(book?.title ?? "");
+  const [bia, setBia] = useState<CoverValue>({ cover: book?.cover ?? COVERS[0], photoId: book?.coverMediaId ?? null });
+  const [touched, setTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const nhac = useMusicField(book?.youtubeId ?? null);
+  return {
+    title, setTitle, bia, setBia, touched, setTouched, busy, setBusy, titleRef, nhac,
+    /** Kiem tai cho va dua focus toi o sai dau tien. false la con sai, dung gui. */
+    check: (): boolean => {
+      setTouched(true);
+      if (title.trim() === "") {
+        titleRef.current?.focus();
+        nhac.setMusicTouched(true);
+        return false;
+      }
+      return nhac.check();
     },
   };
 }
@@ -109,8 +124,8 @@ export function TitleField({ state, disabled }: { state: BookEditState; disabled
   );
 }
 
-/** O nhac nen. Man Sua sach khong co no nua; ai can ca ba o thi dat TitleField, CoverPicker va o nay canh nhau. */
-export function MusicField({ state, disabled }: { state: BookEditState; disabled: boolean }) {
+/** O nhac nen. Nhan rieng trang thai nhac, nen dung duoc o ca man khong co ten sach. */
+export function MusicField({ state, disabled }: { state: MusicState; disabled: boolean }) {
   const id = useId();
   // Cung ly do voi TitleField: JSX chi doc bien cuc bo, khong doc thang state.x.
   const { music, musicCheck, musicTouched, setMusic, setMusicTouched, musicRef } = state;

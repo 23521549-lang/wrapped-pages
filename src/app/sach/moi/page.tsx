@@ -17,7 +17,7 @@ export default async function SachMoi() {
             <p className="head__sub">Đặt tên, chọn một bìa, chọn ai đọc được.</p>
           </div>
         </div>
-        <BookForm book={null} nickname={me.nickname} partnerNickname={me.partnerNickname} mediaEnabled={getMediaStore() !== null} />
+        <BookForm book={null} nickname={me.nickname} partnerNickname={me.partnerNickname} mediaEnabled={getMediaStore() !== null} photos={[]} />
       </main>
     </>
   );

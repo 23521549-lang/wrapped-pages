@@ -3,6 +3,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
 import { BookForm, type BookFormProps } from "@/components/book/BookForm";
+import { CoverPicker } from "@/components/book/CoverPicker";
+import type { CoverKey } from "@/lib/book";
 import { IMAGE_SOURCE_MAX_BYTES } from "@/lib/media/image";
 import { MEDIA_MAX_BYTES } from "@/lib/media/kinds";
 import { isoDau, ispe, jpegDau, KHONG_NHAN, tepTu } from "../helpers/anh-mau";
@@ -86,13 +88,13 @@ afterEach(() => {
 });
 
 function formMoi(props: Partial<BookFormProps> = {}) {
-  render(<BookForm book={null} nickname="Linh" partnerNickname="Manh" mediaEnabled {...props} />);
+  render(<BookForm book={null} nickname="Linh" partnerNickname="Manh" mediaEnabled photos={[]} {...props} />);
   fireEvent.change(screen.getByLabelText("Tên sách"), { target: { value: "Chuyện chưa kể" } });
 }
 
-const oTep = () => screen.getByLabelText("Ảnh của bạn, chọn ảnh làm bìa") as HTMLInputElement;
+const oTep = () => screen.getByLabelText("Thêm ảnh của bạn làm bìa") as HTMLInputElement;
 const oTen = () => screen.getByLabelText("Tên sách") as HTMLInputElement;
-const oAnh = () => screen.getByRole("radio", { name: "Ảnh của bạn" }) as HTMLInputElement;
+const oAnh = () => screen.getByRole("radio", { name: "Ảnh của bạn, vừa tải lên" }) as HTMLInputElement;
 const tranh = (ten: string) => screen.getByRole("radio", { name: ten }) as HTMLInputElement;
 const nut = (ten: string) => screen.getByRole("button", { name: ten }) as HTMLButtonElement;
 /** Moi radio cua bang bia. */
@@ -262,11 +264,11 @@ describe("BookForm bia tu tai len: tai len", () => {
     await xong({ id: BIA, w: 1200, h: 720 });
     expect([oAnh().checked, document.activeElement === oAnh()]).toEqual([true, true]);
     expect(COVER_RADIOS().filter((r) => r.checked)).toEqual([oAnh()]);
-    expect(screen.queryByLabelText("Ảnh của bạn, chọn ảnh làm bìa")).toBeNull();
+    // O chon tep VAN o day: tai anh len la khong gioi han, anh vua tai chi them mot o chu khong the cho o chon tep.
+    expect(oTep()).toBeTruthy();
     expect(oAnh().closest(".swatch")?.querySelector("img.bia__anh")?.getAttribute("src")).toBe(`/m/${BIA}`);
     expect(xemTruoc().querySelector(".book__cover.bia--nui-xa img.bia__anh")?.getAttribute("src")).toBe(`/m/${BIA}`);
     expect(screen.getByText("Ảnh chưa tải được thì bìa hiện tranh Núi xa.")).toBeTruthy();
-    expect(nut("Đổi ảnh")).toBeTruthy();
     expect([screen.queryByRole("progressbar"), loa()]).toEqual([null, ""]);
 
     fireEvent.click(nut("Tạo sách"));
@@ -275,18 +277,20 @@ describe("BookForm bia tu tai len: tai len", () => {
     expect([gui.getAll("cover"), gui.get("coverMedia")]).toEqual([["nui-xa"], BIA]);
   });
 
-  it("o chon tep doi thanh o radio Anh cua ban: React dung nut DOM moi, khong bien o khong kiem soat thanh co kiem soat", async () => {
+  it("tai xong: o chon tep van la chinh no, o anh la mot o moi, khong canh bao doi o khong kiem soat thanh co kiem soat", async () => {
     const than = vi.spyOn(console, "error").mockImplementation(() => {});
     const xong = taiTreo();
     formMoi();
-    // Hai nhanh cung mot vi tri deu ve mot the <input>: khong co key rieng thi React dung lai CHINH nut DOM nay,
-    // bien mot o khong kiem soat (type=file, khong value) thanh o co kiem soat (type=radio, co value va checked).
+    // O chon tep (type=file, khong kiem soat) va o anh (type=radio, co kiem soat) la hai o RIENG o hai vi tri rieng,
+    // nen React khong bao gio phai bien o nay thanh o kia. Bai giu dung dieu do: sau khi tai xong, o chon tep van la
+    // dung nut DOM cu, o anh la mot nut khac, va khong co canh bao "controlled" nao.
     const tepCu = oTep();
     await chon(tepCu);
     fireEvent.click(nut("Dùng ảnh này"));
     await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(1));
     await xong({ id: BIA, w: 1200, h: 720 });
 
+    expect(oTep()).toBe(tepCu);
     expect(oAnh()).not.toBe(tepCu);
     const than2 = than.mock.calls.map((c) => String(c[0])).filter((m) => m.includes("controlled"));
     than.mockRestore();
@@ -419,7 +423,7 @@ describe("BookForm bia tu tai len: tai len", () => {
     await waitFor(() => expect(loa()).toBe("Chưa bật kho lưu ảnh và ghi âm."));
     expect(nut("Chọn ảnh khác")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Thử lại" })).toBeNull();
-    expect(screen.queryByRole("radio", { name: "Ảnh của bạn" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Ảnh của bạn, vừa tải lên" })).toBeNull();
     // May chu tu choi bia khong lam mat chu nguoi viet da go vao o khac cua form.
     expect(oTen().value).toBe("Chuyện chưa kể");
   });
@@ -445,7 +449,7 @@ describe("BookForm bia tu tai len: tai len", () => {
     fireEvent.click(nut("Hủy tải ảnh bìa"));
     expect([screen.queryByRole("progressbar"), nut("Tạo sách").disabled, document.activeElement === oTep()]).toEqual([null, false, true]);
     await xong({ id: BIA, w: 1200, h: 720 });
-    expect(screen.queryByRole("radio", { name: "Ảnh của bạn" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Ảnh của bạn, vừa tải lên" })).toBeNull();
     expect(tranh("Bìa núi xa").checked).toBe(true);
   });
 });
@@ -465,5 +469,148 @@ describe("BookForm bia tu tai len: kho chua bat", () => {
     fireEvent.click(nut("Tạo sách"));
     await waitFor(() => expect(actionCreateBook).toHaveBeenCalledTimes(1));
     expect([actionCreateBook.mock.calls[0][0].getAll("cover"), actionCreateBook.mock.calls[0][0].get("coverMedia")]).toEqual([["nui-xa"], ""]);
+  });
+});
+
+/*
+ * Yeu cau so 4 cua chu du an: "Tai anh bia moi len KHONG GIOI HAN. Anh moi KHONG BAO GIO the cho anh cu, du anh cu co
+ * dang duoc chon lam bia hay khong." Bang bia vi vay ve CA kho anh cua cuon, moi anh mot o.
+ */
+describe("bang bia la kho anh cua cuon", () => {
+  const A1 = "1111aaaa-1111-4111-8111-111111111111";
+  const A2 = "2222bbbb-2222-4222-8222-222222222222";
+  const KHO = [{ id: A2, nhan: "Ảnh của bạn, tải 21.09" }, { id: A1, nhan: "Ảnh của bạn, tải 20.09" }];
+  /** Id cua lan tai thu hai trong cung mot phien. */
+  const BIA2 = "3333cccc-3333-4333-8333-333333333333";
+
+  it("moi anh trong kho la mot o rieng, moi nhat dung truoc, sau muoi tranh ve", () => {
+    formMoi({ photos: KHO });
+    expect(COVER_RADIOS().map((r) => r.getAttribute("data-anh"))).toEqual([...Array(10).fill(null), A2, A1]);
+  });
+
+  it("moi o anh co nhan rieng de trinh doc man hinh phan biet duoc", () => {
+    formMoi({ photos: KHO });
+    for (const p of KHO) expect(screen.getByRole("radio", { name: p.nhan })).toBeTruthy();
+  });
+
+  it("chon mot anh trong kho: truong an mang dung id do, tranh du phong van di kem", async () => {
+    formMoi({ photos: KHO });
+    fireEvent.click(screen.getByRole("radio", { name: KHO[1].nhan }));
+    fireEvent.click(nut("Tạo sách"));
+    await waitFor(() => expect(actionCreateBook).toHaveBeenCalledTimes(1));
+    const gui = actionCreateBook.mock.calls[0][0];
+    expect([gui.getAll("cover"), gui.get("coverMedia")]).toEqual([["nui-xa"], A1]);
+  });
+
+  it("chon lai mot tranh ve thi truong an rong lai", async () => {
+    formMoi({ photos: KHO });
+    fireEvent.click(screen.getByRole("radio", { name: KHO[0].nhan }));
+    fireEvent.click(tranh("Bìa cành hoa đào"));
+    fireEvent.click(nut("Tạo sách"));
+    await waitFor(() => expect(actionCreateBook).toHaveBeenCalledTimes(1));
+    const gui = actionCreateBook.mock.calls[0][0];
+    expect([gui.getAll("cover"), gui.get("coverMedia")]).toEqual([["hoa-dao"], ""]);
+  });
+
+  it("tai anh moi chi THEM mot o, moi o cu con nguyen va van chon lai duoc", async () => {
+    const xong = taiTreo();
+    formMoi({ photos: KHO });
+    const truocKhiTai = COVER_RADIOS().length;
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(1));
+    await xong({ id: BIA, w: 1200, h: 720 });
+    expect(COVER_RADIOS().length).toBe(truocKhiTai + 1);
+    expect(COVER_RADIOS().map((r) => r.getAttribute("data-anh"))).toEqual([...Array(10).fill(null), BIA, A2, A1]);
+
+    // Tai them mot anh NUA: anh vua tai o tren cung va anh tai truoc do van con. Khong co buoc nay thi mot ban vá
+    // "moi lan tai thay het danh sach" van xanh, vi lan tai dau tien nao cung chi them dung mot o.
+    const xong2 = taiTreo();
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(2));
+    await xong2({ id: BIA2, w: 1200, h: 720 });
+    expect(COVER_RADIOS().length).toBe(truocKhiTai + 2);
+    expect(COVER_RADIOS().map((r) => r.getAttribute("data-anh"))).toEqual([...Array(10).fill(null), BIA2, BIA, A2, A1]);
+
+    // Anh cu van chon lai duoc: khong o nao bi thay cho.
+    fireEvent.click(screen.getByRole("radio", { name: KHO[1].nhan }));
+    expect(screen.getByRole("radio", { name: KHO[1].nhan })).toHaveProperty("checked", true);
+  });
+
+  it("tai len goi actionUploadMedia voi truong book la id cuon dang sua", async () => {
+    render(
+      <CoverPicker
+        value={{ cover: "nui-xa", photoId: null }}
+        onChange={() => {}}
+        photos={[]}
+        giuDuoc={false}
+        bookId="sach-1"
+        mediaEnabled
+        disabled={false}
+        onBusyChange={() => {}}
+      />,
+    );
+    await chon(oTep());
+    fireEvent.click(nut("Dùng ảnh này"));
+    await waitFor(() => expect(actionUploadMedia).toHaveBeenCalledTimes(1));
+    expect(actionUploadMedia.mock.calls[0][0].get("book")).toBe("sach-1");
+  });
+
+  it("kho media tat ma cuon da co anh bia: moi anh van hien va van chon duoc, chi mat o chon tep", () => {
+    formMoi({ photos: KHO, mediaEnabled: false });
+    expect(screen.queryByLabelText("Thêm ảnh của bạn làm bìa")).toBeNull();
+    for (const p of KHO) expect(screen.getByRole("radio", { name: p.nhan })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: KHO[0].nhan }));
+    expect(screen.getByRole("radio", { name: KHO[0].nhan })).toHaveProperty("checked", true);
+  });
+});
+
+/*
+ * O "Giu bia dang dung" chi co o trang Viet tiep: o do ca hai o deu bo trong duoc, va mot nhom radio khong co o nao
+ * duoc chon la trang thai ban phim te ma nguoi dung khong go lua chon ra duoc. Trang Sach moi bat buoc co bia nen
+ * khong co o nay.
+ */
+describe("o Giu bia dang dung", () => {
+  function picker(giuDuoc: boolean, value = { cover: null as CoverKey | null, photoId: null as string | null }) {
+    const onChange = vi.fn();
+    render(
+      <CoverPicker
+        value={value}
+        onChange={onChange}
+        photos={[]}
+        giuDuoc={giuDuoc}
+        bookId="sach-1"
+        mediaEnabled
+        disabled={false}
+        onBusyChange={() => {}}
+      />,
+    );
+    return onChange;
+  }
+
+  it("bat thi o dung dau bang va dang duoc chon khi chua chon bia nao", () => {
+    picker(true);
+    const o = COVER_RADIOS()[0];
+    expect([o.value, o.checked]).toEqual(["", true]);
+    expect(screen.getByRole("radio", { name: "Giữ bìa đang dùng, lượt này không thêm bìa" })).toBe(o);
+  });
+
+  it("tat thi khong co o do", () => {
+    picker(false, { cover: "nui-xa", photoId: null });
+    expect(screen.queryByRole("radio", { name: "Giữ bìa đang dùng, lượt này không thêm bìa" })).toBeNull();
+    expect(COVER_RADIOS()[0].value).toBe("nui-xa");
+  });
+
+  it("chon o do thi ca hai truong deu rong", () => {
+    const onChange = picker(true, { cover: "hoa-dao", photoId: null });
+    fireEvent.click(screen.getByRole("radio", { name: "Giữ bìa đang dùng, lượt này không thêm bìa" }));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]({ cover: "hoa-dao", photoId: null })).toEqual({ cover: null, photoId: null });
+  });
+
+  it("chua chon bia thi truong an coverMedia rong", () => {
+    picker(true);
+    expect(document.querySelector<HTMLInputElement>('input[name="coverMedia"]')?.value).toBe("");
   });
 });

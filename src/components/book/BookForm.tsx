@@ -3,11 +3,11 @@
 import { startTransition, useActionState, useEffect, useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { actionCreateBook, actionUpdateBook } from "@/app/actions/library";
-import type { BookMode, CoverKey } from "@/lib/book";
+import { COVERS, type BookMode, type CoverKey } from "@/lib/book";
 import { Button } from "@/components/Button";
 import { BookCard } from "./BookCard";
 import { MusicField, TitleField, useBookEdit } from "./BookEditFields";
-import { chosenCoverMedia, CoverPicker } from "./CoverPicker";
+import { CoverPicker, type CoverPhotoView } from "./CoverPicker";
 
 type Ket = { error: string } | null;
 
@@ -21,8 +21,10 @@ export type BookFormProps = {
   book: { id: string; title: string; mode: BookMode; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null } | null;
   nickname: string;
   partnerNickname: string;
-  /** Kho media dang bat: tat thi khong tai bia moi len duoc, nhung bia anh cuon dang co van hien va van duoc giu. */
+  /** Kho media dang bat: tat thi khong tai bia moi len duoc, nhung moi anh da co trong kho van hien va van chon duoc. */
   mediaEnabled: boolean;
+  /** Kho anh bia cua cuon, moi nhat truoc. Form tao sach luon rong: cuon chua ton tai nen chua co kho. */
+  photos: readonly CoverPhotoView[];
 };
 
 /**
@@ -32,7 +34,7 @@ export type BookFormProps = {
  * cap nhat defaultChecked), lech voi state. Thanh cong thi action tu chuyen trang (redirect).
  * Bang bia nam trong CoverPicker; dang cat hay dang tai bia tu tai len thi khoa nut gui.
  */
-export function BookForm({ book, nickname, partnerNickname, mediaEnabled }: BookFormProps) {
+export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos }: BookFormProps) {
   const id = useId();
   const doi = useBookEdit(book);
   const [mode, setMode] = useState<BookMode>(book?.mode ?? "chia-se");
@@ -59,8 +61,17 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled }: Book
         {/* Bia va nhac chi co o form TAO: khi sua, hai thu do nam o hai muc dong thoi gian (phan quyet B2). */}
         {book === null && (
           <>
-            <CoverPicker value={doi.bia} onChange={doi.setBia} bookId={null} mediaEnabled={mediaEnabled} disabled={pending} onBusyChange={doi.setBusy} />
-            <MusicField state={doi} disabled={pending} />
+            <CoverPicker
+              value={doi.bia}
+              onChange={doi.setBia}
+              photos={photos}
+              giuDuoc={false}
+              bookId={null}
+              mediaEnabled={mediaEnabled}
+              disabled={pending}
+              onBusyChange={doi.setBusy}
+            />
+            <MusicField state={doi.nhac} disabled={pending} />
           </>
         )}
 
@@ -100,8 +111,8 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled }: Book
         {/* coverMediaId lay dung cai form se gui: bia anh cu van la bia that ke ca khi kho tat, nen xem truoc hien no. */}
         <BookCard
           title={doi.title.trim() || "Chưa có tên"}
-          cover={doi.bia.cover}
-          coverMediaId={chosenCoverMedia(doi.bia)}
+          cover={doi.bia.cover ?? COVERS[0]}
+          coverMediaId={doi.bia.photoId}
           owner={nickname}
           meta={`${nickname} · ${book ? "đang sửa" : "vừa tạo"}`}
           excerpt={book ? undefined : "Chưa có trang nào."}

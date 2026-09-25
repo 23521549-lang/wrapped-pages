@@ -26,7 +26,7 @@ const oNhac = () => screen.getByLabelText("Nhạc nền") as HTMLInputElement;
 const dongDuoi = () => document.getElementById(oNhac().getAttribute("aria-describedby") ?? "") as HTMLElement;
 
 function formMoi() {
-  render(<BookForm book={null} nickname="Linh" partnerNickname="Manh" mediaEnabled={false} />);
+  render(<BookForm book={null} nickname="Linh" partnerNickname="Manh" mediaEnabled={false} photos={[]} />);
   fireEvent.change(screen.getByLabelText("Tên sách"), { target: { value: "Chuyện chưa kể" } });
 }
 
@@ -95,6 +95,7 @@ describe("BookForm o nhac nen", () => {
         nickname="Linh"
         partnerNickname="Manh"
         mediaEnabled={false}
+        photos={[]}
       />,
     );
     expect(screen.getByLabelText("Tên sách")).toBeTruthy();

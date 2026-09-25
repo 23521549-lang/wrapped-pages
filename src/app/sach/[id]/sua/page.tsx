@@ -31,6 +31,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
           nickname={me.nickname}
           partnerNickname={me.partnerNickname}
           mediaEnabled={getMediaStore() !== null}
+          photos={[]}
         />
         <RoundList bookId={book.id} rounds={luot ?? []} now={now} />
       </main>

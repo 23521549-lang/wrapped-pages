@@ -16,17 +16,20 @@ import { encodeCover, readSourceImage, releaseSourceImage, type SourceImage } fr
 const TAI_BIA = "Đang tải ảnh bìa lên";
 /** Chu cua dong doc anh HEIC (bo doc mat vai giay), dung cho ca dong hien va vung doc. */
 const DOC_ANH = "Đang đọc ảnh";
+/** Nhan cua o anh vua tai len trong chinh phien nay: chua co moc ngay de goi ten. */
+const VUA_TAI = "Ảnh của bạn, vừa tải lên";
 
 /**
- * Bia cua form sach. cover la tranh ve, luon co va la nen du phong. photo la bia tu tai len dang co (cua
- * cuon, hoac vua tai trong phien nay); photoChosen la dang dung photo lam bia.
+ * Mot anh trong kho bia cua cuon, da san sang de ve. nhan do may chu dung san (vi du "Ảnh của bạn, tải 20.09"): trinh
+ * duyet khong dinh dang ngay, nen lan ve o may chu va lan ve lai o trinh duyet khong bao gio lech nhau.
  */
-export type CoverValue = { cover: CoverKey; photo: string | null; photoChosen: boolean };
+export type CoverPhotoView = { id: string; nhan: string };
 
-/** Id bia tu tai len ma form gui len trong truong coverMedia; null la dung tranh ve. */
-export function chosenCoverMedia(value: CoverValue): string | null {
-  return value.photoChosen ? value.photo : null;
-}
+/**
+ * Bia dang chon. cover la tranh ve, luon di kem lam nen du phong; photoId khac null la mot o anh trong kho dang duoc
+ * chon. cover null chi xay ra o trang Viet tiep, nghia la "giu bia dang dung, luot nay khong them o bia nao".
+ */
+export type CoverValue = { cover: CoverKey | null; photoId: string | null };
 
 /** Viec dang lam cua o bia anh. Anh goc cua buoc cat nam trong ref, vi phai giai phong dung luc. */
 type Step =
@@ -40,9 +43,13 @@ export type CoverPickerProps = {
   value: CoverValue;
   /** Nhan ham cap nhat, vi ket qua tai len ve sau khi nguoi dung co the da doi tranh. */
   onChange: (update: (value: CoverValue) => CoverValue) => void;
+  /** Kho anh cua cuon, moi nhat truoc. Sach moi thi rong. */
+  photos: readonly CoverPhotoView[];
+  /** Co o "Giu bia dang dung" o dau bang khong. Chi trang Viet tiep bat: hai noi kia bat buoc phai co mot bia. */
+  giuDuoc: boolean;
   /** Cuon dang sua; null la sach moi, bia cho gan toi khi tao sach. */
   bookId: string | null;
-  /** Kho media dang bat. Tat thi khong tai len bia moi duoc; bia anh cu van hien va van duoc gui lai nguyen. */
+  /** Kho media dang bat. Tat thi khong tai len bia moi duoc; moi anh da co trong kho van hien va van chon duoc. */
   mediaEnabled: boolean;
   disabled: boolean;
   /** Dang cat hay dang tai bia: form khoa nut gui de khong luu thieu bia vua chon. */
@@ -50,37 +57,38 @@ export type CoverPickerProps = {
 };
 
 /**
- * Bang bia cua form sach: cac tranh ve san va o cuoi "Anh cua ban".
- * - Chua co anh: o cuoi la input file phu kin o, dung chung luat focus va bam cua .swatch.
- * - Chon tep: doc anh (readSourceImage), mo buoc cat ngay duoi bang bia; Dung anh nay thi cat, ma hoa va tai len qua
- *   actionUploadMedia loai bia. Xong thi o cuoi thanh radio dang chon ve chinh anh do, kem Doi anh.
- * - Radio anh cung name "cover" voi cac tranh va mang value la tranh du phong, nen truong cover cua form luon la mot tranh
- *   ve; id anh di trong truong an coverMedia.
+ * Bang bia cua form sach: o "Giu bia dang dung" (neu co), muoi tranh ve san, ca kho anh cua cuon (moi nhat truoc), roi
+ * o chon tep o cuoi.
+ * - Tai mot anh moi chi THEM mot o vao bang va tu chon o do; khong o nao bi thay cho, ke ca anh chua o nao dung toi.
+ * - Radio anh cung name "cover" voi cac tranh va mang value la tranh du phong, nen truong cover cua form luon la mot
+ *   tranh ve; id anh di trong truong an coverMedia.
  * - Tep HEIC ma trinh duyet khong doc duoc: hien Dang doc anh trong luc nap va chay bo doc HEIF; khong nap duoc (mat
  *   mang) thi Thu lai doc lai tep.
+ * Ca bang nam trong mot vung cuon an thanh cuon, co vet mo o day (cung cach voi cot Hoat dong), nen kho anh lon toi dau
+ * cung khong keo dai form.
  * Moi viec bat dong bo mang mot so luot (run): Huy, chon lai hay go component lam ket qua ve sau bi bo qua.
  */
-export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, onBusyChange }: CoverPickerProps) {
+export function CoverPicker({ value, onChange, photos, giuDuoc, bookId, mediaEnabled, disabled, onBusyChange }: CoverPickerProps) {
   const id = useId();
   const [step, setStep] = useState<Step>({ kind: "nghi" });
+  /** Anh tai len trong chinh phien nay, moi nhat truoc. Kho tu may chu chi doi sau khi trang duoc lam moi. */
+  const [them, setThem] = useState<CoverPhotoView[]>([]);
+  const hopRef = useRef<HTMLFieldSetElement>(null);
+  const vungRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const changeRef = useRef<HTMLButtonElement>(null);
   const source = useRef<SourceImage | null>(null);
   const run = useRef(0);
-  const focusNext = useRef<"photo" | "pick" | null>(null);
+  /** Id anh can dua focus toi sau khi DOM doi, hoac "pick" cho o chon tep. */
+  const focusNext = useRef<string | null>(null);
   // Ham bao ban giu trong ref, nhu source va run: hieu ung go component o duoi chi gan mot lan, nen no khong duoc
   // phu thuoc vao mot ham co the doi qua moi lan ve.
   const baoBan = useRef(onBusyChange);
 
-  // Bia anh dang co thi luon hien, ke ca khi kho tat: truong an coverMedia van gui lai id do de sua ten khong
-  // lam mat bia, nen o cuoi phai hien dung cai dang duoc gui - khong duoc de mot tranh ve hien la "dang chon"
-  // trong khi anh moi la bia that su. Kho tat thi chi mat duong tai len bia MOI (o chon tep va nut Doi anh).
-  const showPhoto = value.photo !== null;
-  const photoChosen = showPhoto && value.photoChosen;
   const uploading = step.kind === "tai";
+  const kho = [...them, ...photos];
+  const duPhong = value.cover ?? COVERS[0];
 
-  // Focus sau khi DOM da doi: ve radio anh khi tai xong, ve cho chon tep khi huy.
+  // Focus sau khi DOM da doi: ve o anh vua tai xong, ve o chon tep khi huy.
   // useLayoutEffect, khong phai useEffect: layout effect chay ngay trong lan commit da doi DOM. Passive effect cua mot
   // lan commit truoc (vd luc vua sang "tai", do await dat) co the con treo khi nguoi dung bam Huy; React chay no truoc
   // lan render moi, no an mat yeu cau focus vua dat trong khi o chon tep van disabled, va focus roi mat.
@@ -88,8 +96,18 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     const target = focusNext.current;
     if (!target) return;
     focusNext.current = null;
-    (target === "photo" ? photoRef : value.photo !== null ? changeRef : fileRef).current?.focus();
+    if (target === "pick") fileRef.current?.focus();
+    else hopRef.current?.querySelector<HTMLInputElement>(`input[data-anh="${target}"]`)?.focus();
   });
+
+  // Keo o dang chon vao tam nhin bang scrollTop cua CHINH vung cuon. scrollIntoView se cuon ca trang va lam man nhay.
+  // useLayoutEffect vi viec nay phai xong truoc khung hinh dau, khong duoc de nguoi dung thay bang bia nhay mot cai.
+  useLayoutEffect(() => {
+    const vung = vungRef.current;
+    const o = vung?.querySelector<HTMLInputElement>("input:checked")?.closest<HTMLElement>(".swatch");
+    if (!vung || !o) return;
+    vung.scrollTop = Math.max(0, o.offsetTop - (vung.clientHeight - o.offsetHeight) / 2);
+  }, []);
 
   useEffect(() => {
     baoBan.current = onBusyChange;
@@ -127,8 +145,8 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     go({ kind: "loi", message: IMAGE_ERRORS[reason], hint: IMAGE_HINTS[reason] ?? null, retry });
   }
 
-  // Cung mot cong: nut Doi anh (disabled tren chinh no), nut Chon anh khac o buoc cat va o dong loi (hai nut
-  // ay khong o trong file nay nen khong gan disabled truc tiep len chung duoc) deu goi ham nay.
+  // Cung mot cong: o chon tep, nut Chon anh khac o buoc cat va o dong loi (hai nut ay khong o trong file nay nen khong
+  // gan disabled truc tiep len chung duoc) deu goi ham nay.
   function pick() {
     if (disabled || uploading) return;
     fileRef.current?.click();
@@ -193,9 +211,11 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
     if (run.current !== mine) return;
     if (result === null) return go({ kind: "loi", message: IMAGE_ERRORS.upload, hint: null, retry: () => void upload(blob) });
     if ("error" in result) return go({ kind: "loi", message: result.error, hint: null, retry: null });
-    focusNext.current = "photo";
+    focusNext.current = result.id;
     go({ kind: "nghi" });
-    onChange((v) => ({ ...v, photo: result.id, photoChosen: true }));
+    // Chi THEM mot o vao bang: khong anh nao bi thay cho, ke ca anh dang khong duoc o nao trong dong thoi gian chon.
+    setThem((t) => [{ id: result.id, nhan: VUA_TAI }, ...t]);
+    onChange((v) => ({ cover: v.cover ?? COVERS[0], photoId: result.id }));
   }
 
   function back() {
@@ -208,85 +228,73 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
   const status = step.kind === "tai" ? TAI_BIA : step.kind === "doc" ? DOC_ANH : step.kind === "loi" ? [step.message, step.hint].filter(Boolean).join(" ") : "";
 
   return (
-    <fieldset className="chon" aria-describedby={photoChosen ? `${id}-du-phong` : undefined}>
+    <fieldset ref={hopRef} className="chon" aria-describedby={value.photoId !== null ? `${id}-du-phong` : undefined}>
       <legend>Bìa</legend>
-      <div className="picker">
-        {COVERS.map((c) => (
-          <label key={c} className={`swatch bia--${c}`}>
-            <input
-              type="radio"
-              name="cover"
-              value={c}
-              checked={!photoChosen && value.cover === c}
-              disabled={disabled}
-              onChange={() => onChange((v) => ({ ...v, cover: c, photoChosen: false }))}
-              aria-label={COVER_LABEL[c]}
-            />
-            <CoverArt cover={c} />
-          </label>
-        ))}
-        {/*
-         * Hai nhanh nay cung mot vi tri va deu ve mot the <input>, nen khong co key rieng thi React dung lai CHINH
-         * nut DOM cu: o chon tep (type=file, khong value, khong kiem soat) bien thanh o radio (co value va checked,
-         * co kiem soat). React canh bao "changing an uncontrolled input to be controlled", va nut DOM con giu lai
-         * tep da chon cua lan truoc. Key khac nhau buoc React go nhanh cu ra roi dung nhanh moi.
-         */}
-        {showPhoto ? (
-          <label key="anh-da-chon" className={`swatch bia--${value.cover}`}>
-            <input
-              ref={photoRef}
-              type="radio"
-              name="cover"
-              value={value.cover}
-              checked={photoChosen}
-              disabled={disabled}
-              onChange={() => onChange((v) => ({ ...v, photoChosen: true }))}
-              aria-label="Ảnh của bạn"
-            />
-            <CoverArt cover={value.cover} />
-            <CoverImage mediaId={value.photo} />
-          </label>
-        ) : (
-          mediaEnabled && (
-            <label key="chon-tep" className="swatch swatch--anh">
+      <div className="cuon-vung" ref={vungRef}>
+        <div className="picker">
+          {giuDuoc && (
+            <label className="swatch swatch--giu">
+              <input
+                type="radio"
+                name="cover"
+                value=""
+                checked={value.cover === null}
+                disabled={disabled}
+                onChange={() => onChange(() => ({ cover: null, photoId: null }))}
+                aria-label="Giữ bìa đang dùng, lượt này không thêm bìa"
+              />
+              <span aria-hidden="true">Giữ bìa đang dùng</span>
+            </label>
+          )}
+          {COVERS.map((c) => (
+            <label key={c} className={`swatch bia--${c}`}>
+              <input
+                type="radio"
+                name="cover"
+                value={c}
+                checked={value.photoId === null && value.cover === c}
+                disabled={disabled}
+                onChange={() => onChange((v) => ({ ...v, cover: c, photoId: null }))}
+                aria-label={COVER_LABEL[c]}
+              />
+              <CoverArt cover={c} />
+            </label>
+          ))}
+          {kho.map((p) => (
+            <label key={p.id} className={`swatch bia--${duPhong}`}>
+              <input
+                type="radio"
+                name="cover"
+                value={duPhong}
+                data-anh={p.id}
+                checked={value.photoId === p.id}
+                disabled={disabled}
+                onChange={() => onChange((v) => ({ cover: v.cover ?? COVERS[0], photoId: p.id }))}
+                aria-label={p.nhan}
+              />
+              <CoverArt cover={duPhong} />
+              <CoverImage mediaId={p.id} />
+            </label>
+          ))}
+          {mediaEnabled && (
+            <label className="swatch swatch--anh">
               <input
                 ref={fileRef}
                 type="file"
                 accept={IMAGE_ACCEPT}
                 disabled={disabled || uploading}
                 onChange={open}
-                aria-label="Ảnh của bạn, chọn ảnh làm bìa"
+                aria-label="Thêm ảnh của bạn làm bìa"
               />
               <IconAnh />
-              <span aria-hidden="true">Ảnh của bạn</span>
+              <span aria-hidden="true">Thêm ảnh</span>
             </label>
-          )
-        )}
-      </div>
-      {(showPhoto && mediaEnabled) || photoChosen ? (
-        <div className="bia-anh">
-          {showPhoto && mediaEnabled && (
-            <>
-              <button ref={changeRef} className="btn btn--line btn--sm" type="button" disabled={disabled || uploading} onClick={pick}>
-                Đổi ảnh
-              </button>
-              <input
-                ref={fileRef}
-                className="sr-only"
-                type="file"
-                accept={IMAGE_ACCEPT}
-                tabIndex={-1}
-                aria-hidden="true"
-                disabled={disabled || uploading}
-                onChange={open}
-              />
-            </>
-          )}
-          {photoChosen && (
-            <p className="field__help" id={`${id}-du-phong`}>{`Ảnh chưa tải được thì bìa hiện tranh ${COVER_NAME[value.cover]}.`}</p>
           )}
         </div>
-      ) : null}
+      </div>
+      {value.photoId !== null && (
+        <p className="field__help" id={`${id}-du-phong`}>{`Ảnh chưa tải được thì bìa hiện tranh ${COVER_NAME[duPhong]}.`}</p>
+      )}
       {step.kind === "cat" && (
         <CoverCrop key={step.previewUrl} size={step.size} previewUrl={step.previewUrl} onUse={use} onPickAgain={pick} onCancel={back} />
       )}
@@ -297,7 +305,7 @@ export function CoverPicker({ value, onChange, bookId, mediaEnabled, disabled, o
       )}
       {/* Mot vung doc giu nguyen qua moi trang thai, nen trinh doc man hinh doc duoc cau tai va cau loi moi. */}
       <output className="sr-only">{status}</output>
-      <input type="hidden" name="coverMedia" value={chosenCoverMedia(value) ?? ""} />
+      <input type="hidden" name="coverMedia" value={value.photoId ?? ""} />
     </fieldset>
   );
 }
