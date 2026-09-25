@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
 import { conTroKhi, dangKemNiemPhong, khongLo, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -25,7 +25,7 @@ test("tu tra loi dung: aria-busy khi go, khung Da mo trang, con tro nhap nhay th
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangKemNiemPhong(a, [HE_LO, BI_MAT, DAI], CAU_DO);
   const [s] = await niemPhongCua(id);
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const khung = b.getByRole("region", { name: "Câu đố", exact: true });
   await khung.getByLabel("Câu trả lời").fill("quán mây");
   await khung.getByRole("button", { name: "Mở trang" }).click();
@@ -77,7 +77,7 @@ test("mo= gia tren niem phong duoc tang chia khoa: khong nghi thuc, khong khung 
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangKemNiemPhong(a, [HE_LO, BI_MAT, DAI], CAU_DO);
   const [s] = await niemPhongCua(id);
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await khongLo(b, BI_MAT, DAI);
 
   const cuaToi = a.getByRole("region", { name: "Câu đố của bạn" });

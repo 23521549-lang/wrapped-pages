@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { coSach, dangToThang, dongContextCu, haiNguoiDaVao, nhapCua, taoSach, tranNgang } from "./kho-sach";
+import { coSach, dangToThang, docSach, dongContextCu, haiNguoiDaVao, nhapCua, taoSach, tranNgang } from "./kho-sach";
 import { BE_RONG } from "./media";
 
 test.beforeEach(async () => {
@@ -78,7 +78,7 @@ test("bo ban nhap cua sach da dang: chi mat ban nhap, sach va trang da dang giu 
   expect(await nhapCua(id)).toBeNull();
   expect(await coSach(id)).toBe(true);
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(b.locator(".sach")).toContainText("Tờ một đã đăng.");
 });
 

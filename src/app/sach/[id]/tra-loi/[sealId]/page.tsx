@@ -18,7 +18,7 @@ export default async function VietTraLoi({ params }: { params: Promise<{ id: str
       <AppNav me={me} current="ke-sach" subpage sticky={false} />
       <ReplyEditor
         sealId={seal.id}
-        bookId={view.book.id}
+        veHref={`/sach/${view.book.id}?trang=${seal.firstPosition}`}
         bookTitle={view.book.title}
         ownerName={me.partnerNickname}
         question={seal.question}

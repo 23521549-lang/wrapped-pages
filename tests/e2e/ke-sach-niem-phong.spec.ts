@@ -33,7 +33,7 @@ test("nguoi kia thay dung so trang khoa, luot moi nhat con khoa nen tren ke chi 
   await expect(ganNhat.locator(".trang-khoa .he-lo")).toHaveText(HE_LO);
   await expect(ganNhat.locator(".vua-viet__chu")).toHaveCount(0);
   await expect(ganNhat.getByRole("link", { name: "Đọc Chuyện chưa kể từ trang 1" })).toHaveAttribute("href", `/sach/${id}?trang=1`);
-  await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", `/sach/${id}`);
+  await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", `/sach/${id}?trang=1`);
   await expect(b.getByRole("list", { name: "Chú giải" }).getByRole("listitem")).toHaveText([
     "Trang mới chưa đọc", "Trang khóa cần vượt thử thách", "Riêng tư chỉ mình bạn thấy",
   ]);

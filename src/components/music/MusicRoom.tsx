@@ -6,17 +6,15 @@ import { flushSync } from "react-dom";
 import { CHUA_LUU_NHAC } from "@/app/actions/messages";
 import { actionSetMusicMuted } from "@/app/actions/music";
 import { quaNuaTrongKhung } from "@/lib/viewport";
+import { BiaMoSach, focusVungSach } from "@/components/reader/MoSach";
 import { useYoutubePlayer, type MusicState } from "./useYoutubePlayer";
-
-/** Vung sach cua Flipbook: nhan focus ngay sau khi mo sach. */
-const VUNG_SACH = ".doc__khung";
 
 export type MusicRoomProps = {
   /** Ma video da chuan hoa (o nhac moi nhat cua cuon, book_tracks.youtube_id). */
   videoId: string;
   /** Lua chon tat nhac da luu cua nguoi xem (readMusicMuted), chi doc luc gan. */
   initialMuted: boolean;
-  /** May chu tinh: nguoi xem chua tat nhac va loi vao khong co ?trang hay ?mo. Chi doc mot lan luc gan. */
+  /** May chu tinh (congMoSach): loi vao khong co ?trang hay ?mo. Chi doc mot lan luc gan. */
   gate: boolean;
   /** Tam bia (BookCover), hien khi con cong. */
   cover: ReactNode;
@@ -81,12 +79,9 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children, side, 
 
   function moSach() {
     // Gan sach dong bo (flushSync) truoc, ca lan ve lai cua Flipbook sau khi do che do mot hay hai trang
-    // (useLayoutEffect), de vung sach da het visibility hidden luc nhan focus. Sach chua co trang thi khong co vung
-    // sach: focus ve chinh cot chinh (tabIndex -1), vi nut vua go khoi DOM, de yen thi focus roi ve body va trinh doc
-    // man hinh mat cho dang doc.
+    // (useLayoutEffect), de vung sach da het visibility hidden luc nhan focus.
     flushSync(() => setDaMo(true));
-    const chinh = chinhRef.current;
-    (chinh?.querySelector<HTMLElement>(VUNG_SACH) ?? chinh)?.focus();
+    focusVungSach(chinhRef.current);
     // Do kich thuoc trinh phat SAU khi bo cuc da doi (tam bia da mat, sach da gan): playVideo() chi gui mot
     // postMessage, iframe nhan va thuc su phat o mot tac vu sau, luc do bo cuc phai on dinh (vd man hep, the nhac co
     // the da nam sau cuon sach vua mo). Kich hoat cua nguoi dung khong bi tieu thu boi cap nhat DOM dong bo (chi tinh
@@ -126,14 +121,7 @@ export function MusicRoom({ videoId, initialMuted, gate, cover, children, side, 
   return (
     <div className="doc-luoi">
       <div ref={chinhRef} tabIndex={-1} className={daMo ? "doc-luoi__chinh doc-luoi__chinh--mo" : "doc-luoi__chinh"}>
-        {conBia ? (
-          <div className="bia-mo">
-            {cover}
-            <button type="button" className="btn" onClick={moSach}>Mở sách</button>
-          </div>
-        ) : (
-          children
-        )}
+        {conBia ? <BiaMoSach cover={cover} onMo={moSach} /> : children}
       </div>
       {/* Cot phai luon co mat va the nhac luon la con dau cua no: side chen SAU the nhac, nen iframe khong doi cho. */}
       <div className="doc-luoi__phu doc-luoi__phu--nhac">

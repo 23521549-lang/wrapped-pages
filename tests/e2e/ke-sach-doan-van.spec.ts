@@ -88,7 +88,8 @@ test("nguoi kia chua doc gi: khung mo to bam theo ngay cua luot moi nhat, khong 
   const so = Number(new RegExp(`^/sach/${id}[?]trang=([1-4])$`).exec(href)?.[1]);
   expect(so, `href cua khung: ${href}`).toBeGreaterThan(0);
   await expect(ganNhat.locator(".vua-viet__chu")).toHaveText(CAC_TO[so - 1]);
-  await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", `/sach/${id}`);
+  // Nut "Đọc tiếp" di cung cho voi khung: mo thang to cua doan trich, khong qua tam bia.
+  await expect(ganNhat.getByRole("link", { name: "Đọc tiếp" })).toHaveAttribute("href", href);
   const html = await b.content();
   for (const chu of CAC_TO.filter((_, i) => i !== so - 1)) expect(html, chu).not.toContain(chu);
 

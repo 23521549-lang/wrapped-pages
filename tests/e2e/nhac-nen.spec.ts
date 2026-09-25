@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { quaNuaTrongKhung, type KhungChuNhat } from "@/lib/viewport";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, moSach, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
 import { baoYt, ghiYt, giaYoutube, lucPhat } from "./youtube-gia";
 
@@ -121,20 +121,22 @@ test("bia Mo sach: chua gan sach, bam thi phat ngay va focus vao sach, sach vua 
   await expect(nut).toHaveText("Bật nhạc");
   await expect(chu).toHaveText("Đã tắt nhạc");
 
-  // Back cua trinh duyet: action da refresh() sau khi luu, nen quay lai khong co tam bia va van la Da tat nhac.
+  // Back cua trinh duyet: moi cuon deu mo qua tam bia (chu du an chot 26/09), ke ca khi da tat nhac; the nhac van nho
+  // lua chon tat nhac (action da refresh() sau khi luu), va mo sach thi khong phat.
   await b.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Kệ sách", exact: true }).click();
   await expect(b).toHaveURL(new RegExp("/ke-sach$"));
   await b.goBack();
   await expect(b).toHaveURL(new RegExp(`/sach/${id}$`));
-  await expect(b.locator(".doc__khung")).toBeVisible();
-  await expect(b.getByRole("button", { name: "Mở sách" })).toHaveCount(0);
+  await expect(b.getByRole("button", { name: "Mở sách" })).toBeVisible();
   await expect(chu).toHaveText("Đã tắt nhạc");
 
   await b.reload();
-  await expect(b.locator(".doc__khung")).toBeVisible();
-  await expect(b.getByRole("button", { name: "Mở sách" })).toHaveCount(0);
+  await expect(b.getByRole("button", { name: "Mở sách" })).toBeVisible();
   await expect(nut).toHaveAttribute("aria-disabled", "false");
   await expect(nut).toHaveText("Bật nhạc");
+  await expect(chu).toHaveText("Đã tắt nhạc");
+  await moSach(b);
+  await expect(b.locator(".doc__khung")).toBeVisible();
   await expect(chu).toHaveText("Đã tắt nhạc");
   expect(await ghiYt(b)).toEqual({ created: 1, play: 0, pause: 0 });
 
@@ -186,7 +188,7 @@ test("mo niem phong qua redirect giu nguyen trang va trinh phat: YT.Player chi t
   await expect(nut).toHaveText("Tắt nhạc");
 });
 
-test("sach khong nhac khong co the nhac va khong goi YouTube; loi vao ?trang khong co bia; 375x812 nut Mo sach va trinh phat cung trong man hinh; khong tran ngang", async ({ browser }) => {
+test("sach khong nhac cung qua tam bia nhung khong co the nhac va khong goi YouTube; loi vao ?trang khong co bia; 375x812 nut Mo sach va trinh phat cung trong man hinh; khong tran ngang", async ({ browser }) => {
   test.setTimeout(180_000);
   const { a } = await haiNguoiDaVao(browser);
 
@@ -196,14 +198,18 @@ test("sach khong nhac khong co the nhac va khong goi YouTube; loi vao ?trang kho
   });
   const khongNhac = await taoSach(a, "Sổ tay chạy bộ", "chia-se");
   await dangToThang(khongNhac, "Tờ một");
+  // Cuon khong nhac cung mo qua tam bia (chu du an chot 26/09): con cong thi chua co sach, chua co cot phai.
   await a.goto(`/sach/${khongNhac}`);
-  await expect(a.locator(".doc__khung")).toBeVisible();
+  await expect(a.locator(".bia-mo").getByRole("heading", { level: 1, name: "Sổ tay chạy bộ" })).toBeVisible();
+  await expect(a.locator(".doc__khung")).toHaveCount(0);
+  await expect(a.getByRole("region", { name: "Lời hồi đáp" })).toHaveCount(0);
+  await moSach(a);
+  await expect(a.locator(".doc__khung")).toBeFocused();
   await expect(a.locator(".doc-head")).toBeVisible();
   // Sach chia se khong nhac van co cot phai (khung Loi hoi dap), nhung khong co the nhac nao.
   await expect(a.locator(".doc-luoi")).toHaveCount(1);
   await expect(a.getByRole("region", { name: "Lời hồi đáp" })).toBeVisible();
   await expect(a.locator(".nhac-the")).toHaveCount(0);
-  await expect(a.getByRole("button", { name: "Mở sách" })).toHaveCount(0);
   expect(goiYoutube).toEqual([]);
 
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");

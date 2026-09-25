@@ -4,6 +4,7 @@ import {
   cacToCua, dangToThang, dangTrang, dongContextCu, haiNguoiDaVao, taoSach, toDaDang, toDaXemCua, veCachCatCu, veCuoiTaiLieu, vietTranTrang,
 } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo } from "./niem-phong";
+import { docSach } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -157,7 +158,7 @@ test("luot con niem phong khong sua duoc o moi loi vao, HTML khong lo chu; mo ro
   }
 
   // Nguoi kia giai dung cau do: luot mo voi ca hai, chu sach sua duoc ngay.
-  await b.goto(`/sach/${idDo}`);
+  await docSach(b, idDo);
   const khung = b.getByRole("region", { name: "Câu đố", exact: true });
   await khung.getByLabel("Câu trả lời").fill("quan may");
   await khung.getByRole("button", { name: "Mở trang" }).click();

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resetDb } from "./db";
 import { dangNhap, taoCho } from "./ho-tro";
 import { batMayHong, GOC_MAY_HONG } from "./may-hong";
-import { CHO_ARGON2_MS, dangToThang, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { CHO_ARGON2_MS, dangToThang, dongContextCu, haiNguoiDaVao, moSach, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
 import { BE_RONG, BE_RONG_CHAM, doMan, doMoiManChinh, vungBamNho, type Man, type MienTru } from "./vung-bam";
 
@@ -150,7 +150,10 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
   await doMan(b, {
     ten: "man doc, khung hoi dap",
     duong: `/sach/${id}`,
-    daVe: (p) => expect(p.getByRole("region", { name: "Lời hồi đáp" }).getByLabel("Viết lời hồi đáp")).toBeVisible(),
+    daVe: async (p) => {
+      await moSach(p);
+      await expect(p.getByRole("region", { name: "Lời hồi đáp" }).getByLabel("Viết lời hồi đáp")).toBeVisible();
+    },
   }, MIEN_TRU_VUNG_BAM);
 
   // Context moi, chua co phien: nguoi da vao mo /dang-nhap se bi day ve ke sach.

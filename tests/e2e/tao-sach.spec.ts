@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { COVER_LABEL } from "@/lib/book";
 import { COVERS } from "@/lib/book";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, nhacCua, taoSach, tranNgang } from "./kho-sach";
+import { dongContextCu, haiNguoiDaVao, moSach, nhacCua, taoSach, tranNgang } from "./kho-sach";
 import { giaYoutube } from "./youtube-gia";
 
 /** Ma video mau, dung cho o Nhac nen cua form tao sach. */
@@ -155,11 +155,13 @@ test("bia moi: chon khi tao, giu sau khi tai lai, ve tren ke; ca muoi o bia deu 
   await a.goto("/ke-sach");
   const cuon = a.locator(".cuon", { hasText: "Mái nhà cũ" });
   await expect(cuon.locator(".cuon__bia.bia--cau-go svg")).toHaveCount(1);
-  // Cuon chua co trang: man doc ve bia o khung trong.
+  // Cuon chua co trang: tam bia ve dung bia da chon, mo sach thi man doc ve bia o khung trong.
   await a.goto(`/sach/${id}`);
+  await expect(a.locator(".bia-mo__hinh.bia--cau-go svg")).toHaveCount(1);
+  await moSach(a);
   await expect(a.locator(".trong__hinh.bia--cau-go svg")).toHaveCount(1);
   await a.reload();
-  await expect(a.locator(".trong__hinh.bia--cau-go svg")).toHaveCount(1);
+  await expect(a.locator(".bia-mo__hinh.bia--cau-go svg")).toHaveCount(1);
   await a.goto("/ke-sach");
   await expect(cuon.locator(".cuon__bia.bia--cau-go svg")).toHaveCount(1);
   await expect(cuon.locator(".bia--meo-mai")).toHaveCount(0);

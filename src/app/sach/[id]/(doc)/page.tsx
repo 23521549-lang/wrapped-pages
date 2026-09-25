@@ -11,10 +11,10 @@ import { CoverImage } from "@/components/book/CoverImage";
 import { BookCover } from "@/components/music/BookCover";
 import { MusicRoom } from "@/components/music/MusicRoom";
 import { Reader } from "@/components/reader/Reader";
-import { ReaderColumns } from "@/components/reader/ReaderColumns";
+import { SachCoCong } from "@/components/reader/SachCoCong";
 import { RoundReplyPanel } from "@/components/reader/RoundReplyPanel";
 import { ShownSheetsProvider } from "@/components/reader/ShownSheets";
-import { musicGate } from "@/lib/music-gate";
+import { congMoSach } from "@/lib/cong-mo-sach";
 import { startSheet } from "@/lib/reading";
 import { roundEditPath } from "@/lib/round";
 import { replyRounds } from "@/lib/round-reply";
@@ -54,6 +54,9 @@ export default async function DocSach({ params, searchParams }: {
   if (mine) phu.push(book.mode === "chia-se" ? `${me.partnerNickname} đọc được` : "Chỉ mình bạn đọc");
   if (locked > 0) phu.push(`${locked} trang đang khóa`);
   const muted = book.youtubeId !== null && tatNhac;
+  // Moi cuon deu mo qua tam bia, co nhac hay khong (chu du an chot 26/09); chi loi vao ?trang hay ?mo mo thang sach.
+  const cong = congMoSach(query);
+  const bia = <BookCover title={book.title} cover={book.cover} coverMediaId={book.coverMediaId} owner={owner} />;
 
   const noiDung = (
     <>
@@ -114,15 +117,15 @@ export default async function DocSach({ params, searchParams }: {
          */}
         <ShownSheetsProvider start={start}>
           {book.youtubeId === null ? (
-            hoiDap === null ? noiDung : <ReaderColumns side={hoiDap}>{noiDung}</ReaderColumns>
+            <SachCoCong gate={cong} cover={bia} side={hoiDap}>{noiDung}</SachCoCong>
           ) : (
             <MusicRoom
               // Doi nhac (chu sach sua o tab khac roi man nay lam moi) thi gan lai the nhac voi trinh phat moi.
               key={book.youtubeId}
               videoId={book.youtubeId}
               initialMuted={muted}
-              gate={musicGate(muted, query)}
-              cover={<BookCover title={book.title} cover={book.cover} coverMediaId={book.coverMediaId} owner={owner} />}
+              gate={cong}
+              cover={bia}
               side={hoiDap}
               dauHref={`/dau-thoi-gian/${book.id}`}
             >

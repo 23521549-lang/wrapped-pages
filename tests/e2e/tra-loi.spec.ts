@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -44,7 +44,7 @@ test("nguoi kia viet trang tra loi: tran thi khoa nut gui, chu con sau khi roi m
   const duong = `/sach/${id}/tra-loi/${s.id}`;
   expect((await a.goto(duong))?.status(), "chu sach").toBe(404);
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await b.getByRole("link", { name: "Viết trang trả lời" }).click();
   await expect(b).toHaveURL(new RegExp(`${duong}$`));
   await expect(b.getByRole("heading", { level: 1, name: "Trang trả lời" })).toBeVisible();
@@ -68,8 +68,9 @@ test("nguoi kia viet trang tra loi: tran thi khoa nut gui, chu con sau khi roi m
   await khongTranNgang(b);
 
   // Lien ket Ve sach dieu huong phia client, khong phat beforeunload: quay lai thi chu van con.
+  // "Về sách" tro ve dung to cua trang niem phong dang tra loi, mo thang khong qua tam bia.
   await b.getByRole("link", { name: "Về sách" }).click();
-  await expect(b).toHaveURL(new RegExp(`/sach/${id}$`));
+  await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=[0-9]+$`));
   await b.getByRole("link", { name: "Viết trang trả lời" }).click();
   // Doi tung moc san sang thay vi gop ca chuoi vao mot han: dieu huong, roi editor phia trinh duyet da dung
   // (immediatelyRender false nen .ProseMirror chi co sau khi tao editor), roi moi toi lan do sau khi khoi phuc chu.
@@ -96,7 +97,7 @@ test("nguoi kia viet trang tra loi: tran thi khoa nut gui, chu con sau khi roi m
   await expect(b.locator(".sach")).toContainText(BI_MAT);
   await expect(b.getByRole("region", { name: "Trang trả lời" })).toContainText(TRA_LOI);
 
-  await a.goto(`/sach/${id}`);
+  await docSach(a, id);
   await expect(a.locator(".sach")).toContainText(BI_MAT);
   await expect(a.getByRole("region", { name: "Trang trả lời" })).toContainText(TRA_LOI);
 

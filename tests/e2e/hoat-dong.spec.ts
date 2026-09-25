@@ -6,7 +6,7 @@ import * as schema from "@/server/db/schema";
 import { publishDraft } from "@/server/library/drafts";
 import { assertE2eDatabase, resetDb } from "./db";
 import { e2eUrls } from "./env";
-import { CHO_ARGON2_MS, dangTrang, dongContextCu, haiNguoiDaVao, taoSach, tranNgang, vietTranTrang } from "./kho-sach";
+import { CHO_ARGON2_MS, dangTrang, docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang, vietTranTrang } from "./kho-sach";
 import { dangKemNiemPhong, khongLo } from "./niem-phong";
 import { rethrowSafely } from "./safe-error";
 
@@ -119,7 +119,7 @@ test("cau do: chu sach thay mot dong thu sai gop 2 lan va dong mo duoc; nguoi mo
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangKemNiemPhong(a, [HE_LO, BI_MAT], { kind: "cau-do", question: "Quán tên gì?", answers: ["Quán Mây"], hints: [] });
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const cauDo = b.getByRole("region", { name: "Câu đố", exact: true });
   for (const [doan, conLai] of [[SAI_1, 4], [SAI_2, 3]] as const) {
     await cauDo.getByLabel("Câu trả lời").fill(doan);

@@ -112,6 +112,27 @@ export async function tranNgang(page: Page, choToiMs = 2_000): Promise<string[]>
 
 export type CheDo = "chia-se" | "rieng-tu";
 
+/**
+ * Bam "Mở sách" tren tam bia cua man doc dang mo. Nut ve san tu may chu, nen mot cu bam roi truoc khi trang chay xong
+ * tren trinh duyet khong lam gi: bam lai cho toi khi tam bia that su bien mat.
+ */
+export async function moSach(page: Page): Promise<void> {
+  const nut = page.getByRole("button", { name: "Mở sách" });
+  await expect(async () => {
+    await nut.click({ timeout: 2_000 });
+    await expect(nut).toHaveCount(0, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+}
+
+/**
+ * Vao man doc cua mot cuon nhu nguoi dung that: moi cuon deu mo qua tam bia khi loi vao khong co ?trang hay ?mo (chu du
+ * an chot 26/09), nen la mo /sach/<ma> roi bam "Mở sách".
+ */
+export async function docSach(page: Page, id: string): Promise<void> {
+  await page.goto(`/sach/${id}`);
+  await moSach(page);
+}
+
 /** Tao mot cuon qua man /sach/moi voi bia mac dinh. Tra ma sach; trang dung lai o man viet cua cuon do. */
 export async function taoSach(page: Page, ten: string, cheDo: CheDo): Promise<string> {
   await page.goto("/sach/moi");

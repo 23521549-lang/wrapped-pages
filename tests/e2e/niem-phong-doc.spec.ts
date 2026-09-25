@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -25,7 +25,7 @@ test("nguoi kia chi thay dong he lo va vach nhoe, chu that khong co trong trang;
   await expect(a.locator(".sach .dau-niem")).toHaveText("Đang niêm phong bằng câu đố");
   await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 1 trang · ${tenCuaB} đọc được`);
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(b.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 1 trang · 1 trang đang khóa`);
   await expect(b.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   await expect(b.locator(".sach .giay-noi-dung p").first()).toHaveText(HE_LO);

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { biaCua, dangTrang, dongContextCu, haiNguoiDaVao, nhacCua, taoSach } from "./kho-sach";
+import { biaCua, dangTrang, docSach, dongContextCu, haiNguoiDaVao, nhacCua, taoSach } from "./kho-sach";
 import { chonBia } from "./media";
 
 /*
@@ -24,7 +24,7 @@ test("chon bia va nhac moi o trang Viet tiep: the tren ke mang bia moi, man doc 
   // Luot dau tien chi co o bia MO DAU do createBook chen.
   expect((await biaCua(id)).map((o) => [o.roundId === null, o.cover])).toEqual([[true, "nui-xa"]]);
 
-  await a.goto(`/sach/${id}`);
+  await docSach(a, id);
   await a.getByRole("link", { name: "Viết tiếp" }).click();
   await expect(a).toHaveURL(new RegExp(`/sach/${id}/viet-tiep$`));
   await a.getByRole("radio", { name: "Bìa cành hoa đào" }).check();

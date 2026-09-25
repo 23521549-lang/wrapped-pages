@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { normalizeReplyBody } from "@/lib/round-reply";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong } from "./niem-phong";
 import { BE_RONG, BE_RONG_CHAM } from "./vung-bam";
 import { giaYoutube } from "./youtube-gia";
@@ -49,7 +49,7 @@ test("nguoi doc gui loi hoi dap sau khi hoi lai; bam doi chi gui mot loi; nguoi 
   await dangToThang(id, "Tờ ba");
 
   await b.setViewportSize({ width: 1280, height: 900 });
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(khung(b).getByText("Dành cho trang 1 tới 2")).toBeVisible();
   await expect(khung(b).getByText("0/1000")).toBeVisible();
   const chu = `  Đọc tới đây thương ghê.${LF}${LF}${LF}${LF}${LF}Cảm ơn nhé.  `;
@@ -100,7 +100,7 @@ test("nguoi doc gui loi hoi dap sau khi hoi lai; bam doi chi gui mot loi; nguoi 
 
   // Nguoi viet: doc duoc loi, kem ten nguoi doc va gio; khong co o chu.
   await a.setViewportSize({ width: 1280, height: 900 });
-  await a.goto(`/sach/${id}`);
+  await docSach(a, id);
   expect(await chuDaGui(a)).toBe(daChuan);
   const gio = (await khung(a).locator("figcaption time").textContent()) ?? "";
   await expect(khung(a).locator("figcaption")).toHaveText(`${tenCuaB} gửi ${gio}`);
@@ -123,7 +123,7 @@ test("khung theo luot cua to dang hien: mot trang, hai trang (theo trang phai), 
   await dangToThang(id, "Tờ bốn");
 
   await b.setViewportSize({ width: 375, height: 812 });
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const dau = khung(b).locator(".meta").first();
   const dem = b.locator(".doc__dem");
   // Lat mot to va doi khung dung yen (bo dem cua sach doi) roi moi lat tiep: bam doi trong luc lat se bi gop.
@@ -153,7 +153,7 @@ test("khung theo luot cua to dang hien: mot trang, hai trang (theo trang phai), 
 
   // Hai trang: to 1 va to 2 thuoc hai luot, khung theo to ben phai.
   await b.setViewportSize({ width: 1280, height: 900 });
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(dem).toHaveText("Trang 1-2 / 4");
   await expect(dau).toHaveText("Dành cho trang 2 tới 3");
   await lat("Trang sau", "Trang 3-4 / 4");
@@ -167,10 +167,10 @@ test("luot con niem phong: nguoi doc chi thay dong nhac, khong co o chu", async 
   await dangKemNiemPhong(a, ["Em tới sớm hơn giờ hẹn.", "Chuyện chưa kể ai nghe."], {
     kind: "cau-do", question: "Quán tên gì?", answers: ["Quán Mây"], hints: [],
   });
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(khung(b).getByText("Mở niêm phong để hồi đáp.")).toBeVisible();
   await expect(khung(b).getByLabel("Viết lời hồi đáp")).toHaveCount(0);
-  await a.goto(`/sach/${id}`);
+  await docSach(a, id);
   await expect(khung(a).getByText("Chưa có lời hồi đáp.")).toBeVisible();
 });
 
@@ -179,13 +179,13 @@ test("sach rieng tu va sach chia se chua co to: khong co khung, khong co cot pha
   const { a } = await haiNguoiDaVao(browser);
   const rieng = await taoSach(a, "Cuốn riêng", "rieng-tu");
   await dangToThang(rieng, "Tờ một");
-  await a.goto(`/sach/${rieng}`);
+  await docSach(a, rieng);
   await expect(a.locator(".doc__khung")).toBeVisible();
   await expect(khung(a)).toHaveCount(0);
   await expect(a.locator(".doc-luoi")).toHaveCount(0);
 
   const trong = await taoSach(a, "Cuốn mới", "chia-se");
-  await a.goto(`/sach/${trong}`);
+  await docSach(a, trong);
   await expect(a.getByRole("heading", { name: "Chưa có trang nào." })).toBeVisible();
   await expect(khung(a)).toHaveCount(0);
   await expect(a.locator(".doc-luoi")).toHaveCount(0);
@@ -199,7 +199,7 @@ test("bon be rong va man rong: khung duoi sach khi hep, ben phai sach khi rong; 
 
   for (const width of BE_RONG) {
     await b.setViewportSize({ width, height: 900 });
-    await b.goto(`/sach/${id}`);
+    await docSach(b, id);
     await expect(khung(b).getByLabel("Viết lời hồi đáp")).toBeVisible();
     const [sach, k] = await Promise.all([hop(b.locator(".doc__khung")), hop(khung(b))]);
     expect(k.y, `${width}: khung nam duoi cuon sach`).toBeGreaterThanOrEqual(sach.y + sach.height);
@@ -217,7 +217,7 @@ test("bon be rong va man rong: khung duoi sach khi hep, ben phai sach khi rong; 
   }
 
   await b.setViewportSize({ width: 1280, height: 900 });
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const [sach, k] = await Promise.all([hop(b.locator(".doc__khung")), hop(khung(b))]);
   expect(k.x, "1280: khung o cot phai").toBeGreaterThanOrEqual(sach.x + sach.width);
   expect(k.y, "1280: khung dung canh sach").toBeLessThan(sach.y + sach.height);

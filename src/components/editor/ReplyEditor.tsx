@@ -16,7 +16,8 @@ import { measureOneSheet, useOneSheet } from "./useOneSheet";
 
 export type ReplyEditorProps = {
   sealId: string;
-  bookId: string;
+  /** Lien ket "Về sách": to dau cua trang niem phong dang tra loi, mo thang khong qua tam bia. */
+  veHref: string;
   bookTitle: string;
   /** Biet danh chu sach, nguoi dat cau hoi. */
   ownerName: string;
@@ -44,7 +45,7 @@ function xoaTam(sealId: string): void {
  * hai thi khoa nut gui. Chong mat chu bang ban luu tam trong sessionStorage cua the dang mo
  * va canh bao beforeunload.
  */
-export function ReplyEditor({ sealId, bookId, bookTitle, ownerName, question }: ReplyEditorProps) {
+export function ReplyEditor({ sealId, veHref, bookTitle, ownerName, question }: ReplyEditorProps) {
   const [ask, setAsk] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -150,7 +151,7 @@ export function ReplyEditor({ sealId, bookId, bookTitle, ownerName, question }: 
     <div className="viet">
       <div className="viet-tren">
         <header className="viet-dau">
-          <Link className="nav__link" href={`/sach/${bookId}`}>Về sách</Link>
+          <Link className="nav__link" href={veHref}>Về sách</Link>
           <h1 className="viet-dau__ten d">Trang trả lời</h1>
           <div className="viet-dau__phai">
             {/* output mang san vai status: doi Vua mot trang / Da tran thi trinh doc man hinh doc lai. */}

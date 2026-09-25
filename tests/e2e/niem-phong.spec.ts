@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 import { conTroKhi, dangKemNiemPhong, gioSau, khongLo, luiGioMo, luiMocThu, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -63,7 +63,7 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   });
   const [s] = await niemPhongCua(id);
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(b.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   await expect(b.locator(".sach .giay-noi-dung p").first()).toHaveText(HE_LO);
   const khung = b.getByRole("region", { name: "Câu đố", exact: true });
@@ -92,7 +92,7 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await khongLo(b, BI_MAT, DAI, "quan may", GOI_Y_1, GOI_Y_2);
 
   // Ve URL khong co mo, de lan chuyen trang cua dap an dung doi URL that.
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const traLoi = async (chuoi: string, sau: string) => {
     await khung.getByLabel("Câu trả lời").fill(chuoi);
     await khung.getByRole("button", { name: "Mở trang" }).click();
@@ -221,7 +221,7 @@ test("trao doi: gui trang tra loi thi nghi thuc chay that, tai lai trong tab thi
   await dangKemNiemPhong(a, [HE_LO, BI_MAT, DAI], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" });
   const [s] = await niemPhongCua(id);
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const traoDoi = b.getByRole("region", { name: "Trao đổi", exact: true });
   await expect(traoDoi).toBeVisible();
   await khongLo(b, BI_MAT, DAI);
@@ -254,7 +254,7 @@ test("tang chia khoa: chuyen trang khong kem mo; tab cu cua nguoi kia gui dap an
   const [s] = await niemPhongCua(id);
 
   // Tab cua nguoi kia mo truoc khi duoc tang, o tra loi con dung duoc.
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const khung = b.getByRole("region", { name: "Câu đố", exact: true });
   await expect(khung.getByLabel("Câu trả lời")).toBeEnabled();
 

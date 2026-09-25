@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangTrang, dongContextCu, haiNguoiDaVao, nhapCua, taoSach } from "./kho-sach";
+import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, nhapCua, taoSach } from "./kho-sach";
 import { khongTranNgang, maTaiMedia, themAnh, toCuaKhoi } from "./media";
 
 test.beforeEach(async () => {
@@ -30,7 +30,7 @@ test("them anh o man viet: luu nhap, dang, man doc tai duoc, nguoi kia cua sach 
   expect(await maTaiMedia(a, anhId)).toBe(200);
   await khongTranNgang(a, "man doc co anh");
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(b.locator(`.sach img[src="/m/${anhId}"]`)).toBeVisible();
   expect(await maTaiMedia(b, anhId), "nguoi kia doc duoc sach chia se nen tai duoc anh").toBe(200);
 });

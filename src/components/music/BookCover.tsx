@@ -4,9 +4,8 @@ import { CoverArt } from "@/components/book/CoverArt";
 import { CoverImage } from "@/components/book/CoverImage";
 
 /**
- * Tam bia cua sach co nhac, truoc cu bam Mo sach: tranh bia (bia tu tai len phu len tranh), chu sach va ten sach. The Nhac nen ngay canh da
- * noi cuon nay co nhac. Khong so trang, khong so trang khoa, khong dong he lo: nhung thu do thuoc dau man doc, hien
- * sau khi mo.
+ * Tam bia cua moi cuon truoc cu bam "Mở sách" (co nhac hay khong): tranh bia (bia tu tai len phu len tranh), chu sach va
+ * ten sach. Khong so trang, khong so trang khoa, khong dong he lo: nhung thu do thuoc dau man doc, hien sau khi mo.
  */
 export function BookCover({ title, cover, coverMediaId, owner }: { title: string; cover: CoverKey; coverMediaId?: string | null; owner: string }) {
   return (

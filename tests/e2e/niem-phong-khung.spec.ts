@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -21,7 +21,7 @@ test("cau do: nguoi kia tra loi sai thay so lan con lai; chu sach thay nhat ky g
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangKemNiemPhong(a, [HE_LO, BI_MAT], { kind: "cau-do", question: "Quán tên gì?", answers: ["Quán Mây"], hints: ["Trên trời có"] });
 
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   const cauDo = b.getByRole("region", { name: "Câu đố", exact: true });
   await expect(cauDo.locator(".thu-thach__dau .meta")).toHaveText(`${tenCuaA} đóng trang 1 bằng một câu đố.`);
   expect((await cauDo.boundingBox())?.width).toBeLessThanOrEqual(640);
@@ -91,12 +91,12 @@ test("hen gio: ca hai thay dong ho, khong co nut tang chia khoa, 3000 ngay van v
   expect(hinh.filter((h) => h.tran)).toEqual([]);
   expect(await tranNgang(a)).toEqual([]);
 
-  await b.goto(`/sach/${hen}`);
+  await docSach(b, hen);
   await expect(b.getByRole("region", { name: "Hẹn giờ" }).locator(".thu-thach__dau .meta")).toHaveText(`${tenCuaA} hẹn ngày mở cho trang 1.`);
 
   const doi = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangKemNiemPhong(a, [HE_LO, BI_MAT], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" });
-  await b.goto(`/sach/${doi}`);
+  await docSach(b, doi);
   const traoDoi = b.getByRole("region", { name: "Trao đổi", exact: true });
   await expect(traoDoi.locator(".cau-hoi__chu")).toHaveText("Hôm đó em nghĩ gì?");
   const [s] = await niemPhongCua(doi);

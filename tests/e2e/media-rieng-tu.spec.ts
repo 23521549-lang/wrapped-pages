@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangTrang, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
+import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, luiGioMo, niemPhongCua } from "./niem-phong";
 import { maTaiMedia, themAnh } from "./media";
 
@@ -45,7 +45,7 @@ test("route /m: to cau do mo ra sau khi tra loi dung, to hen gio khoa ca chu sac
   expect(await maTaiMedia(a, anhKhoa), "cau do khong khoa chu sach").toBe(200);
 
   const [cauDo] = await niemPhongCua(chung);
-  await b.goto(`/sach/${chung}`);
+  await docSach(b, chung);
   const khung = b.getByRole("region", { name: "Câu đố", exact: true });
   await khung.getByLabel("Câu trả lời").fill("quán mây");
   await khung.getByRole("button", { name: "Mở trang" }).click();

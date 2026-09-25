@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { tranNgang } from "./kho-sach";
+import { moSach, tranNgang } from "./kho-sach";
 
 /*
  * Buoc do dung chung cho vung bam 44px va tran ngang tren moi man. Ca hai do deu chung mot buoc di qua
@@ -128,7 +128,8 @@ export async function vungBamNho(page: Page, mienTru: MienTru[] = []): Promise<s
  * phep do 11.3 va 11.4 chay tren cung mot buoc duyet.
  *
  * Lay duong tu href THAT thay vi doan ma sach, nen khong phu thuoc cuon nao dang mo:
- * - man doc: lien ket cua cuon dau tien tren ke (moi cuon tren ke la mot lien ket toi man doc, ShelfBook.tsx);
+ * - tam bia va man doc: lien ket cua cuon dau tien tren ke (moi cuon tren ke la mot lien ket toi man doc, ShelfBook.tsx),
+ *   mo ra tam bia; bam "Mở sách" thi toi man doc;
  * - trang Viet tiep: nut "Viet tiep" cua cuon sach mo (src/app/ke-sach/page.tsx: nut do chi co khi trang gan nhat la
  *   cuon cua chinh nguoi xem). Man viet la man ma trang do gui toi, cung cuon;
  * - hai trang Dau thoi gian: muc cua thanh dieu huong, roi dong dau tien cua trang chon cuon.
@@ -154,7 +155,10 @@ export async function doMoiManChinh(page: Page, phepDo: (p: Page) => Promise<str
     throw new Error("doMoiManChinh: thanh dieu huong khong co muc 'Dau thoi gian'");
   }
 
+  // Cuon tren ke mo qua tam bia (chu du an chot 26/09): do ca tam bia lan man doc sau khi bam "Mở sách".
   await page.goto(docHref);
+  expect(await phepDo(page), "tam bia").toEqual([]);
+  await moSach(page);
   expect(await phepDo(page), "man doc").toEqual([]);
 
   await page.goto(vietTiepHref);

@@ -35,6 +35,9 @@ export default async function KeSach() {
   const recent = shelf.find((b) => b.pageCount > 0);
   // Dong thoi gian bia doc cho DUNG MOT cuon: chi khung sach lon moi tu doi bia, the tren ke luon giu bia moi nhat.
   const biaCuaKhung = recent === undefined ? [] : (await coverSlots(db, recent.id)).flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]));
+  // Ca khung sach lon lan nut "Đọc tiếp" cua no mo thang to cua doan trich, khong qua tam bia (chu du an chot 26/09: tam
+  // bia la loi vao tu ke, con khung sach lon dua thang toi dung trang).
+  const docKhung = recent === undefined ? "" : `/sach/${recent.id}?trang=${recent.excerptPosition}`;
   // Khong ai giu tam trang thi dai troi khong hien, tuc khong con nut tam dung nao tren trang: khung bia tu dat mot nut.
   const coDaiTroi = minh !== null || kia !== null;
   const fresh = shelf.reduce((n, b) => n + b.newCount, 0);
@@ -98,14 +101,14 @@ export default async function KeSach() {
                     dauHref={`/dau-thoi-gian/${recent.id}`}
                     pageCount={recent.pageCount}
                     position={recent.excerptPosition}
-                    readHref={`/sach/${recent.id}?trang=${recent.excerptPosition}`}
+                    readHref={docKhung}
                     when={when(recent)}
                     excerpt={recent.excerpt}
                     locked={recent.excerptLocked}
                     isPrivate={recent.mode === "rieng-tu"}
                     action={recent.mine
                       ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet-tiep` }
-                      : { label: "Đọc tiếp", href: `/sach/${recent.id}` }}
+                      : { label: "Đọc tiếp", href: docKhung }}
                   />
                 )}
                 {hoatDong}

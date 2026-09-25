@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DocView } from "@/components/doc/DocView";
 import { GIAM_CHUYEN_DONG, msTuCss } from "@/components/reader/Flipbook";
+import { VUNG_SACH } from "@/components/reader/MoSach";
 import { docCharCount } from "@/lib/doc/text";
 import type { DocJson } from "@/lib/doc/types";
 
@@ -11,7 +12,6 @@ const GO_MAC_DINH = 18;
 const NHAY_MAC_DINH = 1000;
 
 /** Vung sach cua Flipbook: nhan focus khi nghi thuc xong. */
-const VUNG_SACH = ".doc__khung";
 
 /** Doc mot token thoi gian. Ban build viet lai "18ms" thanh ".018s", nen phai qua msTuCss, khong parseFloat. */
 function tokenMs(ten: string, macDinh: number): number {

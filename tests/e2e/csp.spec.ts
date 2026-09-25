@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
+import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
 import { anhPng, giaMicro, tepMau } from "./media";
 import { batMayHong, GOC_MAY_HONG } from "./may-hong";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
@@ -225,7 +225,7 @@ test("khong mot vi pham CSP nao tren cac man chinh, ke ca o man viet va man doc"
 
   // Trang tra loi (trinh viet thu hai), mo bang CHUYEN TRANG ben trong ung dung nhu nguoi dung that: tai lieu
   // khong tai lai nen nonce phai la nonce cua lan tai dau tien, khong phai cua lan lay du lieu RSC.
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await b.getByRole("link", { name: "Viết trang trả lời" }).click();
   await expect(b).toHaveURL(new RegExp(`/sach/${id}/tra-loi/${s.id}$`));
   await expect(b.getByRole("heading", { level: 1, name: "Trang trả lời" })).toBeVisible();

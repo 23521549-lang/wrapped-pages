@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { dangToThang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 
 /*
  * Mo man doc thang toi mot to xa chi tinh dung nhung to that su hien: cac to bi nhay coc van la trang moi tren ke.
@@ -32,7 +32,7 @@ test("mo thang toi to 5: chi to do duoc tinh, cac to bi nhay coc van la trang mo
   await expect(the.locator(".dh--moi")).toHaveText("5 trang mới");
 
   // Mo lai khong kem ?trang: to nho nhat chua thay la to 1, khong phai to 6.
-  await b.goto(`/sach/${id}`);
+  await docSach(b, id);
   await expect(b.locator(".doc__dem")).toHaveText("Trang 1 / 6");
   // Doi tung khung duoc ghi xong roi moi lat tiep: Reader co y chi gui khung dung lai that su, lat lien tay qua mot to
   // thi to do khong duoc tinh.

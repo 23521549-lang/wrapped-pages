@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { dangToThang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -22,9 +22,10 @@ test("nguoi kia: the co trang moi, mo o to dau chua thay, lat het, quay lai thi 
   const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
   await expect(ganNhat).toContainText("Chuyện chưa kể");
   await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveCount(0);
+  // Nut "Đọc tiếp" cua khung sach lon mo thang to cua doan trich, khong qua tam bia (chu du an chot 26/09).
   await ganNhat.getByRole("link", { name: "Đọc tiếp" }).click();
 
-  await expect(b).toHaveURL(new RegExp(`/sach/${id}$`));
+  await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
   await expect(b.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 3 trang`);
   await expect(b.getByRole("link", { name: "Sửa sách" })).toHaveCount(0);
   const dem = b.locator(".doc__dem");
@@ -98,12 +99,12 @@ test("sach rieng tu cua nguoi kia va ma rac la 404; cuon chua co to thi hien loi
   expect((await b.goto(`/sach/${rieng}`))?.status()).toBe(404);
   expect((await b.goto("/sach/khong-phai-ma-sach"))?.status()).toBe(404);
 
-  await b.goto(`/sach/${chung}`);
+  await docSach(b, chung);
   await expect(b.getByRole("heading", { name: "Chưa có trang nào." })).toBeVisible();
   await expect(b.getByText(`${tenCuaA} chưa đăng trang nào trong cuốn này.`)).toBeVisible();
   await expect(b.getByRole("link", { name: "Viết trang đầu" })).toHaveCount(0);
 
-  await a.goto(`/sach/${rieng}`);
+  await docSach(a, rieng);
   await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 0 trang · Chỉ mình bạn đọc`);
   await expect(a.getByRole("link", { name: "Viết trang đầu" })).toHaveAttribute("href", `/sach/${rieng}/viet-tiep`);
 });

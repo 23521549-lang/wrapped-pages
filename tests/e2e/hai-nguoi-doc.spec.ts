@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangTrang, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, vietTranTrang } from "./kho-sach";
+import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, vietTranTrang } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -88,7 +88,7 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     await expect(b.locator("main")).not.toContainText("Cuốn không đặt tên");
     await expect(b.locator("main")).not.toContainText("Nháp chưa đăng");
     expect((await b.goto(`/sach/${rieng}`))?.status()).toBe(404);
-    await b.goto(`/sach/${id}`);
+    await docSach(b, id);
     await expect(b.locator(".doc__dem")).toBeVisible();
     await expect(b.locator("main")).not.toContainText("Nháp chưa đăng");
     await b.goto("/ban-nhap");
