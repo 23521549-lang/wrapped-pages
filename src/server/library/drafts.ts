@@ -101,15 +101,25 @@ export async function setDraftTrim(
   });
 }
 
-/** Ban nhap cua mot cuon. Voi nguoi khong phai chu, no nhu khong ton tai. */
+/**
+ * Ban nhap cua mot cuon, kem hai o bia va nhac ma trang Viet tiep da chon cho luot sap dang. Doc mot dong duy nhat: hai
+ * noi goi (trang Viet tiep de dien san, buoc dang de bao lai) can dung dong nay, nen khong co ham doc thu hai.
+ * Voi nguoi khong phai chu, no nhu khong ton tai.
+ */
 export async function readDraft(db: AnyDb, ownerId: string, bookId: string) {
   const book = await findOwnBook(db, ownerId, bookId);
   if (!book) return null;
   const [row] = await db
-    .select({ content: drafts.content, sheetCount: drafts.sheetCount, updatedAt: drafts.updatedAt })
+    .select({
+      content: drafts.content, sheetCount: drafts.sheetCount, updatedAt: drafts.updatedAt,
+      cover: drafts.cover, coverMediaId: drafts.coverMediaId, youtubeId: drafts.youtubeId, dropTrack: drafts.dropTrack,
+    })
     .from(drafts)
     .where(eq(drafts.bookId, book.id));
-  return row ?? null;
+  if (row === undefined) return null;
+  // row la vat the moi cua rieng truy van nay, khong ai khac giu tham chieu, nen gom bon cot kia thanh trim ngay tren no.
+  const { cover, coverMediaId, youtubeId, dropTrack, ...phan } = row;
+  return Object.assign(phan, { trim: { cover, coverMediaId, youtubeId, dropTrack } satisfies DraftTrim });
 }
 
 export type DraftItem = {

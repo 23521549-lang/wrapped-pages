@@ -413,3 +413,44 @@ describe("doc sach va cac to da xem", () => {
     expect(rows).toHaveLength(0);
   });
 });
+
+/*
+ * Trang Viet tiep va buoc dang deu can dung dong drafts ma readDraft von da doc, nen hai o bia va nhac cua luot sap
+ * dang di kem chinh lan doc do chu khong co mot ham doc thu hai.
+ */
+describe("readDraft mang theo hai o cua luot sap dang", () => {
+  it("tra dung lua chon ma trang Viet tiep da luu", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: "aaaaaaaaaaa", dropTrack: false })).toBe("saved");
+    expect((await readDraft(db, seat1.id, chung))?.trim)
+      .toEqual({ cover: "hoa-dao", coverMediaId: null, youtubeId: "aaaaaaaaaaa", dropTrack: false });
+  });
+
+  it("nhap chua chon gi thi bon gia tri deu trong", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await saveDraft(db, seat1.id, chung, to("mot dong"), 1)).toBeInstanceOf(Date);
+    expect((await readDraft(db, seat1.id, chung))?.trim)
+      .toEqual({ cover: null, coverMediaId: null, youtubeId: null, dropTrack: false });
+  });
+
+  it("o go nhac doc lai duoc, khac han o chua dung toi nhac", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: null, coverMediaId: null, youtubeId: null, dropTrack: true })).toBe("saved");
+    expect((await readDraft(db, seat1.id, chung))?.trim.dropTrack).toBe(true);
+  });
+
+  it("noi dung va so to van tra ve nhu cu", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    expect(await saveDraft(db, seat1.id, chung, to("Mưa"), 3)).toBeInstanceOf(Date);
+    const d = await readDraft(db, seat1.id, chung);
+    expect(d?.content).toEqual(to("Mưa"));
+    expect(d?.sheetCount).toBe(3);
+    expect(d?.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it("voi nguoi kia van la khong ton tai", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    expect(await setDraftTrim(db, seat1.id, chung, { cover: "hoa-dao", coverMediaId: null, youtubeId: null, dropTrack: false })).toBe("saved");
+    expect(await readDraft(db, seat2.id, chung)).toBeNull();
+  });
+});
