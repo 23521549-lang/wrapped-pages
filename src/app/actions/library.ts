@@ -4,13 +4,14 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { db } from "@/server/db";
 import { createBook, findOwnBook, updateBook } from "@/server/library/books";
-import { publishDraft, saveDraft } from "@/server/library/drafts";
+import { publishDraft, saveDraft, setDraftTrim } from "@/server/library/drafts";
 import { editRound, type RoundEditResult } from "@/server/library/edit-round";
 import { markRead } from "@/server/library/pages";
 import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
+import { setCoverEntry, setTrackEntry, type TimelineResult } from "@/server/library/timeline";
 import { readMe } from "@/server/web/guard";
 import { sweepMediaAfterResponse } from "@/server/web/media-sweep";
-import { parseBookInput, parseBookSettings } from "@/lib/book";
+import { parseBookInput, parseBookSettings, parseTrimInput } from "@/lib/book";
 import { groupThousands } from "@/lib/doc/counter";
 import {
   checkDraftInput, checkPublishInput, checkRoundInput, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS,
@@ -26,6 +27,18 @@ const LOI_XOA_SACH: Record<Exclude<DeleteBookResult, "deleted">, string> = {
   "has-pages": "Cuốn này đã có trang đăng nên không xóa được. Bạn vẫn bỏ được bản nháp.",
 };
 const KHONG_THAY_NHAP = "Không tìm thấy bản nháp này.";
+const BIA_SAI = "Chọn một bìa cho cuốn sách.";
+const O_NHAC_TRONG = "Dán một link YouTube, hoặc gỡ nhạc nền cho lượt này.";
+/*
+ * Cau bao cua ca nam duong ghi hai dong thoi gian. Mot bang duy nhat de chu cua cung mot ket qua khong lech nhau giua
+ * cac duong; khong duong nao sinh ra du bon gia tri, nhung moi gia tri deu co it nhat mot duong sinh ra no.
+ */
+const LOI_O: Record<Exclude<TimelineResult, "saved">, string> = {
+  "not-found": KHONG_THAY_SACH,
+  invalid: "Lựa chọn không dùng được. Chọn lại rồi lưu.",
+  "invalid-cover": BIA_KHONG_DUNG_DUOC,
+  "last-cover": "Mỗi cuốn phải còn ít nhất một bìa.",
+};
 const KHONG_THAY_LUOT = "Không tìm thấy lượt này.";
 /** Tran chu cua mot luot dung bang tran cua mot lan dang (PUBLISH_TOTAL_MAX_CHARS): mot luot chinh la mot lan dang. */
 const LUOT_DAI = `Lượt dài quá ${groupThousands(PUBLISH_TOTAL_MAX_CHARS)} ký tự.`;
@@ -184,4 +197,67 @@ export async function actionEditRound(bookId: string, roundId: unknown, sheets: 
   if (typeof r === "string") return { error: LOI_SUA_LUOT[r] };
   if (r.status === "saved") sweepMediaAfterResponse();
   redirect(`/sach/${bookId}?trang=${r.first}`);
+}
+
+/**
+ * Ghi lua chon bia va nhac cua LUOT SAP DANG roi mo man viet. Day la duong ghi duy nhat cua trang Viet tiep. Khong hen
+ * don rac: lua chon nay chua bo mot anh nao ra khoi cuon, va luat don moi khong bao gio don anh bia da thuoc mot cuon.
+ */
+export async function actionSetDraftTrim(bookId: string, formData: FormData) {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  const input = parseTrimInput(formData);
+  if ("error" in input) return input;
+  const r = await setDraftTrim(db, me.accountId, bookId, input);
+  if (r !== "saved") return { error: LOI_O[r] };
+  redirect(`/sach/${bookId}/viet`);
+}
+
+/**
+ * Dat hay doi MOT o bia cua dong thoi gian, tu mot dong trong muc "Bia theo lượt". roundId null la o mo dau. Moi o la
+ * mot lan gui rieng: nguoi dung sua tung o mot, va mot o hong khong duoc keo theo o khac. Xong thi lam moi trang dang
+ * mo chu khong chuyen trang, de ho sua tiep o khac.
+ */
+export async function actionSetCoverEntry(bookId: string, roundId: string | null, formData: FormData) {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  const input = parseTrimInput(formData);
+  if ("error" in input) return input;
+  if (input.cover === null) return { error: BIA_SAI };
+  const r = await setCoverEntry(db, me.accountId, bookId, roundId, { cover: input.cover, coverMediaId: input.coverMediaId });
+  if (r !== "saved") return { error: LOI_O[r] };
+  refresh();
+}
+
+/** Bo mot o bia khoi dong thoi gian. Anh van o lai trong kho cua cuon; bo o bia cuoi cung bi may chu tu choi. */
+export async function actionRemoveCoverEntry(bookId: string, roundId: string | null) {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  const r = await setCoverEntry(db, me.accountId, bookId, roundId, null);
+  if (r !== "saved") return { error: LOI_O[r] };
+  refresh();
+}
+
+/**
+ * Dat hay doi MOT o nhac. Dau go nhac la mot o that mang ma video null: tu luot do cuon khong con nhac nen. Ca hai deu
+ * trong thi khong co gi de ghi - mot o nhac rong khong co nghia, muon bo o thi dung duong bo o.
+ */
+export async function actionSetTrackEntry(bookId: string, roundId: string | null, formData: FormData) {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  const input = parseTrimInput(formData);
+  if ("error" in input) return input;
+  if (!input.dropTrack && input.youtubeId === null) return { error: O_NHAC_TRONG };
+  const r = await setTrackEntry(db, me.accountId, bookId, roundId, { youtubeId: input.dropTrack ? null : input.youtubeId });
+  if (r !== "saved") return { error: LOI_O[r] };
+  refresh();
+}
+
+/** Bo mot o nhac khoi dong thoi gian. Nhac khong co bat bien "luon con it nhat mot o", nen o nao cung bo duoc. */
+export async function actionRemoveTrackEntry(bookId: string, roundId: string | null) {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  const r = await setTrackEntry(db, me.accountId, bookId, roundId, null);
+  if (r !== "saved") return { error: LOI_O[r] };
+  refresh();
 }

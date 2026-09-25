@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { actionDeleteBook, actionDiscardDraft, actionEditRound, actionPublish, actionUpdateBook } from "@/app/actions/library";
+import {
+  actionDeleteBook, actionDiscardDraft, actionEditRound, actionPublish, actionRemoveCoverEntry, actionRemoveTrackEntry,
+  actionSetCoverEntry, actionSetDraftTrim, actionSetTrackEntry, actionUpdateBook,
+} from "@/app/actions/library";
 import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "@/app/actions/messages";
 import { DOC_LIMITS } from "@/lib/doc/validate";
 
@@ -14,7 +17,7 @@ import { DOC_LIMITS } from "@/lib/doc/validate";
 
 const {
   readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
-  sweepMediaAfterResponse, redirect, refresh,
+  sweepMediaAfterResponse, setDraftTrim, setCoverEntry, setTrackEntry, redirect, refresh,
 } = vi.hoisted(() => ({
   readMe: vi.fn(),
   updateBook: vi.fn(),
@@ -24,6 +27,9 @@ const {
   deleteUnpublishedBook: vi.fn(),
   discardDraft: vi.fn(),
   sweepMediaAfterResponse: vi.fn(),
+  setDraftTrim: vi.fn(),
+  setCoverEntry: vi.fn(),
+  setTrackEntry: vi.fn(),
   refresh: vi.fn(),
   redirect: vi.fn((to: string) => {
     // redirect that cua Next nem de moi thu sau no khong chay. Giu dung tinh chat do, neu khong thi test se do qua mot
@@ -33,7 +39,8 @@ const {
 }));
 vi.mock("@/server/web/guard", () => ({ readMe }));
 vi.mock("@/server/library/books", () => ({ createBook: vi.fn(), findOwnBook, updateBook }));
-vi.mock("@/server/library/drafts", () => ({ publishDraft, saveDraft: vi.fn() }));
+vi.mock("@/server/library/drafts", () => ({ publishDraft, saveDraft: vi.fn(), setDraftTrim }));
+vi.mock("@/server/library/timeline", () => ({ setCoverEntry, setTrackEntry }));
 vi.mock("@/server/library/edit-round", () => ({ editRound }));
 vi.mock("@/server/library/pages", () => ({ markRead: vi.fn() }));
 vi.mock("@/server/library/remove", () => ({ deleteUnpublishedBook, discardDraft }));
@@ -285,5 +292,137 @@ describe("actionEditRound", () => {
     const [dbGoi, ai, sach, luot, cacTo, moc] = editRound.mock.calls[0];
     expect([dbGoi, ai, sach, luot, cacTo]).toEqual([{ la: "db-gia" }, ME.accountId, BOOK, LUOT, [TO, TO]]);
     expect((moc as Date).getTime()).toBe(new Date(BASE).getTime());
+  });
+});
+
+/*
+ * Nam duong ghi cua trang Viet tiep va hai muc dong thoi gian. Truoc chang nay, setDraftTrim, setCoverEntry va
+ * setTrackEntry da viet xong va da kiem nhung KHONG CO NOI GOI NAO trong src/, nen san pham khong co cach nao doi bia
+ * hay nhac sau khi tao sach. Cac bai duoi la cong giu nam duong do.
+ */
+describe("dong thoi gian: nam duong ghi", () => {
+  const O_LUOT = "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d";
+  const NHAC = "https://youtu.be/dQw4w9WgXcQ";
+
+  /** Form cua trang Viet tiep hay cua mot dong trong hai muc: moi truong deu bo trong duoc. */
+  function oForm(fields: Record<string, string> = {}): FormData {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries({ cover: "", coverMedia: "", music: "", ...fields })) fd.set(k, v);
+    return fd;
+  }
+
+  it("chua dang nhap: khong duong nao cham database", async () => {
+    readMe.mockResolvedValue(null);
+    const loi = { error: CAN_DANG_NHAP };
+    expect(await goi(() => actionSetDraftTrim(BOOK, oForm()))).toEqual(loi);
+    expect(await goi(() => actionSetCoverEntry(BOOK, null, oForm({ cover: "nui-xa" })))).toEqual(loi);
+    expect(await goi(() => actionRemoveCoverEntry(BOOK, O_LUOT))).toEqual(loi);
+    expect(await goi(() => actionSetTrackEntry(BOOK, O_LUOT, oForm({ music: NHAC })))).toEqual(loi);
+    expect(await goi(() => actionRemoveTrackEntry(BOOK, O_LUOT))).toEqual(loi);
+    expect([setDraftTrim, setCoverEntry, setTrackEntry].every((f) => f.mock.calls.length === 0)).toBe(true);
+    expect([refresh.mock.calls.length, redirect.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  it("cuon cua nguoi kia: cung mot cau nhu cuon khong ton tai, khong lam moi trang", async () => {
+    readMe.mockResolvedValue(ME);
+    setDraftTrim.mockResolvedValue("not-found");
+    setCoverEntry.mockResolvedValue("not-found");
+    setTrackEntry.mockResolvedValue("not-found");
+    const loi = { error: KHONG_THAY_SACH };
+    expect(await goi(() => actionSetDraftTrim(BOOK, oForm()))).toEqual(loi);
+    expect(await goi(() => actionSetCoverEntry(BOOK, null, oForm({ cover: "nui-xa" })))).toEqual(loi);
+    expect(await goi(() => actionRemoveCoverEntry(BOOK, O_LUOT))).toEqual(loi);
+    expect(await goi(() => actionSetTrackEntry(BOOK, O_LUOT, oForm({ music: NHAC })))).toEqual(loi);
+    expect(await goi(() => actionRemoveTrackEntry(BOOK, O_LUOT))).toEqual(loi);
+    expect([refresh.mock.calls.length, redirect.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  it("luu o cua luot sap dang xong thi di thang sang man viet", async () => {
+    readMe.mockResolvedValue(ME);
+    setDraftTrim.mockResolvedValue("saved");
+    expect(await goi(() => actionSetDraftTrim(BOOK, oForm({ cover: "hoa-dao", music: NHAC })))).toEqual({ di: `/sach/${BOOK}/viet` });
+    expect(setDraftTrim.mock.calls[0].slice(1)).toEqual([
+      ME.accountId, BOOK, { cover: "hoa-dao", coverMediaId: null, youtubeId: "dQw4w9WgXcQ", dropTrack: false },
+    ]);
+  });
+
+  it("go nhac cho luot sap dang", async () => {
+    readMe.mockResolvedValue(ME);
+    setDraftTrim.mockResolvedValue("saved");
+    await goi(() => actionSetDraftTrim(BOOK, oForm({ dropTrack: "1" })));
+    expect(setDraftTrim.mock.calls[0][3]).toEqual({ cover: null, coverMediaId: null, youtubeId: null, dropTrack: true });
+  });
+
+  it("vua go nhac vua dan link bi chan ngay o bo kiem, khong cham database", async () => {
+    readMe.mockResolvedValue(ME);
+    const r = await goi(() => actionSetDraftTrim(BOOK, oForm({ music: NHAC, dropTrack: "1" })));
+    expect(r).toEqual({ error: "Bỏ dấu gỡ nhạc nếu bạn muốn dán một bản nhạc mới." });
+    expect(setDraftTrim).not.toHaveBeenCalled();
+  });
+
+  it("anh bia khong dung duoc nua: cau bao chon lai anh bia", async () => {
+    readMe.mockResolvedValue(ME);
+    setCoverEntry.mockResolvedValue("invalid-cover");
+    expect(await goi(() => actionSetCoverEntry(BOOK, null, oForm({ cover: "nui-xa", coverMedia: BIA }))))
+      .toEqual({ error: "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa." });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("bo o bia cuoi cung bi tu choi bang cau rieng cua no", async () => {
+    readMe.mockResolvedValue(ME);
+    setCoverEntry.mockResolvedValue("last-cover");
+    expect(await goi(() => actionRemoveCoverEntry(BOOK, O_LUOT))).toEqual({ error: "Mỗi cuốn phải còn ít nhất một bìa." });
+    expect(setCoverEntry.mock.calls[0].slice(1)).toEqual([ME.accountId, BOOK, O_LUOT, null]);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("sua mot o bia xong thi lam moi trang dang mo, khong chuyen trang", async () => {
+    readMe.mockResolvedValue(ME);
+    setCoverEntry.mockResolvedValue("saved");
+    expect(await goi(() => actionSetCoverEntry(BOOK, O_LUOT, oForm({ cover: "cau-go", coverMedia: BIA })))).toBeUndefined();
+    expect(setCoverEntry.mock.calls[0].slice(1)).toEqual([ME.accountId, BOOK, O_LUOT, { cover: "cau-go", coverMediaId: BIA }]);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("o bia phai co tranh du phong, khong the chi co anh", async () => {
+    readMe.mockResolvedValue(ME);
+    expect(await goi(() => actionSetCoverEntry(BOOK, O_LUOT, oForm({ coverMedia: BIA }))))
+      .toEqual({ error: "Chọn một bìa cho cuốn sách." });
+    expect(setCoverEntry).not.toHaveBeenCalled();
+  });
+
+  it("dat mot o nhac, va dat o go nhac", async () => {
+    readMe.mockResolvedValue(ME);
+    setTrackEntry.mockResolvedValue("saved");
+    expect(await goi(() => actionSetTrackEntry(BOOK, O_LUOT, oForm({ music: NHAC })))).toBeUndefined();
+    expect(setTrackEntry.mock.calls[0].slice(1)).toEqual([ME.accountId, BOOK, O_LUOT, { youtubeId: "dQw4w9WgXcQ" }]);
+    await goi(() => actionSetTrackEntry(BOOK, O_LUOT, oForm({ dropTrack: "1" })));
+    expect(setTrackEntry.mock.calls[1][4]).toEqual({ youtubeId: null });
+  });
+
+  it("o nhac rong khong co nghia: muon bo o thi bam Bo o nay", async () => {
+    readMe.mockResolvedValue(ME);
+    expect(await goi(() => actionSetTrackEntry(BOOK, O_LUOT, oForm())))
+      .toEqual({ error: "Dán một link YouTube, hoặc gỡ nhạc nền cho lượt này." });
+    expect(setTrackEntry).not.toHaveBeenCalled();
+  });
+
+  it("bo mot o nhac: nhac khong co luat o cuoi cung nen o mo dau cung bo duoc", async () => {
+    readMe.mockResolvedValue(ME);
+    setTrackEntry.mockResolvedValue("saved");
+    expect(await goi(() => actionRemoveTrackEntry(BOOK, null))).toBeUndefined();
+    expect(setTrackEntry.mock.calls[0].slice(1)).toEqual([ME.accountId, BOOK, null, null]);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("sua o khong hen don rac: luat don moi khong bao gio don anh bia da thuoc mot cuon", async () => {
+    readMe.mockResolvedValue(ME);
+    setCoverEntry.mockResolvedValue("saved");
+    setTrackEntry.mockResolvedValue("saved");
+    await goi(() => actionSetCoverEntry(BOOK, O_LUOT, oForm({ cover: "cau-go" })));
+    await goi(() => actionRemoveCoverEntry(BOOK, O_LUOT));
+    await goi(() => actionSetTrackEntry(BOOK, O_LUOT, oForm({ music: NHAC })));
+    await goi(() => actionRemoveTrackEntry(BOOK, O_LUOT));
+    expect(sweepMediaAfterResponse).not.toHaveBeenCalled();
   });
 });
