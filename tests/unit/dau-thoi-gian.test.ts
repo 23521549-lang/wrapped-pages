@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { docThangSach, gomTheoNgay, ngayMacDinh, thangMacDinh, type Dau } from "@/lib/dau-thoi-gian";
+import { baiPhatDuoc, docThangSach, gomTheoNgay, gomTheoThang, ngayMacDinh, thangMacDinh, xepTheoDong, type Dau } from "@/lib/dau-thoi-gian";
 
 /*
  * Trang Dau thoi gian dat hai dong thoi gian cua mot cuon len mot lich thang, cung khung voi Lich hoa (spec bo sung B4).
@@ -82,5 +82,41 @@ describe("doc tham so ?thang tu duong dan", () => {
     for (const raw of ["2026-4", "2026-13", "26-09", "2026-04", "2026-10", "2025-12", "", undefined, ["2026-06"]]) {
       expect(docThangSach(raw, TAO, NAY, MAC_DINH), String(raw)).toEqual(MAC_DINH);
     }
+  });
+});
+
+describe("xepTheoDong va gomTheoThang (lich doi thang tai cho, spec bo sung B4 ban hai)", () => {
+  it("xep theo luot, o mo dau truoc het, cung luot thi bia truoc nhac; khong dong vao mang goc", () => {
+    const goc = [nhac("n2", 2, vn(2026, 9, 1)), bia("b2", 2, vn(2026, 9, 1)), bia("mo", null, vn(2026, 8, 1))];
+    expect(xepTheoDong(goc).map((d) => d.key)).toEqual(["mo", "b2", "n2"]);
+    expect(goc.map((d) => d.key)).toEqual(["n2", "b2", "mo"]);
+  });
+
+  it("gom theo khoa thang roi theo ngay, giu thu tu dau vao", () => {
+    const dau = [
+      { key: "a", thang: "2026-08", ngay: 31 },
+      { key: "b", thang: "2026-09", ngay: 26 },
+      { key: "c", thang: "2026-09", ngay: 26 },
+      { key: "d", thang: "2026-09", ngay: 1 },
+    ];
+    const g = gomTheoThang(dau);
+    expect(Object.keys(g).sort()).toEqual(["2026-08", "2026-09"]);
+    expect(g["2026-09"][26].map((d) => d.key)).toEqual(["b", "c"]);
+    expect(g["2026-09"][1].map((d) => d.key)).toEqual(["d"]);
+    expect(g["2026-09"][2]).toBeUndefined();
+  });
+});
+
+describe("baiPhatDuoc", () => {
+  const ds = [{ youtubeId: "a" }, { youtubeId: null }, { youtubeId: "b" }];
+  it("bai phat duoc dau tien tu mot vi tri, bo qua o go nhac", () => {
+    expect(baiPhatDuoc(ds, 0)).toBe(0);
+    expect(baiPhatDuoc(ds, 1)).toBe(2);
+    expect(baiPhatDuoc(ds, -3)).toBe(0);
+  });
+  it("het bai, hay ngay chi co go nhac, hay ngay khong co nhac: -1", () => {
+    expect(baiPhatDuoc(ds, 3)).toBe(-1);
+    expect(baiPhatDuoc([{ youtubeId: null }], 0)).toBe(-1);
+    expect(baiPhatDuoc([], 0)).toBe(-1);
   });
 });

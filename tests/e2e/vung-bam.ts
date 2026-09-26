@@ -89,6 +89,9 @@ export async function vungBamNho(page: Page, mienTru: MienTru[] = []): Promise<s
           if (!Number.isFinite(ti) || ti < 0) continue;
         }
         if (bDisabled(el)) continue;
+        // Phan tu trong cay inert khong bam, khong focus duoc (vd trang nam duoi trinh xem bia cua Dau thoi gian): cung
+        // nhu nut dang tat, no khong phai mot vung bam. Nguong 44px cua moi vung bam that giu nguyen.
+        if (el.closest("[inert]")) continue;
         if (biAn(el)) continue;
 
         const the = el.tagName.toLowerCase();

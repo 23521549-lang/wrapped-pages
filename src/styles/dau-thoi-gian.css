@@ -1,0 +1,188 @@
+/* ==========================================================================
+   Dau thoi gian: trang chon cuon (/dau-thoi-gian) va trang cua mot cuon (LichDau.tsx, NhacNgay.tsx, XemBia.tsx).
+   Tep nay nap SAU tam-trang.css: lich dung lai khung Lich hoa (.thang, .lich, .tuan, .ngay) roi chinh lai o day, nen
+   cac luat cung do manh o day thang.
+   ========================================================================== */
+
+/* ---------- trang chon cuon ---------- */
+/* Trang chon cuon dung lai dong cua trang Ban nhap. Ca dong la vung bam: lien ket o ten sach duoc keo phu kin dong bang
+   ::after. Vong focus giu nguyen tren chinh lien ket: luat cua ca web la khong tat vong focus o dau trong app.css (co bai
+   kiem giu). */
+.dtg-dong{ position: relative; }
+.dtg-dong .nhap__ten::after{ content: ''; position: absolute; inset: 0; }
+/* Ten sach la cach duy nhat phan biet hai cuon tren trang chon, nen xuong dong tron ven thay vi cat bang dau ba cham
+   nhu dong cua trang Ban nhap. */
+.dtg-dong .nhap__ten{ white-space: normal; overflow-wrap: anywhere; }
+
+/* ---------- trang cua mot cuon: lich gon ben trai, cot phai rong (spec bo sung B4 ban hai) ---------- */
+.dtg-trang{ display: grid; grid-template-columns: minmax(0, 1fr) 30rem; gap: var(--space-xl); align-items: start; }
+.dtg-lich{ min-width: 0; }
+@media (max-width: 1000px){
+  .dtg-trang{ grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Lich gon hon Lich hoa: cot ten lan hep hon, lan bia vua mot xap bia nho, lan nhac chi cao bang mot hang cham. */
+.lich--dtg{ --nhan-w: 48px; --lan-bia: 40px; --lan-nhac: 18px; --xap-w: 42px; }
+.lich--dtg .lich__thu, .lich--dtg .tuan{ gap: 0 3px; }
+.lich--dtg .tuan{ padding-block: 5px; }
+.lich--dtg .tuan__nhan, .lich--dtg .ngay{ grid-template-rows: 22px var(--lan-bia) var(--lan-nhac); }
+.lich--dtg .tuan__nhan{ font-size: var(--text-xs); }
+/* Tuan con o tuong lai: chi mot dong so ngay, nhu Lich hoa (bo chon phai manh hon hai dong tren). */
+.lich--dtg .tuan--xa .tuan__nhan, .lich--dtg .tuan--xa .ngay{ grid-template-rows: 22px; }
+.dtg-trong{ width: 14px; height: 14px; }
+.dtg-trong--nhac{ width: 8px; height: 8px; }
+
+/* Xap bia nho: mot toi ba la xoe nghieng, la dau tien trong DOM (bia cua luot dau tien trong ngay) nam tren. */
+.dtg-xap{ position: relative; width: var(--xap-w); height: calc(var(--xap-w) * 2 / 3); }
+.dtg-xap__la{ position: absolute; inset: 2px 3px; border-radius: 3px; box-shadow: var(--bong-xap-la); }
+.dtg-xap__la:nth-child(1){ z-index: 3; }
+.dtg-xap__la:nth-child(2){ z-index: 2; transform: translate(-4px, 1px) rotate(-10deg); }
+.dtg-xap__la:nth-child(3){ z-index: 1; transform: translate(4px, 1px) rotate(9deg); }
+/* Cham nhac: moi lan doi nhac mot cham, toi da ba; go nhac la cham rong. */
+.dtg-cham{ display: flex; gap: 3px; }
+.dtg-cham__mot{ width: 6px; height: 6px; border-radius: 50%; background: var(--blue-ink); }
+.dtg-cham__mot--go{ background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-ink); }
+
+/* Cac nac be rong: o ngay o 320px van rong it nhat 36px (cong vung bam, mien tru o-ngay-lich). */
+@media (max-width: 600px){
+  .lich--dtg{ --nhan-w: 40px; }
+}
+@media (max-width: 420px){
+  .lich--dtg{ --nhan-w: 36px; --xap-w: 34px; }
+  .lich--dtg .lich__thu, .lich--dtg .tuan{ gap: 0 2px; }
+}
+/* Man rat hep: bo cot ten lan; dong chu .lich__chu cua Lich hoa noi hang nao la gi. */
+@media (max-width: 360px){
+  .lich--dtg{ --nhan-w: 0px; }
+}
+
+/* ---------- cot phai ---------- */
+.dtg-phu{ position: sticky; top: calc(var(--nav-cao) + var(--space-lg)); display: grid; gap: var(--space-lg); min-width: 0; }
+@media (max-width: 1000px){
+  .dtg-phu{ position: static; }
+}
+.dtg-the{ border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
+.dtg-ngay{ padding: var(--space-lg) var(--space-lg) 0; }
+.dtg-ngay h2{ font-size: var(--text-md); line-height: 1.3; }
+.dtg-ngay p{ margin-top: .15rem; font-size: var(--text-sm); color: var(--color-ink-2); }
+.dtg-khong-bia{ padding: var(--space-md) var(--space-lg) var(--space-lg); font-size: var(--text-sm); color: var(--color-ink-2); }
+
+/* Xap bia lon: diem nhan cua trang. Re chuot thi hai to sau xoe ra them mot chut (chi transform). */
+.dtg-xl{
+  display: block; width: 100%; padding: var(--space-lg) var(--space-lg) var(--space-md); border: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card); background: none; font: inherit; color: inherit;
+  text-align: left; cursor: zoom-in;
+}
+/* Hep hon the 2.5rem: hai to sau xoe ra (ke ca luc re chuot) van nam trong the o man hep nhat. */
+.dtg-xl__khung{ position: relative; display: block; width: min(calc(100% - 2.5rem), 22rem); aspect-ratio: 5 / 3; margin: .6rem auto 1.9rem; }
+.dtg-xl__to{
+  position: absolute; inset: 0; display: block; padding: 7px; border-radius: 6px; background: var(--color-paper);
+  box-shadow: var(--bong-the-bia); transition: transform var(--dur-long) var(--ease-out);
+}
+.dtg-xl__to > .bia{ display: block; width: 100%; height: 100%; border-radius: 3px; }
+.dtg-xl__to:nth-child(1){ z-index: 3; transform: rotate(-1.5deg); }
+.dtg-xl__to:nth-child(2){ z-index: 2; transform: translate(-14px, 6px) rotate(-7deg); }
+.dtg-xl__to:nth-child(3){ z-index: 1; transform: translate(16px, 8px) rotate(6deg); }
+.dtg-xl:hover .dtg-xl__to:nth-child(2){ transform: translate(-22px, 8px) rotate(-10deg); }
+.dtg-xl:hover .dtg-xl__to:nth-child(3){ transform: translate(24px, 10px) rotate(9deg); }
+.dtg-xl__chu{ display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2xs) var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-2); }
+.dtg-xl__chu b{ color: var(--color-ink); }
+
+/* ---------- the Nhac trong ngay ---------- */
+.dtg-nhac{ display: grid; gap: var(--space-md); padding: var(--space-lg); min-width: 0; }
+.dtg-nhac h3{ font-size: var(--text-base); line-height: 1.3; }
+/* Khung phat: 16:9, khong bao gio thap hon 200px (luat trinh phat YouTube); khong lop nao de len no. */
+.dtg-nhac__may{ position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 200px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-paper-3); }
+.dtg-nhac__may iframe{ position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.dtg-nhac__dang{ display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+/* Het cho cho ten bai thi CA CUM hai nut xuong hang duoi, khong ep ten bai thanh cot chu hep, khong tach doi hai nut. */
+.dtg-nhac__chu{ flex: 1 1 10rem; min-width: 0; }
+.dtg-nhac__nut{ display: flex; flex: none; gap: var(--space-sm); }
+.dtg-nhac__chu b{ display: block; line-height: 1.35; overflow-wrap: anywhere; }
+.dtg-nhac__chu span{ font-size: var(--text-sm); color: var(--color-ink-2); }
+.dtg-nhac__trong{ font-size: var(--text-sm); color: var(--color-ink-2); }
+.dtg-bai-ds{ display: grid; margin: 0; padding: 0; list-style: none; }
+.dtg-bai-ds > li + li{ border-top: 1px solid var(--color-rule); }
+.dtg-bai{
+  display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .1rem var(--space-sm); align-content: center;
+  width: 100%; min-height: 44px; padding: .6rem .5rem; border: 0; border-radius: var(--radius-sm); background: none;
+  font: inherit; color: inherit; text-align: left;
+}
+button.dtg-bai{ cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out); }
+button.dtg-bai:hover{ background: var(--color-paper-2); }
+.dtg-bai__so{ padding-top: .1rem; font-size: var(--text-sm); color: var(--color-ink-3); font-variant-numeric: tabular-nums; }
+.dtg-bai__ten{ font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+.dtg-bai__phu{ grid-column: 2; font-size: var(--text-sm); color: var(--color-ink-2); overflow-wrap: anywhere; }
+.dtg-bai--dang .dtg-bai__ten{ font-weight: 700; }
+.dtg-bai--go .dtg-bai__ten{ color: var(--color-ink-2); }
+/* Ba vach song o bai dang phat: chi chuyen dong khi trinh phat bao dang phat; tam dung thi dung yen. */
+.dtg-vach{ display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; vertical-align: -1px; }
+.dtg-vach i{ width: 3px; height: 4px; border-radius: 1px; background: var(--blue-ink); }
+.dtg-bai--chay .dtg-vach i{ animation: dtg-vach 900ms var(--ease-in-out) infinite alternate; }
+.dtg-bai--chay .dtg-vach i:nth-child(2){ animation-delay: -300ms; }
+.dtg-bai--chay .dtg-vach i:nth-child(3){ animation-delay: -600ms; }
+@keyframes dtg-vach{ to{ height: 12px; } }
+
+/* ---------- trinh xem bia ---------- */
+.dtg-xem{
+  position: fixed; inset: 0; z-index: var(--z-phu); display: grid; grid-template-columns: minmax(0, 1fr) 24rem;
+  width: auto; height: auto; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: none; color: inherit;
+  opacity: 0; transition: opacity var(--dur-nen-xem) var(--ease-out);
+}
+.dtg-xem--mo{ opacity: 1; }
+/* Tron trong srgb: tron voi transparent trong oklch lam lech sac do (giay xanh nhat ra hong nhat). Du duc de chu cua
+   trang phia sau khong lan vao chu thich cua bia, van con thay bong trang. */
+.dtg-xem__nen{ position: absolute; inset: 0; background: color-mix(in srgb, var(--color-paper) 97%, transparent); }
+.dtg-xem__giua{
+  position: relative; display: grid; place-items: center; align-content: center; gap: var(--space-lg); min-height: 0;
+  padding: var(--space-3xl) var(--space-lg) var(--space-xl); overflow-y: auto; overscroll-behavior: contain;
+}
+.dtg-xem__dong{ position: fixed; top: var(--space-lg); right: var(--space-lg); background: var(--color-paper); }
+.dtg-xem__dem{ font-family: var(--font-display); font-weight: 600; color: var(--color-ink-2); font-variant-numeric: tabular-nums; }
+.dtg-xem__boc{ position: relative; width: min(34rem, 100%); aspect-ratio: 5 / 3; }
+.dtg-the-bia{
+  position: absolute; inset: 0; padding: 12px; border: 0; border-radius: var(--radius-giay); background: var(--color-paper);
+  box-shadow: var(--bong-the-bia); cursor: pointer;
+  transition: transform var(--dur-the-bia) var(--ease-out), opacity var(--dur-the-bia) var(--ease-out);
+}
+.dtg-the-bia > .bia{ display: block; width: 100%; height: 100%; border-radius: 4px; }
+.dtg-the-bia[data-o="0"]{ z-index: 5; }
+.dtg-the-bia[data-o="1"]{ z-index: 4; transform: translate(-18px, 10px) rotate(-4deg) scale(.97); }
+.dtg-the-bia[data-o="2"]{ z-index: 3; transform: translate(20px, 14px) rotate(3.5deg) scale(.94); }
+.dtg-the-bia[data-o="3"]{ z-index: 2; transform: translate(0, 18px) scale(.91); opacity: 0; }
+/* The vua lat: luot sang phai va mo di, roi lui xuong cuoi xap. */
+.dtg-the-bia[data-o="-1"]{ z-index: 6; transform: translate(62%, -4%) rotate(10deg); opacity: 0; }
+.dtg-xem__chu{ display: grid; gap: .2rem; justify-items: center; text-align: center; }
+.dtg-xem__chu b{ font-family: var(--font-display); font-size: var(--text-md); font-weight: 600; }
+.dtg-xem__chu span{ font-size: var(--text-sm); color: var(--color-ink-2); }
+.dtg-xem__goi{ font-size: var(--text-sm); color: var(--color-ink-3); text-align: center; }
+.dtg-xem__goi-hep{ display: none; }
+.dtg-xem__chen{ display: none; }
+
+/* Trinh xem dang mo: the nhac (khi co trinh phat) noi len goc duoi, TREN lop nen, nhac van chay va van bam duoc. Cot
+   phai thoi dinh: mot khoi dinh tao lop xep chong rieng, lam z-index cua the nhac khong vuot duoc lop nen. */
+.dtg--xem .dtg-phu{ position: static; }
+.dtg--xem .dtg-nhac--may{ position: fixed; right: var(--space-lg); bottom: var(--space-lg); z-index: var(--z-phu-noi); width: 22rem; box-shadow: var(--shadow-lift); }
+
+/* Trang mot cot (tu 1000px tro xuong): the nhac nam giua day man hinh, chong bia o tren; trinh xem chua dung chieu cao
+   cua the nhac (XemBia do va dat --dtg-chen). */
+@media (max-width: 1000px){
+  .dtg-xem{ grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .dtg-xem__chen{ display: block; height: calc(var(--dtg-chen, 0px) + 24px); }
+  .dtg--xem .dtg-nhac--may{ left: 12px; right: 12px; bottom: 12px; width: auto; max-width: 26rem; margin-inline: auto; gap: var(--space-sm); padding: var(--space-md); }
+  .dtg--xem .dtg-nhac--may h3{ display: none; }
+}
+@media (max-width: 760px){
+  .dtg-xem__boc{ width: min(30rem, 100%); }
+  .dtg-xem__goi-rong{ display: none; }
+  .dtg-xem__goi-hep{ display: inline; }
+}
+
+/* Giam chuyen dong: the chi mo chong, khong truot; xap bia lon khong xoe; vach song dung yen. */
+@media (prefers-reduced-motion: reduce){
+  .dtg-xem, .dtg-the-bia{ transition: opacity 150ms linear; }
+  .dtg-the-bia[data-o="1"], .dtg-the-bia[data-o="2"], .dtg-the-bia[data-o="3"], .dtg-the-bia[data-o="-1"]{ transform: none; opacity: 0; }
+  .dtg-xl__to{ transition: none; }
+  .dtg-bai--chay .dtg-vach i{ animation: none; height: 8px; }
+  button.dtg-bai{ transition: none; }
+}

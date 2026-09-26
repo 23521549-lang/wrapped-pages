@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { dangToThang, datDauLuotMoi, datNhac, doiNgayTaoSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
 import { BE_RONG, BE_RONG_CHAM, vungBamNhoCoLich, type MienTru } from "./vung-bam";
-import { giaYoutube } from "./youtube-gia";
+import { baoYt, danhSachYt, giaYoutube } from "./youtube-gia";
+import { thangCua, thangKhoa, thangTruoc } from "@/lib/tam-trang/lich";
 
 /*
  * Trang Dau thoi gian va ba loi vao cua no (diem 15 va 17 cua chu du an): muc tren thanh dieu huong dan qua trang chon
@@ -10,6 +11,7 @@ import { giaYoutube } from "./youtube-gia";
  */
 
 const MA = "dQw4w9WgXcQ";
+const MA_HAI = "5qap5aO4i9A";
 
 /**
  * Mien tru vung bam (co ten va ly do; phan tu van duoc do, qua vung bam that cua no):
@@ -37,11 +39,11 @@ test("vao tu thanh dieu huong qua trang chon cuon, roi toi lich thang cua cuon d
   await a.getByRole("link", { name: "Chuyện chưa kể" }).click();
   await expect(a).toHaveURL(new RegExp(`/dau-thoi-gian/${id}$`));
   await expect(a.getByRole("heading", { level: 1, name: "Chuyện chưa kể" })).toBeVisible();
-  // Lich thang cung khung voi Lich hoa (spec bo sung B4): thang mo san la thang cua dau moi nhat, ngay chon san la ngay
-  // cua dau do, va khung chi tiet ke o mo dau.
+  // Lich thang cung khung voi Lich hoa (spec bo sung B4 ban hai): thang mo san la thang cua dau moi nhat, ngay chon san
+  // la ngay cua dau do, va the ngay ke o mo dau.
   await expect(a.getByRole("heading", { level: 2, name: /^Tháng [0-9]{1,2}, [0-9]{4}$/ })).toBeVisible();
-  await expect(a.locator(".ngay[aria-pressed='true'] .dtg-tem")).toBeVisible();
-  await expect(a.locator(".chi-tiet")).toContainText("Lúc tạo sách");
+  await expect(a.locator(".ngay[aria-pressed='true'] .dtg-xap")).toBeVisible();
+  await expect(a.locator(".dtg-ngay")).toContainText("1 lượt đăng: 1 bìa mới, 0 lần đổi nhạc.");
 });
 
 test("vao thang bang cach bam anh bia tren khung sach lon", async ({ browser }) => {
@@ -85,7 +87,7 @@ test("vao thang bang cach bam tieu de the Nhac nen o man doc", async ({ browser 
   await the.getByRole("link", { name: "Nhạc nền, xem dấu thời gian của cuốn này" }).click();
   await expect(a).toHaveURL(new RegExp(`/dau-thoi-gian/${id}$`));
   // O nhac mo dau hien o lan nhac cua ngay tao sach.
-  await expect(a.locator(".ngay[aria-pressed='true'] .dtg-not")).toBeVisible();
+  await expect(a.locator(".ngay[aria-pressed='true'] .dtg-cham")).toBeVisible();
 });
 
 test("cuon rieng tu cua nguoi kia: khong co trong trang chon cuon va trang cua no la 404", async ({ browser }) => {
@@ -142,7 +144,7 @@ test("re chuot tren anh bia thi bia khong tu doi", async ({ browser }) => {
   expect(await a.locator(".tranh-dan__bia").getAttribute("class")).toBe(truoc);
 });
 
-test("khung chi tiet: anh bia khong de len chu; trang chon cuon: ten sach dai xuong dong tron ven", async ({ browser }) => {
+test("xap bia lon khong de len chu; trang chon cuon: ten sach dai xuong dong tron ven", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
   const TEN = "Những bữa sáng ở quán cà phê cũ đầu ngõ";
   const id = await taoSach(a, TEN, "chia-se");
@@ -157,13 +159,145 @@ test("khung chi tiet: anh bia khong de len chu; trang chon cuon: ten sach dai xu
     const biCat = await ten.evaluate((el) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
     expect(biCat, `ten sach bi cat o ${w}px`).toBe(false);
 
-    // Thang mac dinh la thang cua dau moi nhat: o bia mo dau cua cuon vua tao.
+    // Thang mac dinh la thang cua dau moi nhat: o bia mo dau cua cuon vua tao. Cac to cua xap bia lon xoe nghieng ra
+    // ngoai khung cua no, nen do tung to: khong to nao cham toi dong chu ben duoi.
     await a.goto(`/dau-thoi-gian/${id}`);
-    const dong = a.locator(".dtg-ct__dong").first();
-    await expect(dong.locator(".dtg-ct__hinh svg")).toBeVisible();
-    const hinh = await dong.locator(".dtg-ct__hinh").boundingBox();
-    const chu = await dong.locator(".dtg-ct__chu").boundingBox();
-    if (!hinh || !chu) throw new Error("khong thay dong chi tiet");
-    expect(hinh.x + hinh.width, `anh bia de len chu o ${w}px`).toBeLessThanOrEqual(chu.x + 0.5);
+    const xl = a.getByRole("button", { name: "Xem 1 bìa của ngày này" });
+    await expect(xl.locator(".dtg-xl__to svg")).toBeVisible();
+    const day = await xl.locator(".dtg-xl__to").evaluateAll((cac) => Math.max(...cac.map((el) => el.getBoundingClientRect().bottom)));
+    const chu = await xl.locator(".dtg-xl__chu").boundingBox();
+    if (!chu) throw new Error("khong thay dong chu cua xap bia lon");
+    expect(day, `xap bia de len chu o ${w}px`).toBeLessThanOrEqual(chu.y + 0.5);
+  }
+});
+
+/** Thang truoc thang nay, theo gio Viet Nam, va 12 gio trua ngay 15 cua thang do. */
+const THANG_TRUOC = thangTruoc(thangCua(new Date()));
+const GIUA_THANG_TRUOC = new Date(Date.UTC(THANG_TRUOC.y, THANG_TRUOC.m - 1, 15, 5));
+
+/**
+ * Cuon co ba luot trong hom nay: luot 1 bia moi va bai MA, luot 2 bia moi va go nhac, luot 3 chi bai MA_HAI. Ngay tao
+ * sach lui ve giua thang truoc, nen o bia mo dau nam o thang truoc va lich co nut Tháng trước.
+ */
+async function cuonBaLuot(a: Page): Promise<string> {
+  const id = await taoSach(a, "Những bữa sáng", "chia-se");
+  await dangToThang(id, "Lượt một.");
+  await datDauLuotMoi(id, { cover: "chim-bay", youtubeId: MA });
+  await dangToThang(id, "Lượt hai.");
+  await datDauLuotMoi(id, { cover: "cau-go", youtubeId: null });
+  await dangToThang(id, "Lượt ba.");
+  await datDauLuotMoi(id, { youtubeId: MA_HAI });
+  await doiNgayTaoSach(id, GIUA_THANG_TRUOC);
+  return id;
+}
+
+/*
+ * Chu du an chot 26/09 (spec bo sung B4 ban hai): nhac chi tu phat khi bam mot ngay, phat tuan tu va bo qua go nhac;
+ * bam lai ngay dang phat thi phat tiep; xem bia va doi thang khong dung toi nhac; chi ngay khac moi doi (hay dung).
+ */
+test("nhac trong ngay: bam ngay moi phat tuan tu; xem bia va doi thang khong dung nhac; ngay khac thi dung", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  const id = await cuonBaLuot(a);
+  await giaYoutube(a);
+  await a.goto(`/dau-thoi-gian/${id}`);
+  const nhac = a.getByRole("region", { name: "Nhạc trong ngày" });
+  await expect(nhac.locator(".dtg-nhac__may iframe")).toBeAttached();
+  await expect(nhac.getByRole("listitem")).toHaveCount(3);
+  await expect(nhac.getByRole("listitem").nth(1)).toContainText("Gỡ nhạc nền");
+  // Vua mo trang: khong phat gi.
+  expect(await danhSachYt(a)).toEqual({ nap: [], dung: 0 });
+
+  // Bam ngay hom nay (dang chon san nhung chua phat bai nao): phat bai dau.
+  await a.locator(".ngay--nay").click();
+  await expect.poll(async () => (await danhSachYt(a)).nap).toEqual([MA]);
+  await baoYt(a, 1);
+  await expect(nhac.locator(".dtg-nhac__chu")).toContainText("Đang phát, lượt 1");
+  await expect(nhac.locator("[aria-current='true']")).toHaveCount(1);
+  // Het bai: sang bai ke, bo qua o go nhac.
+  await baoYt(a, 0);
+  await expect.poll(async () => (await danhSachYt(a)).nap).toEqual([MA, MA_HAI]);
+  // Bam lai dung ngay dang phat: phat tiep, khong nap lai.
+  await a.locator(".ngay--nay").click();
+  expect((await danhSachYt(a)).nap).toEqual([MA, MA_HAI]);
+
+  // Xem bia: chong the giua man hinh, lat bang phim, dong bang Esc; nhac khong bi dung.
+  await a.getByRole("button", { name: "Xem 2 bìa của ngày này" }).click();
+  const hop = a.getByRole("dialog", { name: /^Bìa trong ngày / });
+  await expect(hop).toBeVisible();
+  await expect(hop.locator(".dtg-xem__dem")).toHaveText("Bìa 1 / 2");
+  await expect(hop.getByRole("button", { name: /^Bìa 1 trên 2, lượt 1/ })).toBeFocused();
+  await a.keyboard.press("ArrowRight");
+  await expect(hop.locator(".dtg-xem__dem")).toHaveText("Bìa 2 / 2");
+  await expect(hop.getByRole("link", { name: "Đọc từ trang 2" })).toHaveAttribute("href", `/sach/${id}?trang=2`);
+  await a.keyboard.press("Escape");
+  await expect(hop).toHaveCount(0);
+  await expect(a.getByRole("button", { name: "Xem 2 bìa của ngày này" })).toBeFocused();
+  expect(await danhSachYt(a)).toEqual({ nap: [MA, MA_HAI], dung: 0 });
+
+  // Doi thang ngay tai cho: duong dan ghi thang, nhac khong dung, trinh phat van o do.
+  await a.getByRole("button", { name: "Tháng trước" }).click();
+  await expect(a.getByRole("heading", { level: 2, name: `Tháng ${THANG_TRUOC.m}, ${THANG_TRUOC.y}` })).toBeVisible();
+  await expect(a).toHaveURL(new RegExp(`[?]thang=${thangKhoa(THANG_TRUOC)}$`));
+  expect(await danhSachYt(a)).toEqual({ nap: [MA, MA_HAI], dung: 0 });
+  await expect(nhac.locator(".dtg-nhac__may iframe")).toBeAttached();
+
+  // Ngay khac khong co nhac (ngay tao sach): dung han, khong con trinh phat.
+  await a.getByRole("button", { name: new RegExp(`^15 tháng ${THANG_TRUOC.m}[.]`) }).click();
+  await expect.poll(async () => (await danhSachYt(a)).dung).toBe(1);
+  await expect(nhac).toContainText("Ngày này không đổi nhạc.");
+  await expect(nhac.locator(".dtg-nhac__may")).toHaveCount(0);
+
+  // Tai lai: duong dan mo dung thang da chon.
+  await a.reload();
+  await expect(a.getByRole("heading", { level: 2, name: `Tháng ${THANG_TRUOC.m}, ${THANG_TRUOC.y}` })).toBeVisible();
+});
+
+/** Phan tu tren cung o bon goc (lui vao 12px) va o giua khung phat nhac trong ngay. */
+function diemTrenKhung(page: Page): Promise<(string | undefined)[]> {
+  return page.evaluate(() => {
+    const khung = document.querySelector(".dtg-nhac__may iframe");
+    if (!khung) throw new Error("khong co khung phat");
+    const r = khung.getBoundingClientRect();
+    const diem = [[r.left + 12, r.top + 12], [r.right - 12, r.top + 12], [r.left + 12, r.bottom - 12], [r.right - 12, r.bottom - 12], [r.left + r.width / 2, r.top + r.height / 2]];
+    return diem.map(([x, y]) => document.elementFromPoint(x, y)?.tagName);
+  });
+}
+
+/*
+ * Luat trinh phat YouTube (CLAUDE.md, spec muc 5): khung it nhat 200x200 va khong lop nao de len no o bat ky be rong nao
+ * - ke ca khi trinh xem bia phu ca man hinh: luc do the nhac noi TREN lop nen, o goc man rong va trai ngang day man hep.
+ */
+test("khung phat nhac trong ngay: toi thieu 200x200, khong gi de len ca khi trinh xem bia mo, o nam be rong", async ({ browser }) => {
+  const { a } = await haiNguoiDaVao(browser);
+  const id = await cuonBaLuot(a);
+  await giaYoutube(a);
+  for (const w of [320, 375, 414, 768, 1280]) {
+    await a.setViewportSize({ width: w, height: 800 });
+    await a.goto(`/dau-thoi-gian/${id}`);
+    const khung = a.locator(".dtg-nhac__may iframe");
+    await expect(khung).toBeAttached();
+    await khung.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    const hop = await khung.boundingBox();
+    if (!hop) throw new Error("khong do duoc khung phat");
+    expect(Math.min(hop.width, hop.height), `${w}px: khung phat`).toBeGreaterThanOrEqual(200);
+    expect(await diemTrenKhung(a), `${w}px: trinh xem dong`).toEqual(Array(5).fill("IFRAME"));
+
+    await a.getByRole("button", { name: "Xem 2 bìa của ngày này" }).click();
+    await expect(a.getByRole("dialog")).toBeVisible();
+    expect(await diemTrenKhung(a), `${w}px: trinh xem mo`).toEqual(Array(5).fill("IFRAME"));
+    const noi = await khung.boundingBox();
+    if (!noi) throw new Error("khong do duoc khung phat luc noi");
+    expect(noi.y, `${w}px: the nhac noi nam tron trong khung nhin`).toBeGreaterThanOrEqual(0);
+    expect(noi.y + noi.height).toBeLessThanOrEqual(800);
+    expect(Math.min(noi.width, noi.height), `${w}px: khung phat luc noi`).toBeGreaterThanOrEqual(200);
+    // Bia khong nam duoi the nhac: the nhac khong che mat chong the.
+    const the = await a.locator(".dtg-the-bia[data-o='0']").boundingBox();
+    if (!the) throw new Error("khong thay the bia tren cung");
+    const chong = !(the.x + the.width <= noi.x || noi.x + noi.width <= the.x || the.y + the.height <= noi.y || noi.y + noi.height <= the.y);
+    expect(chong, `${w}px: the bia va the nhac chong len nhau`).toBe(false);
+    if (w === BE_RONG_CHAM || w === 320) expect(await vungBamNhoCoLich(a, MIEN_TRU), `${w}px: vung bam luc xem bia`).toEqual([]);
+    expect(await tranNgang(a), `${w}px: tran ngang luc xem bia`).toEqual([]);
+    await a.keyboard.press("Escape");
+    await expect(a.getByRole("dialog")).toHaveCount(0);
   }
 });

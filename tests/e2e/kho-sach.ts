@@ -209,6 +209,42 @@ export async function datNhac(bookId: string, youtubeId: string): Promise<void> 
 }
 
 /**
+ * Dat bia va/hoac nhac cho luot MOI NHAT cua mot cuon trong database e2e, thay cho chon bia va dan link nhac o trang
+ * Viet tiep. youtubeId null la o go nhac. Cung rao mqce_e2e voi datNhac.
+ */
+export async function datDauLuotMoi(bookId: string, dau: { cover?: string; youtubeId?: string | null }): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const [luot] = await sql<{ id: string }[]>`select id from rounds where book_id = ${bookId} order by published_at desc limit 1`;
+    if (!luot) throw new Error("datDauLuotMoi: cuon chua co luot nao");
+    if (dau.cover !== undefined) await sql`insert into book_covers (book_id, round_id, cover) values (${bookId}, ${luot.id}, ${dau.cover})`;
+    if (dau.youtubeId !== undefined) await sql`insert into book_tracks (book_id, round_id, youtube_id) values (${bookId}, ${luot.id}, ${dau.youtubeId})`;
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("datDauLuotMoi:"))) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Doi ngay tao cua mot cuon (o bia mo dau di theo, vi o mo dau lay gio tao sach), de lich Dau thoi gian co thang truoc. */
+export async function doiNgayTaoSach(bookId: string, luc: Date): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    await sql`update books set created_at = ${luc} where id = ${bookId}`;
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
  * Ma video cua o nhac MO DAU cua mot cuon trong database e2e; null khi cuon chua co o nhac nao hoac o do la o go nhac.
  * Chi doc de kiem. Thay cho phep "mo lai form sua sach, o nhac dien lai link ngan" cua bai da xoa: khong man nao con o
  * nhac de dien lai, nen doc thang thu may chu that su luu. Cung rao mqce_e2e voi datNhac.

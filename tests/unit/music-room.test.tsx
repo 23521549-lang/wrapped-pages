@@ -29,6 +29,8 @@ class PlayerGia {
     khiPhat();
   });
   readonly pauseVideo = vi.fn();
+  readonly loadVideoById = vi.fn();
+  readonly stopVideo = vi.fn();
   /** Khong tu go iframe: go khoi host la viec cua hook (host.replaceChildren), test "go ra" phai bat duoc khi thieu. */
   readonly destroy = vi.fn();
 

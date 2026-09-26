@@ -8,12 +8,15 @@ export const YT_API_SRC = "https://www.youtube.com/iframe_api";
 /** Trinh phat nhung tu mien nocookie. */
 export const YT_HOST = "https://www.youtube-nocookie.com";
 
-/** Ma trang thai cua onStateChange ma man doc phan biet; moi ma khac la khong phat. */
-export const YT_STATE = { PLAYING: 1, PAUSED: 2, BUFFERING: 3 } as const;
+/** Ma trang thai cua onStateChange ma web phan biet; moi ma khac la khong phat. ENDED chi den khi trinh phat khong lap. */
+export const YT_STATE = { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3 } as const;
 
 export type YTPlayer = {
   playVideo(): void;
   pauseVideo(): void;
+  /** Nap mot video khac vao CUNG trinh phat va phat ngay: danh sach nhac trong ngay cua trang Dau thoi gian. */
+  loadVideoById(videoId: string): void;
+  stopVideo(): void;
   destroy(): void;
   getIframe(): HTMLIFrameElement;
 };
@@ -21,7 +24,7 @@ export type YTPlayer = {
 export type YTPlayerEvent = { target: YTPlayer };
 export type YTDataEvent = YTPlayerEvent & { data: number };
 
-export type YTPlayerVars = { controls: 0; autoplay: 0; loop: 1; playlist: string; rel: 0; playsinline: 1 };
+export type YTPlayerVars = { controls: 0 | 1; autoplay: 0; loop: 0 | 1; playlist?: string; rel: 0; playsinline: 1 };
 
 export type YTPlayerOptions = {
   host: string;
@@ -49,6 +52,14 @@ declare global {
  */
 export function playerVars(videoId: string): YTPlayerVars {
   return { controls: 0, autoplay: 0, loop: 1, playlist: videoId, rel: 0, playsinline: 1 };
+}
+
+/**
+ * Tham so trinh phat cua nhac trong ngay (trang Dau thoi gian): hien nut dieu khien cua YouTube (tua, am luong) canh
+ * nut cua minh, KHONG lap de het bai bao ENDED va danh sach sang bai ke, khong tu phat, phat tai cho tren iOS.
+ */
+export function playerVarsDanhSach(): YTPlayerVars {
+  return { controls: 1, autoplay: 0, loop: 0, rel: 0, playsinline: 1 };
 }
 
 let dangNap: Promise<YTNamespace> | null = null;

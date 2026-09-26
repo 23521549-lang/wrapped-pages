@@ -288,6 +288,11 @@ const MIEN_TRU: MienTru[] = [
       // dang chon cua no dung --blue-line tren --blue-1 va dat nguong.
       ".tuan",
       ".chi-tiet",
+      // Dau thoi gian (LichDau.tsx, NhacNgay.tsx): khung the ngay va the Nhac trong ngay, va vach chia giua cac dong
+      // cua danh sach bai. Xap bia lon va moi dong bai la nut khong vien: nhan ra bang noi dung (tranh bia, ten bai)
+      // va vong focus; nut Phat, Bai ke tiep co vien rieng dat nguong.
+      ".dtg-the",
+      ".dtg-bai-ds > li + li",
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
       // phan tren cua chinh the, khong phai vien cua dieu khien nao.
       ".nhap__hoi",

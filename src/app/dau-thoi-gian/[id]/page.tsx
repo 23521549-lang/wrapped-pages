@@ -3,18 +3,21 @@ import { connection } from "next/server";
 import { db } from "@/server/db";
 import { findReadableBook } from "@/server/library/books";
 import { coverSlots, trackSlots } from "@/server/library/timeline";
+import { tenCacBai } from "@/server/media/ten-youtube";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { LichDau, type DauHien } from "@/components/dau-thoi-gian/LichDau";
-import { docThangSach, gomTheoNgay, ngayMacDinh, thangMacDinh, type Dau } from "@/lib/dau-thoi-gian";
+import { docThangSach, gomTheoNgay, ngayMacDinh, thangMacDinh, xepTheoDong, type Dau } from "@/lib/dau-thoi-gian";
 import { pageRange } from "@/lib/seal/reader";
-import { laThangNay, luoiThang, ngayTrongThang, soNgayCua, thangCua, thangKhoa, thangSau, thangTruoc } from "@/lib/tam-trang/lich";
+import { laThangNay, ngayTrongThang, soNgayCua, thangCua, thangKhoa } from "@/lib/tam-trang/lich";
 import { timeLabel } from "@/lib/when";
 
 /**
- * Dau thoi gian cua MOT cuon: hai dong thoi gian bia va nhac tren mot lich thang cung khung voi Lich hoa. Hai phep doc
- * chay song song, khong mot phep doc nao theo tung thang. Trang khong doc va khong hien mot chu nao cua noi dung to,
- * nen niem phong khong lien quan; "Đọc từ trang N" dan toi man doc, noi moi luat niem phong van giu nguyen.
+ * Dau thoi gian cua MOT cuon: hai dong thoi gian bia va nhac tren mot lich thang cung khung voi Lich hoa (spec bo sung
+ * B4 ban hai). Hai phep doc chay song song, khong mot phep doc nao theo tung thang: trang gui MOI dau cua cuon, da dung
+ * san chu, thang va ngay theo gio Viet Nam, de trinh duyet doi thang tai cho ma nhac khong bi ngat. Ten bai nhac lay tu
+ * YouTube o phia may chu (tenCacBai), lay khong duoc thi thoi. Trang khong doc va khong hien mot chu nao cua noi dung
+ * to, nen niem phong khong lien quan; "Đọc từ trang N" dan toi man doc, noi moi luat niem phong van giu nguyen.
  */
 export default async function DauThoiGianCuaSach({ params, searchParams }: {
   params: Promise<{ id: string }>;
@@ -38,28 +41,29 @@ export default async function DauThoiGianCuaSach({ params, searchParams }: {
   ];
 
   const thangNay = thangCua(now);
-  const thang = docThangSach(query.thang, thangCua(book.createdAt), thangNay, thangMacDinh(dau, now));
-  const nay = laThangNay(thang, now);
-  const homNay = nay ? ngayTrongThang(now) : null;
-  const theoNgay = gomTheoNgay(dau, thang);
+  const tao = thangCua(book.createdAt);
+  const thang = docThangSach(query.thang, tao, thangNay, thangMacDinh(dau, now));
+  const homNay = ngayTrongThang(now);
+  const ten = await tenCacBai(dau.flatMap((d) => (d.loai === "nhac" && d.youtubeId !== null ? [d.youtubeId] : [])));
 
   // Moi chu dung san o may chu, de lan ve dau cua trinh duyet khong lech voi HTML may chu gui xuong.
-  const hien = Object.fromEntries(Object.entries(theoNgay).map(([so, ds]) => [so, ds.map((d): DauHien => {
+  const hien = xepTheoDong(dau).map((d): DauHien => {
     const chung = {
       key: d.key,
       luot: d.ordinal === null ? "mo-dau" : `luot-${d.ordinal}`,
+      tenLuot: d.ordinal === null ? "Lúc tạo sách" : `Lượt ${d.ordinal}`,
       nhan: d.ordinal === null ? "Lúc tạo sách" : `Lượt ${d.ordinal}, ${pageRange(d.first ?? 0, d.last ?? 0)}`,
       gio: timeLabel(d.at),
       docHref: d.first === null ? `/sach/${book.id}` : `/sach/${book.id}?trang=${d.first}`,
       docNhan: d.first === null ? "Đọc từ đầu" : `Đọc từ trang ${d.first}`,
+      thang: thangKhoa(thangCua(d.at)),
+      ngay: ngayTrongThang(d.at),
     };
-    return d.loai === "bia"
-      ? { ...chung, loai: "bia", cover: d.cover, coverMediaId: d.coverMediaId }
-      : { ...chung, loai: "nhac", go: d.youtubeId === null };
-  })]));
+    if (d.loai === "bia") return Object.assign(chung, { loai: "bia" as const, cover: d.cover, coverMediaId: d.coverMediaId });
+    const bai = d.youtubeId === null ? undefined : ten[d.youtubeId];
+    return Object.assign(chung, { loai: "nhac" as const, youtubeId: d.youtubeId, ten: bai?.ten ?? null, kenh: bai?.kenh ?? null });
+  });
 
-  const tao = thangCua(book.createdAt);
-  const duong = (t: typeof thang) => `/dau-thoi-gian/${book.id}?thang=${thangKhoa(t)}`;
   const chu = book.ownerId === me.accountId ? "bạn" : me.partnerNickname;
   return (
     <>
@@ -72,14 +76,13 @@ export default async function DauThoiGianCuaSach({ params, searchParams }: {
           </div>
         </div>
         <LichDau
-          key={thangKhoa(thang)}
-          thang={thang}
-          tuan={luoiThang(thang, homNay)}
-          ngay={hien}
-          chonDau={ngayMacDinh(theoNgay, homNay, soNgayCua(thang))}
+          dau={hien}
+          thangDau={thang}
+          chonDau={ngayMacDinh(gomTheoNgay(dau, thang), laThangNay(thang, now) ? homNay : null, soNgayCua(thang))}
+          tao={tao}
+          thangNay={thangNay}
+          homNay={homNay}
           now={now}
-          truocHref={thangKhoa(thang) === thangKhoa(tao) ? null : duong(thangTruoc(thang))}
-          sauHref={nay ? null : duong(thangSau(thang))}
         />
       </main>
     </>

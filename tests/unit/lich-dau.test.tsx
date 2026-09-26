@@ -1,167 +1,372 @@
 import { readFileSync } from "node:fs";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
-import { gomTheoLuot, LichDau, moTaLuot, type DauHien } from "@/components/dau-thoi-gian/LichDau";
-import { luoiThang } from "@/lib/tam-trang/lich";
+import { LichDau, type DauHien } from "@/components/dau-thoi-gian/LichDau";
+import { troNgoai } from "@/components/dau-thoi-gian/tro-ngoai";
+import { YT_HOST, YT_STATE, type YTNamespace, type YTPlayerOptions } from "@/components/music/youtubeApi";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...rest}>{children}</a>,
 }));
 
 /*
- * Trang Dau thoi gian: lich thang cua mot cuon, cung khung voi Lich hoa (spec bo sung B4, chu du an 26/09: "doi lai giao
- * dien lich dep nhu lich hoa"). Moi ngay mot o voi hai lan: lan tren la bia, lan duoi la nhac.
+ * Trang Dau thoi gian ban hai (spec bo sung B4 ban hai, chu du an chot 26/09): lich gon voi xap bia nho va cham nhac,
+ * cot phai co xap bia lon mo trinh xem bia dang chong the, va the Nhac trong ngay phat tuan tu. Nhac chi tu phat khi
+ * bam mot ngay; bam lai ngay dang phat thi phat tiep; xem bia va doi thang khong dung toi nhac; ngay khac thi doi bai.
  */
 
-const CR = String.fromCharCode(13);
-const CSS = readFileSync("src/styles/app.css", "utf8").split(CR).join("");
+const A = "aaaaaaaaaaa";
+const B = "bbbbbbbbbbb";
+const C = "ccccccccccc";
+const D = "ddddddddddd";
 
-const THANG = { y: 2026, m: 9 };
+/** YT.Player gia: thay moc bang mot iframe that, ghi lai moi lenh; su kien do bai kiem tu ban qua opts.events. */
+class PlayerGia {
+  readonly opts: YTPlayerOptions;
+  readonly khung = document.createElement("iframe");
+  readonly playVideo = vi.fn();
+  readonly pauseVideo = vi.fn();
+  readonly loadVideoById = vi.fn();
+  readonly stopVideo = vi.fn();
+  readonly destroy = vi.fn();
+
+  constructor(el: HTMLElement, opts: YTPlayerOptions) {
+    this.opts = opts;
+    el.replaceWith(this.khung);
+    cacMay.push(this);
+  }
+
+  getIframe() {
+    return this.khung;
+  }
+}
+
+const cacMay: PlayerGia[] = [];
+const may = () => cacMay[cacMay.length - 1];
+const san = () => act(() => may().opts.events.onReady({ target: may() }));
+const bao = (data: number) => act(() => may().opts.events.onStateChange({ target: may(), data }));
+const hong = () => act(() => may().opts.events.onError({ target: may(), data: 150 }));
+
+const chung = (key: string, luot: number | null, thang: string, ngay: number, gio: string) => ({
+  key,
+  luot: luot === null ? "mo-dau" : `luot-${luot}`,
+  tenLuot: luot === null ? "Lúc tạo sách" : `Lượt ${luot}`,
+  nhan: luot === null ? "Lúc tạo sách" : `Lượt ${luot}, trang ${luot}`,
+  gio,
+  docHref: luot === null ? "/sach/s1" : `/sach/s1?trang=${luot}`,
+  docNhan: luot === null ? "Đọc từ đầu" : `Đọc từ trang ${luot}`,
+  thang,
+  ngay,
+});
+const bia = (key: string, luot: number | null, thang: string, ngay: number, cover: "nui-xa" | "chim-bay" | "thuyen-trang" | "cau-go", media: string | null = null): DauHien =>
+  ({ ...chung(key, luot, thang, ngay, "08:00"), loai: "bia", cover, coverMediaId: media });
+const nhac = (key: string, luot: number, thang: string, ngay: number, youtubeId: string | null, ten: string | null = null, kenh: string | null = null): DauHien =>
+  ({ ...chung(key, luot, thang, ngay, "19:45"), loai: "nhac", youtubeId, ten, kenh });
+
+/** Cuon tao ngay 5.8; thang 9 co: 15.9 ba luot (bia + nhac A, bia + go nhac, nhac B), 20.9 chi nhac C, 22.9 chi bia. */
+const DAU: DauHien[] = [
+  bia("b0", null, "2026-08", 5, "nui-xa"),
+  nhac("n1", 1, "2026-08", 10, D, "Bài tháng tám", null),
+  bia("b2", 2, "2026-09", 15, "chim-bay"),
+  nhac("n2", 2, "2026-09", 15, A, "Never Gonna Give You Up", "Rick Astley"),
+  bia("b3", 3, "2026-09", 15, "thuyen-trang", "anh-1"),
+  nhac("n3", 3, "2026-09", 15, null),
+  nhac("n4", 4, "2026-09", 15, B, null, null),
+  nhac("n5", 5, "2026-09", 20, C, "Bài ngày hai mươi", "Kênh C"),
+  bia("b6", 6, "2026-09", 22, "cau-go"),
+];
+
 /** 12 gio trua 26.09.2026 gio Viet Nam. */
 const NOW = new Date(Date.UTC(2026, 8, 26, 5));
 
-const moDau: DauHien = { key: "b0", luot: "mo-dau", loai: "bia", nhan: "Lúc tạo sách", gio: "08:00", docHref: "/sach/s1", docNhan: "Đọc từ đầu", cover: "nui-xa", coverMediaId: null };
-const bia2: DauHien = { key: "b2", luot: "luot-2", loai: "bia", nhan: "Lượt 2, trang 2", gio: "08:10", docHref: "/sach/s1?trang=2", docNhan: "Đọc từ trang 2", cover: "chim-bay", coverMediaId: null };
-const nhac2: DauHien = { key: "n2", luot: "luot-2", loai: "nhac", nhan: "Lượt 2, trang 2", gio: "08:10", docHref: "/sach/s1?trang=2", docNhan: "Đọc từ trang 2", go: false };
-const bia3: DauHien = { key: "b3", luot: "luot-3", loai: "bia", nhan: "Lượt 3, trang 3", gio: "19:45", docHref: "/sach/s1?trang=3", docNhan: "Đọc từ trang 3", cover: "thuyen-trang", coverMediaId: "anh-1" };
-const go3: DauHien = { key: "n3", luot: "luot-3", loai: "nhac", nhan: "Lượt 3, trang 3", gio: "19:45", docHref: "/sach/s1?trang=3", docNhan: "Đọc từ trang 3", go: true };
-
-function ve(props: Partial<Parameters<typeof LichDau>[0]> = {}) {
-  render(
-    <LichDau
-      thang={THANG}
-      tuan={luoiThang(THANG, 26)}
-      ngay={{ 3: [moDau], 15: [bia2, nhac2, bia3, go3] }}
-      chonDau={15}
-      now={NOW}
-      truocHref="/dau-thoi-gian/s1?thang=2026-08"
-      sauHref={null}
-      {...props}
-    />,
+async function ve(props: Partial<Parameters<typeof LichDau>[0]> = {}) {
+  const kq = render(
+    <LichDau dau={DAU} thangDau={{ y: 2026, m: 9 }} chonDau={22} tao={{ y: 2026, m: 8 }} thangNay={{ y: 2026, m: 9 }} homNay={26} now={NOW} {...props} />,
   );
+  // Promise nap API (window.YT da san) tao trinh phat trong mot vi tac vu.
+  await act(async () => {});
+  return kq;
 }
 
-const oNgay = (so: number) => screen.getByRole("button", { name: new RegExp(`^${so} tháng 9\\.`) });
-const chiTiet = () => document.querySelector(".chi-tiet") as HTMLElement;
+const oNgay = (so: number, m = 9) => screen.getByRole("button", { name: new RegExp(`^${so} tháng ${m}\\.`) });
+const bamNgay = async (so: number) => {
+  fireEvent.click(oNgay(so));
+  await act(async () => {});
+};
+const theNhac = () => screen.getByRole("region", { name: "Nhạc trong ngày" });
+const dongDang = () => theNhac().querySelector(".dtg-nhac__chu")?.textContent;
 
-afterEach(cleanup);
-
-describe("gomTheoLuot va moTaLuot", () => {
-  it("bia va nhac cua cung mot luot gop thanh mot nhom, giu thu tu dong thoi gian", () => {
-    const nhom = gomTheoLuot([bia2, nhac2, bia3, go3]);
-    expect(nhom.map((n) => [n.key, n.bia?.key ?? null, n.nhac?.key ?? null])).toEqual([["luot-2", "b2", "n2"], ["luot-3", "b3", "n3"]]);
-  });
-
-  it("mo ta dung thu luot da doi", () => {
-    const [l2, l3] = gomTheoLuot([bia2, nhac2, bia3, go3]);
-    expect(moTaLuot(l2)).toBe("Bìa mới, nhạc mới");
-    expect(moTaLuot(l3)).toBe("Bìa mới, gỡ nhạc");
-    expect(moTaLuot(gomTheoLuot([nhac2])[0])).toBe("Nhạc mới");
-    expect(moTaLuot(gomTheoLuot([moDau])[0])).toBe("Bìa mới");
-  });
+beforeAll(() => {
+  window.YT = { Player: PlayerGia } as unknown as YTNamespace;
 });
 
-describe("LichDau", () => {
-  it("moi ngay da qua la mot o bam duoc; ngay sau hom nay mo va khong bam duoc, nhu Lich hoa", () => {
-    ve();
-    expect(screen.getAllByRole("button", { name: /^[0-9]+ tháng 9\./ })).toHaveLength(26);
-    expect(document.querySelectorAll(".ngay--xa")).toHaveLength(4);
-    expect(oNgay(26).className).toContain("ngay--nay");
-  });
+beforeEach(() => {
+  cacMay.length = 0;
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  window.history.replaceState(null, "", "/dau-thoi-gian/s1");
+});
 
-  it("lan tren la bia, lan duoi la nhac; ngay khong co dau la hai vong cham mo", () => {
-    ve();
-    const ngay3 = oNgay(3);
-    expect(ngay3.querySelector(".dtg-tem.bia--nui-xa")).not.toBeNull();
-    expect(ngay3.querySelectorAll(".hoa-trong")).toHaveLength(1);
-    expect(oNgay(4).querySelectorAll(".hoa-trong")).toHaveLength(2);
-  });
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
-  it("nhieu dau cung loai trong mot ngay: tem bia cuoi cung xep chong va mot con so; mot dau thi khong co so", () => {
-    ve();
-    const ngay15 = oNgay(15);
-    const tem = ngay15.querySelector(".dtg-tem") as HTMLElement;
-    expect(tem.className).toContain("dtg-tem--chong");
-    expect(tem.className).toContain("bia--thuyen-trang");
-    expect([...ngay15.querySelectorAll(".dtg-dem")].map((d) => d.textContent)).toEqual(["2", "2"]);
-    // Nhac cuoi cung trong ngay la go nhac: not gach cheo.
-    expect(ngay15.querySelector(".dtg-not svg path:last-child")?.getAttribute("d")).toBe("M1.5 10.5L10.5 1.5");
-    expect(oNgay(3).querySelector(".dtg-dem")).toBeNull();
-    expect(oNgay(3).querySelector(".dtg-tem--chong")).toBeNull();
-  });
-
-  it("khung chi tiet gom theo luot: moi luot mot dong va mot lien ket doc, khong lap lai cho doc", () => {
-    ve();
-    const dong = [...chiTiet().querySelectorAll(".dtg-ct__dong")];
-    expect(dong).toHaveLength(2);
-    expect(dong.map((d) => d.querySelector(".dtg-ct__chu")?.textContent)).toEqual([
-      "Lượt 2, trang 2Bìa mới, nhạc mới, 08:10",
-      "Lượt 3, trang 3Bìa mới, gỡ nhạc, 19:45",
-    ]);
-    expect(dong.map((d) => d.querySelector("a")?.getAttribute("href"))).toEqual(["/sach/s1?trang=2", "/sach/s1?trang=3"]);
-    expect(screen.getByRole("heading", { level: 2, name: "Thứ Ba, 15.09" })).toBeTruthy();
-  });
-
-  it("nhan doc cua o ngay ke du tung luot; so dem an voi trinh doc man hinh", () => {
-    ve();
-    expect(oNgay(15).getAttribute("aria-label")).toBe("15 tháng 9. Lượt 2, trang 2: bìa mới, nhạc mới. Lượt 3, trang 3: bìa mới, gỡ nhạc");
-    expect(oNgay(26).getAttribute("aria-label")).toBe("26 tháng 9. Không có dấu nào. Hôm nay");
-    for (const d of oNgay(15).querySelectorAll(".dtg-dem")) expect(d.getAttribute("aria-hidden")).toBe("true");
-  });
-
-  it("bam mot ngay: khung chi tiet doi tai cho, ngay do duoc danh dau; ngay khong co dau thi noi ro", () => {
-    ve();
-    expect(oNgay(15).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(oNgay(3));
-    expect(oNgay(3).getAttribute("aria-pressed")).toBe("true");
-    expect(oNgay(15).getAttribute("aria-pressed")).toBe("false");
-    expect(chiTiet().querySelector(".dtg-ct__chu")?.textContent).toBe("Lúc tạo sáchBìa mới, 08:00");
-    expect(chiTiet().querySelector("a")?.getAttribute("href")).toBe("/sach/s1");
-    fireEvent.click(oNgay(4));
-    expect(chiTiet().textContent).toContain("Ngày này không có dấu nào.");
-  });
-
-  it("khung chi tiet la mot vung aria-live=polite; moi lien ket o lai trong web", () => {
-    ve();
-    expect(chiTiet().getAttribute("aria-live")).toBe("polite");
-    for (const a of document.querySelectorAll("a")) expect(a.getAttribute("href")?.startsWith("/")).toBe(true);
-  });
-
-  it("doi thang bang lien ket that; thang nay thi nut Thang sau tat; thang tao sach thi nut Thang truoc tat", () => {
-    ve();
-    expect(screen.getByRole("link", { name: "Tháng trước" }).getAttribute("href")).toBe("/dau-thoi-gian/s1?thang=2026-08");
+describe("LichDau: lich gon", () => {
+  it("dau lich: thang, dong tong dem bia va lan doi nhac cua thang; thang nay thi nut Tháng sau tat", async () => {
+    await ve();
+    expect(screen.getByRole("heading", { level: 2, name: "Tháng 9, 2026" })).toBeTruthy();
+    expect(document.querySelector(".thang__tong")?.textContent).toBe("3 bìa, 4 lần đổi nhạc trong tháng");
     expect((screen.getByRole("button", { name: "Tháng sau" }) as HTMLButtonElement).disabled).toBe(true);
-    cleanup();
-    ve({ truocHref: null, sauHref: "/dau-thoi-gian/s1?thang=2026-10" });
-    expect((screen.getByRole("button", { name: "Tháng trước" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByRole("link", { name: "Tháng sau" }).getAttribute("href")).toBe("/dau-thoi-gian/s1?thang=2026-10");
+    expect((screen.getByRole("button", { name: "Tháng trước" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("dong tong cua thang dem dung so bia va so dau nhac", () => {
-    ve();
-    expect(document.querySelector(".thang__tong")?.textContent).toBe("3 bìa, 2 dấu nhạc trong tháng");
+  it("ngay da qua la o bam duoc voi ten day du; ngay sau hom nay mo va khong bam duoc", async () => {
+    await ve();
+    expect(oNgay(15).getAttribute("aria-label")).toBe("15 tháng 9. 2 bìa, 3 lần đổi nhạc");
+    expect(oNgay(3).getAttribute("aria-label")).toBe("3 tháng 9. Không có dấu nào");
+    expect(oNgay(26).getAttribute("aria-label")).toBe("26 tháng 9. Không có dấu nào. Hôm nay");
+    expect(screen.queryByRole("button", { name: /^27 tháng 9/ })).toBeNull();
+  });
+
+  it("lan bia la xap bia nho, bia cua luot dau tien trong ngay nam tren; lan nhac la cham, go nhac la cham rong; khong con con so dem", async () => {
+    await ve();
+    const la = [...oNgay(15).querySelectorAll(".dtg-xap__la")];
+    // La dau trong DOM nam tren cung (dau-thoi-gian.css: .dtg-xap__la:nth-child(1)).
+    expect(la.map((x) => x.classList.contains("bia--chim-bay") ? "b2" : x.classList.contains("bia--thuyen-trang") ? "b3" : "?")).toEqual(["b2", "b3"]);
+    expect(la[1].querySelector("img.bia__anh")?.getAttribute("src")).toContain("anh-1");
+    const cham = [...oNgay(15).querySelectorAll(".dtg-cham__mot")].map((c) => c.classList.contains("dtg-cham__mot--go"));
+    expect(cham).toEqual([false, true, false]);
+    expect(oNgay(20).querySelector(".dtg-xap")).toBeNull();
+    expect(oNgay(20).querySelector(".dtg-trong")).not.toBeNull();
+    expect(document.querySelector(".dtg-dem")).toBeNull();
+  });
+
+  it("ngay chon san: cot phai ke ten ngay, so luot; ngay khong doi nhac thi khong co trinh phat nao", async () => {
+    await ve();
+    expect(oNgay(22).getAttribute("aria-pressed")).toBe("true");
+    const ngay = document.querySelector(".dtg-ngay") as HTMLElement;
+    expect(ngay.querySelector("h2")?.textContent).toBe("Thứ Ba, 22.09");
+    expect(ngay.querySelector("p")?.textContent).toBe("1 lượt đăng: 1 bìa mới, 0 lần đổi nhạc.");
+    expect(theNhac().textContent).toContain("Ngày này không đổi nhạc.");
+    expect(cacMay).toHaveLength(0);
+    expect(theNhac().querySelector(".dtg-nhac__may")).toBeNull();
+  });
+
+  it("doi thang ngay tai cho: tieu de va luoi doi, duong dan ghi ?thang, ngay dang chon va cot phai giu nguyen", async () => {
+    await ve();
+    fireEvent.click(screen.getByRole("button", { name: "Tháng trước" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Tháng 8, 2026" })).toBeTruthy();
+    expect(window.location.search).toBe("?thang=2026-08");
+    expect((screen.getByRole("button", { name: "Tháng trước" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(document.querySelector(".ngay[aria-pressed='true']")).toBeNull();
+    expect(document.querySelector(".dtg-ngay h2")?.textContent).toBe("Thứ Ba, 22.09");
+    // Thang 8 khong co ngay tuong lai.
+    expect(oNgay(31, 8)).toBeTruthy();
   });
 });
 
-describe("lich Dau thoi gian trong app.css", () => {
-  it("tem bia trong lan giu ti le 5:3 va khong rong qua o ngay", () => {
-    const i = CSS.indexOf(".ngay .dtg-tem{");
-    const than = CSS.slice(i, CSS.indexOf("}", i));
-    expect(than).toContain("aspect-ratio: 5 / 3");
-    expect(than).toContain("width: min(calc(var(--hoa-w) * 1.25), 100%)");
+describe("LichDau: nhac trong ngay", () => {
+  it("vua mo trang ma ngay chon san co nhac: tao trinh phat nocookie, KHONG tu phat", async () => {
+    await ve({ chonDau: 15 });
+    expect(cacMay).toHaveLength(1);
+    expect(may().opts).toMatchObject({ host: YT_HOST, videoId: A, playerVars: { controls: 1, autoplay: 0, loop: 0 } });
+    expect(may().khung.title).toBe("Nhạc trong ngày");
+    await san();
+    expect(may().loadVideoById).not.toHaveBeenCalled();
+    expect(may().playVideo).not.toHaveBeenCalled();
+    expect(dongDang()).toBe("2 bài trong ngàyBấm Phát, hay chọn một bài.");
   });
 
-  it("khong mot hoat anh nao tren lich nay", () => {
-    const i = CSS.indexOf(".ngay .dtg-tem{");
-    const j = CSS.indexOf(".dtg-ct__doc{");
-    const khoi = CSS.slice(i, CSS.indexOf("}", j));
-    expect(khoi).not.toContain("transition");
-    expect(khoi).not.toContain("animation");
+  it("danh sach theo thu tu luot: ten bai va kenh; khong co ten thi cau thay; go nhac la dong khong bam duoc", async () => {
+    await ve({ chonDau: 15 });
+    const dong = within(theNhac()).getAllByRole("listitem");
+    expect(dong.map((d) => d.textContent)).toEqual([
+      "1Never Gonna Give You UpRick Astley. Lượt 2, lúc 19:45",
+      "Gỡ nhạc nềnLượt 3, lúc 19:45. Từ lượt này cuốn im lặng.",
+      "2Bản nhạc trên YouTubeLượt 4, lúc 19:45",
+    ]);
+    expect(dong[1].querySelector("button")).toBeNull();
   });
 
-  it("khong con quy tac nao cua luoi muoi hai thang cu", () => {
-    expect(CSS).not.toContain(".nam-luoi");
-    expect(CSS).not.toContain(".nam-o");
+  it("bam mot ngay co nhac: phat tuan tu tu bai dau; het bai thi sang bai ke, bo qua go nhac; het danh sach thi dung", async () => {
+    await ve();
+    await bamNgay(15);
+    expect(cacMay).toHaveLength(1);
+    // Trinh phat vua tao chua san sang: bai dau duoc nho lai, san sang la phat. Trong luc do dong trang thai noi dang nap.
+    expect(dongDang()).toBe("Never Gonna Give You UpĐang nạp, lượt 2");
+    await san();
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(A);
+    await bao(YT_STATE.PLAYING);
+    expect(dongDang()).toBe("Never Gonna Give You UpĐang phát, lượt 2");
+    expect(within(theNhac()).getByRole("button", { name: "Tạm dừng" })).toBeTruthy();
+    expect(theNhac().querySelector("[aria-current='true']")?.textContent).toContain("Never Gonna Give You Up");
+    await bao(YT_STATE.ENDED);
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(B);
+    await bao(YT_STATE.ENDED);
+    expect(may().stopVideo).toHaveBeenCalled();
+    expect(dongDang()).toBe("2 bài trong ngàyBấm Phát, hay chọn một bài.");
+  });
+
+  it("bai khong phat duoc thi bo qua, sang bai ke", async () => {
+    await ve();
+    await bamNgay(15);
+    await san();
+    await hong();
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(B);
+  });
+
+  it("bam lai dung ngay dang phat: phat tiep, khong nap lai tu dau", async () => {
+    await ve();
+    await bamNgay(15);
+    await san();
+    await bao(YT_STATE.PLAYING);
+    await bamNgay(15);
+    expect(may().loadVideoById).toHaveBeenCalledTimes(1);
+    expect(may().stopVideo).not.toHaveBeenCalled();
+  });
+
+  it("bam ngay khac co nhac: cung trinh phat nap bai dau cua ngay moi ngay trong cu bam; ngay khong co nhac thi dung va go trinh phat", async () => {
+    await ve();
+    await bamNgay(15);
+    await san();
+    await bamNgay(20);
+    expect(cacMay).toHaveLength(1);
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(C);
+    await bamNgay(22);
+    expect(cacMay[0].stopVideo).toHaveBeenCalled();
+    expect(cacMay[0].destroy).toHaveBeenCalled();
+    expect(theNhac().querySelector(".dtg-nhac__may")).toBeNull();
+  });
+
+  it("doi thang khong dung toi nhac", async () => {
+    await ve();
+    await bamNgay(15);
+    await san();
+    await bao(YT_STATE.PLAYING);
+    fireEvent.click(screen.getByRole("button", { name: "Tháng trước" }));
+    await act(async () => {});
+    expect(may().stopVideo).not.toHaveBeenCalled();
+    expect(may().destroy).not.toHaveBeenCalled();
+    expect(dongDang()).toBe("Never Gonna Give You UpĐang phát, lượt 2");
+  });
+
+  it("nut Phat luc chua phat bai nao thi phat bai dau; Tam dung va Phat tiep goi thang trinh phat; Bai ke tiep", async () => {
+    await ve({ chonDau: 15 });
+    await san();
+    fireEvent.click(within(theNhac()).getByRole("button", { name: "Phát" }));
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(A);
+    await bao(YT_STATE.PLAYING);
+    fireEvent.click(within(theNhac()).getByRole("button", { name: "Tạm dừng" }));
+    expect(may().pauseVideo).toHaveBeenCalledTimes(1);
+    await bao(YT_STATE.PAUSED);
+    expect(dongDang()).toBe("Never Gonna Give You UpTạm dừng, lượt 2");
+    fireEvent.click(within(theNhac()).getByRole("button", { name: "Phát" }));
+    expect(may().playVideo).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(theNhac()).getByRole("button", { name: "Bài kế tiếp" }));
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(B);
+    expect((within(theNhac()).getByRole("button", { name: "Bài kế tiếp" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("bam mot bai trong danh sach thi phat bai do", async () => {
+    await ve({ chonDau: 15 });
+    await san();
+    fireEvent.click(within(theNhac()).getByRole("button", { name: /Bản nhạc trên YouTube/ }));
+    expect(may().loadVideoById).toHaveBeenLastCalledWith(B);
+  });
+});
+
+describe("LichDau: trinh xem bia", () => {
+  it("bam xap bia lon: chong the giua man hinh, the tren cung la bia cua luot dau tien va giu focus; nhac khong bi dung", async () => {
+    await ve({ chonDau: 15 });
+    await san();
+    fireEvent.click(within(theNhac()).getByRole("button", { name: "Phát" }));
+    const xl = screen.getByRole("button", { name: "Xem 2 bìa của ngày này" });
+    fireEvent.click(xl);
+    const hop = screen.getByRole("dialog", { name: "Bìa trong ngày Thứ Ba, 15.09" });
+    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 1 / 2");
+    const tren = within(hop).getByRole("button", { name: /^Bìa 1 trên 2, lượt 2, trang 2/ });
+    expect(document.activeElement).toBe(tren);
+    expect(within(hop).getByRole("link", { name: "Đọc từ trang 2" }).getAttribute("href")).toBe("/sach/s1?trang=2");
+    expect(may().stopVideo).not.toHaveBeenCalled();
+    expect(may().pauseVideo).not.toHaveBeenCalled();
+  });
+
+  it("the nhac noi len goc va van dieu khien duoc; moi thu khac inert; danh sach bai thu gon", async () => {
+    await ve({ chonDau: 15 });
+    fireEvent.click(screen.getByRole("button", { name: "Xem 2 bìa của ngày này" }));
+    expect(document.querySelector(".dtg--xem")).not.toBeNull();
+    expect(document.querySelector(".dtg-lich")?.hasAttribute("inert")).toBe(true);
+    expect(document.querySelector(".dtg-the")?.hasAttribute("inert")).toBe(true);
+    expect(theNhac().closest("[inert]")).toBeNull();
+    expect(theNhac().querySelector(".dtg-bai-ds")).toBeNull();
+    expect(document.querySelector(".dtg-nhac-cho")).not.toBeNull();
+  });
+
+  it("bam the (hay phim →) thi lat sang bia ke; phim ← lui lai; Esc dong, go inert va focus ve xap bia lon", async () => {
+    vi.useFakeTimers();
+    await ve({ chonDau: 15 });
+    const xl = screen.getByRole("button", { name: "Xem 2 bìa của ngày này" });
+    xl.focus();
+    fireEvent.click(xl);
+    const hop = screen.getByRole("dialog");
+    fireEvent.click(within(hop).getByRole("button", { name: /^Bìa 1 trên 2/ }));
+    expect(hop.querySelector(".dtg-xem__chu b")?.textContent).toBe("Lượt 3, trang 3");
+    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 2 / 2");
+    // Dang lat thi cu bam them bi bo qua, het nhip moi lat tiep.
+    fireEvent.keyDown(hop, { key: "ArrowRight" });
+    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 2 / 2");
+    act(() => { vi.advanceTimersByTime(600); });
+    fireEvent.keyDown(hop, { key: "ArrowLeft" });
+    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 1 / 2");
+    fireEvent.keyDown(document, { key: "Escape" });
+    act(() => { vi.advanceTimersByTime(600); });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.querySelector("[inert]")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Xem 2 bìa của ngày này" }));
+  });
+
+  it("ngay khong doi bia thi khong co xap bia lon, chi mot cau noi ro", async () => {
+    await ve({ chonDau: 20 });
+    expect(screen.queryByRole("button", { name: /^Xem .* bìa/ })).toBeNull();
+    expect(document.querySelector(".dtg-khong-bia")?.textContent).toBe("Ngày này không đổi bìa.");
+  });
+});
+
+describe("troNgoai", () => {
+  it("dat inert len moi nhanh khong chua phan tu giu, giu nguyen to tien va con chau cua no; go ra chi go phan minh dat", () => {
+    document.body.innerHTML = `
+      <nav id="nav"></nav>
+      <main id="main"><div id="trai"></div><aside id="phu"><section id="ngay"></section><section id="nhac"><button id="nut"></button></section></aside></main>
+      <div id="hop"></div><div id="san" inert></div>`;
+    const $ = (id: string) => document.getElementById(id) as HTMLElement;
+    const go = troNgoai([$("hop"), $("nhac")]);
+    expect(["nav", "trai", "ngay"].every((id) => $(id).hasAttribute("inert"))).toBe(true);
+    expect(["main", "phu", "nhac", "nut", "hop"].some((id) => $(id).hasAttribute("inert"))).toBe(false);
+    go();
+    expect(["nav", "trai", "ngay"].some((id) => $(id).hasAttribute("inert"))).toBe(false);
+    expect($("san").hasAttribute("inert")).toBe(true);
+    document.body.innerHTML = "";
+  });
+});
+
+describe("dau-thoi-gian.css", () => {
+  const CSS = readFileSync("src/styles/dau-thoi-gian.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const giam = CSS.slice(CSS.indexOf("@media (prefers-reduced-motion: reduce)"));
+
+  it("khung phat khong bao gio thap hon 200px", () => {
+    expect(CSS).toMatch(/\.dtg-nhac__may\{[^}]*min-height: 200px/);
+  });
+
+  it("moi hoat anh va chuyen tiep moi deu co nhanh giam chuyen dong", () => {
+    expect(giam.length).toBeGreaterThan(0);
+    for (const chon of [".dtg-xem", ".dtg-the-bia", ".dtg-xl__to", ".dtg-bai--chay .dtg-vach i", "button.dtg-bai"]) expect(giam).toContain(chon);
+  });
+
+  it("mau va lop xep chong di qua token, khong ma mau viet tay", () => {
+    expect(CSS).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(CSS).not.toMatch(/oklch\(/);
+    for (const m of CSS.matchAll(/z-index:\s*([^;}]+)/g)) expect(m[1].trim()).toMatch(/^(var\(--z-[a-z-]+\)|[0-9])$/);
   });
 });

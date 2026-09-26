@@ -8,6 +8,8 @@ import type { KhungChuNhat } from "@/lib/viewport";
  * do tre do bang setTimeout(0): ghi so lan phat va khung cua iframe (window.ytGiaLucPhat) o mot tac vu ke tiep, chu
  * khong ngay trong playVideo(). Nho vay test kiem duoc bo cuc THAT SU luc phat, khong phai luc goi playVideo(). Trang
  * thai phat chi doi khi test goi window.ytGiaBao(ma), de kiem nhan nut theo su kien that chu khong theo cu bam.
+ * Trinh phat danh sach cua Dau thoi gian ghi rieng vao window.ytGiaDanhSach (ma da nap bang loadVideoById, so lan
+ * stopVideo), de ghi cu cua man doc giu nguyen hinh dang; window.ytGiaHong() bao loi "khong phat duoc".
  */
 const YT_GIA = [
   "(() => {",
@@ -17,6 +19,9 @@ const YT_GIA = [
   "  window.ytGia = ghi;",
   "  window.ytGiaLucPhat = lucPhat;",
   "  window.ytGiaBao = (data) => { for (const m of cacMay) m.opts.events.onStateChange({ target: m, data }); };",
+  "  window.ytGiaHong = () => { for (const m of cacMay) m.opts.events.onError({ target: m, data: 150 }); };",
+  "  const danhSach = { nap: [], dung: 0 };",
+  "  window.ytGiaDanhSach = danhSach;",
   "  class Player {",
   "    constructor(el, opts) {",
   "      ghi.created += 1;",
@@ -38,6 +43,8 @@ const YT_GIA = [
   "      }, 0);",
   "    }",
   "    pauseVideo() { ghi.pause += 1; }",
+  "    loadVideoById(id) { danhSach.nap.push(id); }",
+  "    stopVideo() { danhSach.dung += 1; }",
   "    destroy() { this.khung.remove(); }",
   "  }",
   "  window.YT = { Player };",
@@ -66,6 +73,17 @@ export function ghiYt(page: Page): Promise<GhiYt> {
 
 export async function baoYt(page: Page, ma: number): Promise<void> {
   await page.evaluate((m) => (window as unknown as { ytGiaBao: (m: number) => void }).ytGiaBao(m), ma);
+}
+
+/** Trinh phat danh sach (nhac trong ngay cua Dau thoi gian): cac ma da nap theo thu tu, va so lan dung han. */
+export type DanhSachYt = { nap: string[]; dung: number };
+
+export function danhSachYt(page: Page): Promise<DanhSachYt> {
+  return page.evaluate(() => (window as unknown as { ytGiaDanhSach: DanhSachYt }).ytGiaDanhSach);
+}
+
+export async function hongYt(page: Page): Promise<void> {
+  await page.evaluate(() => (window as unknown as { ytGiaHong: () => void }).ytGiaHong());
 }
 
 export function lucPhat(page: Page): Promise<LucPhat[]> {

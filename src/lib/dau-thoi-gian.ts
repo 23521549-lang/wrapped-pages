@@ -32,17 +32,41 @@ function moiNhat(dau: readonly Dau[]): Dau | null {
   return dau.reduce<Dau | null>((max, d) => (max === null || truocSau(d, max) >= 0 ? d : max), null);
 }
 
+/** Ban sao cua cac dau, xep theo thu tu dong thoi gian (truocSau). */
+export function xepTheoDong(dau: readonly Dau[]): Dau[] {
+  // oxlint-disable-next-line unicorn/no-array-sort -- ban sao vua tao, khong ai khac giu tham chieu; toSorted can lib ES2023, du an dang o ES2022.
+  return [...dau].sort(truocSau);
+}
+
 /** Cac dau cua thang `t`, gom theo ngay trong thang; moi ngay theo thu tu dong thoi gian. Ngay khong co dau thi khong co khoa. */
 export function gomTheoNgay(dau: readonly Dau[], t: Thang): Record<number, Dau[]> {
   const khoa = thangKhoa(t);
   const ngay: Record<number, Dau[]> = {};
-  for (const d of dau) {
+  for (const d of xepTheoDong(dau)) {
     if (thangKhoa(thangCua(d.at)) !== khoa) continue;
     (ngay[ngayTrongThang(d.at)] ??= []).push(d);
   }
-  // oxlint-disable-next-line unicorn/no-array-sort -- mang vua tao o tren, khong ai khac giu tham chieu; toSorted can lib ES2023, du an dang o ES2022.
-  for (const ds of Object.values(ngay)) ds.sort(truocSau);
   return ngay;
+}
+
+/**
+ * Dau da dung san (co khoa thang "YYYY-MM" va ngay trong thang, tinh o may chu theo gio Viet Nam) gom theo thang roi
+ * theo ngay, GIU thu tu dau vao. Trinh duyet gom lai o day de doi thang ngay tai cho ma khong phai hoi lai may chu, va
+ * khong tu tinh mui gio nao.
+ */
+export function gomTheoThang<T extends { thang: string; ngay: number }>(dau: readonly T[]): Record<string, Record<number, T[]>> {
+  const thang: Record<string, Record<number, T[]>> = {};
+  for (const d of dau) ((thang[d.thang] ??= {})[d.ngay] ??= []).push(d);
+  return thang;
+}
+
+/**
+ * Vi tri cua bai phat duoc dau tien tu vi tri `tu` tro di trong danh sach nhac cua mot ngay (o go nhac thi khong phat
+ * duoc); -1 khi het. Danh sach nhac trong ngay dung ham nay cho bai dau, bai ke tiep, va het bai hay bai hong.
+ */
+export function baiPhatDuoc(ds: readonly { youtubeId: string | null }[], tu: number): number {
+  for (let i = Math.max(0, tu); i < ds.length; i++) if (ds[i].youtubeId !== null) return i;
+  return -1;
 }
 
 /** Thang mo san: thang cua dau moi nhat; chua co dau nao thi thang cua `now`. */

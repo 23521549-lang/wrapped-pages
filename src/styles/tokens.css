@@ -74,6 +74,15 @@
   --shadow-lift: 0 2px 4px oklch(24% 0.012 250 / .055), 0 28px 52px -30px oklch(24% 0.012 250 / .45);
   --z-raised: 10;
   --z-sticky: 200;
+  /* Trinh xem bia cua Dau thoi gian phu ca thanh dieu huong dinh. The nhac noi TREN lop do: khong gi de len khung YouTube. */
+  --z-phu: 300;
+  --z-phu-noi: 310;
+  /* Trinh xem bia: the lat va lop nen di cham rai (chu du an 26/09: "nhe nhang va cham rai"). XemBia.tsx giu hai nhip khop. */
+  --dur-the-bia: 800ms;
+  --dur-nen-xem: 600ms;
+  /* Xap bia nho trong o ngay va chong the cua trinh xem bia. */
+  --bong-xap-la: 0 0 0 1px var(--color-paper), 0 1px 3px oklch(24% 0.012 250 / .22);
+  --bong-the-bia: 0 0 0 1px var(--color-rule), 0 24px 48px -24px oklch(24% 0.012 250 / .5);
 
   /* Vach nhoe tren mat giay: nhat, chi du thay nhip dong. */
   --color-vach: oklch(92.5% 0.014 240);
