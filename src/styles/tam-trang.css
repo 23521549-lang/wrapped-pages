@@ -146,6 +146,8 @@
  * nen doi cho van binh thuong khi dang dung.
  */
 .troi-dung .m{ animation-play-state: paused; }
+/* Dai troi khuat han khoi man hinh: BauTroi.tsx dat lop nay qua IntersectionObserver, dung net ve cho toi khi thay lai. */
+.troi-khuat .m{ animation-play-state: paused; }
 /* chu bam dinh, o cua so (may tinh) nam giua chieu cao chung: hai troi dat o cua so dung cung mot cho */
 .troi-dai .troi__noi{ align-self: start; }
 /* Dai troi dung ngay tren dau ke: keo dong tieu de len sat bau troi. */

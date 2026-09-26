@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { MUC_LOGO } from "@/components/Logo";
-import type { CoverKey } from "@/lib/book";
+import { COVERS, type CoverKey } from "@/lib/book";
 
 /** Id cua bo loc muc loang, khai mot lan trong InkDefs (layout goc), moi bia tro toi no. */
 export const MUC_LOANG = "muc-loang";
@@ -138,17 +138,25 @@ const VE: Record<CoverKey, ReactNode> = {
   ),
 };
 
-/** Net ve cua mot bia, mau la currentColor; nen gradient do class .bia--<khoa> tren phan tu cha ve. */
+/** Id cua hinh ve mot bia trong InkDefs. */
+export const idVeBia = (cover: CoverKey) => `bia-ve-${cover}`;
+
+/**
+ * Net ve cua mot bia, mau la currentColor; nen gradient do class .bia--<khoa> tren phan tu cha ve. Hinh ve khai MOT lan
+ * trong InkDefs (layout goc), moi bia tren trang chi la mot <use> tro toi do: mot trang danh sach sach co hang chuc bia,
+ * chep lai tung net ve thi la hang tram phan tu DOM (51 bia o trang chon cuon: 514 tren 846 phan tu) va hang chuc KB HTML.
+ * Noi dung trong <use> ke thua color cua the <use>, nen currentColor va bo loc muc loang van y nhu cu.
+ */
 export function CoverArt({ cover }: { cover: CoverKey }) {
   return (
     <svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      {VE[cover]}
+      <use href={`#${idVeBia(cover)}`} />
     </svg>
   );
 }
 
 /**
- * Bo loc muc dung chung cho moi bia, dat MOT lan trong layout goc (khong lap moi bia, khong trung id).
+ * Bo loc muc va hinh ve cua moi bia dung chung, dat MOT lan trong layout goc (khong lap moi bia, khong trung id).
  * Nhieu tan so thap xo dich net ve vai px roi nhoe rat nhe cho mep an vao giay; lop nhieu thu hai lam muc tham
  * khong deu thanh vet loang lon. Bo loc SVG noi tuyen khong can mien CSP nao.
  */
@@ -164,6 +172,8 @@ export function InkDefs() {
           <feColorMatrix in="hat" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.3 1.45" result="hatA" />
           <feComposite in="nhoe" in2="hatA" operator="in" />
         </filter>
+        {/* Hinh ve cua muoi bia, moi bia mot nhom co id: CoverArt tro toi day bang <use>. */}
+        {COVERS.map((k) => <g key={k} id={idVeBia(k)}>{VE[k]}</g>)}
         {/* Logo: net nho nen chi xo dich nhe va nhoe rat it, khong co lop muc tham. */}
         <filter id={MUC_LOGO} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
           <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves={3} seed={7} result="song" />

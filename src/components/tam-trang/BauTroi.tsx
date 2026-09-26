@@ -395,6 +395,23 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
     apDung(dangDung.current);
   }, [apDung, caHai]);
 
+  /*
+   * Dai troi khuat han khoi man hinh (nguoi dung dang doc ke sach ben duoi): dung moi net ve bang lop `troi-khuat`, cuon
+   * ve thay lai thi chay tiep. Hang tram hat mua lap vo han, moi vong lap bao ve luong chinh mot lan tinh kieu: chay tiep
+   * khi khong ai nhin la ton CPU va pin vo ich. Lop rieng, khong dung toi lua chon "Tam dung hieu ung" cua nguoi dung.
+   */
+  const coTroi = kia !== null || minh !== null;
+  useEffect(() => {
+    const w = dai.current;
+    if (!coTroi || w === null || typeof IntersectionObserver === "undefined") return undefined;
+    const quan = new IntersectionObserver(([e]) => w.classList.toggle("troi-khuat", !e.isIntersecting));
+    quan.observe(w);
+    return () => {
+      quan.disconnect();
+      w.classList.remove("troi-khuat");
+    };
+  }, [coTroi]);
+
   function doiDung() {
     const moi = !dung;
     datDung(moi);

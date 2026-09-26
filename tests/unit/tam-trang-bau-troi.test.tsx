@@ -163,6 +163,37 @@ const luat = (bo: string) => new RegExp(`${bo.replace(/[.*+?^${}()|[\]\\]/g, "\\
  * day la phan CSS quyet dinh chieu cao: hai mat chung mot o (doi cho khong xo dich), va trai troi cu cua lan loang nam
  * ngoai dong chay (thay tam trang thi dai doi chieu cao mot lan, ngay khung hinh dau, khong co lai muon luc don).
  */
+describe("BauTroi: dung net ve khi dai troi khuat khoi man hinh", () => {
+  it("khuat han thi dai troi mang lop troi-khuat (CSS dung moi .m), thay lai thi go; go dai troi thi thoi quan sat", () => {
+    let bao: ((ds: { isIntersecting: boolean }[]) => void) | null = null;
+    const ngat = vi.fn();
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(f: (ds: { isIntersecting: boolean }[]) => void) {
+        bao = f;
+      }
+      observe() {}
+      disconnect() {
+        ngat();
+      }
+    });
+    const { container, unmount } = render(<BauTroi tenKia="Linh" kia={null} minh={MINH} />);
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    expect(bao).not.toBeNull();
+    act(() => bao?.([{ isIntersecting: false }]));
+    expect(dai.classList.contains("troi-khuat")).toBe(true);
+    act(() => bao?.([{ isIntersecting: true }]));
+    expect(dai.classList.contains("troi-khuat")).toBe(false);
+    unmount();
+    expect(ngat).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("CSS: .troi-khuat dung moi net ve", () => {
+    const css = boComment(readFileSync(`${THU_MUC_CSS}/tam-trang.css`, "utf8"));
+    expect(css).toMatch(/\.troi-khuat \.m\{ animation-play-state: paused; \}/);
+  });
+});
+
 describe("dai troi: nhung luat CSS khong duoc mat", () => {
   it("dai troi la luoi mot o, va moi bau troi deu nam trong dung o do", () => {
     expect(luat(".troi-dai")).toContain("display: grid");
