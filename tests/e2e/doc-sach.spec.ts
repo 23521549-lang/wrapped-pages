@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { dangToThang, docSach, dongContextCu, haiNguoiDaVao, moSach, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -22,10 +22,11 @@ test("nguoi kia: the co trang moi, mo o to dau chua thay, lat het, quay lai thi 
   const ganNhat = b.getByRole("article", { name: "Một trang trong sách" });
   await expect(ganNhat).toContainText("Chuyện chưa kể");
   await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveCount(0);
-  // Nut "Đọc tiếp" cua khung sach lon mo thang to cua doan trich, khong qua tam bia (chu du an chot 26/09).
+  // "Đọc tiếp" qua tam bia nhu moi loi vao tu ke (chu du an chot 26/09), roi man doc mo o to dau chua doc.
   await ganNhat.getByRole("link", { name: "Đọc tiếp" }).click();
 
-  await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
+  await expect(b).toHaveURL(new RegExp(`/sach/${id}$`));
+  await moSach(b);
   await expect(b.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 3 trang`);
   await expect(b.getByRole("link", { name: "Sửa sách" })).toHaveCount(0);
   const dem = b.locator(".doc__dem");
