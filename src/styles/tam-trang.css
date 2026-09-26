@@ -121,28 +121,16 @@
   .cua-so .cua-so__hoa{ width: 58px; height: 58px; }
 }
 /*
- * Dai troi: the boc chung cua mot hay hai bau troi va cua khuon giu cho. Moi bau troi nam trong CUNG mot o luoi voi
- * khuon, nen chieu cao dai troi bang phan tu cao nhat trong o va khong bao gio doi: khong khi doi cho hai troi, khong
- * khi thay mot tam trang. Khong gi ben duoi bi xo dich. Troi dang xem nam tren, troi kia bi cat ve 0 va tro nang
- * (inert). Doi cho chi la bat/tat lop va chay hoat hinh clip-path lan tu tam o cua so.
+ * Dai troi: the boc chung cua mot hay hai bau troi, cao dung bang noi dung nhu ban mau da duyet (khong con khuon giu
+ * cho, spec bo sung B6). Hai bau troi nam trong CUNG mot o luoi, nen dai cao bang troi cao hon va doi cho hai troi khong
+ * xo dich gi. Troi dang xem nam tren, troi kia bi cat ve 0 va tro nang (inert). Doi cho chi la bat/tat lop va chay hoat
+ * hinh clip-path lan tu tam o cua so.
  */
 /* nut o cua so phai nam tren cac doan chu de ca nut deu bam duoc */
 .cua-so{ position: relative; z-index: 1; touch-action: manipulation; }
 .troi-dai{ position: relative; isolation: isolate; overflow: clip; display: grid; grid-template-columns: minmax(0, 1fr); }
 .troi-dai > .troi{ grid-area: 1 / 1; display: flex; flex-direction: column; z-index: 1; }
 .troi-dai > .troi > .troi__chu{ flex: 1 0 auto; }
-/*
- * Khuon giu cho (BauTroi.tsx, ham KhuonTroi): chin ban tho chong len nhau, dat san chieu cao cho ban cao nhat tai
- * chinh be rong va co chu dang dung. Du an da hai lan bi bac vi tieu de "Ke sach" nhuc nhich khi doi tam trang, nen
- * cho nay do bang khuon that chu khong bang mot con so px viet tay: khuon tu tinh lai khi doi be rong, doi co chu,
- * hay khi font ve muon. Khuon mang ca lop `troi` nen no nhan dung moi quy tac cua mot bau troi that o tren.
- *
- * An bang visibility chu KHONG bang display: none - display: none thi khuon khong con do gi nua. visibility: hidden
- * da du de trinh doc man hinh bo qua va de moi thu ben trong ra khoi luot Tab; aria-hidden va inert la lop thu hai.
- */
-.troi-dai > .troi-dai__khuon{ visibility: hidden; }
-.troi-dai__chong{ display: grid; grid-template-columns: minmax(0, 1fr); }
-.troi-dai__chong > *{ grid-area: 1 / 1; }
 /* troi dang an: cat ve 0 bang clip-path chu khong phai visibility, nen bo an chi la hoat hinh clip-path cua dung mot
    phan tu, khong phai tinh lai style ke thua cho hang tram net ve ben trong (do duoc: visibility ton 11 toi 90ms ngay
    luc bam, CPU cham gap bon) */
@@ -229,9 +217,11 @@
 .cua-so__kinh--loang{ background: none; z-index: 1; }
 .cua-so__kinh--loang > .cua-so__nen{ z-index: 3; }
 .cua-so__kinh--loang > .cua-so__hoa{ z-index: 4; }
-/* troi moi nam tren lop loang, troi cu nam duoi cung: thu tu nay khong phu thuoc thu tu the trong cay DOM */
+/* troi moi nam tren lop loang, troi cu nam duoi cung: thu tu nay khong phu thuoc thu tu the trong cay DOM. Troi cu
+   nam ngoai dong chay va phu kin dai (dai cat phan thua), nen chieu cao dai di theo troi moi ngay tu khung hinh dau cua
+   lan loang, khong cao them roi co lai muon luc don. */
 .troi-dai > .troi--dang-loang{ z-index: 3; }
-.troi-dai > .troi--cu{ z-index: 0; }
+.troi-dai > .troi--cu{ position: absolute; inset: 0; z-index: 0; }
 
 /*
  * Net ve bau troi. Mau net di qua fill/stroke/background (nen troi --tnet, --t1, --t2), khong qua color: day la trang

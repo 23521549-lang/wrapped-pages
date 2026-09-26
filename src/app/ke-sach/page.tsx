@@ -12,6 +12,7 @@ import { Ngan, type SachTrenKe } from "@/components/book/Ngan";
 import { GlyphKhoa, GlyphRieng } from "@/components/book/ShelfBook";
 import { ActivityPanel } from "@/components/feed/ActivityPanel";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
+import { TroiTam } from "@/components/tam-trang/troi-tam";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
 import { chiaTamTrang, conLai, troiHien } from "@/lib/tam-trang/lich";
@@ -59,78 +60,81 @@ export default async function KeSach() {
       <AppNav me={me} current="ke-sach" />
       <main className="man">
         <HoaDefs />
-        <BauTroi
-          tenKia={me.partnerNickname}
-          kia={kia ? troiHien(kia, now) : null}
-          minh={minh ? troiHien(minh, now) : null}
-        />
-        <div className="shell">
-          <ThaTamTrang
-            dau={(
-              <div>
-                <h1 className="d">Kệ sách</h1>
-                <p className="ke-dau__phu">
-                  {shelf.length > 0 ? `${shelf.length} cuốn${fresh > 0 ? `, ${fresh} trang mới` : ""}` : "Chưa có cuốn nào"}
-                </p>
-              </div>
-            )}
-            nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}
-            dangGiu={minh ? { weather: minh.weather, conLai: conLai(minh.endsAt, now) } : null}
+        {/* Troi tam cua lan tha (spec bo sung B5) di tu hop tha sang dai troi: mot ngu canh boc ca hai, khong ve the nao. */}
+        <TroiTam>
+          <BauTroi
             tenKia={me.partnerNickname}
+            kia={kia ? troiHien(kia, now) : null}
+            minh={minh ? troiHien(minh, now) : null}
           />
+          <div className="shell">
+            <ThaTamTrang
+              dau={(
+                <div>
+                  <h1 className="d">Kệ sách</h1>
+                  <p className="ke-dau__phu">
+                    {shelf.length > 0 ? `${shelf.length} cuốn${fresh > 0 ? `, ${fresh} trang mới` : ""}` : "Chưa có cuốn nào"}
+                  </p>
+                </div>
+              )}
+              nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}
+              dangGiu={minh ? { weather: minh.weather, conLai: conLai(minh.endsAt, now) } : null}
+              tenKia={me.partnerNickname}
+            />
 
-          {shelf.length === 0 ? (
-            <div className="dau-ke">
-              <div className="ke-trong">
-                <h2 className="d">Kệ còn trống.</h2>
-                <p>Cuốn đầu tiên bạn tạo sẽ đứng ở đây. Cuốn nào chia sẻ thì {me.partnerNickname} cũng đọc được.</p>
-                <Link className="btn" href="/sach/moi">Tạo sách</Link>
-                <span className="ke-mep ke-trong__mep" aria-hidden="true" />
-              </div>
-              {hoatDong}
-            </div>
-          ) : (
-            <>
+            {shelf.length === 0 ? (
               <div className="dau-ke">
-                {recent && (
-                  <OpenBook
-                    who={recent.mine ? "Bạn" : recent.ownerNickname}
-                    title={recent.title}
-                    covers={biaCuaKhung}
-                    tuDatNut={!coDaiTroi}
-                    dauHref={`/dau-thoi-gian/${recent.id}`}
-                    pageCount={recent.pageCount}
-                    position={recent.excerptPosition}
-                    readHref={docKhung}
-                    when={when(recent)}
-                    excerpt={recent.excerpt}
-                    locked={recent.excerptLocked}
-                    isPrivate={recent.mode === "rieng-tu"}
-                    action={recent.mine
-                      ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet-tiep` }
-                      : { label: "Đọc tiếp", href: docKhung }}
-                  />
-                )}
+                <div className="ke-trong">
+                  <h2 className="d">Kệ còn trống.</h2>
+                  <p>Cuốn đầu tiên bạn tạo sẽ đứng ở đây. Cuốn nào chia sẻ thì {me.partnerNickname} cũng đọc được.</p>
+                  <Link className="btn" href="/sach/moi">Tạo sách</Link>
+                  <span className="ke-mep ke-trong__mep" aria-hidden="true" />
+                </div>
                 {hoatDong}
               </div>
+            ) : (
+              <>
+                <div className="dau-ke">
+                  {recent && (
+                    <OpenBook
+                      who={recent.mine ? "Bạn" : recent.ownerNickname}
+                      title={recent.title}
+                      covers={biaCuaKhung}
+                      tuDatNut={!coDaiTroi}
+                      dauHref={`/dau-thoi-gian/${recent.id}`}
+                      pageCount={recent.pageCount}
+                      position={recent.excerptPosition}
+                      readHref={docKhung}
+                      when={when(recent)}
+                      excerpt={recent.excerpt}
+                      locked={recent.excerptLocked}
+                      isPrivate={recent.mode === "rieng-tu"}
+                      action={recent.mine
+                        ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet-tiep` }
+                        : { label: "Đọc tiếp", href: docKhung }}
+                    />
+                  )}
+                  {hoatDong}
+                </div>
 
-              <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." />
-              <Ngan
-                ten={`Kệ của ${me.partnerNickname}`}
-                books={cuaKia}
-                trong={`${me.partnerNickname} chưa chia sẻ cuốn nào.`}
-              />
+                <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." />
+                <Ngan
+                  ten={`Kệ của ${me.partnerNickname}`}
+                  books={cuaKia}
+                  trong={`${me.partnerNickname} chưa chia sẻ cuốn nào.`}
+                />
 
-              <footer className="foot">
-                <ul className="legend" aria-label="Chú giải">
-                  <li><span className="dh dh--moi"><span className="cham" aria-hidden="true" />Trang mới</span> chưa đọc</li>
-                  <li><span className="dh"><GlyphKhoa />Trang khóa</span> cần vượt thử thách</li>
-                  <li><span className="dh"><GlyphRieng />Riêng tư</span> chỉ mình bạn thấy</li>
-                </ul>
-              </footer>
-            </>
-          )}
-        </div>
+                <footer className="foot">
+                  <ul className="legend" aria-label="Chú giải">
+                    <li><span className="dh dh--moi"><span className="cham" aria-hidden="true" />Trang mới</span> chưa đọc</li>
+                    <li><span className="dh"><GlyphKhoa />Trang khóa</span> cần vượt thử thách</li>
+                    <li><span className="dh"><GlyphRieng />Riêng tư</span> chỉ mình bạn thấy</li>
+                  </ul>
+                </footer>
+              </>
+            )}
+          </div>
+        </TroiTam>
       </main>
     </>
   );

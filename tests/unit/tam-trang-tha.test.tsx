@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ChoKeSach from "@/app/ke-sach/loading";
 import { ThaTamTrang, type DangGiu } from "@/components/tam-trang/ThaTamTrang";
+import { CUON_TOI_DA_MS, NHIP_SAU_CUON_MS } from "@/components/tam-trang/cuon-len";
+import { TroiTam, useTroiTam } from "@/components/tam-trang/troi-tam";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { CHON_TROI, NHAN_DAI, NOTE_MAX } from "@/lib/tam-trang/input";
 
@@ -328,5 +330,98 @@ describe("ke sach va khung giu cho", () => {
     expect((container.querySelector("#tha-tam-trang") as HTMLElement).hidden).toBe(true);
     expect(document.activeElement).toBe(nutMo());
     await act(async () => traLoi({ ok: true }));
+  });
+});
+
+/** Doc troi tam trong ngu canh, nhu dai troi doc. */
+function DoTam() {
+  const { tam } = useTroiTam();
+  return <output data-testid="tam">{tam === null ? "" : `${tam.weather}|${tam.note ?? ""}|${tam.tha}`}</output>;
+}
+
+const veTam = () =>
+  render(
+    <TroiTam>
+      <ThaTamTrang dau={<div><h1>Kệ sách</h1></div>} nutPhu={null} dangGiu={null} tenKia="Linh" />
+      <DoTam />
+    </TroiTam>,
+  );
+const tam = () => screen.getByTestId("tam").textContent;
+
+/** Chon mot troi, go loi nhan (neu co) roi bam Tha. */
+function thaQuaHop(troi: string, nhan = "") {
+  fireEvent.click(nutMo());
+  fireEvent.click(screen.getByRole("radio", { name: troi }));
+  if (nhan !== "") fireEvent.change(oNhan(), { target: { value: nhan } });
+  fireEvent.click(screen.getByRole("button", { name: "Thả" }));
+}
+
+/*
+ * Spec bo sung B5: bam "Thả" thi trang cuon muot len dai troi, toi noi thi dai troi nhan troi TAM cua lan tha, khong
+ * cho may chu. May chu tu choi thi troi tam bi go (chi khi no van la cua lan tha nay), hop mo lai kem cau bao.
+ */
+describe("ThaTamTrang: troi tam va cuon len dai troi", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("dang o dinh trang: sau mot nhip dai troi nhan troi tam, trong luc may chu chua tra loi", async () => {
+    vi.useFakeTimers();
+    let traLoi!: (r: { ok: true }) => void;
+    actionSetMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
+    veTam();
+    thaQuaHop("Giông", "Mưa cả buổi chiều.");
+    expect(tam()).toBe("");
+    act(() => { vi.advanceTimersByTime(NHIP_SAU_CUON_MS); });
+    expect(tam()).toMatch(/^giong\|Mưa cả buổi chiều\.\|Thả lúc [0-9]{2}:[0-9]{2}$/);
+    expect(actionSetMood).toHaveBeenCalledWith("giong", "Mưa cả buổi chiều.");
+    await act(async () => traLoi({ ok: true }));
+  });
+
+  it("dang o duoi trang: cuon muot len dinh truoc, troi tam chi den khi cuon xong", async () => {
+    vi.useFakeTimers();
+    const cuon = vi.fn();
+    vi.stubGlobal("scrollTo", cuon);
+    vi.stubGlobal("scrollY", 900);
+    let traLoi!: (r: { ok: true }) => void;
+    actionSetMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
+    veTam();
+    thaQuaHop("Mưa phùn");
+    expect(cuon).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    // Focus ve nut mo khong duoc keo trang xuong lai.
+    expect(document.activeElement).toBe(nutMo());
+    act(() => { vi.advanceTimersByTime(CUON_TOI_DA_MS - 1); });
+    expect(tam()).toBe("");
+    act(() => {
+      globalThis.dispatchEvent(new Event("scrollend"));
+      vi.advanceTimersByTime(NHIP_SAU_CUON_MS);
+    });
+    expect(tam()).toMatch(/^mua-phun\|\|/);
+    await act(async () => traLoi({ ok: true }));
+  });
+
+  it("may chu tu choi sau khi troi tam da dat: troi tam bi go, hop mo lai kem cau bao", async () => {
+    vi.useFakeTimers();
+    let traLoi!: (r: { error: string }) => void;
+    actionSetMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
+    veTam();
+    thaQuaHop("Giông");
+    act(() => { vi.advanceTimersByTime(NHIP_SAU_CUON_MS); });
+    expect(tam()).toMatch(/^giong/);
+    await act(async () => traLoi({ error: "Bạn cần đăng nhập trước." }));
+    expect(tam()).toBe("");
+    expect(screen.getByRole("alert").textContent).toBe("Bạn cần đăng nhập trước.");
+  });
+
+  it("may chu tu choi truoc khi toi dai troi: troi tam khong bao gio duoc dat", async () => {
+    vi.useFakeTimers();
+    actionSetMood.mockResolvedValueOnce({ error: "Bạn cần đăng nhập trước." });
+    veTam();
+    thaQuaHop("Giông");
+    await act(async () => { await Promise.resolve(); });
+    act(() => { vi.advanceTimersByTime(NHIP_SAU_CUON_MS * 2); });
+    expect(tam()).toBe("");
+    expect(screen.getByRole("alert").textContent).toBe("Bạn cần đăng nhập trước.");
   });
 });

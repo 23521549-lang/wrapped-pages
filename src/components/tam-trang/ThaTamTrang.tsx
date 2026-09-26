@@ -5,8 +5,12 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import { actionSetMood, actionWithdrawMood } from "@/app/actions/mood";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { NHAN_DAI, NOTE_MAX, parseMoodInput } from "@/lib/tam-trang/input";
+import { thaLabel, type TroiHien } from "@/lib/tam-trang/lich";
 import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
+import { timeLabel } from "@/lib/when";
+import { cuonLenDinh } from "./cuon-len";
 import { Hoa } from "./HoaEp";
+import { useTroiTam } from "./troi-tam";
 
 /** Id cua hop chon: nut mo tro toi no bang aria-controls. */
 const HOP = "tha-tam-trang";
@@ -46,6 +50,9 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   const hopRef = useRef<HTMLElement>(null);
   /** Hop vua duoc mo lai sau khi may chu tu choi: dua focus toi nut Tha de nguoi dung thu lai ngay. */
   const moLaiRef = useRef(false);
+  const { datTam } = useTroiTam();
+  /** Huy lan cuon len dai troi dang cho (lan tha moi thay lan cu, hay thanh phan go ra giua chung). */
+  const huyCuon = useRef<(() => void) | null>(null);
   const soChu = [...nhan].length;
   const qua = soChu > NOTE_MAX;
   // Bo dem: dam khi vua day, them kieu bao loi khi da vuot. Mot chuoi lop thay vi ba nhanh dieu kieu long nhau.
@@ -101,6 +108,8 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     setMo(true);
   }
 
+  useEffect(() => () => huyCuon.current?.(), []);
+
   // Focus toi nut Tha sau khi hop da mo lai tren man VA lan gui da xong han: luc goi setMo(true) hop van dang an, va
   // trong luc transition con chay nut Tha van bi tat, ma trinh duyet khong cho focus vao mot nut dang tat.
   useEffect(() => {
@@ -119,18 +128,36 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     }
     setLoi("");
     setMo(false);
-    nutRef.current?.focus();
+    // Focus ve nut mo nhung khong keo trang: trang sap cuon len dai troi.
+    nutRef.current?.focus({ preventScroll: true });
+    /*
+     * Spec bo sung B5: trang cuon muot len dai troi ngay, toi noi thi dai troi ve troi TAM cua lan tha nay, khong cho may
+     * chu. May chu tu choi thi go troi tam (chi khi no van la cua lan tha nay) va mo lai hop kem cau bao; tu choi den
+     * truoc khi cuon xong thi troi tam khong bao gio duoc dat.
+     */
+    const luc = new Date();
+    const moi: TroiHien = { weather: vao.weather, note: vao.note, tha: thaLabel(luc, luc), gio: timeLabel(luc) };
+    let hong = false;
+    const boTam = (cau: string) => {
+      hong = true;
+      datTam((t) => (t === moi ? null : t));
+      moLaiVoiLoi(cau);
+    };
+    huyCuon.current?.();
+    huyCuon.current = cuonLenDinh(() => {
+      if (!hong) datTam(moi);
+    });
     batDau(async () => {
       try {
         const r = await actionSetMood(vao.weather, vao.note);
         if ("error" in r) {
-          moLaiVoiLoi(r.error);
+          boTam(r.error);
           return;
         }
         dong();
         setBao(`Đã thả ${TROI[vao.weather].ten}. Giữ trong 24 giờ.`);
       } catch {
-        moLaiVoiLoi(CHUA_THA_DUOC);
+        boTam(CHUA_THA_DUOC);
       }
     });
   }

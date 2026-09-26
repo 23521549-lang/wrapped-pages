@@ -402,16 +402,18 @@ const cls = (p: Page) => p.evaluate(async () => {
  * giay sau cu bam, nen lan thu hop do bi tinh vao CLS: do duoc mot ban ghi 0,1349 tren `.dau-ke` ngay ca khi tat hieu
  * ung. Gio hop dong ngay trong luot bam. Bai nay dem tu TRUOC cu bam toi sau khi moi thu xong, o hai bo may.
  */
-test("thay tam trang khong gay xo dich nao ngoai cua so cu bam: CLS bang 0 ca luot", async ({ browser }) => {
+test("thay tam trang bang mot troi cung chieu cao: CLS bang 0 ca luot", async ({ browser }) => {
   const { b } = await haiNguoiDaVao(browser);
   // Da giu san mot tam trang, tuc dai troi da co tren trang: bai nay do lan THAY tam trang. Lan tha dau tien thi dai
-  // troi xuat hien lan dau o dinh trang, mot viec khac han va khong thuoc bai nay.
+  // troi xuat hien lan dau o dinh trang, mot viec khac han va khong thuoc bai nay. Ba troi o day cung khong co dong giai
+  // nghia va khong loi nhan, tuc cung chieu cao: dai troi cao dung bang noi dung (spec bo sung B6), nen thay bang mot
+  // troi cao khac thi dai doi chieu cao mot lan - viec do do rieng o bai "troi moi loang phu het troi cu".
   await tha(b, "nang-am");
   for (const giam of [false, true]) {
     await b.emulateMedia({ reducedMotion: giam ? "reduce" : "no-preference" });
     await b.goto("/ke-sach");
     await b.getByRole("button", { name: "Thả tâm trạng" }).click();
-    await b.locator("label.o", { hasText: TROI[giam ? "mua-phun" : "giong"].ten }).click();
+    await b.locator("label.o", { hasText: TROI[giam ? "troi-trong" : "giong"].ten }).click();
     // Doi hoat hinh mo hop chay xong, roi moi bat dem: chi do tu luc bam Tha.
     await b.waitForTimeout(400);
     await demCls(b);
@@ -425,13 +427,12 @@ test("thay tam trang khong gay xo dich nao ngoai cua so cu bam: CLS bang 0 ca lu
   }
 });
 
-test("thay tam trang: troi moi loang phu het troi cu, khong xo dich, xong thi sach", async ({ browser }) => {
+test("thay tam trang: troi moi loang phu het troi cu; dai troi doi chieu cao mot lan luc bat dau loang, khong doi them; xong thi sach", async ({ browser }) => {
   const { b } = await haiNguoiDaVao(browser);
   await tha(b, "nang-am");
   await b.goto("/ke-sach");
   const dai = b.locator(".troi-dai");
   const moc = b.getByRole("heading", { level: 1, name: "Kệ sách" });
-  const mocTruoc = await dinhTaiLieu(moc);
   const caoTruoc = (await dai.boundingBox())?.height ?? -1;
   // Tha bang thaTaiCho chu khong bang tha(): tha() mo dau bang mot lan goto, ma lan goto do xoa mat chinh cai
   // PerformanceObserver cua demXoDich (phan quyet M8, phat hien F13).
@@ -451,6 +452,11 @@ test("thay tam trang: troi moi loang phu het troi cu, khong xo dich, xong thi sa
   // ngay sau khi `hidden` duoc dat la con dem nham chinh cu thu hop lai.
   await b.evaluate(() => new Promise((xong) => requestAnimationFrame(() => requestAnimationFrame(() => xong(null)))));
   await demXoDich(b);
+  // Dai troi cao dung bang noi dung (spec bo sung B6): troi moi co them mot dong loi nhan nen dai da cao hon, va lan doi
+  // chieu cao do xay ra ngay luc bat dau loang. Tu day toi het buoc don, khong gi con nhuc nhich.
+  const mocLoang = await dinhTaiLieu(moc);
+  const caoLoang = (await dai.boundingBox())?.height ?? -1;
+  expect(caoLoang, "dai troi di theo troi moi ngay khi bat dau loang").toBeGreaterThan(caoTruoc);
   const soVet = await b.locator(".loang .giot").count();
   console.log(`[tam-trang] so vet nuoc cua lan loang o ${b.viewportSize()?.width}px: ${soVet}`);
   expect(soVet).toBeGreaterThan(0);
@@ -458,8 +464,8 @@ test("thay tam trang: troi moi loang phu het troi cu, khong xo dich, xong thi sa
   await expect(b.locator(".troi--cu")).toHaveAttribute("inert", "");
   await expect(b.locator(".troi--dang-loang")).toHaveCount(1);
   // Khong xo dich ngay giua lan loang.
-  expect(await dinhTaiLieu(moc)).toBeCloseTo(mocTruoc, 2);
-  expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoTruoc, 2);
+  expect(await dinhTaiLieu(moc)).toBeCloseTo(mocLoang, 2);
+  expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoLoang, 2);
 
   // Sau 3,2 giay: khong con lop loang nao trong DOM, khong con trai troi cu nao, khong hoat hinh nao con chay.
   await b.waitForTimeout(3200);
@@ -468,10 +474,10 @@ test("thay tam trang: troi moi loang phu het troi cu, khong xo dich, xong thi sa
   await expect(b.locator(".troi--dang-loang")).toHaveCount(0);
   // Bo qua CSSAnimation: net ve cua bau troi chay mai mai theo CSS, chi hoat hinh do lan loang tao ra moi phai tan.
   expect(await b.evaluate(() => document.getAnimations().filter((a) => a.playState === "running" && !(a instanceof CSSAnimation)).length)).toBe(0);
-  // Chieu cao dai troi khong doi mot chut nao du bai tho moi dai ngan khac bai cu.
-  expect(await dinhTaiLieu(moc)).toBeCloseTo(mocTruoc, 2);
-  expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoTruoc, 2);
-  expect(await xoDich(b), "co xo dich bo cuc khi thay tam trang").toBe(0);
+  // Buoc don go trai troi cu (nam ngoai dong chay) ma dai troi khong co lai: khong co lan xo dich muon nao.
+  expect(await dinhTaiLieu(moc)).toBeCloseTo(mocLoang, 2);
+  expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoLoang, 2);
+  expect(await xoDich(b), "co xo dich bo cuc tu luc bat dau loang toi het buoc don").toBe(0);
 
   // Giam chuyen dong: doi thang, khong lop loang nao.
   await b.emulateMedia({ reducedMotion: "reduce" });
@@ -708,4 +714,60 @@ test("anh chup chin bau troi, hop chon va lich hoa de cham giao dien", async ({ 
     await choSongTan(a);
     await a.screenshot({ path: `test-results/tam-trang/cua-so-doi-${width}.png` });
   }
+});
+
+/*
+ * Spec bo sung B6: dai troi cao dung bang noi dung nhu ban mau da duyet, khong con khuon giu cho. Do tu dong chu cuoi
+ * cua dai troi toi tieu de "Kệ sách": ban mau do duoc 40px o ca hai be rong (che do mot bau troi). Truoc khi bo khuon,
+ * con so nay la 201px o 1280 va 355px o 375.
+ */
+test("dai troi gon nhu ban mau: tu dong chu cuoi cua dai troi toi tieu de Ke sach khoang 40px", async ({ browser }) => {
+  const { b } = await haiNguoiDaVao(browser);
+  await tha(b, "nang-am");
+  for (const width of [1280, 375]) {
+    await b.setViewportSize({ width, height: 900 });
+    await b.goto("/ke-sach");
+    const cuoi = b.locator(".troi-dai section.troi .troi__cuoi");
+    const tieuDe = b.getByRole("heading", { level: 1, name: "Kệ sách" });
+    const [c, t] = await Promise.all([cuoi.boundingBox(), tieuDe.boundingBox()]);
+    if (!c || !t) throw new Error("khong thay dai troi hay tieu de");
+    const khoang = t.y - (c.y + c.height);
+    expect(khoang, `${width}px: khoang tu dai troi toi tieu de`).toBeGreaterThanOrEqual(36);
+    expect(khoang, `${width}px: khoang tu dai troi toi tieu de`).toBeLessThanOrEqual(44);
+  }
+});
+
+/*
+ * Spec bo sung B5: bam "Thả" thi trang cuon muot len dai troi va dai troi bat dau doi ngay khi toi noi, khong cho may
+ * chu. Giu phan hoi cua server action lai 4 giay de chung minh lan doi den TRUOC khi may chu tra loi.
+ */
+test("tha tam trang tu giua trang: trang cuon ve dai troi va troi bat dau loang trong vong 2 giay, truoc khi may chu tra loi", async ({ browser }) => {
+  const { b } = await haiNguoiDaVao(browser);
+  await tha(b, "nang-am");
+  await b.setViewportSize({ width: 375, height: 640 });
+  await b.goto("/ke-sach");
+  await b.getByRole("button", { name: "Thả tâm trạng" }).click();
+  await b.locator("label.o", { hasText: TROI.giong.ten }).click();
+  // Cuon cho nut Tha ra giua man hinh: dai troi da khuat phia tren.
+  await b.getByRole("button", { name: "Thả", exact: true }).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  expect(await b.evaluate(() => globalThis.scrollY), "trang phai dang cuon xuong truoc khi tha").toBeGreaterThan(100);
+
+  await b.route("**/ke-sach", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await new Promise((xong) => setTimeout(xong, 4_000));
+    return route.continue();
+  });
+  const bam = Date.now();
+  await b.getByRole("button", { name: "Thả", exact: true }).click();
+  await expect(b.locator(".troi--dang-loang")).toHaveCount(1, { timeout: 2_000 });
+  expect(Date.now() - bam, "troi bat dau loang trong vong 2 giay tu cu bam").toBeLessThan(2_000);
+  expect(await b.evaluate(() => globalThis.scrollY), "trang da ve dai troi").toBeLessThanOrEqual(1);
+  // May chu van chua tra loi luc troi da loang.
+  await expect(b.getByText("Đã thả Giông. Giữ trong 24 giờ.")).toHaveCount(0);
+  await expect(b.getByText("Đã thả Giông. Giữ trong 24 giờ.")).toBeAttached({ timeout: 10_000 });
+  // May chu ve lai dung tam trang do: khong co lan loang thu hai.
+  await b.waitForTimeout(3_500);
+  await expect(b.locator(".troi--dang-loang")).toHaveCount(0);
+  await expect(b.locator(".troi--cu")).toHaveCount(0);
+  await expect(b.getByRole("region", { name: "Tâm trạng của bạn" })).toHaveClass(/troi--giong/);
 });

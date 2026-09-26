@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
 import { dongChu, soHoatDangGiu } from "@/components/tam-trang/hieu-ung-chung";
+import { TroiTam, useTroiTam } from "@/components/tam-trang/troi-tam";
 import { doHinh } from "@/components/tam-trang/song";
-import { NOTE_MAX } from "@/lib/tam-trang/input";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { netTroi } from "@/lib/tam-trang/net-troi";
 import { LOANG_HET_MS, NEN_MS, NEN_TRE_MS } from "@/lib/tam-trang/loang-nhip";
@@ -81,8 +81,6 @@ describe("BauTroi: mot bau troi", () => {
     const { container } = ve(KIA, null);
     const vung = screen.getByRole("region", { name: "Tâm trạng của Linh" });
     expect(vung.className).toBe("troi troi--mua-phun");
-    // Do TRONG the .troi that: khuon giu cho cung mang du nhung lop nay (chin ban tho an), nen do tren ca container
-    // la do nham khuon ngay khi ai do doi thu tu hai thu trong dai troi.
     const tho = vung.querySelector(".troi__tho");
     expect([...(tho?.querySelectorAll(".troi__cau") ?? [])].map((c) => c.textContent)).toEqual(["Tùy phong tiềm nhập dạ", "Nhuận vật tế vô thanh"]);
     expect(tho?.classList.contains("d")).toBe(true);
@@ -92,9 +90,8 @@ describe("BauTroi: mot bau troi", () => {
     expect(vung.querySelector(".troi__nhan")?.textContent).toBe("Nhớ cậu một chút thôi.");
     expect(vung.querySelector(".troi__gio")?.textContent).toBe("Thả lúc 21:40");
     expect(vung.querySelector(".troi__noi .sr-only")?.textContent).toBe("Linh: Mưa phùn.");
-    // Troi cua nguoi kia khong mang nhan "Ban"; khuon thi luon mang, vi no phai giu cho cho ca hai mat (phat hien N6).
+    // Troi cua nguoi kia khong mang nhan "Ban".
     expect(vung.querySelector(".troi__ai")).toBeNull();
-    expect(container.querySelector(".troi-dai__khuon .troi__ai")?.textContent).toBe("Bạn");
     const lien = screen.getByRole("link", { name: "Xem lịch hoa" });
     expect(lien.getAttribute("href")).toBe("/tam-trang");
     expect(lien.querySelector("svg.hoa use")?.getAttribute("href")).toBe("#hoa-hue-mua");
@@ -108,13 +105,8 @@ describe("BauTroi: mot bau troi", () => {
     expect(vung.className).toBe("troi troi--nang-am");
     expect(vung.querySelector(".troi__ai")?.textContent).toBe("Bạn");
     expect(vung.querySelector(".troi__noi .sr-only")?.textContent).toBe("Bạn: Nắng ấm.");
-    // Do TRONG the .troi that chu khong tren ca container: khuon giu cho co du ba dong giai nghia cua tho Han Viet va
-    // ca chin loi nhan, nen do tren container la do nham khuon. Hai dong cuoi chung minh bo chon van tim thay that -
-    // khong phai mot bo chon khong con ton tai, tra ve null vi ly do sai.
     expect(vung.querySelector(".troi__giai")).toBeNull();
     expect(vung.querySelector(".troi__nhan")).toBeNull();
-    expect(container.querySelectorAll(".troi-dai__khuon .troi__giai")).toHaveLength(WEATHERS.filter((w) => TROI[w].giai !== null).length);
-    expect(container.querySelectorAll(".troi-dai__khuon .troi__nhan")).toHaveLength(WEATHERS.length);
     // Spec muc 5 ("Bo dieu kien !m.laMinh ... de lien ket 'Xem lich hoa' hien ca khi nguoi xem dang nhin troi cua
     // chinh minh") va yeu cau diem 3: nhan khong doi theo chu troi, bong hoa mang mau troi dang hien. Lich hoa la cua
     // ca hai nguoi nen khong co ly do doi chu hay giau di. Bai nay truoc day khang dinh dieu nguoc lai.
@@ -145,60 +137,12 @@ describe("BauTroi: mot bau troi", () => {
     expect([...container.querySelectorAll(".troi__nen .m-cv path")].map((p) => p.getAttribute("class"))).toEqual(["m-cv__1", "m-cv__2", "m-cv__3", "m-cv__4", "m-cv__5"]);
   });
 
-  /*
-   * Khuon giu cho, phan quyet M4: DUNG MOT ban cho ca dai troi, khong phai moi bau troi mot ban. Ve trong tung MotTroi
-   * se thanh 18 ban tho an luc nghi va 27 luc loang, va no day khoang trong vao GIUA bai tho voi hang cuoi - dung cho
-   * chu du an da bac hai lan. O muc dai troi thi phan cao them roi xuong day bau troi, bo cuc ben trong khong doi.
-   */
-  it("khuon giu cho: dung mot ban cho ca dai troi, chin ban tho chong nhau, an voi mat va voi trinh doc man hinh", () => {
+  it("khong con khuon giu cho: dai troi cao dung bang noi dung nhu ban mau da duyet (chu du an 26/09, spec bo sung B6)", () => {
     const { container } = ve(KIA, null);
-    expect(container.querySelectorAll(".troi-dai__khuon")).toHaveLength(1);
-    const khuon = container.querySelector(".troi-dai__khuon") as HTMLElement;
-    expect(khuon.getAttribute("aria-hidden")).toBe("true");
-    expect(khuon.hasAttribute("inert")).toBe(true);
-    // Khong mot the bam duoc nao trong khuon: no ra khoi luot Tab ke ca khi mot trinh duyet chua hieu inert.
-    expect(khuon.querySelector("a, button, input, select, textarea, [tabindex]")).toBeNull();
-
-    const chong = khuon.querySelector(".troi-dai__chong") as HTMLElement;
-    expect(chong.children).toHaveLength(WEATHERS.length);
-    const banMuaPhun = chong.children[WEATHERS.indexOf("mua-phun")];
-    expect(banMuaPhun.querySelector(".troi__giai")?.textContent).toBe(TROI["mua-phun"].giai);
-    expect(banMuaPhun.querySelectorAll(".troi__nhan")).toHaveLength(1);
-    // Phan quyet M5: NOTE_MAX dem code point chu khong dem be rong, nen mot cau tieng Viet dai 80 chu khong chan duoc
-    // chieu cao. Loi nhan cua khuon phai la NOTE_MAX glyph rong nhat (bong hoa mau, moi cai mot o chu) moi la can tren.
-    const nhan = [...(banMuaPhun.querySelector(".troi__nhan")?.textContent ?? "")];
-    expect(nhan).toHaveLength(NOTE_MAX);
-    expect(new Set(nhan).size).toBe(1);
-    expect(nhan[0].codePointAt(0)).toBeGreaterThan(0xffff);
-  });
-
-  /*
-   * Phep chung minh cua ca task: dai troi la mot o luoi, nen no chi cao bang phan tu cao nhat trong o. Chieu cao do
-   * khong doi khi thay tam trang DUNG KHI khuon co du moi dong ma mot bau troi co the ve ra, cho ca chin kieu troi.
-   * Bau troi cao nhat cua mot kieu troi la troi cua chinh nguoi xem (co them hang "Ban") va co loi nhan.
-   */
-  it.each(WEATHERS)("%s: khuon co du moi dong cua bau troi cao nhat, dung thu tu tren duoi", (w) => {
-    const { container } = ve(null, { ...MINH, weather: w, note: "Nhớ cậu." });
-    const sec = container.querySelector("section.troi") as HTMLElement;
-    const khuon = container.querySelector(".troi-dai__khuon") as HTMLElement;
-    const ban = khuon.querySelector(".troi-dai__chong")?.children[WEATHERS.indexOf(w)];
-    const dongKhuon = [...khuon.querySelectorAll<HTMLElement>(".troi__noi > *")].flatMap((el) => (
-      el.classList.contains("troi-dai__chong") ? [...(ban?.children ?? [])].map((c) => c.className) : [el.className]
-    ));
-    // `sr-only` nam ngoai mach bo cuc (position: absolute) nen khuon khong phai giu cho cho no.
-    expect(dongKhuon).toEqual(dongChu(sec).map((el) => el.className).filter((c) => c !== "sr-only"));
-  });
-
-  it("hang cuoi cua khuon dung nhung o y het hang cuoi that, chi khong bam duoc", () => {
-    const { container } = ve(KIA, null);
-    const that = container.querySelector("section.troi .troi__cuoi") as HTMLElement;
-    const khuon = container.querySelector(".troi-dai__khuon .troi__cuoi") as HTMLElement;
-    // O giu cho cua nut tam dung mang lop `nut-cho` thay cho `nut-dung`: bo dem nut that (bai kiem duoi day, song.ts,
-    // e2e) khong duoc dem nham o giu cho, nhung nhanh giam chuyen dong van phai giau ca hai cung luc. Moi lop con lai
-    // phai y het, neu khong hang cuoi cua khuon xuong dong khac hang cuoi that.
-    expect([...khuon.children].map((el) => el.className))
-      .toEqual([...that.children].map((el) => el.className.replace(" nut-dung", " nut-cho")));
-    expect(khuon.querySelector("svg.hoa")).not.toBeNull();
+    expect(container.querySelector(".troi-dai__khuon")).toBeNull();
+    expect(container.querySelector(".troi-dai__chong")).toBeNull();
+    // Moi the trong dai troi la mot bau troi that hay mot vung bao an: khong the an nao chiem cho.
+    expect([...(container.querySelector(".troi-dai")?.children ?? [])].map((el) => el.tagName.toLowerCase())).toEqual(["section", "p"]);
   });
 
   it("dai troi luon la .troi-dai, ca khi chi mot nguoi giu tam trang", () => {
@@ -215,20 +159,20 @@ const CSS_TROI = boComment(readFileSync(`${THU_MUC_CSS}/tam-trang.css`, "utf8"))
 const luat = (bo: string) => new RegExp(`${bo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`).exec(CSS_TROI)?.[1] ?? "";
 
 /*
- * Cong CSS cua khuon giu cho. jsdom khong tinh bo cuc nen cac bai tren chi chung minh duoc phan DOM; bon luat duoi day
- * la phan CSS quyet dinh chieu cao co that su bi khoa hay khong, va chung la cho de bi go nham nhat.
+ * Cong CSS cua chieu cao dai troi. jsdom khong tinh bo cuc nen cac bai tren chi chung minh duoc phan DOM; cac luat duoi
+ * day la phan CSS quyet dinh chieu cao: hai mat chung mot o (doi cho khong xo dich), va trai troi cu cua lan loang nam
+ * ngoai dong chay (thay tam trang thi dai doi chieu cao mot lan, ngay khung hinh dau, khong co lai muon luc don).
  */
-describe("khuon giu cho: nhung luat CSS khong duoc mat", () => {
-  it("dai troi la luoi mot o, va ca bau troi lan khuon deu nam trong dung o do", () => {
+describe("dai troi: nhung luat CSS khong duoc mat", () => {
+  it("dai troi la luoi mot o, va moi bau troi deu nam trong dung o do", () => {
     expect(luat(".troi-dai")).toContain("display: grid");
     expect(luat(".troi-dai > .troi")).toContain("grid-area: 1 / 1");
-    expect(luat(".troi-dai__chong > *")).toContain("grid-area: 1 / 1");
   });
 
-  it("khuon an bang visibility chu khong bang display: none - display: none thi no khong do gi nua", () => {
-    const khuon = luat(".troi-dai > .troi-dai__khuon");
-    expect(khuon).toContain("visibility: hidden");
-    expect(khuon).not.toContain("display: none");
+
+  it("khong con quy tac nao cua khuon giu cho", () => {
+    expect(CSS_TROI).not.toContain("troi-dai__khuon");
+    expect(CSS_TROI).not.toContain("troi-dai__chong");
   });
 });
 
@@ -238,8 +182,8 @@ describe("BauTroi: o cua so khi ca hai cung giu tam trang", () => {
     const dai = container.querySelector(".troi-cua-so");
     // The boc luon mang lop troi-dai, va them troi-cua-so khi ca hai cung giu tam trang.
     expect(dai?.className).toBe("troi-dai troi-cua-so");
-    // Hai bau troi, khuon giu cho, vung bao cua lan doi cho, vung bao cua nut tam dung.
-    expect(dai?.children).toHaveLength(5);
+    // Hai bau troi, vung bao cua lan doi cho, vung bao cua nut tam dung: khong con khuon giu cho.
+    expect(dai?.children).toHaveLength(4);
     const mat = [...(dai?.querySelectorAll(".troi[data-mat]") ?? [])];
     expect(mat.map((s) => s.getAttribute("data-mat"))).toEqual(["kia", "minh"]);
     expect(mat[0].className).toBe("troi troi--mua-phun troi--cua-so");
@@ -761,7 +705,7 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     rerender(<BauTroi tenKia="Linh" kia={null} minh={MINH_MOI} />);
 
     const dai = container.querySelector(".troi-dai") as HTMLElement;
-    // Dem theo [data-k]: bau troi that mang no, khuon giu cho thi khong du cung mang lop `troi`.
+    // Dem theo [data-k]: moi bau troi that mang no.
     expect(dai.querySelectorAll(".troi[data-k]")).toHaveLength(2);
     const moi = dai.querySelector(".troi--dang-loang") as HTMLElement;
     expect(moi.classList.contains("troi--giong")).toBe(true);
@@ -771,8 +715,8 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     expect(cu.getAttribute("aria-hidden")).toBe("true");
     // Trai troi cu khong mang data-mat: song.ts tim hai mat cua lan doi cho bang dung thuoc tinh do.
     expect(cu.hasAttribute("data-mat")).toBe(false);
-    // Con truc tiep cua dai troi, tuc nam trong DUNG o luoi cua cac bau troi (.troi-dai > .troi{ grid-area: 1 / 1 }):
-    // dai khong cao them roi thap di, tieu de "Ke sach" ngay duoi khong nhuc nhich.
+    // Con truc tiep cua dai troi, dat tuyet doi phu kin dai (.troi-dai > .troi--cu): chieu cao dai di theo troi moi ngay
+    // tu khung hinh dau cua lan loang, khong co lai muon luc don.
     expect(cu.parentElement).toBe(dai);
     // Phan quyet M3: khang dinh lop loang CO that truoc da, roi moi dem vet nuoc.
     expect(lopLoang(dai).querySelectorAll(".giot").length).toBeGreaterThan(0);
@@ -967,9 +911,10 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
 
   /*
    * Phat hien N12: `tha` la chuoi "Tha luc 08:15" hay "Tha luc 08:15 hom qua" tuy hom nay la ngay nao, nen no khong
-   * phai moc dinh danh cua mot lan tha. `gio` moi la moc that (timeLabel cua setAt).
+   * phai moc dinh danh cua mot lan tha. Spec bo sung B5 them: gio tha cung khong phai - troi tam cua trinh duyet va troi
+   * may chu co the lech mot phut ma van la mot lan tha. Chi kieu troi hay loi nhan doi moi la thay tam trang.
    */
-  it("qua nua dem ma dong gio tha doi chu: khong loang; tha lai cung kieu troi o phut khac: co loang", () => {
+  it("chi chu gio tha doi (qua nua dem, hay tha lai y nguyen tam trang dang giu o phut khac): khong loang, chu doi tai cho", () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(null, MINH);
     rerender(<BauTroi tenKia="Linh" kia={null} minh={{ ...MINH, tha: "Thả lúc 08:15 hôm qua" }} />);
@@ -977,6 +922,12 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     expect(container.querySelector(".troi--cu")).toBeNull();
 
     rerender(<BauTroi tenKia="Linh" kia={null} minh={{ ...MINH, tha: "Thả lúc 09:00", gio: "09:00" }} />);
+    expect(container.querySelector(".loang")).toBeNull();
+    expect(container.querySelector(".troi--cu")).toBeNull();
+    expect(container.querySelector("section.troi .troi__gio")?.textContent).toBe("Thả lúc 09:00");
+
+    // Doi loi nhan (cung kieu troi) thi la thay tam trang: co loang.
+    rerender(<BauTroi tenKia="Linh" kia={null} minh={{ ...MINH, note: "Trời đẹp.", tha: "Thả lúc 09:05", gio: "09:05" }} />);
     expect(lopLoang(container).querySelectorAll(".giot").length).toBeGreaterThan(0);
     vi.advanceTimersByTime(LOANG_HET_MS + 10);
     expect(container.querySelector(".troi--cu")).toBeNull();
@@ -987,9 +938,10 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * CSS. Trai troi cu la con CUOI cua dai troi: neu khong co z-index day no xuong duoi, no ve DE LEN troi moi va ca
    * lan loang thanh vo hinh - mot lan hong im lang, khong bai DOM nao bat duoc.
    */
-  it("trai troi cu nam trong dung o luoi cua cac bau troi va ve duoi troi moi", () => {
+  it("trai troi cu nam ngoai dong chay, phu kin dai va ve duoi troi moi", () => {
     expect(luat(".troi-dai > .troi")).toContain("grid-area: 1 / 1");
-    expect(luat(".troi-dai > .troi--cu")).toContain("z-index: 0");
+    const cu = luat(".troi-dai > .troi--cu");
+    for (const d of ["position: absolute", "inset: 0", "z-index: 0"]) expect(cu).toContain(d);
     expect(luat(".troi-dai > .troi--dang-loang")).toContain("z-index: 3");
   });
 
@@ -1024,4 +976,64 @@ describe("dongChu: cac dong chu cua mot bau troi", () => {
       "sr-only", "troi__dong troi__tho d", "troi__giai troi__phu", "troi__nguon troi__phu", "troi__nhan", "troi__cuoi",
     ]);
   });
+});
+
+/** Dat troi tam qua ngu canh, nhu hop tha lam khi trang da cuon toi dai troi. */
+function DatTam({ t }: { t: TroiHien | null }) {
+  const { datTam } = useTroiTam();
+  useEffect(() => {
+    datTam(t);
+  }, [t, datTam]);
+  return null;
+}
+
+/** Dai troi trong ngu canh troi tam, voi troi may chu `minh` va troi tam `tam` (null la chua tha gi). */
+const veTam = (minh: TroiHien | null, tam: TroiHien | null) => (
+  <TroiTam>
+    <DatTam t={tam} />
+    <BauTroi tenKia="Linh" kia={null} minh={minh} />
+  </TroiTam>
+);
+
+/*
+ * Spec bo sung B5: bam "Thả" thi dai troi ve troi TAM ngay khi trang cuon toi day, khong cho may chu. May chu ve lai
+ * trang voi dung tam trang do thi troi may chu thang, troi tam duoc go, va khong co lan loang thu hai du gio tha lech.
+ */
+describe("BauTroi: troi tam cua lan tha", () => {
+  it("troi tam khac troi may chu: dai troi ve troi tam va loang tu troi cu sang", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(veTam(MINH, null));
+    rerender(veTam(MINH, MINH_MOI));
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    expect(dai.querySelector(".troi--dang-loang")?.classList.contains("troi--giong")).toBe(true);
+    expect(dai.querySelector(".troi--cu")?.classList.contains("troi--nang-am")).toBe(true);
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+  });
+
+  it("may chu ve lai dung tam trang do voi gio lech mot phut: khong loang lan hai, chu gio doi tai cho, troi tam duoc go", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(veTam(MINH, MINH_MOI));
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+    const mayChu: TroiHien = { ...MINH_MOI, tha: "Thả lúc 09:01", gio: "09:01" };
+    rerender(veTam(mayChu, MINH_MOI));
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    expect(dai.querySelector(".troi--cu")).toBeNull();
+    expect(dai.querySelector(".troi--dang-loang")).toBeNull();
+    expect(dai.querySelector("section.troi .troi__gio")?.textContent).toBe("Thả lúc 09:01");
+    // Troi tam da duoc go: may chu ve tam trang khac (vd nguoi nay tha lai tu tab khac) thi dai troi theo may chu.
+    rerender(veTam(MINH, null));
+    expect(dai.querySelector("section.troi[data-k]")?.classList.contains("troi--nang-am")).toBe(true);
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+  });
+
+  it("troi tam bi go (may chu tu choi): dai troi ve lai troi cu", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(veTam(MINH, MINH_MOI));
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+    rerender(veTam(MINH, null));
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    expect(dai.querySelector(".troi--dang-loang")?.classList.contains("troi--nang-am")).toBe(true);
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+  });
+
 });

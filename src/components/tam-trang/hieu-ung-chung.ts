@@ -108,8 +108,8 @@ export const giamChuyenDong = (): boolean =>
  * Cac dong chu cua mot bau troi, theo dung thu tu tren duoi. Ca hai hieu ung dung chung ham nay: song.ts do khoang
  * cach tu tam song toi tung dong roi hien chu theo mep song, loang.ts lam chuyen do cho ca chu cu lan chu moi.
  *
- * Luon goi voi mot the `.troi` (mot bau troi), khong phai ca dai troi: khuon giu cho chieu cao cung co mot `.troi__noi`
- * cua rieng no, ma khuon thi khong duoc chay hoat hinh nao.
+ * Luon goi voi mot the `.troi` (mot bau troi), khong phai ca dai troi: dai troi co the chua hai bau troi (o cua so) va
+ * trai troi cu cua mot lan loang, moi cai mot `.troi__noi` rieng.
  */
 export function dongChu(sec: ParentNode): HTMLElement[] {
   return [...sec.querySelectorAll<HTMLElement>(".troi__noi > *")];
