@@ -22,7 +22,7 @@ const MIEN_TRU: MienTru[] = [{ phanTu: ".dtg-dong .nhap__ten", vungBam: "li.dtg-
 test.beforeEach(resetDb);
 test.afterEach(dongContextCu);
 
-test("vao tu thanh dieu huong qua trang chon cuon, roi toi luoi muoi hai thang cua cuon do", async ({ browser }) => {
+test("vao tu thanh dieu huong qua trang chon cuon, roi toi lich thang cua cuon do", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangToThang(id, "Lượt đầu tiên.");
@@ -37,8 +37,10 @@ test("vao tu thanh dieu huong qua trang chon cuon, roi toi luoi muoi hai thang c
   await a.getByRole("link", { name: "Chuyện chưa kể" }).click();
   await expect(a).toHaveURL(new RegExp(`/dau-thoi-gian/${id}$`));
   await expect(a.getByRole("heading", { level: 1, name: "Chuyện chưa kể" })).toBeVisible();
-  await expect(a.locator(".nam-o")).toHaveCount(12);
-  // Thang dang chon san la thang cua dau moi nhat; khung chi tiet ke o mo dau.
+  // Lich thang cung khung voi Lich hoa (spec bo sung B4): thang mo san la thang cua dau moi nhat, ngay chon san la ngay
+  // cua dau do, va khung chi tiet ke o mo dau.
+  await expect(a.getByRole("heading", { level: 2, name: /^Tháng [0-9]{1,2}, [0-9]{4}$/ })).toBeVisible();
+  await expect(a.locator(".ngay[aria-pressed='true'] .dtg-tem")).toBeVisible();
   await expect(a.locator(".chi-tiet")).toContainText("Lúc tạo sách");
 });
 
@@ -82,8 +84,8 @@ test("vao thang bang cach bam tieu de the Nhac nen o man doc", async ({ browser 
   expect(await the.locator(".nhac-the__may").evaluate((el) => el.closest("a") === null)).toBe(true);
   await the.getByRole("link", { name: "Nhạc nền, xem dấu thời gian của cuốn này" }).click();
   await expect(a).toHaveURL(new RegExp(`/dau-thoi-gian/${id}$`));
-  // O nhac mo dau hien trong luoi.
-  await expect(a.locator(".nam-not").first()).toBeVisible();
+  // O nhac mo dau hien o lan nhac cua ngay tao sach.
+  await expect(a.locator(".ngay[aria-pressed='true'] .dtg-not")).toBeVisible();
 });
 
 test("cuon rieng tu cua nguoi kia: khong co trong trang chon cuon va trang cua no la 404", async ({ browser }) => {

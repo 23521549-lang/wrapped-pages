@@ -445,31 +445,25 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 /* Ten sach la cach duy nhat phan biet hai cuon tren trang chon, nen xuong dong tron ven thay vi cat bang dau ba cham
    nhu dong cua trang Ban nhap. */
 .dtg-dong .nhap__ten{ white-space: normal; overflow-wrap: anywhere; }
-/* Luoi muoi hai thang cua trang Dau thoi gian: 3 cot o man hep, 4 cot tu 768px. Moi o la mot nut (bam thi khung chi
-   tiet doi tai cho, nhu Lich hoa). Khong mot hoat anh nao. */
-.nam-luoi{ border: 0; margin: 0; padding: 0; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); }
-@media (min-width: 768px){ .nam-luoi{ grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.nam-o{
-  display: grid; align-content: start; gap: 6px; min-width: 0; min-height: 64px; padding: var(--space-xs);
-  border: 1px solid var(--color-rule-ui); border-radius: var(--radius-sm); background: var(--color-paper);
-  font: inherit; color: inherit; text-align: left; cursor: pointer;
-}
-.nam-o[aria-pressed="true"]{ background: var(--blue-1); border-color: var(--blue-line); }
-.nam-o__ten{ font-size: var(--text-sm); font-weight: 600; line-height: 1.3; }
-.nam-o--trong .nam-o__ten{ color: var(--color-ink-3); font-weight: 500; }
-.nam-o__dau{ display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-/* Tem bia: dung ti le 5:3, cao 26px, nen anh ve muon khong day luoi. */
-.nam-tem{ position: relative; display: block; height: 26px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
-.nam-tem svg{ display: block; width: 100%; height: 100%; }
-.nam-not{ display: grid; place-items: center; width: 16px; height: 26px; color: var(--color-ink-2); }
-.nam-not svg{ width: 12px; height: 12px; }
+/* Lich cua trang Dau thoi gian dung khung cua Lich hoa (tam-trang.css: .lich-trang, .thang, .lich, .tuan, .ngay,
+   .chi-tiet), hai lan la Bia va Nhac thay cho hai nguoi. Tem bia dung ti le 5:3 va rong hon bong hoa mot chut de van nhan
+   ra tranh; cao theo --hoa-w nen co theo cac nac be rong cua Lich hoa. Ngay khong co dau thi lan la vong cham .hoa-trong. */
+.ngay .dtg-tem{ position: relative; display: block; width: min(calc(var(--hoa-w) * 1.25), 100%); aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
+.ngay .dtg-tem svg{ display: block; width: 100%; height: 100%; }
+.ngay .dtg-not{ display: grid; place-items: center; width: var(--hoa-w); height: var(--hoa-w); color: var(--color-ink-2); }
+.ngay .dtg-not svg{ width: 16px; height: 16px; }
+/* Mot ngay nhieu dau cung loai: tem bia xep chong them mot lop lech sau lung, va mot con so nho o goc (cung cap mau voi
+   so ngay hom nay, --blue-ink tren --blue-2). Khung chi tiet van liet ke du tung dau. */
+.ngay .dtg-lan{ position: relative; display: grid; place-items: center; }
+.ngay .dtg-tem--chong{ box-shadow: 3px -3px 0 -1px var(--color-paper-2), 3px -3px 0 0 var(--color-rule-ui); }
+.ngay .dtg-dem{ position: absolute; top: -7px; right: -6px; min-width: 16px; height: 16px; padding-inline: 3px; border-radius: var(--radius-pill); background: var(--blue-2); color: var(--blue-ink); font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
 /* Khung chi tiet: moi dau mot dong, hinh 96px ben trai. */
 .chi-tiet__trong{ color: var(--color-ink-2); margin-top: var(--space-xs); }
 .dtg-ct{ margin: var(--space-sm) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-md); }
 /* Khung chi tiet muon .chi-tiet cua Lich hoa, ma `.chi-tiet li` (tam-trang.css) dat cot hinh 48px cho bong hoa. Dong
-   dau thoi gian can cot 96px cho anh bia, nen bo chon phai manh hon `.chi-tiet li`, khong thi anh de len chu. */
-.dtg-ct > .dtg-ct__dong{ display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-2xs) var(--space-sm); align-items: start; }
-.dtg-ct__hinh{ position: relative; display: block; width: 96px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
+   dau thoi gian can cot 72px cho anh bia, nen bo chon phai manh hon `.chi-tiet li`, khong thi anh de len chu. */
+.dtg-ct > .dtg-ct__dong{ display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-2xs) var(--space-sm); align-items: start; }
+.dtg-ct__hinh{ position: relative; display: block; width: 72px; aspect-ratio: 5 / 3; border-radius: var(--radius-sach); overflow: hidden; color: var(--blue-ink); }
 .dtg-ct__hinh svg{ display: block; width: 100%; height: 100%; }
 .dtg-ct__hinh--nhac{ display: grid; place-items: center; color: var(--color-ink-2); }
 .dtg-ct__hinh--nhac svg{ width: 16px; height: 16px; }

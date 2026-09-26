@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  docNam, gomTheoThang, namCo, namMacDinh, namThang, thangMacDinh, type Dau,
-} from "@/lib/dau-thoi-gian";
+import { docThangSach, gomTheoNgay, ngayMacDinh, thangMacDinh, type Dau } from "@/lib/dau-thoi-gian";
 
 /*
- * Trang Dau thoi gian gom hai dong thoi gian cua mot cuon theo thang. Ham thuan nen kiem thang o day: thang tinh theo
- * gio Viet Nam, thu tu trong mot thang theo luot, nam va thang mac dinh, va doc tham so tu duong dan.
+ * Trang Dau thoi gian dat hai dong thoi gian cua mot cuon len mot lich thang, cung khung voi Lich hoa (spec bo sung B4).
+ * Ham thuan nen kiem thang o day: ngay va thang tinh theo gio Viet Nam, thu tu trong mot ngay theo luot, thang va ngay
+ * mac dinh, va doc tham so tu duong dan.
  */
 
 /** Mot thoi diem theo gio Viet Nam (UTC+7), de bai kiem doc ra dung ngay du may chay kiem o mui gio nao. */
@@ -16,80 +15,72 @@ const bia = (key: string, ordinal: number | null, at: Date): Dau =>
 const nhac = (key: string, ordinal: number | null, at: Date, youtubeId: string | null = "dQw4w9WgXcQ"): Dau =>
   ({ loai: "nhac", key, ordinal, first: ordinal, last: ordinal, at, youtubeId });
 
-describe("namThang", () => {
-  it("doc theo gio Viet Nam: 23 gio dem 31.12 gio UTC da la ngay 1.1 nam sau o Viet Nam", () => {
-    expect(namThang(new Date(Date.UTC(2025, 11, 31, 20)))).toEqual({ nam: 2026, thang: 1 });
+const THANG_9 = { y: 2026, m: 9 };
+
+describe("gomTheoNgay", () => {
+  it("moi dau vao dung ngay cua no theo gio Viet Nam, chi cua thang dang xem; ngay khong co dau thi khong co khoa", () => {
+    const ngay = gomTheoNgay([
+      bia("a", null, vn(2026, 9, 5)),
+      bia("b", 1, vn(2026, 9, 20)),
+      bia("c", 2, vn(2026, 8, 20)),
+      // 20 gio UTC ngay 30.9 da la 3 gio sang ngay 1.10 o Viet Nam: thuoc thang 10, khong thuoc thang 9.
+      nhac("d", 3, new Date(Date.UTC(2026, 8, 30, 20))),
+    ], THANG_9);
+    expect(Object.keys(ngay).map(Number)).toEqual([5, 20]);
+    expect(ngay[5].map((d) => d.key)).toEqual(["a"]);
+    expect(ngay[20].map((d) => d.key)).toEqual(["b"]);
   });
 
-  it("dau thang va cuoi thang", () => {
-    expect(namThang(vn(2026, 9, 1, 0))).toEqual({ nam: 2026, thang: 9 });
-    expect(namThang(vn(2026, 9, 30, 23))).toEqual({ nam: 2026, thang: 9 });
-  });
-});
-
-describe("gomTheoThang", () => {
-  it("luon du muoi hai o, ke ca thang khong co dau nao", () => {
-    const o = gomTheoThang([], 2026);
-    expect(o.map((x) => x.thang)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-    expect(o.every((x) => x.dau.length === 0)).toBe(true);
-  });
-
-  it("moi dau vao dung thang cua no, chi cua nam dang xem", () => {
-    const o = gomTheoThang([bia("a", null, vn(2026, 3, 5)), bia("b", 1, vn(2026, 9, 20)), bia("c", 2, vn(2025, 9, 20))], 2026);
-    expect(o[2].dau.map((d) => d.key)).toEqual(["a"]);
-    expect(o[8].dau.map((d) => d.key)).toEqual(["b"]);
-    expect(o.flatMap((x) => x.dau).map((d) => d.key)).not.toContain("c");
-  });
-
-  it("trong mot thang: theo luot, o mo dau truoc het, cung luot thi bia truoc nhac", () => {
-    const o = gomTheoThang([
-      nhac("n2", 2, vn(2026, 9, 21)),
-      bia("b2", 2, vn(2026, 9, 21)),
-      bia("b0", null, vn(2026, 9, 18)),
-      nhac("n1", 1, vn(2026, 9, 19)),
-    ], 2026);
-    expect(o[8].dau.map((d) => d.key)).toEqual(["b0", "n1", "b2", "n2"]);
+  it("trong mot ngay: theo luot, o mo dau truoc het, cung luot thi bia truoc nhac, du mang dau vao lon xon", () => {
+    const ngay = gomTheoNgay([
+      nhac("n2", 2, vn(2026, 9, 15, 19)),
+      bia("b2", 2, vn(2026, 9, 15, 19)),
+      bia("b1", 1, vn(2026, 9, 15, 8)),
+      nhac("mo", null, vn(2026, 9, 15, 7)),
+    ], THANG_9);
+    expect(ngay[15].map((d) => d.key)).toEqual(["mo", "b1", "b2", "n2"]);
   });
 
   it("o go nhac la mot dau that, khong bi bo di", () => {
-    const o = gomTheoThang([nhac("go", 3, vn(2026, 9, 22), null)], 2026);
-    expect(o[8].dau).toHaveLength(1);
+    const ngay = gomTheoNgay([nhac("go", 4, vn(2026, 9, 15), null)], THANG_9);
+    expect(ngay[15]).toHaveLength(1);
   });
 });
 
-describe("nam va thang mac dinh", () => {
-  it("nam mac dinh la nam cua dau moi nhat theo luot, khong theo thu tu mang", () => {
-    const dau = [bia("moi", 3, vn(2026, 2, 1)), bia("cu", null, vn(2025, 11, 1))];
-    expect(namMacDinh(dau, vn(2026, 9, 25))).toBe(2026);
+describe("thang va ngay mac dinh", () => {
+  it("thang mac dinh la thang cua dau moi nhat theo luot, khong theo thu tu mang", () => {
+    const dau = [bia("moi", 3, vn(2026, 9, 26)), bia("cu", 1, vn(2026, 6, 2)), nhac("giua", 2, vn(2026, 7, 14))];
+    expect(thangMacDinh(dau, vn(2026, 12, 1))).toEqual(THANG_9);
   });
 
-  it("chua co dau nao thi la nam hien tai", () => {
-    expect(namMacDinh([], vn(2026, 9, 25))).toBe(2026);
+  it("chua co dau nao thi la thang cua hom nay", () => {
+    expect(thangMacDinh([], vn(2026, 9, 26))).toEqual(THANG_9);
   });
 
-  it("thang mac dinh la thang cua dau moi nhat trong nam", () => {
-    const o = gomTheoThang([bia("a", null, vn(2026, 3, 5)), bia("b", 1, vn(2026, 7, 2)), nhac("c", 2, vn(2026, 5, 9))], 2026);
-    expect(thangMacDinh(o)).toBe(5);
+  it("ngay mac dinh la ngay cua dau moi nhat trong thang dang xem", () => {
+    const ngay = gomTheoNgay([bia("a", 1, vn(2026, 9, 3)), bia("b", 2, vn(2026, 9, 18)), nhac("c", 2, vn(2026, 9, 18))], THANG_9);
+    expect(ngayMacDinh(ngay, null, 30)).toBe(18);
   });
 
-  it("ca nam trong thi khong co thang nao duoc chon", () => {
-    expect(thangMacDinh(gomTheoThang([], 2026))).toBeNull();
-  });
-
-  it("cac nam co dau: tang dan, khong trung", () => {
-    expect(namCo([bia("a", 2, vn(2026, 1, 1)), bia("b", null, vn(2024, 5, 1)), bia("c", 1, vn(2026, 3, 1))])).toEqual([2024, 2026]);
+  it("thang khong co dau nao: nhu Lich hoa, hom nay neu la thang nay, khong thi ngay cuoi thang", () => {
+    expect(ngayMacDinh({}, 26, 30)).toBe(26);
+    expect(ngayMacDinh({}, null, 31)).toBe(31);
   });
 });
 
-describe("doc tham so tu duong dan", () => {
-  it("nam hop le trong khoang tu nam tao cuon toi nam nay", () => {
-    expect(docNam("2025", 2024, 2026, 2026)).toBe(2025);
+describe("doc tham so ?thang tu duong dan", () => {
+  const TAO = { y: 2026, m: 5 };
+  const NAY = { y: 2026, m: 9 };
+  const MAC_DINH = { y: 2026, m: 8 };
+
+  it("thang hop le trong khoang tu thang tao cuon toi thang nay", () => {
+    expect(docThangSach("2026-05", TAO, NAY, MAC_DINH)).toEqual({ y: 2026, m: 5 });
+    expect(docThangSach("2026-09", TAO, NAY, MAC_DINH)).toEqual({ y: 2026, m: 9 });
   });
 
-  it("nam sai, truoc nam tao cuon hay sau nam nay deu ve mac dinh", () => {
-    for (const raw of ["abcd", "20", "2023", "2027", "", undefined, ["2025"]]) {
-      expect(docNam(raw, 2024, 2026, 2026), String(raw)).toBe(2026);
+  it("sai dinh dang, truoc thang tao cuon, sau thang nay hay khong phai chuoi deu ve thang mac dinh", () => {
+    for (const raw of ["2026-4", "2026-13", "26-09", "2026-04", "2026-10", "2025-12", "", undefined, ["2026-06"]]) {
+      expect(docThangSach(raw, TAO, NAY, MAC_DINH), String(raw)).toEqual(MAC_DINH);
     }
   });
-
 });
