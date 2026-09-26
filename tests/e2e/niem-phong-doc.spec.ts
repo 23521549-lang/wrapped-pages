@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taiLaiSach, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -46,7 +46,7 @@ test("hen gio khoa ca chu sach, ke ca tren sach rieng tu", async ({ browser }) =
   await expect(a.locator(".doc-head__sub")).toHaveText(`${tenCuaA} viết · 1 trang · Chỉ mình bạn đọc · 1 trang đang khóa`);
   await expect(a.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   // dangKemNiemPhong ket thuc bang chuyen trang phia trinh duyet: tai lai de soi ban may chu ve that (ca RSC payload).
-  await a.reload();
+  await taiLaiSach(a);
   await expect(a.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   await khongLo(a, BI_MAT);
 });

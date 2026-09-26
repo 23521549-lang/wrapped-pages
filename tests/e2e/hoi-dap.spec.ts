@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { normalizeReplyBody } from "@/lib/round-reply";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taiLaiSach, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong } from "./niem-phong";
 import { BE_RONG, BE_RONG_CHAM } from "./vung-bam";
 import { giaYoutube } from "./youtube-gia";
@@ -90,7 +90,7 @@ test("nguoi doc gui loi hoi dap sau khi hoi lai; bam doi chi gui mot loi; nguoi 
   await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1, 2]);
 
   // Tai lai khong kem ?trang: man doc mo o to nho nhat chua thay (to 3, luot hai), nen khung la o chu con trong cua luot do.
-  await b.reload();
+  await taiLaiSach(b);
   await expect(khung(b).getByText("Dành cho trang 3")).toBeVisible();
   await expect(khung(b).getByLabel("Viết lời hồi đáp")).toHaveValue("");
   // Quay lai luot da hoi dap: van la loi da gui, khong co o chu nao (bat bien, mot luot mot loi).

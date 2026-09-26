@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taiLaiSach, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, gioSau, khongLo, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -33,7 +33,7 @@ test("cau do: nguoi kia tra loi sai thay so lan con lai; chu sach thay nhat ky g
   await expect(cauDo.getByRole("status")).toHaveText("Chưa đúng. Còn 4 lần");
   await expect(cauDo.locator(".goi-y")).toHaveCount(0);
   // Du lieu lam moi sau action di qua fetch, khong nam trong page.content(): tai lai de soi ban may chu ve that.
-  await b.reload();
+  await taiLaiSach(b);
   await expect(cauDo.locator(".con-lan")).toHaveText("Còn 4 lần");
   // Nguoi kia: khong dap an (ca ban goc lan ban chuan hoa), khong chu that, khong goi y chua mo, khong nhat ky.
   await khongLo(b, "Quán Mây", "quan may", BI_MAT, "Trên trời có");
@@ -44,7 +44,7 @@ test("cau do: nguoi kia tra loi sai thay so lan con lai; chu sach thay nhat ky g
   await expect(cauDo.getByLabel("Câu trả lời")).toBeVisible();
   expect(await tranNgang(b)).toEqual([]);
 
-  await a.reload();
+  await taiLaiSach(a);
   const cuaToi = a.getByRole("region", { name: "Câu đố của bạn" });
   await expect(cuaToi.locator(".thu-thach__dau .meta")).toHaveText(`Trang 1 · 1 đáp án · 1 gợi ý · ${tenCuaB} chưa mở được`);
   const nhatKy = cuaToi.getByRole("list", { name: "Nhật ký gõ cửa" });
@@ -57,7 +57,7 @@ test("cau do: nguoi kia tra loi sai thay so lan con lai; chu sach thay nhat ky g
   await expect(a.getByRole("region", { name: "Câu đố của bạn" }).locator(".thu-thach__dau .meta")).toContainText(`${tenCuaB} đã mở, hôm nay,`);
   await expect(a.getByRole("button", { name: "Tặng chìa khóa" })).toHaveCount(0);
 
-  await b.reload();
+  await taiLaiSach(b);
   await expect(b.locator(".sach")).toContainText(BI_MAT);
   await expect(b.getByRole("region", { name: "Câu đố", exact: true })).toHaveCount(0);
   await expect(b.getByRole("region", { name: "Được tặng chìa khóa" }).locator(".loi-nhan__chu")).toHaveText(LOI_NHAN);

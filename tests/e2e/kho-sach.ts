@@ -125,6 +125,16 @@ export async function moSach(page: Page): Promise<void> {
 }
 
 /**
+ * Tai lai man doc dang mo. Tai lai /sach/<ma> tran thi ra tam bia lan nua (moi cuon mo qua tam bia khi loi vao khong co
+ * ?trang hay ?mo), nen bam "Mở sách"; duong co ?trang hay ?mo thi sach mo thang, khong co gi de bam.
+ */
+export async function taiLaiSach(page: Page): Promise<void> {
+  await page.reload();
+  const q = new URL(page.url()).searchParams;
+  if (!q.has("trang") && !q.has("mo")) await moSach(page);
+}
+
+/**
  * Vao man doc cua mot cuon nhu nguoi dung that: moi cuon deu mo qua tam bia khi loi vao khong co ?trang hay ?mo (chu du
  * an chot 26/09), nen la mo /sach/<ma> roi bam "Mở sách".
  */

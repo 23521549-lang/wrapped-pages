@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resetDb } from "./db";
 import { dangToThang, datNhac, dongContextCu, haiNguoiDaVao, taoSach, tranNgang } from "./kho-sach";
-import { BE_RONG, BE_RONG_CHAM, vungBamNho, type MienTru } from "./vung-bam";
+import { BE_RONG, BE_RONG_CHAM, vungBamNhoCoLich, type MienTru } from "./vung-bam";
 import { giaYoutube } from "./youtube-gia";
 
 /*
@@ -113,7 +113,8 @@ test("hai trang Dau thoi gian voi ten sach dai: vung bam 44px va khong tran ngan
     for (const w of BE_RONG) {
       await a.setViewportSize({ width: w, height: 900 });
       await a.goto(duong);
-      if (w === BE_RONG_CHAM) expect(await vungBamNho(a, MIEN_TRU), `${duong}: vung bam`).toEqual([]);
+      // O ngay cua lich hep nhat o 320, nen do ca 320 lan be rong cham chung.
+      if (w === BE_RONG_CHAM || w === 320) expect(await vungBamNhoCoLich(a, MIEN_TRU), `${duong} o ${w}px: vung bam`).toEqual([]);
       expect(await tranNgang(a), `${duong} o ${w}px: tran ngang`).toEqual([]);
     }
   }

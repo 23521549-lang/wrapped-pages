@@ -59,7 +59,7 @@ test("tu tra loi dung: aria-busy khi go, khung Da mo trang, con tro nhap nhay th
   await dangKemNiemPhong(a, [HE_LO, BI_MAT, DAI], CAU_DO);
   const [s2] = await niemPhongCua(id2);
   await b.emulateMedia({ reducedMotion: "reduce" });
-  await b.goto(`/sach/${id2}`);
+  await docSach(b, id2);
   const khung2 = b.getByRole("region", { name: "Câu đố", exact: true });
   await khung2.getByLabel("Câu trả lời").fill("quán mây");
   await khung2.getByRole("button", { name: "Mở trang" }).click();

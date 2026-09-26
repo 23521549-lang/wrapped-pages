@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taoSach } from "./kho-sach";
+import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, moSach, taoSach } from "./kho-sach";
 import { anhPng, giaMicro, tepMau } from "./media";
 import { batMayHong, GOC_MAY_HONG } from "./may-hong";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
@@ -159,7 +159,11 @@ test("khong mot vi pham CSP nao tren cac man chinh, ke ca o man viet va man doc"
     ["/ke-sach", () => expect(a.getByRole("heading", { level: 1, name: "Kệ sách" })).toBeVisible()],
     ["/sach/moi", () => expect(a.getByLabel("Tên sách")).toBeVisible()],
     [`/sach/${id}/viet`, () => expect(a.locator(".viet-chu .ProseMirror")).toBeVisible()],
-    [`/sach/${id}`, () => expect(a.locator(".doc__khung")).toBeVisible()],
+    // Moi cuon mo qua tam bia (chu du an chot 26/09): do ca man doc sau khi bam "Mở sách".
+    [`/sach/${id}`, async () => {
+      await moSach(a);
+      await expect(a.locator(".doc__khung")).toBeVisible();
+    }],
     [`/sach/${id}/sua`, () => expect(a.getByLabel("Tên sách")).toBeVisible()],
     ["/ban-nhap", () => expect(a.getByRole("heading", { level: 1, name: "Bản nháp" })).toBeVisible()],
     ["/cai-dat", () => expect(a.getByRole("heading", { level: 1, name: "Cài đặt" })).toBeVisible()],

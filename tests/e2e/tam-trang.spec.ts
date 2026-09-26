@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetDb } from "./db";
 import { dongContextCu, ghiTamTrang, haiNguoiDaVao, tranNgang } from "./kho-sach";
-import { BE_RONG_CHAM, vungBamNho, type MienTru } from "./vung-bam";
+import { BE_RONG_CHAM, vungBamNho, vungBamNhoCoLich, type MienTru } from "./vung-bam";
 import { khoangThang, thangCua, thangKhoa, thangTruoc } from "@/lib/tam-trang/lich";
 import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 
@@ -23,15 +23,9 @@ const BE_RONG_DO_BAM = new Set([320, BE_RONG_CHAM]);
  * Mien tru vung bam:
  * - .o input: radio that cua o chon troi, an 1px sau nhan (ThaTamTrang.tsx). Nam TRONG <label class="o">, bam bat ky dau
  *   tren o troi hay ten deu chon radio; nhan cao hon 80px va rong it nhat mot phan ba hop chon.
- * - o-ngay-lich-hoa (spec 6.4): o ngay cua Lich hoa o man hep. Bay cot ngay (va cot nhan ten) phai vua be ngang
- *   320 toi 414px, nen o rong khoang 37px o 320 va 39px o 375. O cao tu 100px, va moi ngay doc du trong khung chi
- *   tiet ben duoi. Van do: o nao hep hon O_NGAY_MIN la loi.
+ * - o-ngay-lich (spec 6.4): o ngay cua Lich hoa o man hep, luat dung chung trong vung-bam.ts (vungBamNhoCoLich).
  */
 const MIEN_TRU_HOP: MienTru[] = [{ phanTu: ".o input", vungBam: "label.o" }];
-const O_NGAY = /^button "[0-9]{1,2} tháng [0-9]{1,2}[.]/;
-/** Nguong be ngang cua o ngay: so do that la ~37px o 320 va ~39px o 375; duoi nguong nay la CSS lich da hong. */
-const O_NGAY_MIN = 36;
-const canhNgan = (dong: string) => Number(/canh ngan ([0-9.]+)px/.exec(dong)?.[1] ?? "0");
 
 /**
  * Tha mot tam trang qua hop chon, TREN trang dang mo: khong dieu huong. Sau khi tha, trang tu lam moi tai cho (props
@@ -643,9 +637,7 @@ test("nam be rong khong tran ngang; vung bam 44px o be rong cam ung, tru mien tr
     expect(await tranNgang(b), `lich hoa o ${width}px`).toEqual([]);
     // Do vung bam o CA 320 va 375: o ngay hep nhat o 320, nen mot mien tru do o 375 chua chung minh duoc gi cho 320.
     if (BE_RONG_DO_BAM.has(width)) {
-      const nho = await vungBamNho(b);
-      expect(nho.filter((dong) => !O_NGAY.test(dong)), `lich hoa o ${width}px: vung bam`).toEqual([]);
-      for (const dong of nho.filter((d) => O_NGAY.test(d))) expect(canhNgan(dong), `${width}px: ${dong}`).toBeGreaterThanOrEqual(O_NGAY_MIN);
+      expect(await vungBamNhoCoLich(b), `lich hoa o ${width}px: vung bam`).toEqual([]);
     }
   }
 });

@@ -4,7 +4,7 @@ import { dangNhap, taoCho } from "./ho-tro";
 import { batMayHong, GOC_MAY_HONG } from "./may-hong";
 import { CHO_ARGON2_MS, dangToThang, dongContextCu, haiNguoiDaVao, moSach, taoSach, tranNgang } from "./kho-sach";
 import { dangKemNiemPhong, niemPhongCua } from "./niem-phong";
-import { BE_RONG, BE_RONG_CHAM, doMan, doMoiManChinh, vungBamNho, type Man, type MienTru } from "./vung-bam";
+import { BE_RONG, BE_RONG_CHAM, doMan, doMoiManChinh, vungBamNho, vungBamNhoCoLich, type Man, type MienTru } from "./vung-bam";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -76,7 +76,7 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
   const [s] = await niemPhongCua(idThu);
 
   await a.setViewportSize({ width: BE_RONG_CHAM, height: 900 });
-  await doMoiManChinh(a, (p) => vungBamNho(p, MIEN_TRU_VUNG_BAM));
+  await doMoiManChinh(a, (p) => vungBamNhoCoLich(p, MIEN_TRU_VUNG_BAM));
   for (const width of BE_RONG) {
     await a.setViewportSize({ width, height: 900 });
     await doMoiManChinh(a, (p) => tranNgang(p));

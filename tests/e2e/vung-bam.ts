@@ -123,6 +123,21 @@ export async function vungBamNho(page: Page, mienTru: MienTru[] = []): Promise<s
 }
 
 /**
+ * O ngay cua lich (Lich hoa va lich Dau thoi gian dung chung mot khung): bay cot ngay cong cot nhan lan phai vua be
+ * ngang 320 toi 414px, nen o rong khoang 37px o 320 va 39px o 375; o cao tu 100px, va moi ngay doc du trong khung chi
+ * tiet ngay duoi (mien tru co ten "o-ngay-lich", spec Lich hoa muc 6.4). Van do: o nao hep hon O_NGAY_MIN la loi.
+ */
+export const O_NGAY = /^button "[0-9]{1,2} tháng [0-9]{1,2}[.]/;
+/** Nguong be ngang cua o ngay: so do that la ~37px o 320 va ~39px o 375; duoi nguong nay la CSS lich da hong. */
+export const O_NGAY_MIN = 36;
+const canhNgan = (dong: string) => Number(/canh ngan ([0-9.]+)px/.exec(dong)?.[1] ?? "0");
+
+/** Nhu vungBamNho, tru o ngay cua lich chi can canh ngan tu O_NGAY_MIN (mien tru o-ngay-lich). */
+export async function vungBamNhoCoLich(page: Page, mienTru: MienTru[] = []): Promise<string[]> {
+  return (await vungBamNho(page, mienTru)).filter((dong) => !O_NGAY.test(dong) || canhNgan(dong) < O_NGAY_MIN);
+}
+
+/**
  * Di qua cac man chinh - ke sach, man doc, trang Viet tiep, man viet, hai trang Dau thoi gian, cai dat - va chay mot phep
  * do (vungBamNho hoac tranNgang) tren tung man, khang dinh rong ngay tai do voi thong diep neu ten man. Dung de ca hai
  * phep do 11.3 va 11.4 chay tren cung mot buoc duyet.

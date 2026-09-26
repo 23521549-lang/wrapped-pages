@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, vietTranTrang } from "./kho-sach";
+import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, moSach, taoSach, toDaXemCua, vietTranTrang } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -37,7 +37,9 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
   });
 
   await test.step("B mo sach o khung dau, chua lat da quay lai: con dung so to chua thay", async () => {
+    // Bam cuon tren ke thi ra tam bia (chu du an chot 26/09); bam "Mở sách" moi vao man doc.
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
+    await moSach(b);
     // Che do hai trang ghep (1,2), (3,4) (src/lib/flip.ts): khung dau da cho thay ca to 1 lan to 2.
     await expect(b.locator(".doc__dem")).toHaveText(`Trang 1-2 / ${soTo}`);
     // DOI HANH VI CO Y: mot khung chi tinh la da doc khi nguoi doc DUNG lai tren no du CHO_MS (600ms), va luat do dung
@@ -51,6 +53,7 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
 
   await test.step("B mo lai thi bat dau o to dau chua doc, lat toi to cuoi, quay lai ke thi het dau", async () => {
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
+    await moSach(b);
     // To 3 la to dau chua doc; o che do hai trang no nam ben trai cua khung thu hai (src/lib/flip.ts).
     // Sach chi co hai to thi da doc het o lan truoc, khung dau van la khung cuoi.
     const moDau = soTo >= 4 ? `Trang 3-4 / ${soTo}` : soTo === 3 ? `Trang 3 / ${soTo}` : `Trang 1-2 / ${soTo}`;

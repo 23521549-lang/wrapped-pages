@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { docSach, dongContextCu, haiNguoiDaVao, taiLaiSach, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
 import { conTroKhi, dangKemNiemPhong, gioSau, khongLo, luiGioMo, luiMocThu, niemPhongCua } from "./niem-phong";
 
 test.beforeEach(async () => {
@@ -105,7 +105,7 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await expect(khung.locator(".goi-y")).toHaveCount(1);
   await expect(khung.locator(".goi-y").first()).toHaveText(`Gợi ý 1${GOI_Y_1}`);
   // Lan sai vua roi lam moi bang server action: du lieu RSC moi khong vao DOM, nen tai lai roi moi soi.
-  await b.reload();
+  await taiLaiSach(b);
   await expect(khung.locator(".goi-y")).toHaveCount(1);
   await khongLo(b, BI_MAT, DAI, "quan may", GOI_Y_2);
   await traLoi("quán cóc", "Chưa đúng. Còn 2 lần");
@@ -120,7 +120,7 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await khongTranHep(b, "khung cau do dang cho");
 
   await luiMocThu(s.id, 11);
-  await b.reload();
+  await taiLaiSach(b);
   await expect(khung.locator(".con-lan")).toHaveText("Còn 5 lần");
   await expect(khung.getByLabel("Câu trả lời")).toBeEnabled();
   await khongLo(b, BI_MAT, DAI, "quan may");
@@ -133,7 +133,7 @@ test("cau do: goi y nho giot, ha nhiet, tra loi dung thi trang mo voi nghi thuc 
   await expect(b.getByRole("region", { name: "Câu đố", exact: true })).toHaveCount(0);
 
   // Mot lan trong tab: tai lai ngay (URL van co mo, van trong RITUAL_WINDOW_MS nen may chu van tra ritual) thi hien thang.
-  await b.reload();
+  await taiLaiSach(b);
   await khongNghiThuc(b);
 
   // Niem phong da mo va man doc da gan lai (chuyen trang cua dap an dung, roi tai lai): to 1 khong con bi loc nua,
@@ -174,7 +174,7 @@ test("hen gio: chu sach cung bi khoa; dem nguoc cham 0 tren trang dang mo thi tr
   const [s] = await niemPhongCua(id);
 
   // dangKemNiemPhong ket thuc bang chuyen trang phia trinh duyet: tai lai de soi ban may chu ve that.
-  await a.reload();
+  await taiLaiSach(a);
   await expect(a.locator(".sach .dau-niem")).toHaveText("Đang niêm phong");
   await expect(a.getByRole("region", { name: "Hẹn giờ" }).getByRole("timer")).toBeVisible();
   await expect(a.getByRole("button", { name: "Tặng chìa khóa" })).toHaveCount(0);
@@ -209,7 +209,7 @@ test("hen gio: chu sach cung bi khoa; dem nguoc cham 0 tren trang dang mo thi tr
   await expect(a.locator(".sach")).toContainText(BI_MAT);
   await expect(a.locator(".sach .dau-niem")).toHaveCount(0);
   await expect(a.getByRole("region", { name: "Hẹn giờ" })).toHaveCount(0);
-  await b.reload();
+  await taiLaiSach(b);
   await khongNghiThuc(b);
   await expect(henGio).toHaveCount(0);
 });
@@ -240,7 +240,7 @@ test("trao doi: gui trang tra loi thi nghi thuc chay that, tai lai trong tab thi
   await expect(b.locator(".sach")).toContainText(BI_MAT);
 
   // Mot lan trong tab: tai lai ngay thi hien thang.
-  await b.reload();
+  await taiLaiSach(b);
   await khongNghiThuc(b);
   await expect(b.getByRole("region", { name: "Trang trả lời" })).toContainText(TRA_LOI);
   await khongTranHep(b, "khung trang tra loi");
