@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { TroiHien } from "@/lib/tam-trang/lich";
+import { giamChuyenDong } from "./hieu-ung-chung";
 
 type TroiTamGiaTri = {
   tam: TroiHien | null;
   datTam: Dispatch<SetStateAction<TroiHien | null>>;
   /**
-   * Mot lan tha dang cho toi luc doi troi (trang dang luot len, hay dang nghi 3 giay): dai troi GIU NGUYEN bau troi dang
-   * hien, ke ca khi may chu da luu xong va ve lai trang voi tam trang moi truoc luc do.
+   * Mot lan tha dang cho toi luc doi troi (trang dang luot len dinh): dai troi GIU NGUYEN bau troi dang hien, ke ca khi
+   * may chu da luu xong va ve lai trang voi tam trang moi truoc luc do.
    */
   giu: boolean;
   datGiu: Dispatch<SetStateAction<boolean>>;
@@ -41,4 +42,13 @@ export function useTroiTam(): TroiTamGiaTri {
  */
 export function cungTamTrang(a: TroiHien, b: TroiHien): boolean {
   return a.weather === b.weather && a.note === b.note;
+}
+
+/**
+ * Doi bau troi cua nguoi xem tu `truoc` sang `sau` co chay lan loang giay tham nuoc khong: chi khi THAY mot tam trang
+ * bang mot tam trang khac (tha lan dau hay thu lai thi dai troi hien ra hay mat di han), va khong giam chuyen dong. Dai
+ * troi dung ham nay de quyet loang; hop tha dung no de biet phai cho het lan loang roi moi thu lai.
+ */
+export function coLoang(truoc: TroiHien | null, sau: TroiHien | null): boolean {
+  return truoc !== null && sau !== null && !cungTamTrang(truoc, sau) && !giamChuyenDong();
 }

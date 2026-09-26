@@ -6,12 +6,12 @@ import { flushSync } from "react-dom";
 import { useTamDung } from "@/components/hieu-ung/tam-dung";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
-import { dongChu, giamChuyenDong, goViec } from "./hieu-ung-chung";
+import { dongChu, goViec } from "./hieu-ung-chung";
 import { Hoa } from "./HoaEp";
 import { huyLoang, loangTroi, type MatLoang } from "./loang";
 import { NetTroi } from "./NetTroi";
 import { ganSong } from "./song";
-import { cungTamTrang, useTroiTam } from "./troi-tam";
+import { coLoang, cungTamTrang, useTroiTam } from "./troi-tam";
 
 /** Mot mat cua dai: bau troi lon cua ai, o cua so mang troi cua nguoi con lai (null khi chi mot nguoi co tam trang). */
 type Mat = {
@@ -327,8 +327,7 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
     daVe.current = { kia, minh };
     // Chi loang khi kieu troi hay loi nhan doi. Chi gio tha doi (troi tam nhuong cho troi may chu, hay tha lai y nguyen
     // tam trang dang giu) thi chu doi tai cho, troi khong loang.
-    if (truoc.minh === null || minh === null || cungTamTrang(truoc.minh, minh)) return;
-    if ((truoc.kia === null) !== (kia === null) || giamChuyenDong()) return;
+    if (truoc.minh === null || !coLoang(truoc.minh, minh) || (truoc.kia === null) !== (kia === null)) return;
     // Dat trang thai ngay trong effect la dung viec ma luat "khong setState trong effect" cho phep: dong bo voi mot he
     // thong ngoai (props vua ve tu may chu). Trai troi cu phai co trong cay ngay o luot nay thi lan loang moi co cai
     // de phu len.

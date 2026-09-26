@@ -3,6 +3,7 @@ import { resetDb } from "./db";
 import { dongContextCu, ghiTamTrang, haiNguoiDaVao, tranNgang } from "./kho-sach";
 import { BE_RONG_CHAM, vungBamNho, vungBamNhoCoLich, type MienTru } from "./vung-bam";
 import { khoangThang, thangCua, thangKhoa, thangTruoc } from "@/lib/tam-trang/lich";
+import { LOANG_HET_MS } from "@/lib/tam-trang/loang-nhip";
 import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 
 test.beforeEach(async () => {
@@ -57,13 +58,18 @@ function choPostXong(p: Page): Promise<void> {
   });
 }
 
-/** Mo Ke sach roi tha mot tam trang, doi loi bao cua vung aria-live va doi yeu cau gui xong han. */
+/**
+ * Mo Ke sach roi tha mot tam trang, doi loi bao cua vung aria-live, doi yeu cau gui xong han, va doi hop tha thu lai: hop
+ * van mo suot lan tha va chi thu lai khi troi doi xong (het lan loang), nen buoc tiep theo cua bai kiem khong dung vao
+ * mot hop dang khoa.
+ */
 async function tha(p: Page, w: Weather, nhan = ""): Promise<void> {
   await p.goto("/ke-sach");
   const guiXong = choPostXong(p);
   await thaTaiCho(p, w, nhan);
   await expect(p.getByText(`Đã thả ${TROI[w].ten}. Giữ trong 24 giờ.`)).toBeAttached();
   await guiXong;
+  await expect(p.locator("#tha-tam-trang")).toBeHidden({ timeout: 10_000 });
 }
 
 /**
@@ -230,6 +236,8 @@ test("tha tam trang moi thay tam trang cu; thu lai lam troi bien mat va bo bong 
   await a.locator("label.o", { hasText: "Giông" }).click();
   await a.getByRole("button", { name: "Thả", exact: true }).click();
   await expect(a.getByText("Đã thả Giông. Giữ trong 24 giờ.")).toBeAttached();
+  // Thay Nang am bang Giong: hop mo suot lan loang, loang xong moi thu lai.
+  await expect(a.locator("#tha-tam-trang")).toBeHidden({ timeout: 10_000 });
   await b.goto("/ke-sach");
   await expect(b.getByRole("region", { name: `Tâm trạng của ${tenCuaA}` })).toHaveClass("troi troi--giong");
 
@@ -322,8 +330,9 @@ test("giam chuyen dong: bau troi dung yen, chop va vet sang an, hat mua nam rai 
   expect(await troi.locator(".m-hat").first().evaluate((el) => getComputedStyle(el).top)).not.toBe("-30px");
   // Khong con gi chay de ma dung: nut bien han, khong de lai mot cong tac vo nghia trong hang cuoi.
   await expect(b.locator(".nut-dung")).toBeHidden();
+  // Giam chuyen dong: hop hien ngay, khong tha xuong (globals.css bo chuyen dong clip-path va transform).
   await b.getByRole("button", { name: "Thả tâm trạng" }).click();
-  await expect(b.locator(".tha")).toHaveCSS("animation-name", "none");
+  expect(await b.locator(".tha").evaluate((el) => getComputedStyle(el).transitionProperty)).not.toMatch(/clip-path|transform/);
 });
 
 test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich gi, focus o yen, co bao", async ({ browser }) => {
@@ -454,18 +463,16 @@ test("thay tam trang: troi moi loang phu het troi cu; dai troi doi chieu cao mot
   // PerformanceObserver cua demXoDich (phan quyet M8, phat hien F13).
   await thaTaiCho(b, "giong", "Mưa cả buổi chiều, chẳng đi đâu được.");
 
-  // Dang loang: co lop vet nuoc, trai troi cu van con va tro nang. Loang bat dau sau nhip luot len va nghi 3 giay.
+  // Dang loang: co lop vet nuoc, trai troi cu van con va tro nang. Loang bat dau ngay khi trang toi dinh.
   await expect(b.locator(".loang .giot").first()).toBeAttached({ timeout: 10_000 });
+  // Hop tha van mo (va khoa) suot lan loang (chu du an 27/09).
+  await expect(b.locator(".tha")).toBeVisible();
+  await expect(b.locator(".tha")).toHaveAttribute("inert", "");
   /*
-   * Bat dem xo dich o DAY chu khong truoc luc tha: bai nay dem MOI ban ghi layout-shift, ke ca ban ghi do chinh cu bam
-   * sinh ra, ma hop "Thả tâm trạng" thu lai ngay trong luot bam la mot ban ghi nhu vay (trinh duyet danh dau
-   * hadRecentInput va khong tinh no vao CLS). Viec "khong xo dich ngoai cua so cu bam" duoc do rieng, dung dinh nghia
-   * CLS, o bai "thay tam trang khong gay xo dich nao ngoai cua so cu bam". Cua so o day om tu giua lan loang qua het buoc
-   * don, tuc dung cho troi cu va lop vet nuoc bi go: khuc de xo dich nhat cua ca hieu ung.
+   * Bat dem xo dich o DAY chu khong truoc luc tha: bai nay dem MOI ban ghi layout-shift. Cua so o day om tu giua lan
+   * loang qua het buoc don VA qua luc hop tha thu lai, tuc dung cho troi cu, lop vet nuoc bi go va hop cuon len: khuc de
+   * xo dich nhat cua ca hieu ung. Hop noi tren ke sach nen thu lai khong duoc xo dich gi.
    */
-  await expect(b.locator(".tha")).toBeHidden();
-  // Ban ghi layout-shift sinh ra luc trinh duyet VE, khong phai luc DOM doi, nen doi them hai khung hinh: bat dem
-  // ngay sau khi `hidden` duoc dat la con dem nham chinh cu thu hop lai.
   await b.evaluate(() => new Promise((xong) => requestAnimationFrame(() => requestAnimationFrame(() => xong(null)))));
   await demXoDich(b);
   // Dai troi cao dung bang noi dung (spec bo sung B6): troi moi co them mot dong loi nhan nen dai da cao hon, va lan doi
@@ -483,8 +490,10 @@ test("thay tam trang: troi moi loang phu het troi cu; dai troi doi chieu cao mot
   expect(await dinhTaiLieu(moc)).toBeCloseTo(mocLoang, 2);
   expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoLoang, 2);
 
-  // Sau 3,2 giay: khong con lop loang nao trong DOM, khong con trai troi cu nao, khong hoat hinh nao con chay.
+  // Sau 3,2 giay: khong con lop loang nao trong DOM, khong con trai troi cu nao, hop tha da thu lai, khong hoat hinh nao
+  // con chay.
   await b.waitForTimeout(3200);
+  await expect(b.locator(".tha")).toBeHidden({ timeout: 2_000 });
   await expect(b.locator(".loang")).toHaveCount(0);
   await expect(b.locator(".troi--cu")).toHaveCount(0);
   await expect(b.locator(".troi--dang-loang")).toHaveCount(0);
@@ -493,7 +502,7 @@ test("thay tam trang: troi moi loang phu het troi cu; dai troi doi chieu cao mot
   // Buoc don go trai troi cu (nam ngoai dong chay) ma dai troi khong co lai: khong co lan xo dich muon nao.
   expect(await dinhTaiLieu(moc)).toBeCloseTo(mocLoang, 2);
   expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoLoang, 2);
-  expect(await xoDich(b), "co xo dich bo cuc tu luc bat dau loang toi het buoc don").toBe(0);
+  expect(await xoDich(b), "co xo dich bo cuc tu luc bat dau loang toi het buoc don va luc hop thu lai").toBe(0);
 
   // Giam chuyen dong: doi thang, khong lop loang nao.
   await b.emulateMedia({ reducedMotion: "reduce" });
@@ -752,15 +761,15 @@ test("dai troi gon nhu ban mau: tu dong chu cuoi cua dai troi toi tieu de Ke sac
 });
 
 /** Cac moc do ngay trong trang (performance.now), de do tre cua Playwright khong lam lech so. */
-type MocTha = { y: [number, number][]; bam: number; toi: number; bao: number; loang: number };
+type MocTha = { y: [number, number][]; bam: number; toi: number; bao: number; loang: number; thu: number };
 
 /**
  * Ghi moc cua MOT lan tha ngay trong trang: vi tri cuon tung khung hinh tu cu bam, luc trang toi dinh, luc may chu bao
- * "Đã thả <ten>" va luc dai troi bat dau loang. Doc lai bang docMoc.
+ * "Đã thả <ten>", luc dai troi bat dau loang va luc hop tha thu lai. Doc lai bang docMoc.
  */
 async function ghiMoc(p: Page, ten: string): Promise<void> {
   await p.getByRole("button", { name: "Thả", exact: true }).evaluate((nut, tenTroi) => {
-    const g: MocTha = { y: [], bam: -1, toi: -1, bao: -1, loang: -1 };
+    const g: MocTha = { y: [], bam: -1, toi: -1, bao: -1, loang: -1, thu: -1 };
     (globalThis as unknown as { mocTha: MocTha }).mocTha = g;
     const khung = () => {
       g.y.push([performance.now() - g.bam, globalThis.scrollY]);
@@ -774,6 +783,7 @@ async function ghiMoc(p: Page, ten: string): Promise<void> {
     new MutationObserver(() => {
       if (g.bao < 0 && document.body.textContent?.includes(`Đã thả ${tenTroi}.`)) g.bao = performance.now();
       if (g.loang < 0 && document.querySelector(".troi--dang-loang")) g.loang = performance.now();
+      if (g.thu < 0 && g.bam > 0 && document.getElementById("tha-tam-trang")?.hidden) g.thu = performance.now();
     }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
   }, ten);
 }
@@ -792,40 +802,37 @@ async function chonTroiGiuaTrang(p: Page, w: Weather): Promise<number> {
 }
 
 /*
- * Spec bo sung B5, chu du an chinh lai ngay 26/09: bam "Thả" thi trang LUOT TU TU len dai troi (khong nhay mot cu), toi
- * dinh thi nghi 3 giay roi dai troi moi loang. Lan dau may chu tra loi ngay (thuong la vay): tra loi xong truoc khi troi
- * doi ma dai troi van giu troi cu cho het nhip. Lan hai may chu bi giu lai 9 giay: troi tam van loang dung nhip, truoc
- * khi may chu tra loi.
+ * Spec bo sung B5, chu du an chinh lai ngay 27/09: bam "Thả" thi hop VAN MO (khoa lai), trang cuon len dai troi nhanh nhu
+ * mot cu cuon chuot, toi dinh thi dai troi loang NGAY, loang xong hop moi thu lai. Lan dau may chu tra loi ngay. Lan hai
+ * may chu bi giu lai 9 giay: troi tam van loang ngay khi toi dinh, va hop van thu lai khi loang xong, truoc khi may chu
+ * tra loi.
  */
-test("tha tam trang tu giua trang: trang luot tu tu len dai troi, nghi 3 giay roi troi moi loang, du may chu tra loi som hay muon", async ({ browser }) => {
+test("tha tam trang tu giua trang: hop van mo, cuon len nhu cuon chuot, troi doi ngay khi toi dinh, loang xong hop moi thu lai", async ({ browser }) => {
   const { b } = await haiNguoiDaVao(browser);
   await tha(b, "nang-am");
   await b.setViewportSize({ width: 375, height: 640 });
   const vung = b.getByRole("region", { name: "Tâm trạng của bạn" });
+  const hop = b.locator("#tha-tam-trang");
 
   // Lan 1: may chu tra loi binh thuong.
   const tu = await chonTroiGiuaTrang(b, "giong");
   await ghiMoc(b, TROI.giong.ten);
   await b.getByRole("button", { name: "Thả", exact: true }).click();
-  await expect(b.locator(".troi--dang-loang")).toHaveCount(1, { timeout: 10_000 });
+  await expect(hop).toBeVisible();
+  await expect(hop).toHaveAttribute("inert", "");
+  await expect(b.locator(".troi--dang-loang")).toHaveCount(1, { timeout: 5_000 });
+  await expect(hop).toBeVisible();
+  await expect(hop).toBeHidden({ timeout: 8_000 });
   const m = await docMoc(b);
   const luot = m.toi - m.bam;
-  console.log(`[tam-trang] luot tu ${tu}px len dinh: ${Math.round(luot)}ms; toi dinh toi luc loang: ${Math.round(m.loang - m.toi)}ms`);
-  expect(luot, "luot len dinh tu tu, khong nhay").toBeGreaterThan(1_200);
-  expect(luot, "luot len dinh khong keo dai qua lau").toBeLessThan(3_000);
-  // Giua quang thoi gian luot, trang con o khoang giua; va khong khung hinh nao keo trang di xuong.
-  const giua = m.y.find(([t]) => t >= luot / 2)?.[1] ?? -1;
-  expect(giua).toBeGreaterThan(tu * 0.2);
-  expect(giua).toBeLessThan(tu * 0.8);
+  console.log(`[tam-trang] cuon tu ${tu}px len dinh: ${Math.round(luot)}ms; toi dinh toi luc loang: ${Math.round(m.loang - m.toi)}ms; loang toi luc thu hop: ${Math.round(m.thu - m.loang)}ms`);
+  expect(luot, "cuon len nhu mot cu cuon chuot: khong nhay, khong cham rai").toBeGreaterThan(150);
+  expect(luot).toBeLessThan(800);
   for (let i = 1; i < m.y.length; i++) expect(m.y[i][1], `khung hinh ${i}`).toBeLessThanOrEqual(m.y[i - 1][1]);
-  // May chu tra loi xong truoc khi troi doi, ma troi van nghi du 3 giay sau khi toi dinh.
-  expect(m.bao, "may chu da tra loi").toBeGreaterThan(0);
-  expect(m.bao, "may chu tra loi truoc khi troi doi").toBeLessThan(m.loang);
-  expect(m.loang - m.toi, "nghi 3 giay tren dinh roi moi doi troi").toBeGreaterThanOrEqual(2_950);
-  expect(m.loang - m.toi).toBeLessThan(3_800);
+  expect(m.loang - m.toi, "troi doi ngay khi toi dinh").toBeLessThan(150);
+  expect(m.thu - m.loang, "hop chi thu lai khi loang xong").toBeGreaterThan(LOANG_HET_MS - 150);
+  expect(m.thu - m.loang).toBeLessThan(LOANG_HET_MS + 600);
   await expect(vung).toHaveClass(/troi--giong/);
-  // Mot lan loang duy nhat: may chu ve lai dung tam trang do.
-  await b.waitForTimeout(3_500);
   await expect(b.locator(".troi--dang-loang")).toHaveCount(0);
   await expect(b.locator(".troi--cu")).toHaveCount(0);
 
@@ -838,14 +845,16 @@ test("tha tam trang tu giua trang: trang luot tu tu len dai troi, nghi 3 giay ro
   });
   await ghiMoc(b, TROI["mua-phun"].ten);
   await b.getByRole("button", { name: "Thả", exact: true }).click();
-  await expect(b.locator(".troi--dang-loang")).toHaveCount(1, { timeout: 10_000 });
+  await expect(hop).toBeHidden({ timeout: 8_000 });
   const m2 = await docMoc(b);
-  expect(m2.bao, "may chu chua tra loi luc troi da loang").toBe(-1);
-  expect(m2.loang - m2.toi, "van nghi 3 giay tren dinh").toBeGreaterThanOrEqual(2_950);
+  expect(m2.bao, "may chu chua tra loi luc hop da thu lai").toBe(-1);
+  expect(m2.loang - m2.toi, "van loang ngay khi toi dinh").toBeLessThan(150);
+  expect(m2.thu - m2.loang, "van cho loang xong moi thu hop").toBeGreaterThan(LOANG_HET_MS - 150);
   await expect(b.getByText(`Đã thả ${TROI["mua-phun"].ten}. Giữ trong 24 giờ.`)).toBeAttached({ timeout: 15_000 });
-  // May chu ve lai dung tam trang do: khong co lan loang thu hai.
-  await b.waitForTimeout(3_500);
+  // May chu ve lai dung tam trang do: khong co lan loang thu hai, hop khong mo lai.
+  await b.waitForTimeout(500);
   await expect(b.locator(".troi--dang-loang")).toHaveCount(0);
   await expect(b.locator(".troi--cu")).toHaveCount(0);
+  await expect(hop).toBeHidden();
   await expect(vung).toHaveClass(/troi--mua-phun/);
 });

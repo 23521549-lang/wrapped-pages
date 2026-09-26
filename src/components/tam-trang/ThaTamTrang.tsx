@@ -6,11 +6,12 @@ import { actionSetMood, actionWithdrawMood } from "@/app/actions/mood";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { NHAN_DAI, NOTE_MAX, parseMoodInput } from "@/lib/tam-trang/input";
 import { thaLabel, type TroiHien } from "@/lib/tam-trang/lich";
+import { LOANG_HET_MS } from "@/lib/tam-trang/loang-nhip";
 import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 import { timeLabel } from "@/lib/when";
 import { cuonLenDinh } from "./cuon-len";
 import { Hoa } from "./HoaEp";
-import { useTroiTam } from "./troi-tam";
+import { coLoang, useTroiTam } from "./troi-tam";
 
 /** Id cua hop chon: nut mo tro toi no bang aria-controls. */
 const HOP = "tha-tam-trang";
@@ -33,10 +34,12 @@ export type DangGiu = { weather: Weather; conLai: string };
  * toi no bang aria-describedby) va nut "Tha" bi tat chung nao con vuot. parseMoodInput trong tha() la lop chan cuoi
  * cung (dung luat voi may chu: chua chon troi, loi nhan qua dai, ca nguong 320 ky tu truoc khi chuan hoa).
  */
-export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
+export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia }: {
   dau: ReactNode;
   nutPhu: ReactNode;
   dangGiu: DangGiu | null;
+  /** Bau troi cua nguoi xem ma may chu dang ve (cung gia tri dai troi nhan): de biet lan tha nay co loang khong. */
+  minh: TroiHien | null;
   tenKia: string;
 }) {
   const [mo, setMo] = useState(false);
@@ -45,14 +48,29 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   const [loi, setLoi] = useState("");
   const [bao, setBao] = useState("");
   const [dangGui, batDau] = useTransition();
+  /** Mot lan tha dang chay (trang cuon len, troi doi, loang): hop van mo nhung khoa lai, khong bam them duoc. */
+  const [dangTha, setDangTha] = useState(false);
+  /**
+   * Dong "Ban dang giu" luc bam Tha. Suot lan tha hop hien dung dong nay: may chu tra loi trong luc hop con mo thi dong
+   * that doi (Nang am thanh Giong, hay tu khong co thanh co), ma doi ngay truoc mat la mot lan xo dich chu trong hop.
+   */
+  const [giuLucTha, setGiuLucTha] = useState<DangGiu | null>(null);
+  const giuHien = dangTha ? giuLucTha : dangGiu;
   const nutRef = useRef<HTMLButtonElement>(null);
   const nutThaRef = useRef<HTMLButtonElement>(null);
   const hopRef = useRef<HTMLElement>(null);
   /** Hop vua duoc mo lai sau khi may chu tu choi: dua focus toi nut Tha de nguoi dung thu lai ngay. */
   const moLaiRef = useRef(false);
-  const { datTam, datGiu } = useTroiTam();
+  const { tam, datTam, datGiu } = useTroiTam();
   /** Huy lan cuon len dai troi dang cho (lan tha moi thay lan cu, hay thanh phan go ra giua chung). */
   const huyCuon = useRef<(() => void) | null>(null);
+  /** So thu tu lan tha gan nhat; hop dang thuoc lan tha nao (0 la khong lan nao); hen thu hop sau khi troi doi xong. */
+  const lanTha = useRef(0);
+  const hopCuaLan = useRef(0);
+  const henThu = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** Lan tha da duoc may chu luu; lan tha da tu thu hop lai (va chua ai mo lai hop). */
+  const daLuu = useRef(0);
+  const daThuHop = useRef(0);
   const soChu = [...nhan].length;
   const qua = soChu > NOTE_MAX;
   // Bo dem: dam khi vua day, them kieu bao loi khi da vuot. Mot chuoi lop thay vi ba nhanh dieu kieu long nhau.
@@ -64,24 +82,34 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     if (!mo || hop === null) return undefined;
     function nghe(e: globalThis.KeyboardEvent) {
       if (e.key !== "Escape") return;
-      setMo(false);
-      setChon(null);
-      setNhan("");
-      setLoi("");
+      nhaHop();
+      dong();
       nutRef.current?.focus();
     }
     hop.addEventListener("keydown", nghe);
     return () => hop.removeEventListener("keydown", nghe);
   }, [mo]);
 
-  function dong() {
-    setMo(false);
+  function xoaChon() {
     setChon(null);
     setNhan("");
     setLoi("");
   }
 
+  function dong() {
+    setMo(false);
+    xoaChon();
+  }
+
+  /** Hop thoi thuoc ve lan tha dang chay: bo hen thu hop, mo khoa. Lan tha van chay tiep (troi van doi), chi khong dong hop. */
+  function nhaHop() {
+    clearTimeout(henThu.current);
+    hopCuaLan.current = 0;
+    setDangTha(false);
+  }
+
   function thoi() {
+    nhaHop();
     dong();
     nutRef.current?.focus();
   }
@@ -91,16 +119,17 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
       thoi();
       return;
     }
+    daThuHop.current = 0;
     setLoi("");
     setMo(true);
   }
 
   /*
-   * Tha va Thu lai DONG HOP NGAY trong luot bam, khong doi may chu tra loi. Hop nam giua dau ke va ke sach, nen dong no
-   * la mot lan xo dich ca ke. Trinh duyet chi bo qua xo dich xay ra trong nua giay sau mot cu bam; dong sau khi may chu
-   * tra loi (thuong lau hon the) thi lan xo dich do bi tinh vao CLS, do duoc 0,216 toi 0,707 tren dau ke sach.
-   * Lua chon cua nguoi dung chi bi xoa khi may chu da nhan; may chu tu choi thi hop mo lai nguyen nhu cu, kem cau bao,
-   * va focus toi nut Tha de thu lai duoc ngay.
+   * Hop NOI tren ke sach (tam-trang.css), khong nam trong dong chay: mo hay thu lai luc nao cung khong xo dich ke. Nho vay
+   * hop tha duoc giu mo suot lan tha va chi thu lai sau khi troi doi xong (chu du an 27/09), vai giay sau cu bam, ma CLS
+   * van bang 0 (truoc day hop day ke xuong, dong muon hon nua giay sau cu bam la mot lan xo dich 0,216 toi 0,707).
+   * Lua chon cua nguoi dung chi bi xoa khi may chu da nhan; may chu tu choi thi hop mo (hay mo lai) kem cau bao, giu
+   * nguyen lua chon, va focus toi nut Tha de thu lai duoc ngay.
    */
   function moLaiVoiLoi(cau: string) {
     setLoi(cau);
@@ -108,7 +137,10 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     setMo(true);
   }
 
-  useEffect(() => () => huyCuon.current?.(), []);
+  useEffect(() => () => {
+    huyCuon.current?.();
+    clearTimeout(henThu.current);
+  }, []);
 
   // Focus toi nut Tha sau khi hop da mo lai tren man VA lan gui da xong han: luc goi setMo(true) hop van dang an, va
   // trong luc transition con chay nut Tha van bi tat, ma trinh duyet khong cho focus vao mot nut dang tat.
@@ -127,28 +159,45 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
       return;
     }
     setLoi("");
-    setMo(false);
-    // Focus ve nut mo nhung khong keo trang: trang sap cuon len dai troi.
-    nutRef.current?.focus({ preventScroll: true });
     /*
-     * Spec bo sung B5, chinh lai 26/09 theo chu du an: trang luot tu tu len dai troi, toi noi thi nghi 3 giay, roi dai troi
-     * moi doi sang troi TAM cua lan tha nay, khong cho may chu. Suot luc do dai troi GIU NGUYEN bau troi dang hien, du may
-     * chu da luu xong som hon. May chu tu choi thi thoi giu, go troi tam (chi khi no van la cua lan tha nay) va mo lai hop
-     * kem cau bao; tu choi den truoc luc doi troi thi dai troi khong he doi.
+     * Chu du an 27/09: hop VAN MO (khoa lai, khong bam them), trang cuon len dai troi voi toc do mot cu cuon chuot, toi
+     * noi thi dai troi doi NGAY sang troi TAM cua lan tha nay (khong cho may chu), va chi khi troi doi xong (het lan loang,
+     * hay ngay khi khong co lan loang) hop moi thu lai. Trong luc cuon dai troi GIU NGUYEN bau troi dang hien, du may chu
+     * da luu xong som hon. May chu tu choi thi dung han: thoi giu, go troi tam (chi khi no van la cua lan tha nay), mo
+     * khoa va hop mo (lai) kem cau bao.
      */
+    const lan = lanTha.current + 1;
+    lanTha.current = lan;
+    hopCuaLan.current = lan;
+    daThuHop.current = 0;
+    setGiuLucTha(dangGiu);
+    setDangTha(true);
+    // Focus ve nut mo nhung khong keo trang: hop sap bi khoa, va trang sap cuon len dai troi.
+    nutRef.current?.focus({ preventScroll: true });
     const luc = new Date();
     const moi: TroiHien = { weather: vao.weather, note: vao.note, tha: thaLabel(luc, luc), gio: timeLabel(luc) };
+    const truoc = tam ?? minh;
     const boTam = (cau: string) => {
       huyCuon.current?.();
       datGiu(false);
       datTam((t) => (t === moi ? null : t));
+      nhaHop();
       moLaiVoiLoi(cau);
     };
     huyCuon.current?.();
+    clearTimeout(henThu.current);
     datGiu(true);
     huyCuon.current = cuonLenDinh(() => {
       datGiu(false);
       datTam(moi);
+      if (hopCuaLan.current !== lan) return;
+      henThu.current = setTimeout(() => {
+        if (hopCuaLan.current !== lan) return;
+        nhaHop();
+        daThuHop.current = lan;
+        setMo(false);
+        if (daLuu.current === lan) xoaChon();
+      }, coLoang(truoc, moi) ? LOANG_HET_MS : 0);
     });
     batDau(async () => {
       try {
@@ -157,7 +206,9 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
           boTam(r.error);
           return;
         }
-        dong();
+        daLuu.current = lan;
+        // Hop da tu thu lai (va chua ai mo lai) thi xoa lua chon ngay; con dang mo cho loang thi xoa luc thu hop.
+        if (daThuHop.current === lan) xoaChon();
         setBao(`Đã thả ${TROI[vao.weather].ten}. Giữ trong 24 giờ.`);
       } catch {
         boTam(CHUA_THA_DUOC);
@@ -166,6 +217,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   }
 
   function thuLai() {
+    nhaHop();
     setLoi("");
     setMo(false);
     nutRef.current?.focus();
@@ -191,6 +243,8 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
 
   return (
     <>
+      {/* Khung dinh vi cua hop tha: hop noi ngay duoi dong tieu de, de len ke sach. */}
+      <div className="ke-dau-khung">
       <div className="ke-dau">
         {dau}
         <div className="ke-dau__nut">
@@ -202,17 +256,17 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
         </div>
       </div>
 
-      <section className="tha" id={HOP} aria-labelledby={`${HOP}-t`} hidden={!mo} ref={hopRef}>
+      <section className="tha" id={HOP} aria-labelledby={`${HOP}-t`} hidden={!mo} inert={dangTha || undefined} ref={hopRef}>
         <div className="tha__dau">
           <div>
             <h2 className="d" id={`${HOP}-t`}>Thả tâm trạng</h2>
             <p className="tha__hoi">Lòng bạn lúc này thế nào?</p>
           </div>
         </div>
-        {dangGiu && (
+        {giuHien && (
           <p className="tha__giu">
-            <span className={`o-mau troi--${dangGiu.weather}`} aria-hidden="true" />
-            <span>Bạn đang giữ <b>{TROI[dangGiu.weather].ten}</b>, {dangGiu.conLai}.</span>
+            <span className={`o-mau troi--${giuHien.weather}`} aria-hidden="true" />
+            <span>Bạn đang giữ <b>{TROI[giuHien.weather].ten}</b>, {giuHien.conLai}.</span>
             <button type="button" className="btn btn--chu" onClick={thuLai} disabled={dangGui}>Thu lại</button>
           </p>
         )}
@@ -288,6 +342,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
         </div>
         <p className="tha__lich"><Link className="btn btn--chu" href="/tam-trang">Xem lịch hoa</Link></p>
       </section>
+      </div>
       <p className="sr-only" aria-live="polite">{bao}</p>
     </>
   );

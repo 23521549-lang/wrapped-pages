@@ -77,6 +77,9 @@
   /* Trinh xem bia cua Dau thoi gian phu ca thanh dieu huong dinh. The nhac noi TREN lop do: khong gi de len khung YouTube. */
   --z-phu: 300;
   --z-phu-noi: 310;
+  /* Hop Tha tam trang tha xuong khi mo va cuon len khi thu lai (chu du an 27/09). */
+  --dur-tha-mo: 320ms;
+  --dur-tha-dong: 260ms;
   /* Trinh xem bia: the lat va lop nen di cham rai (chu du an 26/09: "nhe nhang va cham rai"). XemBia.tsx giu hai nhip khop. */
   --dur-the-bia: 800ms;
   --dur-nen-xem: 600ms;

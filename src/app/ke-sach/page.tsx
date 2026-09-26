@@ -76,6 +76,7 @@ export default async function KeSach() {
               )}
               nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}
               dangGiu={minh ? { weather: minh.weather, conLai: conLai(minh.endsAt, now) } : null}
+              minh={minh ? troiHien(minh, now) : null}
               tenKia={me.partnerNickname}
             />
 

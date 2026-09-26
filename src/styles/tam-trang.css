@@ -312,9 +312,30 @@
 .o-mau{ width: 18px; height: 18px; border-radius: 50%; flex: none; background: linear-gradient(180deg, var(--t1), var(--t2)); box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 30%, transparent); }
 .o-mau--trong{ background: none; box-shadow: none; border: 1.5px dashed var(--color-rule-ui); }
 
-/* hop chon; giam chuyen dong: globals.css tat hoat anh mo, hop hien ngay */
-.tha{ border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); padding: var(--space-lg); margin-bottom: var(--space-2xl); animation: tha-mo var(--dur-short) var(--ease-out) both; }
-@keyframes tha-mo{ from{ opacity: 0; transform: translateY(-6px); } to{ opacity: 1; transform: none; } }
+/*
+ * Hop chon NOI ngay duoi dong tieu de, de len ke sach (ThaTamTrang.tsx): mo hay thu lai deu khong day ke sach di dau.
+ * Hieu ung (chu du an 27/09, "xa xuong va thu lai"): mo thi hop tha xuong tu mep tren (clip-path mo dan tu tren xuong,
+ * cung luc truot xuong 6px), ease-out nhu mot bang tha tu nut; thu lai thi cuon nguoc len, nhanh hon mot chut. Hop giu
+ * nguyen do dam suot luc tha va cuon: mo dan thi hop va ke sach ben duoi lan vao nhau, nhin roi. display chuyen roi rac (allow-discrete) nen thuoc tinh hidden van la nguon that duy nhat cua trang thai mo, va
+ * @starting-style cho khung hinh dau luc mo. Mep cat luc mo het lui ra ngoai hop de bong do khong bi cat.
+ * Giam chuyen dong: globals.css tat chuyen dong clip-path va transform, hop hien va an ngay.
+ */
+.ke-dau-khung{ position: relative; }
+.tha{
+  position: absolute; top: calc(100% - var(--space-xl) + var(--space-xs)); left: 0; right: 0; z-index: var(--z-raised);
+  border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); padding: var(--space-lg);
+  box-shadow: var(--shadow-lift);
+  transform: none; clip-path: inset(-2rem -2rem -4rem -2rem);
+  transition: clip-path var(--dur-tha-mo) var(--ease-out), transform var(--dur-tha-mo) var(--ease-out),
+    display var(--dur-tha-mo) allow-discrete;
+}
+.tha[hidden]{
+  display: none; transform: translateY(-6px); clip-path: inset(0 0 100% 0);
+  transition-duration: var(--dur-tha-dong); transition-timing-function: var(--ease-in-out);
+}
+@starting-style{
+  .tha{ transform: translateY(-6px); clip-path: inset(0 0 100% 0); }
+}
 .tha__dau{ display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-md); }
 .tha__dau h2{ font-size: var(--text-md); line-height: 1.3; }
 .tha__hoi{ color: var(--color-ink-2); margin-top: 2px; }
@@ -361,7 +382,8 @@
   .o__troi{ height: 72px; }
 }
 @media (max-width: 600px){
-  .tha{ padding: var(--space-md); }
+  /* Dong tieu de o man hep co le duoi --space-lg (app.css), nen hop noi len theo. */
+  .tha{ padding: var(--space-md); top: calc(100% - var(--space-lg) + var(--space-xs)); }
 }
 @media (max-width: 360px){
   .o-troi{ gap: 6px; }
