@@ -228,8 +228,18 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
    * may chu), hay troi may chu gui xuong. Tu luc may chu ve lai trang voi dung tam trang do, troi may chu thang va troi
    * tam duoc go di: hai troi cung tam trang, nen khong co lan loang thu hai.
    */
-  const { tam, datTam } = useTroiTam();
-  const minh = tam !== null && (minhMay === null || !cungTamTrang(tam, minhMay)) ? tam : minhMay;
+  const { tam, datTam, giu } = useTroiTam();
+  const minhMoi = tam !== null && (minhMay === null || !cungTamTrang(tam, minhMay)) ? tam : minhMay;
+  /*
+   * Trong luc mot lan tha dang cho (trang dang luot len, hay dang nghi 3 giay), dai troi giu nguyen bau troi dang hien du
+   * may chu da luu xong som hon: troi chi doi dung luc hop tha bao. Luu bau troi luc bat dau giu bang mau "luu tu lan ve
+   * truoc" cua React (dat state ngay trong luc ve, co dieu kien), khong can effect: o lan ve dau tien cua luc giu, may chu
+   * chua tra loi nen minhMoi van la bau troi dang hien.
+   */
+  const [dongBang, setDongBang] = useState<{ minh: TroiHien | null } | null>(null);
+  if (giu && dongBang === null) setDongBang({ minh: minhMoi });
+  if (!giu && dongBang !== null) setDongBang(null);
+  const minh = dongBang === null ? minhMoi : dongBang.minh;
   useEffect(() => {
     if (tam !== null && minhMay !== null && cungTamTrang(tam, minhMay)) datTam(null);
   }, [tam, minhMay, datTam]);

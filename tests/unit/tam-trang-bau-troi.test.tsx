@@ -978,19 +978,20 @@ describe("dongChu: cac dong chu cua mot bau troi", () => {
   });
 });
 
-/** Dat troi tam qua ngu canh, nhu hop tha lam khi trang da cuon toi dai troi. */
-function DatTam({ t }: { t: TroiHien | null }) {
-  const { datTam } = useTroiTam();
+/** Dat troi tam va co giu qua ngu canh, nhu hop tha lam trong mot lan tha. */
+function DatTam({ t, g = false }: { t: TroiHien | null; g?: boolean }) {
+  const { datTam, datGiu } = useTroiTam();
   useEffect(() => {
     datTam(t);
-  }, [t, datTam]);
+    datGiu(g);
+  }, [t, g, datTam, datGiu]);
   return null;
 }
 
-/** Dai troi trong ngu canh troi tam, voi troi may chu `minh` va troi tam `tam` (null la chua tha gi). */
-const veTam = (minh: TroiHien | null, tam: TroiHien | null) => (
+/** Dai troi trong ngu canh troi tam, voi troi may chu `minh`, troi tam `tam` (null la chua tha gi) va co giu `g`. */
+const veTam = (minh: TroiHien | null, tam: TroiHien | null, g = false) => (
   <TroiTam>
-    <DatTam t={tam} />
+    <DatTam t={tam} g={g} />
     <BauTroi tenKia="Linh" kia={null} minh={minh} />
   </TroiTam>
 );
@@ -1023,6 +1024,21 @@ describe("BauTroi: troi tam cua lan tha", () => {
     // Troi tam da duoc go: may chu ve tam trang khac (vd nguoi nay tha lai tu tab khac) thi dai troi theo may chu.
     rerender(veTam(MINH, null));
     expect(dai.querySelector("section.troi[data-k]")?.classList.contains("troi--nang-am")).toBe(true);
+    vi.advanceTimersByTime(LOANG_HET_MS + 10);
+  });
+
+  it("dang giu (trang dang luot len hay dang nghi 3 giay): may chu ve tam trang moi thi dai troi van giu troi cu; thoi giu thi loang", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(veTam(MINH, null, true));
+    // May chu da luu xong va ve lai trang voi tam trang moi, trong luc van con giu.
+    rerender(veTam(MINH_MOI, null, true));
+    const dai = container.querySelector(".troi-dai") as HTMLElement;
+    expect(dai.querySelector("section.troi[data-k]")?.classList.contains("troi--nang-am")).toBe(true);
+    expect(dai.querySelector(".troi--dang-loang")).toBeNull();
+    // Het nhip: thoi giu, hop tha dat troi tam trung voi may chu. Mot lan loang, tu troi cu sang troi moi.
+    rerender(veTam(MINH_MOI, MINH_MOI, false));
+    expect(dai.querySelector(".troi--dang-loang")?.classList.contains("troi--giong")).toBe(true);
+    expect(dai.querySelector(".troi--cu")?.classList.contains("troi--nang-am")).toBe(true);
     vi.advanceTimersByTime(LOANG_HET_MS + 10);
   });
 

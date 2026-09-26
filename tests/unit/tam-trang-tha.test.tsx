@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ChoKeSach from "@/app/ke-sach/loading";
 import { ThaTamTrang, type DangGiu } from "@/components/tam-trang/ThaTamTrang";
-import { CUON_TOI_DA_MS, NHIP_SAU_CUON_MS } from "@/components/tam-trang/cuon-len";
+import { NHIP_SAU_CUON_MS, thoiGianLuot } from "@/components/tam-trang/cuon-len";
 import { TroiTam, useTroiTam } from "@/components/tam-trang/troi-tam";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { CHON_TROI, NHAN_DAI, NOTE_MAX } from "@/lib/tam-trang/input";
@@ -335,18 +335,19 @@ describe("ke sach va khung giu cho", () => {
 
 /** Doc troi tam trong ngu canh, nhu dai troi doc. */
 function DoTam() {
-  const { tam } = useTroiTam();
-  return <output data-testid="tam">{tam === null ? "" : `${tam.weather}|${tam.note ?? ""}|${tam.tha}`}</output>;
+  const { tam, giu } = useTroiTam();
+  return <output data-testid="tam" data-giu={String(giu)}>{tam === null ? "" : `${tam.weather}|${tam.note ?? ""}|${tam.tha}`}</output>;
 }
 
-const veTam = () =>
+const veTam = (dangGiu: Parameters<typeof ThaTamTrang>[0]["dangGiu"] = null) =>
   render(
     <TroiTam>
-      <ThaTamTrang dau={<div><h1>Kệ sách</h1></div>} nutPhu={null} dangGiu={null} tenKia="Linh" />
+      <ThaTamTrang dau={<div><h1>Kệ sách</h1></div>} nutPhu={null} dangGiu={dangGiu} tenKia="Linh" />
       <DoTam />
     </TroiTam>,
   );
 const tam = () => screen.getByTestId("tam").textContent;
+const giu = () => screen.getByTestId("tam").getAttribute("data-giu");
 
 /** Chon mot troi, go loi nhan (neu co) roi bam Tha. */
 function thaQuaHop(troi: string, nhan = "") {
@@ -379,25 +380,29 @@ describe("ThaTamTrang: troi tam va cuon len dai troi", () => {
     await act(async () => traLoi({ ok: true }));
   });
 
-  it("dang o duoi trang: cuon muot len dinh truoc, troi tam chi den khi cuon xong", async () => {
+  it("dang o duoi trang: luot tu tu len dinh, nghi 3 giay, roi moi dat troi tam; suot luc do dai troi duoc giu", async () => {
     vi.useFakeTimers();
     const cuon = vi.fn();
     vi.stubGlobal("scrollTo", cuon);
     vi.stubGlobal("scrollY", 900);
+    vi.stubGlobal("requestAnimationFrame", (f: FrameRequestCallback) => setTimeout(() => f(Date.now()), 16) as unknown as number);
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id));
     let traLoi!: (r: { ok: true }) => void;
     actionSetMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
     veTam();
     thaQuaHop("Mưa phùn");
-    expect(cuon).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    expect(giu()).toBe("true");
     // Focus ve nut mo khong duoc keo trang xuong lai.
     expect(document.activeElement).toBe(nutMo());
-    act(() => { vi.advanceTimersByTime(CUON_TOI_DA_MS - 1); });
+    act(() => { vi.advanceTimersByTime(thoiGianLuot(900) + 32); });
+    expect(cuon).toHaveBeenLastCalledWith(0, 0);
     expect(tam()).toBe("");
-    act(() => {
-      globalThis.dispatchEvent(new Event("scrollend"));
-      vi.advanceTimersByTime(NHIP_SAU_CUON_MS);
-    });
+    act(() => { vi.advanceTimersByTime(NHIP_SAU_CUON_MS - 64); });
+    expect(tam()).toBe("");
+    expect(giu()).toBe("true");
+    act(() => { vi.advanceTimersByTime(64); });
     expect(tam()).toMatch(/^mua-phun\|\|/);
+    expect(giu()).toBe("false");
     await act(async () => traLoi({ ok: true }));
   });
 
@@ -411,6 +416,7 @@ describe("ThaTamTrang: troi tam va cuon len dai troi", () => {
     expect(tam()).toMatch(/^giong/);
     await act(async () => traLoi({ error: "Bạn cần đăng nhập trước." }));
     expect(tam()).toBe("");
+    expect(giu()).toBe("false");
     expect(screen.getByRole("alert").textContent).toBe("Bạn cần đăng nhập trước.");
   });
 
@@ -422,6 +428,24 @@ describe("ThaTamTrang: troi tam va cuon len dai troi", () => {
     await act(async () => { await Promise.resolve(); });
     act(() => { vi.advanceTimersByTime(NHIP_SAU_CUON_MS * 2); });
     expect(tam()).toBe("");
+    // Thoi giu ngay khi may chu tu choi, khong doi het nhip.
+    expect(giu()).toBe("false");
     expect(screen.getByRole("alert").textContent).toBe("Bạn cần đăng nhập trước.");
+  });
+
+  it("Thu lai trong luc lan tha con cho doi troi: bo lan doi troi do va thoi giu ngay, troi vua tha khong hien len nua", async () => {
+    vi.useFakeTimers();
+    veTam({ weather: "cau-vong", conLai: "còn 3 giờ" });
+    thaQuaHop("Giông");
+    // May chu luu xong lan tha som, trong luc dai troi con dang nghi.
+    await act(async () => { await Promise.resolve(); });
+    expect(giu()).toBe("true");
+    fireEvent.click(nutMo());
+    fireEvent.click(screen.getByRole("button", { name: "Thu lại" }));
+    expect(giu()).toBe("false");
+    act(() => { vi.advanceTimersByTime(NHIP_SAU_CUON_MS * 2); });
+    expect(tam()).toBe("");
+    await act(async () => { await Promise.resolve(); });
+    expect(actionWithdrawMood).toHaveBeenCalledTimes(1);
   });
 });

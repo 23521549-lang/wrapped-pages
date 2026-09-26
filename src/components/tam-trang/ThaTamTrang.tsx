@@ -50,7 +50,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
   const hopRef = useRef<HTMLElement>(null);
   /** Hop vua duoc mo lai sau khi may chu tu choi: dua focus toi nut Tha de nguoi dung thu lai ngay. */
   const moLaiRef = useRef(false);
-  const { datTam } = useTroiTam();
+  const { datTam, datGiu } = useTroiTam();
   /** Huy lan cuon len dai troi dang cho (lan tha moi thay lan cu, hay thanh phan go ra giua chung). */
   const huyCuon = useRef<(() => void) | null>(null);
   const soChu = [...nhan].length;
@@ -131,21 +131,24 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     // Focus ve nut mo nhung khong keo trang: trang sap cuon len dai troi.
     nutRef.current?.focus({ preventScroll: true });
     /*
-     * Spec bo sung B5: trang cuon muot len dai troi ngay, toi noi thi dai troi ve troi TAM cua lan tha nay, khong cho may
-     * chu. May chu tu choi thi go troi tam (chi khi no van la cua lan tha nay) va mo lai hop kem cau bao; tu choi den
-     * truoc khi cuon xong thi troi tam khong bao gio duoc dat.
+     * Spec bo sung B5, chinh lai 26/09 theo chu du an: trang luot tu tu len dai troi, toi noi thi nghi 3 giay, roi dai troi
+     * moi doi sang troi TAM cua lan tha nay, khong cho may chu. Suot luc do dai troi GIU NGUYEN bau troi dang hien, du may
+     * chu da luu xong som hon. May chu tu choi thi thoi giu, go troi tam (chi khi no van la cua lan tha nay) va mo lai hop
+     * kem cau bao; tu choi den truoc luc doi troi thi dai troi khong he doi.
      */
     const luc = new Date();
     const moi: TroiHien = { weather: vao.weather, note: vao.note, tha: thaLabel(luc, luc), gio: timeLabel(luc) };
-    let hong = false;
     const boTam = (cau: string) => {
-      hong = true;
+      huyCuon.current?.();
+      datGiu(false);
       datTam((t) => (t === moi ? null : t));
       moLaiVoiLoi(cau);
     };
     huyCuon.current?.();
+    datGiu(true);
     huyCuon.current = cuonLenDinh(() => {
-      if (!hong) datTam(moi);
+      datGiu(false);
+      datTam(moi);
     });
     batDau(async () => {
       try {
@@ -166,6 +169,12 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, tenKia }: {
     setLoi("");
     setMo(false);
     nutRef.current?.focus();
+    // Thu lai trong luc mot lan tha con cho doi troi (nhip nghi 3 giay du dai de lam vay): bo luon lan doi troi do va
+    // thoi giu, neu khong troi vua tha se hien len sau khi da thu lai va nam do toi luc tai lai trang.
+    huyCuon.current?.();
+    huyCuon.current = null;
+    datGiu(false);
+    datTam(null);
     batDau(async () => {
       try {
         const r = await actionWithdrawMood();

@@ -3,10 +3,19 @@
 import { createContext, useContext, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 
-type TroiTamGiaTri = { tam: TroiHien | null; datTam: Dispatch<SetStateAction<TroiHien | null>> };
+type TroiTamGiaTri = {
+  tam: TroiHien | null;
+  datTam: Dispatch<SetStateAction<TroiHien | null>>;
+  /**
+   * Mot lan tha dang cho toi luc doi troi (trang dang luot len, hay dang nghi 3 giay): dai troi GIU NGUYEN bau troi dang
+   * hien, ke ca khi may chu da luu xong va ve lai trang voi tam trang moi truoc luc do.
+   */
+  giu: boolean;
+  datGiu: Dispatch<SetStateAction<boolean>>;
+};
 
 /** Ngoai trang ke sach (va trong bai kiem don le) khong co ai tha: troi tam luon rong, dat vao khong lam gi. */
-const KHONG: TroiTamGiaTri = { tam: null, datTam: () => {} };
+const KHONG: TroiTamGiaTri = { tam: null, datTam: () => {}, giu: false, datGiu: () => {} };
 const Ngu = createContext<TroiTamGiaTri>(KHONG);
 
 /**
@@ -17,7 +26,8 @@ const Ngu = createContext<TroiTamGiaTri>(KHONG);
  */
 export function TroiTam({ children }: { children: ReactNode }) {
   const [tam, datTam] = useState<TroiHien | null>(null);
-  const giaTri = useMemo(() => ({ tam, datTam }), [tam]);
+  const [giu, datGiu] = useState(false);
+  const giaTri = useMemo(() => ({ tam, datTam, giu, datGiu }), [tam, giu]);
   return <Ngu.Provider value={giaTri}>{children}</Ngu.Provider>;
 }
 
