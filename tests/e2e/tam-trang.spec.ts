@@ -752,6 +752,10 @@ test("dai troi gon nhu ban mau: tu dong chu cuoi cua dai troi toi tieu de Ke sac
     await b.goto("/ke-sach");
     const cuoi = b.locator(".troi-dai section.troi .troi__cuoi");
     const tieuDe = b.getByRole("heading", { level: 1, name: "Kệ sách" });
+    // Trang ke sach stream qua khung giu cho: noi dung that nam trong mot khoi an toi luc React hien no ra (React gom cac
+    // lan hien, tre toi khoang 300ms sau su kien load). Do ngay luc load la do vao khoi an: may CI cham da roi dung vao do.
+    await expect(cuoi).toBeVisible();
+    await expect(tieuDe).toBeVisible();
     const [c, t] = await Promise.all([cuoi.boundingBox(), tieuDe.boundingBox()]);
     if (!c || !t) throw new Error("khong thay dai troi hay tieu de");
     const khoang = t.y - (c.y + c.height);
