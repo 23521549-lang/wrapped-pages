@@ -263,6 +263,41 @@ function diemTrenKhung(page: Page): Promise<(string | undefined)[]> {
   });
 }
 
+/**
+ * Lat mot the (phim →) roi do chong the o tung khung hinh trong mot giay: do lech lon nhat so voi truoc khi lat, va co
+ * phan tu nao cua trinh xem tran ra thanh cuon khong (chu du an 26/09: moi lan lat hien hai thanh cuon, khung bi nhay).
+ */
+function latVaDo(page: Page): Promise<{ lech: number; cuon: string[] }> {
+  return page.evaluate(async () => {
+    const boc = document.querySelector(".dtg-xem__boc");
+    if (!boc) throw new Error("khong co chong the");
+    const goc = boc.getBoundingClientRect();
+    let lech = 0;
+    const cuon = new Set<string>();
+    const doCuon = () => {
+      for (const el of [document.documentElement, ...document.querySelectorAll(".dtg-xem, .dtg-xem *")]) {
+        const k = getComputedStyle(el);
+        const doc = el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(k.overflowY);
+        const ngang = el.scrollWidth > el.clientWidth + 1 && /auto|scroll/.test(k.overflowX);
+        if (doc || ngang) cuon.add(`${el.tagName.toLowerCase()}.${el.className}`);
+      }
+    };
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    const batDau = performance.now();
+    await new Promise<void>((xong) => {
+      const khung = () => {
+        const r = boc.getBoundingClientRect();
+        lech = Math.max(lech, Math.abs(r.x - goc.x), Math.abs(r.y - goc.y), Math.abs(r.width - goc.width), Math.abs(r.height - goc.height));
+        doCuon();
+        if (performance.now() - batDau < 1000) requestAnimationFrame(khung);
+        else xong();
+      };
+      requestAnimationFrame(khung);
+    });
+    return { lech, cuon: [...cuon] };
+  });
+}
+
 /*
  * Luat trinh phat YouTube (CLAUDE.md, spec muc 5): khung it nhat 200x200 va khong lop nao de len no o bat ky be rong nao
  * - ke ca khi trinh xem bia phu ca man hinh: luc do the nhac noi TREN lop nen, o goc man rong va trai ngang day man hep.
@@ -297,6 +332,11 @@ test("khung phat nhac trong ngay: toi thieu 200x200, khong gi de len ca khi trin
     expect(chong, `${w}px: the bia va the nhac chong len nhau`).toBe(false);
     if (w === BE_RONG_CHAM || w === 320) expect(await vungBamNhoCoLich(a, MIEN_TRU), `${w}px: vung bam luc xem bia`).toEqual([]);
     expect(await tranNgang(a), `${w}px: tran ngang luc xem bia`).toEqual([]);
+    // Lat the: chong the dung yen, khong thanh cuon nao hien ra.
+    const lat = await latVaDo(a);
+    expect(lat.cuon, `${w}px: thanh cuon luc lat`).toEqual([]);
+    expect(lat.lech, `${w}px: chong the xe dich luc lat`).toBeLessThan(0.5);
+    await expect(a.locator(".dtg-xem__dem")).toHaveText("Bìa 2 / 2");
     await a.keyboard.press("Escape");
     await expect(a.getByRole("dialog")).toHaveCount(0);
   }

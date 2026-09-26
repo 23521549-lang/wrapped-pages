@@ -83,9 +83,9 @@ export function XemBia({ bia, tenNgay, giuRef, onDong }: {
     };
   }, [giuRef]);
 
-  // The tren cung luon giu focus: luc mo, va sau moi lan lat.
+  // The tren cung luon giu focus: luc mo, va sau moi lan lat. Khong de focus cuon gi: chong the phai dung yen.
   useEffect(() => {
-    theRef.current[dinh]?.focus();
+    theRef.current[dinh]?.focus({ preventScroll: true });
   }, [dinh]);
 
   const dong = () => {
@@ -178,12 +178,6 @@ export function XemBia({ bia, tenNgay, giuRef, onDong }: {
           <span>{`Bìa mới lúc ${tren.gio}`}</span>
           <Link className="btn btn--chu" href={tren.docHref}>{tren.docNhan}</Link>
         </div>
-        {n > 1 && (
-          <p className="dtg-xem__goi">
-            <span className="dtg-xem__goi-rong">Bấm vào bìa, hay phím →, để xem bìa kế tiếp. Phím ← để lùi lại.</span>
-            <span className="dtg-xem__goi-hep">Chạm vào bìa để xem bìa kế tiếp.</span>
-          </p>
-        )}
       </div>
       <div className="dtg-xem__chen" aria-hidden="true" />
     </dialog>

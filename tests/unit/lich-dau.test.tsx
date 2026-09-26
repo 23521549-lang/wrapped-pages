@@ -355,6 +355,11 @@ describe("dau-thoi-gian.css", () => {
   const CSS = readFileSync("src/styles/dau-thoi-gian.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   const giam = CSS.slice(CSS.indexOf("@media (prefers-reduced-motion: reduce)"));
 
+  it("trinh xem bia khong bao gio sinh thanh cuon: the vua lat bi cat o mep man hinh, vung giua khong cuon", () => {
+    expect(CSS).toMatch(/\.dtg-xem\{[^}]*overflow: clip/);
+    expect(CSS).not.toMatch(/\.dtg-xem__giua\{[^}]*overflow/);
+  });
+
   it("khung phat khong bao gio thap hon 200px", () => {
     expect(CSS).toMatch(/\.dtg-nhac__may\{[^}]*min-height: 200px/);
   });
