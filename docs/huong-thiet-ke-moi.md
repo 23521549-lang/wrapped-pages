@@ -53,7 +53,7 @@ Cuốn sách mở trên kệ ("X vừa viết") dùng cùng chất liệu với 
 
 - Nền `--color-giay`, bóng `--bong-giay`, bo `--radius-sach-mo` ở mép ngoài.
 - Tỉ lệ 4:3, tức hai tờ 360×540 của màn đọc đặt cạnh nhau. Nếp gáy là vạch 1px `--nep-vach` mờ dần hai đầu, cộng bóng `--nep-bong` rộng 22px mỗi bên.
-- Trang trái: "**Tên** vừa viết" (hoặc "**Bạn** vừa viết"), tên sách Lexend 600 cỡ `--text-md` (tối đa 2 dòng), dòng "N trang, thời điểm", bìa thật của cuốn đó dán như tranh in, và một nút chính duy nhất sát chân trang: "Viết tiếp" nếu là sách của mình, "Đọc tiếp" nếu là sách người kia.
+- Trang trái: "**Tên** vừa viết" (hoặc "**Bạn** vừa viết"), tên sách Lexend 600 cỡ `--text-md` (tối đa 2 dòng), dòng "N trang, thời điểm", bìa thật của cuốn đó dán như tranh in, và một nút chính duy nhất sát chân trang: "Viết tiếp" nếu là sách của mình, "Đọc tiếp" nếu là sách người kia. "Đọc tiếp" đi cùng chỗ với cả khung: mở thẳng tờ của đoạn trích, không qua tấm bìa.
 - Tranh dán: bìa (tranh vẽ hoặc ảnh tự tải lên) in trên một tờ `--color-paper` có lề 6px, bóng `--bong-tranh`, nghiêng `--tranh-nghieng`, nằm chính giữa trang trái theo chiều dọc (cách đều mép trên và mép dưới của trang).
 - Trang phải: đoạn trích bằng Be Vietnam Pro 400, cỡ 1.0625rem, giãn dòng 1.75, tối đa 34ch, tối đa 6 dòng; số tờ cuối ở giữa chân trang.
 - Từ 640px trở xuống chỉ còn một tờ tỉ lệ 2:3 như tờ đơn của màn đọc: đoạn trích lên trước, rồi ai viết, tên, dòng phụ, tranh (không còn căn giữa), nút. Bóng gáy chỉ còn một dải 14px bên trái.
@@ -74,7 +74,7 @@ Ba trạng thái của trang phải:
 - Cả cuốn là một liên kết tới màn đọc, nên vùng bấm là toàn bộ cuốn sách và vòng focus bao quanh cả cuốn.
 - Màn rộng tự chia cột (mỗi cột tối thiểu 200px); từ 420px trở xuống luôn 2 cuốn mỗi hàng.
 - **Kệ chia tầng.** Mỗi hàng sách đứng trên một mép kệ, nên một hàng đọc ra là một tầng; khoảng cách dọc giữa hai tầng là `--space-xl`. Mỗi ngăn (của mình, của người kia) **thu gọn riêng còn ba tầng**. Số cột là sự thật của trình duyệt (đổi theo bề rộng và theo cỡ chữ), nên được đọc từ `grid-template-columns` đã tính chứ không chép lại bằng media query; sách bị gọn **không có trong cây** để phím Tab không đi vào chỗ không nhìn thấy. Trước khi trình duyệt chạy xong, máy chủ cắt sẵn ba tầng bằng CSS (`.ngan__gon`), nên không có JavaScript vẫn thấy đúng ba tầng.
-- **Dải nút ẩn.** Đúng một dải cho mỗi ngăn, cao cố định 44px, ngay dưới tầng cuối đang hiện. Chữ "Mở rộng" / "Thu gọn" trong suốt cho tới khi rê chuột hoặc đi tới bằng phím Tab (`opacity`, 120ms), không bao giờ ẩn bằng `display: none` hay `visibility: hidden`. Tên đọc được: "Mở rộng kệ của bạn, còn 7 cuốn" / "Thu gọn kệ của bạn", kèm `aria-expanded`. Ở trạng thái thu gọn, một dải 10px màu `--ke-mep-bong` ngay dưới mép kệ gợi ý hàng sách kế tiếp thò ra, nằm trong lòng dải nút nên không chiếm thêm chỗ. Ba tầng trở xuống thì không có dải nút nào.
+- **Dải nút ẩn.** Đúng một dải cho mỗi ngăn, cao cố định 44px, ngay dưới tầng cuối đang hiện. Chữ "Mở rộng" / "Thu gọn" trong suốt cho tới khi rê chuột hoặc đi tới bằng phím Tab (`opacity`, 120ms), không bao giờ ẩn bằng `display: none` hay `visibility: hidden`. Tên đọc được: "Mở rộng kệ của bạn, còn 7 cuốn" / "Thu gọn kệ của bạn", kèm `aria-expanded`. Dải nút ở trạng thái thu gọn trông y như ở trạng thái mở rộng: chủ dự án bỏ gợi ý "hàng sách kế tiếp thò ra" ngày 26/09. Ba tầng trở xuống thì không có dải nút nào.
 - Thành phần trình duyệt của ngăn chỉ nhận **đúng chín trường** một thẻ sách vẽ ra (`SachTrenKe`). Mọi prop của thành phần trình duyệt được chép vào gói dữ liệu gửi xuống, nên đưa cả dòng kệ vào là gửi kèm đoạn trích, kể cả của lượt còn niêm phong.
 
 ### Bìa tự đổi trên khung sách lớn
@@ -184,7 +184,7 @@ Luật của việc sửa:
 
 Người đọc gửi được đúng một lời hồi đáp cho mỗi lượt đăng của sách đang chia sẻ. Lời hồi đáp bất biến: không sửa, không xóa.
 
-- **Chỗ đứng.** Cột phải của màn đọc: dưới thẻ "Nhạc nền" khi sách có nhạc (chỉ gắn sau "Mở sách"), đứng một mình khi sách không có nhạc. Dưới 980px cột phải xuống dưới cuốn sách. Sách riêng tư và sách chưa có tờ nào không có khung. Thẻ nhạc luôn là con đầu của cột phải, khung hồi đáp chèn sau nó, nên trình phát không bao giờ đổi chỗ trong DOM. Ở màn rộng chỉ thẻ nhạc dính, khung hồi đáp cuộn theo trang: nút "Gửi" luôn tới được dù lời dài tới đâu, còn trình phát thì không rời khỏi màn hình. Khi cuộn, khung trượt ra sau thẻ nhạc như một thẻ ghim quen thuộc và không bao giờ đè lên trình phát.
+- **Chỗ đứng.** Cột phải của màn đọc: dưới thẻ "Nhạc nền" khi sách có nhạc (chỉ gắn sau "Mở sách"), đứng một mình khi sách không có nhạc. Dưới 980px cột phải xuống dưới cuốn sách. Sách riêng tư và sách chưa có tờ nào không có khung. Thẻ nhạc luôn là con đầu của cột phải, khung hồi đáp chèn sau nó, nên trình phát không bao giờ đổi chỗ trong DOM. Ở màn rộng **cả cột phải dính thành một khối** (chủ dự án 26/09): khung hồi đáp luôn nằm ngay dưới thẻ nhạc và cuộn theo nó, không bao giờ trượt vào dưới thẻ nhạc mà bị che. Khối cao tối đa bằng khung nhìn trừ hai mép; khung hồi đáp là phần co lại được và cuộn bên trong khi dài hơn chỗ còn lại, nên nút "Gửi" luôn tới được. Sách không nhạc thì khung hồi đáp dính ngay dưới thanh điều hướng (cao `--nav-cao`). Dưới 980px không dính gì.
 - **Theo tờ đang hiện.** Khung theo lượt của tờ đang hiện; hai trang thuộc hai lượt thì theo trang bên phải. Chữ đang gõ được giữ theo từng lượt khi lật qua lại; câu báo cho trình đọc màn hình và lời nhắc lỗi thì bỏ hẳn khi đổi lượt, lật về cũng không đọc lại.
 - **Người đọc.** Ô chữ "Viết lời hồi đáp", bộ đếm "0/1000" đếm đúng như máy chủ (bỏ khoảng trắng hai đầu, gộp dòng trống còn tối đa hai, đếm theo ký tự), nút "Gửi". Gửi thì hỏi lại ngay trong khung "Gửi rồi sẽ không sửa được." với "Gửi" và "Xem lại" (focus sẵn ở "Xem lại", Esc cũng là "Xem lại"). Bấm đôi hay Enter hai lần chỉ gửi đúng một lời. Lượt còn niêm phong: "Mở niêm phong để hồi đáp.". Đã gửi: lời của mình kèm "Bạn gửi hôm nay, 07:41".
 - **Người viết.** Lời hồi đáp kèm "Linh gửi hôm nay, 07:41", hoặc "Chưa có lời hồi đáp.".
@@ -238,25 +238,38 @@ Mục gập "Đổi bìa, tên, nhạc" ở bước đăng **đã bị bỏ hẳ
 
 ## 16. Trang Dấu thời gian
 
-Hai dòng thời gian bìa và nhạc của **một** cuốn, gom theo tháng của một năm, cùng tinh thần với Lịch hoa.
+Hai dòng thời gian bìa và nhạc của **một** cuốn, đặt lên một lịch tháng cùng khung với Lịch hoa (chủ dự án chốt lại ngày 26/09: "đổi lại giao diện lịch đẹp như lịch hoa").
 
 **Ba lối vào**, không lối nào đặt ở đầu màn đọc (chủ dự án bác chỗ đó):
 
-- Mục **"Dấu thời gian"** trên thanh điều hướng dẫn tới **trang chọn cuốn** (`/dau-thoi-gian`): đúng những cuốn người xem thấy được trên kệ, mỗi dòng một bìa nhỏ, tên sách và dòng phụ "Bạn, 4 bìa, 2 bản nhạc". Ô gỡ nhạc không tính là một bản nhạc. Dòng dùng lại hình dáng dòng của trang Bản nháp; cả dòng là vùng bấm và vòng focus bao quanh cả dòng.
+- Mục **"Dấu thời gian"** trên thanh điều hướng dẫn tới **trang chọn cuốn** (`/dau-thoi-gian`): đúng những cuốn người xem thấy được trên kệ, mỗi dòng một bìa nhỏ, tên sách và dòng phụ "Bạn, 4 bìa, 2 bản nhạc". Ô gỡ nhạc không tính là một bản nhạc. Dòng dùng lại hình dáng dòng của trang Bản nháp; cả dòng là vùng bấm (lớp `::after` của liên kết tên sách phủ kín dòng), vòng focus nằm trên chính liên kết, và tên sách xuống dòng trọn vẹn thay vì cắt bằng dấu ba chấm như trang Bản nháp, vì tên là cách duy nhất phân biệt hai cuốn.
 - Bấm **ảnh bìa** trên khung sách lớn ở Kệ sách. Ảnh bìa là một liên kết riêng ("Dấu thời gian của <tên sách>"), nằm ngoài lớp phủ của khung sách trong cây và nằm trên nó theo thứ tự lớp, nên không có liên kết lồng nhau và bấm chỗ khác trên khung vẫn tới màn đọc.
 - Bấm **tiêu đề "Nhạc nền"** của thẻ nhạc ở màn đọc. Chỉ dòng tiêu đề là liên kết, không phải cả thẻ: khung YouTube nằm ngay dưới và không lớp nào được đè lên nó. Liên kết cao 44px, đậm thêm một bậc khi rê chuột hay đi tới bằng phím, không gạch chân.
 
-**Trang của một cuốn** (`/dau-thoi-gian/[id]`), bố cục C mà chủ dự án chọn:
+**Trang của một cuốn** (`/dau-thoi-gian/[id]`), một lịch tháng dùng đúng khung của Lịch hoa (`.lich-trang`, `.thang`, `.lich`, `.tuan`, `.ngay`, `.chi-tiet` trong `tam-trang.css`):
 
-- Đầu trang: tên sách, rồi "Sách của <ai>. Bìa và nhạc của cuốn này theo thời gian."
-- Dòng đầu lưới dùng lại `.thang` của Lịch hoa: hai nút mũi tên đổi năm bằng **liên kết thật** (`?nam=YYYY`), tên năm ở giữa, số dấu trong năm ở bên phải. Năm sớm nhất là năm cuốn được tạo, năm muộn nhất là năm nay; nút ở hai đầu tắt.
-- **Lưới mười hai tháng**: 3 cột ở màn hẹp, 4 cột từ 768px. Mỗi ô là một nút cao tối thiểu 64px, có tên tháng và bên dưới là các dấu: tem bìa tỉ lệ 5:3 cao 26px cho mỗi ô bìa, nốt nhạc 12px cho mỗi ô nhạc, nốt gạch chéo cho ô gỡ nhạc. Tháng không có dấu nào chỉ còn tên tháng nhạt. Ô đang chọn nền `--blue-1`, viền `--blue-line`.
-- **Khung chi tiết** bên phải (bên dưới ở màn hẹp) dùng lại `.chi-tiet` của Lịch hoa: bấm một tháng thì khung đổi **tại chỗ**, và nó là vùng `aria-live="polite"`. Mỗi dấu một dòng theo thứ tự lượt: hình bìa 96px hoặc nốt nhạc, "Lượt 3, trang 12 tới 17" (ô mở đầu là "Lúc tạo sách"), ngày theo định dạng chung, và liên kết cấp chữ "Đọc từ trang 12".
-- Năm mặc định là năm của lượt mới nhất; tháng chọn sẵn là tháng của dấu mới nhất trong năm đó.
+- Đầu trang: tên sách, rồi "Sách của <ai>. Bìa và nhạc của cuốn này theo từng ngày."
+- Dòng đầu lịch như Lịch hoa: hai nút mũi tên đổi tháng bằng **liên kết thật** (`?thang=YYYY-MM`), "Tháng 9, 2026" ở giữa, dòng tổng "3 bìa, 2 dấu nhạc trong tháng" bên phải. Tháng sớm nhất là tháng cuốn được tạo, muộn nhất là tháng này; nút ở hai đầu tắt. `?thang` sai hay ngoài khoảng thì về tháng mặc định.
+- Hàng thứ T2 tới CN, mỗi tuần một hàng có vạch mảnh phía trên. Mỗi ngày một ô bấm được với **hai làn**, thay cho hai người của Lịch hoa: làn trên là **Bìa** (tem bìa tỉ lệ 5:3, rộng hơn bông hoa một chút), làn dưới là **Nhạc** (nốt nhạc, gạch chéo khi là gỡ nhạc). Làn không có dấu là vòng chấm mờ `.hoa-trong` của Lịch hoa. Ngày sau hôm nay mờ và không bấm được; ngày đang chọn nền `--blue-1`, viền `--blue-line`. Màn hẹp dùng đúng các nấc bề rộng của Lịch hoa; ở 360px trở xuống cột tên làn ẩn đi và một dòng chữ nói hàng trên là bìa, hàng dưới là nhạc.
+- **Một ngày nhiều dấu**: làn vẽ dấu cuối cùng của ngày; nhiều hơn một dấu cùng loại thì tem bìa xếp chồng thêm một lớp lệch phía sau và góc làn có một con số nhỏ (chữ đậm `--blue-ink` trên nền `--blue-2`, cùng cặp màu với số ngày hôm nay). Con số ẩn với trình đọc màn hình vì tên của ô ngày đã kể đủ từng lượt.
+- **Khung chi tiết** bên phải (bên dưới ở màn hẹp) dùng lại `.chi-tiet` của Lịch hoa: bấm một ngày thì khung đổi **tại chỗ**, và nó là vùng `aria-live="polite"`. Tiêu đề là tên ngày ("Thứ Hai, 15.06"). Các dấu **gộp theo lượt**, mỗi lượt một dòng và một liên kết: tem bìa 72px (hay nốt nhạc khi lượt chỉ đổi nhạc), "Lượt 3, trang 12 tới 17" (ô mở đầu là "Lúc tạo sách"), dòng "Bìa mới, nhạc mới, 19:45" (hay "Bìa mới, gỡ nhạc"), và liên kết cấp chữ "Đọc từ trang 12".
+- Tháng mặc định là tháng của dấu mới nhất; ngày chọn sẵn là ngày của dấu mới nhất trong tháng đang xem, tháng không có dấu thì như Lịch hoa (hôm nay, hay ngày cuối tháng).
 - **Không đường ra ngoài**: ô nhạc dẫn về màn đọc, nơi trình phát và nghi thức "chỉ phát sau khi bấm Mở sách" đã có sẵn. CSP không nới một dòng nào.
 - Cuốn riêng tư của người kia không có trong trang chọn cuốn, và trang của nó trả 404 thật (trang chọn cuốn nằm trong nhóm tuyến riêng để khung giữ chỗ của nó không bọc trang của một cuốn).
 - Trang tĩnh: không hoạt ảnh nào ngoài vi tương tác của nút.
 
-## 17. Việc còn lại
+## 17. Bổ sung ngày 26/09
+
+Bảy quyết định chủ dự án đưa ra khi bấm thử dữ liệu mẫu. Spec: `docs/superpowers/specs/2026-09-26-dot-ba-bo-sung.md`.
+
+- **Mọi cuốn mở qua tấm bìa.** Bấm một cuốn trên kệ (hay mở `/sach/<mã>`) thì luôn ra tấm bìa với nút "Mở sách", có nhạc hay không, kể cả khi người xem đã tắt nhạc. Chỉ mở thẳng khi lối vào có `?trang` (khung sách lớn, "Đọc từ trang N", dòng Hoạt động, chuyển hướng sau khi đăng, "Về sách" ở trang trả lời) hoặc `?mo` (nghi thức mở khóa). Còn tấm bìa thì sách và khung hồi đáp chưa gắn.
+- **Cột phải của màn đọc dính cả khối** (mục 13).
+- **Mép kệ về màu vàng nhạt** của bản mẫu kệ sách đã duyệt (bảng token mục 1). Nét trang trí, không thuộc cổng tương phản.
+- **Dải nút kệ không còn thanh hé sách** (mục 5).
+- **Lịch Dấu thời gian theo khung Lịch hoa** (mục 16).
+- **Dải trời cao đúng bằng nội dung**, như bản mẫu dải trời đã duyệt: bỏ khuôn giữ chỗ (chín bài thơ chồng nhau cộng một lời nhắn 80 biểu tượng cảm xúc). Hai trời của chế độ ô cửa sổ vẫn chung một ô lưới, nên đổi chỗ không xô dịch. Thay tâm trạng bằng một bài thơ hay lời nhắn dài ngắn khác thì dải đổi chiều cao **một lần, đúng lúc trời bắt đầu loang**: trời cũ nằm ngoài dòng chảy, phủ kín dải, nên dải không co lại muộn khi dọn.
+- **Thả tâm trạng mượt.** Bấm "Thả" thì trang cuộn mượt lên dải trời (giảm chuyển động thì nhảy thẳng); cuộn tới nơi cộng một nhịp 300ms, dải trời nhận tâm trạng mới **tạm thời** từ trình duyệt và loang ngay, không chờ máy chủ. Máy chủ về tới với đúng kiểu trời và lời nhắn đó thì không loang lần hai; máy chủ từ chối thì dải trời về lại tâm trạng cũ và hộp mở lại kèm câu báo. Chỉ kiểu trời hay lời nhắn đổi mới là thay tâm trạng: thả lại y nguyên tâm trạng đang giữ chỉ đổi chữ giờ tại chỗ.
+
+## 18. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của ba màn: tạo sách, sửa sách và Viết tiếp. Khi ba màn đó được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
