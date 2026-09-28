@@ -87,11 +87,16 @@ R2 của Cloudflare đòi thêm thẻ để xác minh tài khoản, dù gói fre
 
    | Biến | Giá trị |
    |---|---|
-   | `MEDIA_S3_ENDPOINT` | `https://s3.filebase.com` |
-   | `MEDIA_S3_REGION` | `us-east-1` |
+   | `MEDIA_S3_ENDPOINT` | `https://s3.filebase.io` |
+   | `MEDIA_S3_REGION` | `auto` |
    | `MEDIA_S3_BUCKET` | tên bucket vừa tạo |
    | `MEDIA_S3_ACCESS_KEY_ID` | Access Key |
    | `MEDIA_S3_SECRET_ACCESS_KEY` | Secret Key |
+
+   Đừng dùng địa chỉ cũ `https://s3.filebase.com`: nó vẫn trả lời, nhưng bucket tạo trên nền tảng hiện tại không
+   có ở đó, nên mọi lần tải lên đều bị từ chối "NoSuchBucket" và web chỉ báo tải ảnh không được. Đã thử ngày
+   28/09/2026: cùng khoá, cùng bucket, `s3.filebase.io` ghi, đọc, xoá được, còn `s3.filebase.com` thì không.
+   Đổi biến trên Vercel xong phải triển khai lại, vì bản đang chạy vẫn giữ giá trị cũ.
 
 Ảnh tối đa 1 MB và ghi âm tối đa 2 MB mỗi tệp, nên 5 GB chứa được hàng nghìn tệp.
 
