@@ -3,7 +3,6 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
 import { LichDau, type DauHien } from "@/components/dau-thoi-gian/LichDau";
-import { troNgoai } from "@/components/dau-thoi-gian/tro-ngoai";
 import { YT_HOST, YT_STATE, type YTNamespace, type YTPlayerOptions } from "@/components/music/youtubeApi";
 
 vi.mock("next/link", () => ({
@@ -11,9 +10,9 @@ vi.mock("next/link", () => ({
 }));
 
 /*
- * Trang Dau thoi gian ban hai (spec bo sung B4 ban hai, chu du an chot 26/09): lich gon voi xap bia nho va cham nhac,
- * cot phai co xap bia lon mo trinh xem bia dang chong the, va the Nhac trong ngay phat tuan tu. Nhac chi tu phat khi
- * bam mot ngay; bam lai ngay dang phat thi phat tiep; xem bia va doi thang khong dung toi nhac; ngay khac thi doi bai.
+ * Trang Dau thoi gian chi con nhac (chu du an 28/09): lich gon voi not nhac, cot phai la mot the gom ten ngay va Nhac
+ * trong ngay phat tuan tu. Nhac chi tu phat khi bam mot ngay; bam lai ngay dang phat thi phat tiep; doi thang khong dung
+ * toi nhac; ngay khac thi doi bai.
  */
 
 const A = "aaaaaaaaaaa";
@@ -48,33 +47,16 @@ const san = () => act(() => may().opts.events.onReady({ target: may() }));
 const bao = (data: number) => act(() => may().opts.events.onStateChange({ target: may(), data }));
 const hong = () => act(() => may().opts.events.onError({ target: may(), data: 150 }));
 
-const chung = (key: string, luot: number | null, thang: string, ngay: number, gio: string) => ({
-  key,
-  luot: luot === null ? "mo-dau" : `luot-${luot}`,
-  tenLuot: luot === null ? "Lúc tạo sách" : `Lượt ${luot}`,
-  nhan: luot === null ? "Lúc tạo sách" : `Lượt ${luot}, trang ${luot}`,
-  gio,
-  docHref: luot === null ? "/sach/s1" : `/sach/s1?trang=${luot}`,
-  docNhan: luot === null ? "Đọc từ đầu" : `Đọc từ trang ${luot}`,
-  thang,
-  ngay,
-});
-const bia = (key: string, luot: number | null, thang: string, ngay: number, cover: "nui-xa" | "chim-bay" | "thuyen-trang" | "cau-go", media: string | null = null): DauHien =>
-  ({ ...chung(key, luot, thang, ngay, "08:00"), loai: "bia", cover, coverMediaId: media });
 const nhac = (key: string, luot: number, thang: string, ngay: number, youtubeId: string | null, ten: string | null = null, kenh: string | null = null): DauHien =>
-  ({ ...chung(key, luot, thang, ngay, "19:45"), loai: "nhac", youtubeId, ten, kenh });
+  ({ key, luot: `luot-${luot}`, tenLuot: `Lượt ${luot}`, gio: "19:45", thang, ngay, youtubeId, ten, kenh });
 
-/** Cuon tao ngay 5.8; thang 9 co: 15.9 ba luot (bia + nhac A, bia + go nhac, nhac B), 20.9 chi nhac C, 22.9 chi bia. */
+/** Cuon tao ngay 5.8; thang 9 co: 15.9 ba luot (nhac A, go nhac, nhac B), 20.9 nhac C, 22.9 khong doi nhac. */
 const DAU: DauHien[] = [
-  bia("b0", null, "2026-08", 5, "nui-xa"),
   nhac("n1", 1, "2026-08", 10, D, "Bài tháng tám", null),
-  bia("b2", 2, "2026-09", 15, "chim-bay"),
   nhac("n2", 2, "2026-09", 15, A, "Never Gonna Give You Up", "Rick Astley"),
-  bia("b3", 3, "2026-09", 15, "thuyen-trang", "anh-1"),
   nhac("n3", 3, "2026-09", 15, null),
   nhac("n4", 4, "2026-09", 15, B, null, null),
   nhac("n5", 5, "2026-09", 20, C, "Bài ngày hai mươi", "Kênh C"),
-  bia("b6", 6, "2026-09", 22, "cau-go"),
 ];
 
 /** 12 gio trua 26.09.2026 gio Viet Nam. */
@@ -114,44 +96,45 @@ afterEach(() => {
 });
 
 describe("LichDau: lich gon", () => {
-  it("dau lich: thang, dong tong dem bia va lan doi nhac cua thang; thang nay thi nut Tháng sau tat", async () => {
+  it("dau lich: thang, dong tong dem lan doi nhac cua thang; thang nay thi nut Tháng sau tat", async () => {
     await ve();
     expect(screen.getByRole("heading", { level: 2, name: "Tháng 9, 2026" })).toBeTruthy();
-    expect(document.querySelector(".thang__tong")?.textContent).toBe("3 bìa, 4 lần đổi nhạc trong tháng");
+    expect(document.querySelector(".thang__tong")?.textContent).toBe("4 lần đổi nhạc trong tháng");
     expect((screen.getByRole("button", { name: "Tháng sau" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "Tháng trước" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("ngay da qua la o bam duoc voi ten day du; ngay sau hom nay mo va khong bam duoc", async () => {
     await ve();
-    expect(oNgay(15).getAttribute("aria-label")).toBe("15 tháng 9. 2 bìa, 3 lần đổi nhạc");
-    expect(oNgay(3).getAttribute("aria-label")).toBe("3 tháng 9. Không có dấu nào");
-    expect(oNgay(26).getAttribute("aria-label")).toBe("26 tháng 9. Không có dấu nào. Hôm nay");
+    expect(oNgay(15).getAttribute("aria-label")).toBe("15 tháng 9. 3 lần đổi nhạc");
+    expect(oNgay(3).getAttribute("aria-label")).toBe("3 tháng 9. Không đổi nhạc");
+    expect(oNgay(26).getAttribute("aria-label")).toBe("26 tháng 9. Không đổi nhạc. Hôm nay");
     expect(screen.queryByRole("button", { name: /^27 tháng 9/ })).toBeNull();
   });
 
-  it("lan bia la xap bia nho, bia cua luot dau tien trong ngay nam tren; lan nhac la cham, go nhac la cham rong; khong con con so dem", async () => {
+  it("lich chi con mot lan nhac: moi lan doi nhac mot not, go nhac la not gach cheo; khong con bia", async () => {
     await ve();
-    const la = [...oNgay(15).querySelectorAll(".dtg-xap__la")];
-    // La dau trong DOM nam tren cung (dau-thoi-gian.css: .dtg-xap__la:nth-child(1)).
-    expect(la.map((x) => x.classList.contains("bia--chim-bay") ? "b2" : x.classList.contains("bia--thuyen-trang") ? "b3" : "?")).toEqual(["b2", "b3"]);
-    expect(la[1].querySelector("img.bia__anh")?.getAttribute("src")).toContain("anh-1");
-    const cham = [...oNgay(15).querySelectorAll(".dtg-cham__mot")].map((c) => c.classList.contains("dtg-cham__mot--go"));
-    expect(cham).toEqual([false, true, false]);
-    expect(oNgay(20).querySelector(".dtg-xap")).toBeNull();
-    expect(oNgay(20).querySelector(".dtg-trong")).not.toBeNull();
-    expect(document.querySelector(".dtg-dem")).toBeNull();
+    const not = [...oNgay(15).querySelectorAll(".dtg-not__mot")].map((c) => c.classList.contains("dtg-not__mot--go"));
+    expect(not).toEqual([false, true, false]);
+    expect(oNgay(20).querySelectorAll(".dtg-not__mot")).toHaveLength(1);
+    expect(oNgay(3).querySelector(".dtg-trong")).not.toBeNull();
+    expect(document.querySelector(".dtg-xap, .dtg-xl, .dtg-cham")).toBeNull();
+    expect([...document.querySelectorAll(".tuan__nhan")].map((n) => n.textContent)).toContain("Nhạc");
+    expect(document.body.textContent).not.toContain("Bìa");
   });
 
-  it("ngay chon san: cot phai ke ten ngay, so luot; ngay khong doi nhac thi khong co trinh phat nao", async () => {
+  it("ngay chon san: mot the gom ten ngay, cau tom tat va Nhac trong ngay; ngay khong doi nhac thi khong co trinh phat", async () => {
     await ve();
     expect(oNgay(22).getAttribute("aria-pressed")).toBe("true");
-    const ngay = document.querySelector(".dtg-ngay") as HTMLElement;
-    expect(ngay.querySelector("h2")?.textContent).toBe("Thứ Ba, 22.09");
-    expect(ngay.querySelector("p")?.textContent).toBe("1 lượt đăng: 1 bìa mới, 0 lần đổi nhạc.");
-    expect(theNhac().textContent).toContain("Ngày này không đổi nhạc.");
+    const the = document.querySelector(".dtg-phu > .dtg-the") as HTMLElement;
+    expect(the.querySelector(".dtg-ngay h2")?.textContent).toBe("Thứ Ba, 22.09");
+    expect(the.querySelector(".dtg-ngay p")?.textContent).toBe("Ngày này không đổi nhạc.");
+    expect(the.contains(theNhac())).toBe(true);
+    expect(theNhac().textContent).toContain("Chọn một ngày có nốt nhạc trên lịch.");
     expect(cacMay).toHaveLength(0);
     expect(theNhac().querySelector(".dtg-nhac__may")).toBeNull();
+    await bamNgay(15);
+    expect(the.querySelector(".dtg-ngay p")?.textContent).toBe("3 lượt đăng, 3 lần đổi nhạc.");
   });
 
   it("doi thang ngay tai cho: tieu de va luoi doi, duong dan ghi ?thang, ngay dang chon va cot phai giu nguyen", async () => {
@@ -160,7 +143,7 @@ describe("LichDau: lich gon", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Tháng 8, 2026" })).toBeTruthy();
     expect(window.location.search).toBe("?thang=2026-08");
     expect((screen.getByRole("button", { name: "Tháng trước" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(document.querySelector(".ngay[aria-pressed='true']")).toBeNull();
+    expect(document.querySelector(".ngay[aria-pressed=true]")).toBeNull();
     expect(document.querySelector(".dtg-ngay h2")?.textContent).toBe("Thứ Ba, 22.09");
     // Thang 8 khong co ngay tuong lai.
     expect(oNgay(31, 8)).toBeTruthy();
@@ -277,88 +260,9 @@ describe("LichDau: nhac trong ngay", () => {
   });
 });
 
-describe("LichDau: trinh xem bia", () => {
-  it("bam xap bia lon: chong the giua man hinh, the tren cung la bia cua luot dau tien va giu focus; nhac khong bi dung", async () => {
-    await ve({ chonDau: 15 });
-    await san();
-    fireEvent.click(within(theNhac()).getByRole("button", { name: "Phát" }));
-    const xl = screen.getByRole("button", { name: "Xem 2 bìa của ngày này" });
-    fireEvent.click(xl);
-    const hop = screen.getByRole("dialog", { name: "Bìa trong ngày Thứ Ba, 15.09" });
-    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 1 / 2");
-    const tren = within(hop).getByRole("button", { name: /^Bìa 1 trên 2, lượt 2, trang 2/ });
-    expect(document.activeElement).toBe(tren);
-    expect(within(hop).getByRole("link", { name: "Đọc từ trang 2" }).getAttribute("href")).toBe("/sach/s1?trang=2");
-    expect(may().stopVideo).not.toHaveBeenCalled();
-    expect(may().pauseVideo).not.toHaveBeenCalled();
-  });
-
-  it("the nhac noi len goc va van dieu khien duoc; moi thu khac inert; danh sach bai thu gon", async () => {
-    await ve({ chonDau: 15 });
-    fireEvent.click(screen.getByRole("button", { name: "Xem 2 bìa của ngày này" }));
-    expect(document.querySelector(".dtg--xem")).not.toBeNull();
-    expect(document.querySelector(".dtg-lich")?.hasAttribute("inert")).toBe(true);
-    expect(document.querySelector(".dtg-the")?.hasAttribute("inert")).toBe(true);
-    expect(theNhac().closest("[inert]")).toBeNull();
-    expect(theNhac().querySelector(".dtg-bai-ds")).toBeNull();
-    expect(document.querySelector(".dtg-nhac-cho")).not.toBeNull();
-  });
-
-  it("bam the (hay phim →) thi lat sang bia ke; phim ← lui lai; Esc dong, go inert va focus ve xap bia lon", async () => {
-    vi.useFakeTimers();
-    await ve({ chonDau: 15 });
-    const xl = screen.getByRole("button", { name: "Xem 2 bìa của ngày này" });
-    xl.focus();
-    fireEvent.click(xl);
-    const hop = screen.getByRole("dialog");
-    fireEvent.click(within(hop).getByRole("button", { name: /^Bìa 1 trên 2/ }));
-    expect(hop.querySelector(".dtg-xem__chu b")?.textContent).toBe("Lượt 3, trang 3");
-    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 2 / 2");
-    // Dang lat thi cu bam them bi bo qua, het nhip moi lat tiep.
-    fireEvent.keyDown(hop, { key: "ArrowRight" });
-    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 2 / 2");
-    act(() => { vi.advanceTimersByTime(600); });
-    fireEvent.keyDown(hop, { key: "ArrowLeft" });
-    expect(hop.querySelector(".dtg-xem__dem")?.textContent).toBe("Bìa 1 / 2");
-    fireEvent.keyDown(document, { key: "Escape" });
-    act(() => { vi.advanceTimersByTime(600); });
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(document.querySelector("[inert]")).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Xem 2 bìa của ngày này" }));
-  });
-
-  it("ngay khong doi bia thi khong co xap bia lon, chi mot cau noi ro", async () => {
-    await ve({ chonDau: 20 });
-    expect(screen.queryByRole("button", { name: /^Xem .* bìa/ })).toBeNull();
-    expect(document.querySelector(".dtg-khong-bia")?.textContent).toBe("Ngày này không đổi bìa.");
-  });
-});
-
-describe("troNgoai", () => {
-  it("dat inert len moi nhanh khong chua phan tu giu, giu nguyen to tien va con chau cua no; go ra chi go phan minh dat", () => {
-    document.body.innerHTML = `
-      <nav id="nav"></nav>
-      <main id="main"><div id="trai"></div><aside id="phu"><section id="ngay"></section><section id="nhac"><button id="nut"></button></section></aside></main>
-      <div id="hop"></div><div id="san" inert></div>`;
-    const $ = (id: string) => document.getElementById(id) as HTMLElement;
-    const go = troNgoai([$("hop"), $("nhac")]);
-    expect(["nav", "trai", "ngay"].every((id) => $(id).hasAttribute("inert"))).toBe(true);
-    expect(["main", "phu", "nhac", "nut", "hop"].some((id) => $(id).hasAttribute("inert"))).toBe(false);
-    go();
-    expect(["nav", "trai", "ngay"].some((id) => $(id).hasAttribute("inert"))).toBe(false);
-    expect($("san").hasAttribute("inert")).toBe(true);
-    document.body.innerHTML = "";
-  });
-});
-
 describe("dau-thoi-gian.css", () => {
   const CSS = readFileSync("src/styles/dau-thoi-gian.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   const giam = CSS.slice(CSS.indexOf("@media (prefers-reduced-motion: reduce)"));
-
-  it("trinh xem bia khong bao gio sinh thanh cuon: the vua lat bi cat o mep man hinh, vung giua khong cuon", () => {
-    expect(CSS).toMatch(/\.dtg-xem\{[^}]*overflow: clip/);
-    expect(CSS).not.toMatch(/\.dtg-xem__giua\{[^}]*overflow/);
-  });
 
   it("khung phat khong bao gio thap hon 200px", () => {
     expect(CSS).toMatch(/\.dtg-nhac__may\{[^}]*min-height: 200px/);
@@ -366,7 +270,11 @@ describe("dau-thoi-gian.css", () => {
 
   it("moi hoat anh va chuyen tiep moi deu co nhanh giam chuyen dong", () => {
     expect(giam.length).toBeGreaterThan(0);
-    for (const chon of [".dtg-xem", ".dtg-the-bia", ".dtg-xl__to", ".dtg-bai--chay .dtg-vach i", "button.dtg-bai"]) expect(giam).toContain(chon);
+    for (const chon of [".dtg-bai--chay .dtg-vach i", "button.dtg-bai"]) expect(giam).toContain(chon);
+  });
+
+  it("khong con CSS cua trinh xem bia hay xap bia lon", () => {
+    expect(CSS).not.toMatch(/\.dtg-(xem|xl|the-bia|nhac-cho|cham|khong-bia)\b/);
   });
 
   it("mau va lop xep chong di qua token, khong ma mau viet tay", () => {

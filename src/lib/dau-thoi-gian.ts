@@ -1,30 +1,24 @@
-import type { CoverKey } from "@/lib/book";
 import { ngayTrongThang, thangCua, thangKhoa, type Thang } from "@/lib/tam-trang/lich";
 
 /*
- * Trang Dau thoi gian ke lai hai dong thoi gian bia va nhac cua MOT cuon tren mot lich thang, cung khung voi Lich hoa:
- * moi ngay mot o, lan tren la bia, lan duoi la nhac. Mo dun thuan: nhan cac dau da doc san, tra ve dau theo ngay cua mot
- * thang. Khong mot phep doc nao theo tung thang - trang doc hai dong thoi gian mot lan roi gom o day. Ngay va thang deu
- * theo gio Viet Nam (thangCua, ngayTrongThang cua Lich hoa), nen may chay kiem hay may chu o mui gio nao cung vay.
+ * Trang Dau thoi gian ke lai dong thoi gian nhac cua MOT cuon tren mot lich thang, cung khung voi Lich hoa (chi con nhac
+ * tu 28/09: chu du an khong can luu dau thoi gian cua bia). Mo dun thuan: nhan cac dau da doc san, tra ve dau theo ngay
+ * cua mot thang. Khong mot phep doc nao theo tung thang - trang doc dong thoi gian mot lan roi gom o day. Ngay va thang
+ * deu theo gio Viet Nam (thangCua, ngayTrongThang cua Lich hoa), nen may chay kiem hay may chu o mui gio nao cung vay.
  */
-
-/** Phan chung cua mot dau: o nao, cua luot nao, luc nao. ordinal null la o mo dau (luc tao sach). */
-type DauChung = { key: string; ordinal: number | null; first: number | null; last: number | null; at: Date };
-
-/** Mot dau tren dong thoi gian: mot o bia, hay mot o nhac (youtubeId null la o GO NHAC). */
-export type Dau =
-  | (DauChung & { loai: "bia"; cover: CoverKey; coverMediaId: string | null })
-  | (DauChung & { loai: "nhac"; youtubeId: string | null });
 
 /**
- * Thu tu cua hai dau: theo luot (o mo dau truoc het), cung luot thi bia truoc nhac. Dung dung khoa sap xep cua ca dong
- * thoi gian (thu tu luot) chu khong theo gio, de trang nay khong the xep khac man Sua sach.
+ * Mot dau tren dong thoi gian nhac: o nao, cua luot nao, luc nao. ordinal null la o mo dau (luc tao sach); youtubeId
+ * null la o GO NHAC.
+ */
+export type Dau = { key: string; ordinal: number | null; first: number | null; last: number | null; at: Date; youtubeId: string | null };
+
+/**
+ * Thu tu cua hai dau: theo luot (o mo dau truoc het), dung khoa sap xep cua ca dong thoi gian (thu tu luot) chu khong
+ * theo gio, de trang nay khong the xep khac man Sua sach. Moi luot co nhieu nhat mot o nhac.
  */
 function truocSau(a: Dau, b: Dau): number {
-  const la = a.ordinal ?? 0;
-  const lb = b.ordinal ?? 0;
-  if (la !== lb) return la - lb;
-  return a.loai === b.loai ? 0 : a.loai === "bia" ? -1 : 1;
+  return (a.ordinal ?? 0) - (b.ordinal ?? 0);
 }
 
 /** Dau moi nhat theo thu tu dong thoi gian (luot cao nhat); null khi chua co dau nao. Mot luot duyet, khong sap xep. */

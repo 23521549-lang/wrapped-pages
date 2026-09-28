@@ -2,27 +2,25 @@ import { describe, expect, it } from "vitest";
 import { baiPhatDuoc, docThangSach, gomTheoNgay, gomTheoThang, ngayMacDinh, thangMacDinh, xepTheoDong, type Dau } from "@/lib/dau-thoi-gian";
 
 /*
- * Trang Dau thoi gian dat hai dong thoi gian cua mot cuon len mot lich thang, cung khung voi Lich hoa (spec bo sung B4).
- * Ham thuan nen kiem thang o day: ngay va thang tinh theo gio Viet Nam, thu tu trong mot ngay theo luot, thang va ngay
- * mac dinh, va doc tham so tu duong dan.
+ * Trang Dau thoi gian dat dong thoi gian nhac cua mot cuon len mot lich thang, cung khung voi Lich hoa (chi con nhac tu
+ * 28/09). Ham thuan nen kiem thang o day: ngay va thang tinh theo gio Viet Nam, thu tu trong mot ngay theo luot, thang
+ * va ngay mac dinh, va doc tham so tu duong dan.
  */
 
 /** Mot thoi diem theo gio Viet Nam (UTC+7), de bai kiem doc ra dung ngay du may chay kiem o mui gio nao. */
 const vn = (y: number, m: number, d: number, h = 12) => new Date(Date.UTC(y, m - 1, d, h - 7));
 
-const bia = (key: string, ordinal: number | null, at: Date): Dau =>
-  ({ loai: "bia", key, ordinal, first: ordinal, last: ordinal, at, cover: "nui-xa", coverMediaId: null });
 const nhac = (key: string, ordinal: number | null, at: Date, youtubeId: string | null = "dQw4w9WgXcQ"): Dau =>
-  ({ loai: "nhac", key, ordinal, first: ordinal, last: ordinal, at, youtubeId });
+  ({ key, ordinal, first: ordinal, last: ordinal, at, youtubeId });
 
 const THANG_9 = { y: 2026, m: 9 };
 
 describe("gomTheoNgay", () => {
   it("moi dau vao dung ngay cua no theo gio Viet Nam, chi cua thang dang xem; ngay khong co dau thi khong co khoa", () => {
     const ngay = gomTheoNgay([
-      bia("a", null, vn(2026, 9, 5)),
-      bia("b", 1, vn(2026, 9, 20)),
-      bia("c", 2, vn(2026, 8, 20)),
+      nhac("a", null, vn(2026, 9, 5)),
+      nhac("b", 1, vn(2026, 9, 20)),
+      nhac("c", 2, vn(2026, 8, 20)),
       // 20 gio UTC ngay 30.9 da la 3 gio sang ngay 1.10 o Viet Nam: thuoc thang 10, khong thuoc thang 9.
       nhac("d", 3, new Date(Date.UTC(2026, 8, 30, 20))),
     ], THANG_9);
@@ -31,14 +29,13 @@ describe("gomTheoNgay", () => {
     expect(ngay[20].map((d) => d.key)).toEqual(["b"]);
   });
 
-  it("trong mot ngay: theo luot, o mo dau truoc het, cung luot thi bia truoc nhac, du mang dau vao lon xon", () => {
+  it("trong mot ngay: theo luot, o mo dau truoc het, du mang dau vao lon xon", () => {
     const ngay = gomTheoNgay([
       nhac("n2", 2, vn(2026, 9, 15, 19)),
-      bia("b2", 2, vn(2026, 9, 15, 19)),
-      bia("b1", 1, vn(2026, 9, 15, 8)),
+      nhac("n1", 1, vn(2026, 9, 15, 8)),
       nhac("mo", null, vn(2026, 9, 15, 7)),
     ], THANG_9);
-    expect(ngay[15].map((d) => d.key)).toEqual(["mo", "b1", "b2", "n2"]);
+    expect(ngay[15].map((d) => d.key)).toEqual(["mo", "n1", "n2"]);
   });
 
   it("o go nhac la mot dau that, khong bi bo di", () => {
@@ -49,7 +46,7 @@ describe("gomTheoNgay", () => {
 
 describe("thang va ngay mac dinh", () => {
   it("thang mac dinh la thang cua dau moi nhat theo luot, khong theo thu tu mang", () => {
-    const dau = [bia("moi", 3, vn(2026, 9, 26)), bia("cu", 1, vn(2026, 6, 2)), nhac("giua", 2, vn(2026, 7, 14))];
+    const dau = [nhac("moi", 3, vn(2026, 9, 26)), nhac("cu", 1, vn(2026, 6, 2)), nhac("giua", 2, vn(2026, 7, 14))];
     expect(thangMacDinh(dau, vn(2026, 12, 1))).toEqual(THANG_9);
   });
 
@@ -58,7 +55,7 @@ describe("thang va ngay mac dinh", () => {
   });
 
   it("ngay mac dinh la ngay cua dau moi nhat trong thang dang xem", () => {
-    const ngay = gomTheoNgay([bia("a", 1, vn(2026, 9, 3)), bia("b", 2, vn(2026, 9, 18)), nhac("c", 2, vn(2026, 9, 18))], THANG_9);
+    const ngay = gomTheoNgay([nhac("a", 1, vn(2026, 9, 3)), nhac("b", 2, vn(2026, 9, 18))], THANG_9);
     expect(ngayMacDinh(ngay, null, 30)).toBe(18);
   });
 
@@ -86,10 +83,10 @@ describe("doc tham so ?thang tu duong dan", () => {
 });
 
 describe("xepTheoDong va gomTheoThang (lich doi thang tai cho, spec bo sung B4 ban hai)", () => {
-  it("xep theo luot, o mo dau truoc het, cung luot thi bia truoc nhac; khong dong vao mang goc", () => {
-    const goc = [nhac("n2", 2, vn(2026, 9, 1)), bia("b2", 2, vn(2026, 9, 1)), bia("mo", null, vn(2026, 8, 1))];
-    expect(xepTheoDong(goc).map((d) => d.key)).toEqual(["mo", "b2", "n2"]);
-    expect(goc.map((d) => d.key)).toEqual(["n2", "b2", "mo"]);
+  it("xep theo luot, o mo dau truoc het; khong dong vao mang goc", () => {
+    const goc = [nhac("n2", 2, vn(2026, 9, 1)), nhac("n1", 1, vn(2026, 9, 1)), nhac("mo", null, vn(2026, 8, 1))];
+    expect(xepTheoDong(goc).map((d) => d.key)).toEqual(["mo", "n1", "n2"]);
+    expect(goc.map((d) => d.key)).toEqual(["n2", "n1", "mo"]);
   });
 
   it("gom theo khoa thang roi theo ngay, giu thu tu dau vao", () => {

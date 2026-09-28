@@ -45,19 +45,12 @@ function BaiKe() {
 }
 
 /**
- * The "Nhạc trong ngày" cua cot phai (spec bo sung B4 ban hai): khung phat YouTube, dong dang phat, nut Phat/Tam dung
- * va Bai ke tiep, danh sach bai cua ngay theo thu tu luot. Nhac CHI tu phat khi nguoi dung bam mot ngay (lich goi
- * chonNgay); xem bia hay doi thang khong dung toi nhac. Het bai thi sang bai ke, bai hong thi bo qua. Ngay khong co bai
- * nao phat duoc thi khong co trinh phat nao (khong phai trinh phat an).
+ * Phan "Nhạc trong ngày" trong the cua cot phai: khung phat YouTube, dong dang phat, nut Phat/Tam dung va Bai ke tiep,
+ * danh sach bai cua ngay theo thu tu luot. Nhac CHI tu phat khi nguoi dung bam mot ngay (lich goi chonNgay); doi thang
+ * khong dung toi nhac. Het bai thi sang bai ke, bai hong thi bo qua. Ngay khong co bai nao phat duoc thi khong co trinh
+ * phat nao (khong phai trinh phat an).
  */
-export function NhacNgay({ ds, ref, khungRef, noi }: {
-  ds: readonly BaiNgay[];
-  ref: Ref<DieuKhienNhac>;
-  /** Khung cua the: lich do chieu cao va giu no ngoai lop inert khi the noi len tren trinh xem bia. */
-  khungRef: Ref<HTMLElement>;
-  /** Trinh xem bia dang mo va the nay dang noi o goc: thu gon danh sach. */
-  noi: boolean;
-}) {
+export function NhacNgay({ ds, ref }: { ds: readonly BaiNgay[]; ref: Ref<DieuKhienNhac> }) {
   const hostRef = useRef<HTMLDivElement>(null);
   /** Vi tri bai dang nap hay dang phat trong ds; null la chua phat bai nao. */
   const [dang, setDang] = useState<number | null>(null);
@@ -105,7 +98,7 @@ export function NhacNgay({ ds, ref, khungRef, noi }: {
   /** So thu tu hien cua moi bai phat duoc (o go nhac khong duoc danh so). */
   const thuTu = ds.map((_, i) => ds.slice(0, i + 1).filter((b) => b.youtubeId !== null).length);
   return (
-    <section ref={khungRef} className={coMay ? "dtg-the dtg-nhac dtg-nhac--may" : "dtg-the dtg-nhac"} aria-labelledby="dtg-nhac-t">
+    <section className="dtg-nhac" aria-labelledby="dtg-nhac-t">
       <h3 className="d" id="dtg-nhac-t">Nhạc trong ngày</h3>
       {coMay && <div className="dtg-nhac__may" ref={hostRef} />}
       {coMay ? (
@@ -141,9 +134,9 @@ export function NhacNgay({ ds, ref, khungRef, noi }: {
           </div>
         </div>
       ) : (
-        <p className="dtg-nhac__trong">{ds.length === 0 ? "Ngày này không đổi nhạc." : "Ngày này chỉ gỡ nhạc nền."}</p>
+        <p className="dtg-nhac__trong">{ds.length === 0 ? "Chọn một ngày có nốt nhạc trên lịch." : "Ngày này chỉ gỡ nhạc nền."}</p>
       )}
-      {ds.length > 0 && !noi && (
+      {ds.length > 0 && (
         <ol className="dtg-bai-ds">
           {ds.map((b, i) => {
             if (b.youtubeId === null) {
