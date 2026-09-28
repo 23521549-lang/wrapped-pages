@@ -102,8 +102,6 @@
 .trang-ghi{ display: grid; grid-template-columns: repeat(var(--so-to, 1), minmax(0, 1fr)); gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
 .trang-ghi > li{ display: grid; justify-items: center; align-content: start; gap: var(--space-2xs); min-width: 0; text-align: center; }
 .trang-ghi__sua{ margin: 0; font-size: var(--text-xs); color: var(--color-ink-3); }
-.trang-ghi__khoa{ display: inline-flex; align-items: center; gap: .35rem; margin: 0; min-height: 44px; font-size: var(--text-sm); color: var(--color-ink-2); }
-.trang-ghi__khoa svg{ width: 12px; height: 12px; flex: none; }
 
 /* dieu khien */
 .doc__dk{ display: flex; align-items: center; justify-content: center; gap: var(--space-md); margin-top: var(--space-lg); }
@@ -187,7 +185,7 @@
 .hoi-dap .dang-hoi__nut{ justify-content: flex-end; }
 .hoi-dap__loi{ display: grid; gap: var(--space-2xs); margin: 0; }
 .hoi-dap__chu{ margin: 0; padding-left: var(--space-sm); border-left: 2px solid var(--color-rule-ui); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
-/* cung dang voi .trang-ghi__khoa (dong khoa duoi to giay): cung o khoa 12px, cung chieu cao dong, nen hai cho noi ve niem phong trong nhu nhau */
+/* dong khoa cua khung hoi dap: o khoa 12px, cao mot vung bam */
 .hoi-dap__trong{ display: inline-flex; align-items: center; gap: .35rem; margin: 0; min-height: 44px; font-size: var(--text-sm); color: var(--color-ink-2); }
 .hoi-dap__trong svg{ width: 12px; height: 12px; flex: none; }
 

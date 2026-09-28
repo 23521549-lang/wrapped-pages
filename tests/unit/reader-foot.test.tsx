@@ -19,6 +19,7 @@ const NOW = new Date("2026-09-13T08:00:00.000Z");
 const SUA = new Date("2026-09-13T07:05:00.000Z");
 const BOOK = "5d1c7a9e-2b4f-4c6d-8e0a-1f3b5d7c9e2a";
 const SUA_1 = `/sach/${BOOK}/sua-luot/1`;
+const SUA_2 = `/sach/${BOOK}/sua-luot/2`;
 const SUA_3 = `/sach/${BOOK}/sua-luot/2?trang=2`;
 
 function to(text: string): DocJson {
@@ -49,7 +50,7 @@ function props(p: Partial<ReaderProps> = {}): ReaderProps {
     bookId: BOOK, title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
     looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }], seals: [],
     ownerName: "Linh", readerName: "Mạnh", now: NOW, start: 0, revealAt: null, seen: [], trackRead: false,
-    mine: true, editedAt: [null, null, null], editHref: [SUA_1, null, SUA_3], ...p,
+    mine: true, editedAt: [null, null, null], editHref: [SUA_1, SUA_2, SUA_3], ...p,
   };
 }
 
@@ -81,14 +82,12 @@ afterEach(() => {
 });
 
 describe("Reader: dai ghi chu duoi cuon sach", () => {
-  it("chu sach: to sua duoc co lien ket Sua trang toi man sua luot, to niem phong con dong chi co dong chu kem o khoa an", () => {
-    render(<Reader {...props()} />);
-    const nut = screen.getByRole("link", { name: "Sửa trang 1" });
-    expect(nut.getAttribute("href")).toBe(SUA_1);
+  it("chu sach: moi to co lien ket Sua trang toi man sua luot, ke ca to niem phong; khong con dong chua sua duoc", () => {
+    render(<Reader {...props({ looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }] })} />);
+    expect(screen.getByRole("link", { name: "Sửa trang 1" }).getAttribute("href")).toBe(SUA_1);
     lat("Trang sau");
-    expect(screen.getByText("Đang niêm phong, chưa sửa được")).toBeTruthy();
-    expect(lienKetSua()).toHaveLength(0);
-    expect(document.querySelector(".trang-ghi__khoa svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByRole("link", { name: "Sửa trang 2" }).getAttribute("href")).toBe(SUA_2);
+    expect(screen.queryByText("Đang niêm phong, chưa sửa được")).toBeNull();
   });
 
   it("nguoi kia: thay Da sua luc voi time day du, khong co lien ket sua nao", () => {

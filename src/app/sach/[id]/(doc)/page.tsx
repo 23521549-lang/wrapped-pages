@@ -16,7 +16,7 @@ import { RoundReplyPanel } from "@/components/reader/RoundReplyPanel";
 import { ShownSheetsProvider } from "@/components/reader/ShownSheets";
 import { congMoSach } from "@/lib/cong-mo-sach";
 import { startSheet } from "@/lib/reading";
-import { roundEditPath } from "@/lib/round";
+import { editHrefs } from "@/lib/round";
 import { replyRounds } from "@/lib/round-reply";
 import { revealTarget, sheetLooks } from "@/lib/seal/reader";
 
@@ -33,13 +33,8 @@ export default async function DocSach({ params, searchParams }: {
   if (!view) notFound();
   const { book, mine, sheets, seals, rounds, replies, seen, firstUnread } = view;
   const count = sheets.length;
-  // Nut "Sua trang N" chi cho chu sach: tro toi man sua luot chua to do, mo ngay to do. Luot con niem phong voi nguoi kia
-  // (hay nguoi xem khong phai chu sach) thi null.
-  const luotCua = new Map(rounds.map((r) => [r.id, r]));
-  const editHref = sheets.map((s) => {
-    const r = luotCua.get(s.roundId);
-    return mine && r && !r.sealed ? roundEditPath(book.id, r.ordinal, s.position - r.first + 1) : null;
-  });
+  // Nut "Sua trang N" chi cho chu sach, o moi to ke ca to niem phong: tro toi man sua luot chua to do, mo ngay to do.
+  const editHref = editHrefs(book.id, mine, sheets, rounds);
   const start = startSheet(query.trang, count, firstUnread, mine);
   // Nguoi doc la nguoi khong phai chu sach: cung la nguoi hoi dap.
   const nguoiDoc = mine ? me.partnerNickname : me.nickname;

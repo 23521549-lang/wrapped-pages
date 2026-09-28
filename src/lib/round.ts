@@ -7,6 +7,21 @@ export function roundEditPath(bookId: string, ordinal: number, sheet = 1): strin
 }
 
 /**
+ * Duong sua cua tung to cho man doc. Chu sach: moi to (ke ca to cua luot niem phong con dong, chu du an 28/09) tro toi
+ * man sua luot chua no, mo ngay to do. Nguoi kia, hay to khong thuoc luot nao: null.
+ */
+export function editHrefs(
+  bookId: string, mine: boolean, sheets: readonly { roundId: string; position: number }[],
+  rounds: readonly { id: string; ordinal: number; first: number }[],
+): (string | null)[] {
+  const luotCua = new Map(rounds.map((r) => [r.id, r]));
+  return sheets.map((s) => {
+    const r = luotCua.get(s.roundId);
+    return mine && r ? roundEditPath(bookId, r.ordinal, s.position - r.first + 1) : null;
+  });
+}
+
+/**
  * To mo dau cua man sua luot tu ?trang=N (tu 1). Mau chat nhu so trang tren duong dan (khong nhan 1e3, 0x10, so 0 dau);
  * sai dang thi to 1, vuot so to cua luot (lien ket cu, luot vua duoc thu gon) thi to cuoi.
  */

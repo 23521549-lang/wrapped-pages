@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { actionMarkRead } from "@/app/actions/library";
-import { GlyphKhoa } from "@/components/book/ShelfBook";
 import { SealPanel } from "@/components/seal/SealPanel";
 import { TypeReveal } from "@/components/seal/TypeReveal";
 import { ClockSkew, useClockSkew } from "@/components/seal/useTimeLeft";
@@ -207,11 +206,8 @@ export function Reader({
                 {sua && (
                   <p className="trang-ghi__sua"><time dateTime={sua.toISOString()}>{editedLabel(sua, now)}</time></p>
                 )}
-                {i !== null && mine && den !== null && (
+                {i !== null && den !== null && (
                   <Link className="btn btn--chu" href={den}>Sửa trang {i + 1}</Link>
-                )}
-                {i !== null && mine && den === null && (
-                  <p className="trang-ghi__khoa"><GlyphKhoa />Đang niêm phong, chưa sửa được</p>
                 )}
               </li>
             );
