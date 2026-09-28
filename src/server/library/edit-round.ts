@@ -1,8 +1,10 @@
 import { and, asc, count, eq, gt, gte, lte, sql } from "drizzle-orm";
-import { books, pages, readSheets, rounds, seals } from "@/server/db/schema";
+import { books, pages, readSheets, rounds } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
+import { hopLeChiThem } from "@/lib/doc/chi-them";
 import { normalizeSheets } from "@/lib/doc/continuation";
+import { joinSheets } from "@/lib/doc/join";
 import { trimTrailingBlank } from "@/lib/doc/text";
 import type { DocJson } from "@/lib/doc/types";
 import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
@@ -19,21 +21,22 @@ import { roundsOfBook, type RoundSpan } from "./rounds";
 export type RoundListItem = Pick<RoundSpan, "id" | "ordinal" | "first" | "last" | "publishedAt"> & { sealed: boolean };
 
 /**
- * Mot luot nhu man sua can. Luot niem phong con dong chi co so thu tu va to dau: noi dung cua no khong bao gio duoc doc
- * ra, ke ca voi chu sach (hen gio chua toi gio khoa ca chu sach). version la moc phien ban (lan sua gan nhat, hay luc
- * dang) dang ISO, man sua gui lai nguyen van khi luu.
+ * Mot luot nhu man sua can. Chu sach sua duoc moi luot, ke ca luot niem phong con dong voi nguoi kia (chu du an 28/09),
+ * nen noi dung luon duoc doc ra cho chu sach; niemPhong de man sua bao mot dong. Nguoi kia khong bao gio toi day
+ * (findOwnBook). version la moc phien ban (lan sua gan nhat, hay luc dang) dang ISO, man sua gui lai nguyen van khi luu.
  */
-export type RoundForEdit =
-  | { kind: "sealed"; ordinal: number; first: number }
-  | {
-    kind: "ok"; id: string; ordinal: number; first: number; sheets: DocJson[]; version: string; bookTitle: string;
-    publishedAt: Date; editedAt: Date | null;
-  };
+export type RoundForEdit = {
+  id: string; ordinal: number; first: number; sheets: DocJson[]; version: string; bookTitle: string;
+  publishedAt: Date; editedAt: Date | null; niemPhong: boolean;
+};
 
-/** Ket qua luu mot luot. Thanh cong kem to dau cua luot, de action chuyen ve dung cho tren man doc. */
+/**
+ * Ket qua luu mot luot. Thanh cong kem to dau cua luot, de action chuyen ve dung cho tren man doc. "deleted": ban sua
+ * xoa chu, anh hay ghi am cu (luat chi-them, src/lib/doc/chi-them.ts).
+ */
 export type RoundEditResult =
   | { status: "saved" | "unchanged"; first: number }
-  | "not-found" | "sealed" | "stale" | "invalid-media" | "invalid";
+  | "not-found" | "deleted" | "stale" | "invalid-media" | "invalid";
 
 /** Khoang dem khi doi vi tri to: lon hon moi vi tri co that, de chi muc duy nhat (book_id, position) khong vuong giua chung. */
 const DEM = 1_000_000;
@@ -60,8 +63,8 @@ export async function listRoundsForEdit(
 
 /**
  * Luot thu ordinal cua cuon, de chu sach sua. null khi bookId, ordinal sai dang, sach khong phai cua ownerId hay khong
- * co luot do: noi goi tra 404 nhu moi cho khac, khong lo su ton tai. Niem phong duoc xet truoc va cau doc noi dung chi
- * chay khi luot sua duoc, nen to hen gio chua toi gio khong bao gio lot noi dung ra, du chi vao bo nho may chu.
+ * co luot do: noi goi tra 404 nhu moi cho khac, khong lo su ton tai. Luot niem phong con dong van tra noi dung (chi chu
+ * sach toi duoc day), kem niemPhong.
  */
 export async function readRoundForEdit(
   db: AnyDb, ownerId: string, bookId: string, ordinal: number, now: Date = new Date(),
@@ -73,11 +76,11 @@ export async function readRoundForEdit(
     const [luot, sealRows] = await Promise.all([roundsOfBook(tx, book.id), sealsOfBook(tx, book.id)]);
     const r = luot[ordinal - 1];
     if (!r) return null;
-    if (closedToPartner(sealRows.find((s) => s.roundId === r.id), now)) return { kind: "sealed", ordinal, first: r.first };
     const rows = await tx.select({ content: pages.content }).from(pages).where(eq(pages.roundId, r.id)).orderBy(asc(pages.position));
     return {
-      kind: "ok", id: r.id, ordinal, first: r.first, sheets: rows.map((x) => x.content),
+      id: r.id, ordinal, first: r.first, sheets: rows.map((x) => x.content),
       version: (r.editedAt ?? r.publishedAt).toISOString(), bookTitle: book.title, publishedAt: r.publishedAt, editedAt: r.editedAt,
+      niemPhong: closedToPartner(sealRows.find((s) => s.roundId === r.id), now),
     };
   });
 }
@@ -110,10 +113,11 @@ export async function ownRoundExists(db: AnyDb, ownerId: string, bookId: string,
  * Chu sach thay cac to cua mot luot da dang bang cac to vua cat lai o man sua luot. Moi thu trong mot giao dich:
  * - khoa dong sach (FOR UPDATE, lockOwnBook), xep hang voi publishDraft, saveDraft, markRead (FOR SHARE) va lan sua
  *   khac cua cung cuon;
- * - luot phai thuoc cuon cua ownerId; niem phong cua luot con dong voi nguoi kia thi "sealed" (mo roi thi sua duoc; dong
- *   he lo cat luc dang giu nguyen vi no chi hien khi niem phong con dong);
+ * - luot phai thuoc cuon cua ownerId; luot niem phong con dong van sua duoc (chu du an 28/09), niem phong va dong he lo
+ *   cat luc dang giu nguyen;
  * - khoa lac quan: base phai trung moc phien ban (edited_at, hay published_at khi chua sua), so o muc mili giay vi Date
  *   chi giu toi do, con timestamptz giu micro giay;
+ * - luat chi-them (hopLeChiThem tren hai tai lieu da noi): ban sua xoa chu, anh hay ghi am cu thi "deleted";
  * - media qua bindMedia voi keep la moi id dang co tren cac to cua luot;
  * - cac to moi y het cac to cu (so bang phep bang cua jsonb, khong giu thu tu khoa) thi "unchanged", khong ghi gi; chi
  *   hoi cau nay khi so to khong doi, vi doi so to thi khong the y het;
@@ -148,11 +152,6 @@ export async function editRound(
       .from(rounds)
       .where(and(eq(rounds.id, roundId), eq(rounds.bookId, book)));
     if (!round) return "not-found";
-    const [seal] = await tx
-      .select({ kind: seals.kind, opensAt: seals.opensAt, openedAt: seals.openedAt })
-      .from(seals)
-      .where(eq(seals.roundId, round.id));
-    if (closedToPartner(seal, now ?? new Date())) return "sealed";
     if (round.stale) return "stale";
     const cu = await tx
       .select({ position: pages.position, content: pages.content })
@@ -160,6 +159,7 @@ export async function editRound(
       .where(eq(pages.roundId, round.id))
       .orderBy(asc(pages.position));
     if (cu.length === 0) return "not-found";
+    if (!hopLeChiThem(joinSheets(cu.map((p) => p.content)), joinSheets(kept))) return "deleted";
     const keep = new Set(cu.flatMap((p) => mediaIdsOf(p.content)));
     const bound = (await Promise.all(kept.map((sheet) => bindMedia(tx, ownerId, book, sheet, { keep })))).filter((d) => d !== null);
     if (bound.length !== kept.length) return "invalid-media";

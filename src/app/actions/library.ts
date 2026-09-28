@@ -44,7 +44,7 @@ const KHONG_THAY_LUOT = "Không tìm thấy lượt này.";
 const LUOT_DAI = `Lượt dài quá ${groupThousands(PUBLISH_TOTAL_MAX_CHARS)} ký tự.`;
 const LOI_SUA_LUOT: Record<Extract<RoundEditResult, string>, string> = {
   "not-found": KHONG_THAY_LUOT,
-  sealed: "Lượt này đang niêm phong nên chưa sửa được.",
+  deleted: "Có chữ, ảnh hay ghi âm cũ bị xoá. Chỉ được viết thêm và sửa chính tả.",
   stale: LUOT_VUA_SUA_NOI_KHAC,
   "invalid-media": "Có ảnh hoặc ghi âm không dùng được trong lượt này.",
   invalid: "Lượt phải còn ít nhất một trang không trống.",

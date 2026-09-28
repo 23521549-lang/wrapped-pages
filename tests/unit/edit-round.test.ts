@@ -59,7 +59,7 @@ async function banDo(db: TestDb, bookId: string): Promise<[number, number, strin
 /** Id va moc phien ban cua luot thu ordinal, doc qua dung duong man sua dung. */
 async function moc(s: Bo, ordinal: number, bookId = s.chung): Promise<{ id: string; base: Date }> {
   const r = await readRoundForEdit(s.db, s.seat1.id, bookId, ordinal);
-  if (r?.kind !== "ok") throw new Error("luot khong sua duoc");
+  if (!r) throw new Error("khong thay luot");
   return { id: r.id, base: new Date(r.version) };
 }
 
@@ -112,8 +112,8 @@ describe("editRound: doi so to", () => {
     await dang(s.db, s.seat1.id, s.chung, "A1", "A2", "A3");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
     await datDaXem(s, s.seat2.id, 4, 5);
-    expect(await sua(s, 1, ["A"])).toEqual({ status: "saved", first: 1 });
-    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "A"], [2, 2, "B1"], [3, 2, "B2"]]);
+    expect(await sua(s, 1, ["A1 A2 A3"])).toEqual({ status: "saved", first: 1 });
+    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "A1 A2 A3"], [2, 2, "B1"], [3, 2, "B2"]]);
     expect(await daXem(s)).toEqual([2, 3]);
   });
 
@@ -122,7 +122,7 @@ describe("editRound: doi so to", () => {
     await dang(s.db, s.seat1.id, s.chung, "A1", "A2", "A3");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2");
     await datDaXem(s, s.seat2.id, 1, 2, 3, 5);
-    expect(await sua(s, 1, ["Gọn"])).toEqual({ status: "saved", first: 1 });
+    expect(await sua(s, 1, ["A1 A2 A3"])).toEqual({ status: "saved", first: 1 });
     expect(await daXem(s, s.seat2.id)).toEqual([1, 3]);
   });
 
@@ -131,9 +131,9 @@ describe("editRound: doi so to", () => {
     await dang(s.db, s.seat1.id, s.chung, "A");
     await dang(s.db, s.seat1.id, s.chung, "B1", "B2", "B3");
     await datDaXem(s, s.seat2.id, 1, 2, 3, 4);
-    await sua(s, 2, ["B"]);
+    await sua(s, 2, ["B1 B2 B3"]);
     expect(await daXem(s)).toEqual([1, 2]);
-    await sua(s, 2, ["B", "C", "D"]);
+    await sua(s, 2, ["B1 B2 B3", "C", "D"]);
     expect(await daXem(s)).toEqual([1, 2]);
   });
 
@@ -144,7 +144,7 @@ describe("editRound: doi so to", () => {
     // seat2 da xem hai to cuoi cuon (sau luot 1); seat1 da xem to 1 va to 2, to 2 nam trong phan sap bi cat.
     await datDaXem(s, s.seat2.id, 4, 5);
     await datDaXem(s, s.seat1.id, 1, 2);
-    expect(await sua(s, 1, ["A"])).toEqual({ status: "saved", first: 1 });
+    expect(await sua(s, 1, ["A1 A2 A3"])).toEqual({ status: "saved", first: 1 });
     expect(await daXem(s, s.seat2.id)).toEqual([2, 3]);
     expect(await daXem(s, s.seat1.id)).toEqual([1]);
   });
@@ -175,19 +175,19 @@ describe("editRound: doi so to", () => {
     await dang(s.db, s.seat1.id, s.chung, "A1", "A2");
     const [luot] = await roundsOfBook(s.db, s.chung);
     const { id, base } = await moc(s, 1);
-    const coDau: DocJson = { type: "doc", content: [{ type: "paragraph", noiTiep: true, content: [{ type: "text", text: "Mới" }] }] };
-    await editRound(s.db, s.seat1.id, s.chung, id, [coDau, to("Hai"), to("Ba")], base, T);
+    const coDau: DocJson = { type: "doc", content: [{ type: "paragraph", noiTiep: true, content: [{ type: "text", text: "A1 mới" }] }] };
+    await editRound(s.db, s.seat1.id, s.chung, id, [coDau, to("A2"), to("Ba")], base, T);
     const cacTo = await s.db.select().from(pages).where(eq(pages.bookId, s.chung)).orderBy(asc(pages.position));
     expect(cacTo.map((t) => [t.roundId, t.publishedAt.getTime()])).toEqual([1, 2, 3].map(() => [luot.id, luot.publishedAt.getTime()]));
-    expect(cacTo[0].content).toEqual(to("Mới"));
+    expect(cacTo[0].content).toEqual(to("A1 mới"));
   });
 
   it("sau khi sua, lan dang ke tiep noi sau to cuoi moi", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "A1", "A2", "A3");
-    await sua(s, 1, ["A"]);
+    await sua(s, 1, ["A1 A2 A3"]);
     expect(await dang(s.db, s.seat1.id, s.chung, "B")).toEqual({ firstPosition: 2, count: 1 });
-    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "A"], [2, 2, "B"]]);
+    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "A1 A2 A3"], [2, 2, "B"]]);
   });
 });
 
@@ -210,8 +210,8 @@ describe("editRound: luat sua", () => {
     expect(await editRound(s.db, s.seat1.id, s.chung, id, [trong, trong], base, T)).toBe("invalid");
     const nhieu = Array.from({ length: MAX_SHEETS_PER_PUBLISH + 1 }, (_, i) => to(`tờ ${i}`));
     expect(await editRound(s.db, s.seat1.id, s.chung, id, nhieu, base, T)).toBe("invalid");
-    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Mới"), trong, trong], base, T)).toEqual({ status: "saved", first: 1 });
-    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "Mới"]]);
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Một Hai"), trong, trong], base, T)).toEqual({ status: "saved", first: 1 });
+    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "Một Hai"]]);
   });
 
   it.each<[string, (s: Bo, luot: string, luotRieng: string) => [string, string, string]]>([
@@ -233,46 +233,57 @@ describe("editRound: luat sua", () => {
     expect(await chup(s.db)).toEqual(truoc);
   });
 
-  it("cau do: con dong voi nguoi kia thi sealed, khong ghi gi; tang chia khoa roi thi sua duoc", async () => {
+  it("cau do con dong voi nguoi kia: chu sach viet them duoc, niem phong van con nguyen", async () => {
     const s = await haiCuon();
     await dangNiemPhong(s.db, s.seat1.id, s.chung, CAU_DO, "Khóa");
     const [niem] = await sealsOfBook(s.db, s.chung);
     const [luot] = await roundsOfBook(s.db, s.chung);
-    const truoc = await chup(s.db);
-    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Mới")], luot.publishedAt, T)).toBe("sealed");
-    expect(await chup(s.db)).toEqual(truoc);
+    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Khóa này mở ra rồi")], luot.publishedAt, T)).toEqual({ status: "saved", first: 1 });
+    expect(await banDo(s.db, s.chung)).toEqual([[1, 1, "Khóa này mở ra rồi"]]);
+    const [sau] = await sealsOfBook(s.db, s.chung);
+    expect(sau).toEqual(niem);
     expect(await giftKey(s.db, s.seat1.id, niem.id, "", T)).toMatchObject({ status: "opened" });
-    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Mới")], luot.publishedAt, T)).toEqual({ status: "saved", first: 1 });
   });
 
-  it("trao doi: chua co trang tra loi thi sealed; co roi thi sua duoc", async () => {
+  it("trao doi chua co trang tra loi: chu sach sua chinh ta duoc", async () => {
     const s = await haiCuon();
-    await dangNiemPhong(s.db, s.seat1.id, s.chung, TRAO_DOI, "Khóa");
+    await dangNiemPhong(s.db, s.seat1.id, s.chung, TRAO_DOI, "Khóa cửa sỏ");
     const [niem] = await sealsOfBook(s.db, s.chung);
     const [luot] = await roundsOfBook(s.db, s.chung);
-    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Mới")], luot.publishedAt, T)).toBe("sealed");
+    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Khóa cửa sổ")], luot.publishedAt, T)).toEqual({ status: "saved", first: 1 });
     expect(await submitReply(s.db, s.seat2.id, niem.id, to("Trả lời"), T)).toMatchObject({ status: "opened" });
-    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Mới")], luot.publishedAt, T)).toEqual({ status: "saved", first: 1 });
   });
 
-  it("hen gio: truoc gio mo thi sealed ca voi chu sach; tu gio mo thi sua duoc", async () => {
+  it("hen gio chua toi gio: chu sach van sua duoc (chu du an cho sua ca trang niem phong)", async () => {
     const s = await haiCuon();
     const mo = new Date(Date.now() + 2 * GIO);
     await dangNiemPhong(s.db, s.seat1.id, s.chung, henGio(mo), "Hẹn");
     const [luot] = await roundsOfBook(s.db, s.chung);
-    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Mới")], luot.publishedAt, T)).toBe("sealed");
-    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Mới")], luot.publishedAt, mo)).toEqual({ status: "saved", first: 1 });
+    expect(await editRound(s.db, s.seat1.id, s.chung, luot.id, [to("Hẹn gặp lại")], luot.publishedAt, T)).toEqual({ status: "saved", first: 1 });
+  });
+
+  it("deleted: xoa mot chu, doi han mot chu, hay bo ca to cu thi tu choi va khong ghi gi", async () => {
+    const s = await haiCuon();
+    await dang(s.db, s.seat1.id, s.chung, "Sáng nay trời mưa", "Anh nhớ không");
+    const { id, base } = await moc(s, 1);
+    const truoc = await chup(s.db);
+    for (const cacTo of [["Sáng nay mưa", "Anh nhớ không"], ["Sáng nay trời nắng", "Anh nhớ không"], ["Sáng nay trời mưa"]]) {
+      expect(await editRound(s.db, s.seat1.id, s.chung, id, cacTo.map(to), base, T), cacTo.join("|")).toBe("deleted");
+    }
+    expect(await chup(s.db)).toEqual(truoc);
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Sáng nay trời mưa to"), to("Anh nhớ không?")], base, T))
+      .toEqual({ status: "saved", first: 1 });
   });
 
   it("stale: moc cu thi tu choi; hai lan sua noi nhau voi moc dung deu qua va moc tang moi lan", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "Một");
     const { id, base } = await moc(s, 1);
-    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Hai")], base, T)).toEqual({ status: "saved", first: 1 });
-    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Ba")], base, T)).toBe("stale");
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Một hai")], base, T)).toEqual({ status: "saved", first: 1 });
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Một hai ba")], base, T)).toBe("stale");
     const lan2 = await moc(s, 1);
     expect(lan2.base.getTime()).toBe(T.getTime());
-    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Ba")], lan2.base, T)).toEqual({ status: "saved", first: 1 });
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [to("Một hai ba")], lan2.base, T)).toEqual({ status: "saved", first: 1 });
     expect((await moc(s, 1)).base.getTime()).toBe(T.getTime() + 1);
   });
 
@@ -289,27 +300,29 @@ describe("editRound: luat sua", () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "Một");
     const { id, base } = await moc(s, 1);
-    await editRound(s.db, s.seat1.id, s.chung, id, [to("Hai")], base, new Date(0));
+    await editRound(s.db, s.seat1.id, s.chung, id, [to("Một hai")], base, new Date(0));
     const [luot] = await roundsOfBook(s.db, s.chung);
     expect(luot.editedAt?.getTime()).toBe(luot.publishedAt.getTime() + 1);
   });
 });
 
 describe("editRound: media", () => {
-  it("giu anh dang co tren luot va gan anh vua tai; anh bi bo thi nguoi kia khong xem duoc nua", async () => {
+  it("giu anh dang co tren luot va gan anh vua tai; bo mot anh cu thi deleted, khong ghi gi", async () => {
     const s = await haiCuon();
     const store = new MemoryStore();
     const giu = await taiAnh(s.db, store, s.seat1.id, s.chung);
-    const bo = await taiAnh(s.db, store, s.seat1.id, s.chung);
-    await publishDraft(s.db, s.seat1.id, s.chung, [tai(doan("Một"), khoiAnh(giu)), tai(khoiAnh(bo))]);
+    const giu2 = await taiAnh(s.db, store, s.seat1.id, s.chung);
+    await publishDraft(s.db, s.seat1.id, s.chung, [tai(doan("Một"), khoiAnh(giu)), tai(khoiAnh(giu2))]);
     const moi = await taiAnh(s.db, store, s.seat1.id, s.chung);
     const { id, base } = await moc(s, 1);
-    expect(await editRound(s.db, s.seat1.id, s.chung, id, [tai(doan("Một"), khoiAnh(giu), khoiAnh(moi))], base, T))
+    const truoc = await chup(s.db);
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [tai(doan("Một"), khoiAnh(giu), khoiAnh(moi))], base, T)).toBe("deleted");
+    expect(await chup(s.db)).toEqual(truoc);
+    expect(await editRound(s.db, s.seat1.id, s.chung, id, [tai(doan("Một"), khoiAnh(giu), khoiAnh(moi)), tai(khoiAnh(giu2))], base, T))
       .toEqual({ status: "saved", first: 1 });
-    const [to1] = await s.db.select({ content: pages.content }).from(pages).where(eq(pages.bookId, s.chung));
+    const [to1] = await s.db.select({ content: pages.content }).from(pages).where(eq(pages.bookId, s.chung)).orderBy(asc(pages.position));
     expect(to1.content).toEqual(tai(doan("Một"), anhThat(giu), anhThat(moi)));
-    expect(await canViewMedia(s.db, s.seat2.id, bo, T)).toBeNull();
-    expect((await canViewMedia(s.db, s.seat1.id, bo, T))?.id).toBe(bo);
+    expect((await canViewMedia(s.db, s.seat2.id, giu2, T))?.id).toBe(giu2);
     expect((await canViewMedia(s.db, s.seat2.id, moi, T))?.id).toBe(moi);
   });
 
@@ -332,16 +345,15 @@ describe("editRound: media", () => {
 });
 
 describe("doc luot cho man sua", () => {
-  it("readRoundForEdit: luot sua duoc tra cac to va moc; luot niem phong con dong khong doc noi dung", async () => {
+  it("readRoundForEdit: tra cac to va moc; luot niem phong con dong cung tra noi dung cho chu sach, kem co niemPhong", async () => {
     const s = await haiCuon();
     await dang(s.db, s.seat1.id, s.chung, "Một", "Hai");
     await dangNiemPhong(s.db, s.seat1.id, s.chung, henGio(new Date(Date.now() + GIO)), "BÍ MẬT HẸN GIỜ");
     const mot = await readRoundForEdit(s.db, s.seat1.id, s.chung, 1);
-    expect(mot).toMatchObject({ kind: "ok", ordinal: 1, first: 1, sheets: [to("Một"), to("Hai")], bookTitle: "Chuyện chưa kể", editedAt: null });
-    if (mot?.kind === "ok") expect(mot.version).toBe(mot.publishedAt.toISOString());
+    expect(mot).toMatchObject({ ordinal: 1, first: 1, sheets: [to("Một"), to("Hai")], bookTitle: "Chuyện chưa kể", editedAt: null, niemPhong: false });
+    expect(mot?.version).toBe(mot?.publishedAt.toISOString());
     const hai = await readRoundForEdit(s.db, s.seat1.id, s.chung, 2);
-    expect(hai).toEqual({ kind: "sealed", ordinal: 2, first: 3 });
-    expect(JSON.stringify(hai)).not.toContain("BÍ MẬT");
+    expect(hai).toMatchObject({ ordinal: 2, first: 3, sheets: [to("BÍ MẬT HẸN GIỜ")], niemPhong: true });
     const sai: [string, string, number][] = [[s.seat2.id, s.chung, 1], [s.seat1.id, s.chung, 3], [s.seat1.id, s.chung, 0], [s.seat1.id, "rac", 1]];
     for (const [ai, sach, so] of sai) expect(await readRoundForEdit(s.db, ai, sach, so)).toBeNull();
   });
