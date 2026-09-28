@@ -52,11 +52,10 @@ async function moManSua(p: Page, bookId: string, luot: number, trang?: number): 
   await expect(p.locator(".viet-chu .ProseMirror")).toHaveAttribute("contenteditable", "true");
 }
 
-/** Chon het chu cua luot dang sua roi thay bang chu moi. */
-async function thayChu(p: Page, chu: string): Promise<void> {
+/** Viet them chu vao cuoi luot dang sua: man sua chi cho viet them va sua chinh ta, khong cho xoa chu cu. */
+async function themCuoi(p: Page, chu: string): Promise<void> {
   await p.locator(".viet-chu .ProseMirror").click();
-  await p.keyboard.press("ControlOrMeta+A");
-  await p.keyboard.press("Delete");
+  await veCuoiTaiLieu(p);
   await p.keyboard.insertText(chu);
 }
 
@@ -114,6 +113,7 @@ test("sua luot lam giam so to: to sau lui lai, to da xem cua nguoi kia doi theo"
   test.setTimeout(240_000);
   const { a, b } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
+  // Ba to ngan dang thang, moi cau mot to: man sua noi lai thanh ba doan tren cung mot to.
   await dangToThang(id, TO_1, TO_2, TO_3);
   await dangToThang(id, TO_4, "Hết.");
   await b.setViewportSize({ width: 375, height: 900 });
@@ -122,19 +122,19 @@ test("sua luot lam giam so to: to sau lui lai, to da xem cua nguoi kia doi theo"
   await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([5]);
 
   await moManSua(a, id, 1);
-  await thayChu(a, "Gọn lại một trang.");
+  await themCuoi(a, " Gọn.");
   await expect(a.getByText("1 trang", { exact: true })).toBeVisible();
   await a.getByRole("button", { name: "Lưu thay đổi" }).click();
   await expect(a).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
 
-  expect((await cacToCua(id)).map((t) => doanCua(t.content))).toEqual([["Gọn lại một trang."], [TO_4], ["Hết."]]);
+  expect((await cacToCua(id)).map((t) => doanCua(t.content))).toEqual([[TO_1, TO_2, `${TO_3} Gọn.`], [TO_4], ["Hết."]]);
   expect(await toDaXemCua(id)).toEqual([3]);
   await b.goto(`/sach/${id}?trang=2`);
   await expect(b.locator(".doc__dem")).toHaveText("Trang 2 / 3");
   await expect(b.locator(".sach")).toContainText(TO_4);
 });
 
-test("luot con niem phong khong sua duoc o moi loi vao, HTML khong lo chu; mo roi thi sua duoc", async ({ browser }) => {
+test("luot con niem phong: chu sach sua duoc tu man doc, nguoi kia van khong thay chu nao, niem phong giu nguyen", async ({ browser }) => {
   test.setTimeout(300_000);
   const { a, b } = await haiNguoiDaVao(browser);
   const idDo = await taoSach(a, "Thư chưa gửi", "chia-se");
@@ -143,30 +143,63 @@ test("luot con niem phong khong sua duoc o moi loi vao, HTML khong lo chu; mo ro
   await dangKemNiemPhong(a, [HE_LO, BI_MAT], { kind: "hen-gio", opensAt: await gioSau(a, 60 * 60 * 1000) });
 
   for (const bookId of [idDo, idHen]) {
+    // Man doc cua chu sach: duoi trang niem phong la lien ket Sua trang, nhu moi trang khac.
     await a.goto(`/sach/${bookId}?trang=1`);
-    await expect(a.locator(".trang-ghi .trang-ghi__khoa").first()).toHaveText("Đang niêm phong, chưa sửa được");
-    await expect(a.locator('a[href*="/sua-luot/"]')).toHaveCount(0);
-    await a.goto(`/sach/${bookId}/sua`);
-    await expect(a.locator(".luot").first()).toContainText("Lượt 1 · trang 1");
-    await expect(a.locator(".luot__khoa")).toHaveText("Đang niêm phong");
-    await expect(a.locator('a[href*="/sua-luot/"]')).toHaveCount(0);
-    await a.goto(`/sach/${bookId}/sua-luot/1`);
-    await expect(a.getByRole("heading", { level: 1, name: "Không sửa được" })).toBeVisible();
-    await expect(a.getByRole("link", { name: "Về trang 1" })).toHaveAttribute("href", `/sach/${bookId}?trang=1`);
-    await expect(a.locator(".ProseMirror")).toHaveCount(0);
-    await khongLo(a, BI_MAT);
+    await expect(a.locator(".trang-ghi__khoa")).toHaveCount(0);
+    await a.getByRole("link", { name: "Sửa trang 1", exact: true }).click();
+    await expect(a).toHaveURL(new RegExp(`/sach/${bookId}/sua-luot/1$`));
+    await expect(a.getByRole("heading", { level: 1, name: "Sửa lượt 1" })).toBeVisible();
+    await expect(a.locator(".sua-ghi")).toContainText(new RegExp("Lượt này đang niêm phong với .+[.] Sửa xong vẫn giữ niêm phong như cũ[.]"));
+    await expect(a.locator(".viet-chu .ProseMirror")).toContainText(BI_MAT);
+    await expect(a.locator(".viet-chu .ProseMirror")).toHaveAttribute("contenteditable", "true");
+    await themCuoi(a, ` ${CAU_MOI}`);
+    await a.getByRole("button", { name: "Lưu thay đổi" }).click();
+    await expect(a).toHaveURL(new RegExp(`/sach/${bookId}[?]trang=1$`));
+    expect(JSON.stringify((await cacToCua(bookId)).map((t) => t.content))).toContain(CAU_MOI);
+
+    // Nguoi kia: van la trang niem phong, HTML khong co chu cu lan chu vua viet them, va khong vao duoc man sua.
+    await b.goto(`/sach/${bookId}?trang=1`);
+    if (bookId === idDo) await expect(b.getByRole("region", { name: "Câu đố", exact: true })).toBeVisible();
+    else await expect(b.getByRole("region", { name: "Hẹn giờ" }).getByRole("timer")).toBeVisible();
+    await khongLo(b, BI_MAT, CAU_MOI);
+    expect((await b.goto(`/sach/${bookId}/sua-luot/1`))?.status()).toBe(404);
   }
 
-  // Nguoi kia giai dung cau do: luot mo voi ca hai, chu sach sua duoc ngay.
+  // Nguoi kia giai dung cau do: trang mo ra voi ca chu vua viet them.
   await docSach(b, idDo);
   const khung = b.getByRole("region", { name: "Câu đố", exact: true });
   await khung.getByLabel("Câu trả lời").fill("quan may");
   await khung.getByRole("button", { name: "Mở trang" }).click();
   await expect(b).toHaveURL(new RegExp(`/sach/${idDo}[?]trang=1&mo=`));
-  await a.goto(`/sach/${idDo}?trang=1`);
-  await a.getByRole("link", { name: "Sửa trang 1", exact: true }).click();
-  await expect(a).toHaveURL(new RegExp(`/sach/${idDo}/sua-luot/1$`));
-  await expect(a.locator(".viet-chu .ProseMirror")).toContainText(BI_MAT);
+  await b.goto(`/sach/${idDo}?trang=1`);
+  await expect(b.locator(".sach")).toContainText(BI_MAT);
+  await expect(b.locator(".sach")).toContainText(CAU_MOI);
+});
+
+test("xoa chu cu thi chua luu duoc: chu bi xoa hien gach ngang dung cho, bam vao thi tra lai", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const { a } = await haiNguoiDaVao(browser);
+  const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
+  await dangToThang(id, TO_3);
+
+  await moManSua(a, id, 1);
+  // TO_3 ket thuc bang "hôm đó.": xoa dau cham va chu "đó".
+  await a.locator(".viet-chu .ProseMirror").click();
+  await veCuoiTaiLieu(a);
+  for (let i = 0; i < 3; i++) await a.keyboard.press("Backspace");
+  const mat = a.locator(".viet-chu .chu-mat");
+  await expect(mat).toHaveText("đó");
+  await expect(a.locator(".sua-ghi b")).toHaveText("Còn 1 chữ cũ bị xoá.");
+  await expect(a.getByRole("button", { name: "Lưu thay đổi" })).toBeDisabled();
+
+  await a.getByRole("button", { name: "Chữ cũ bị xoá: đó. Bấm để trả lại" }).click();
+  await expect(mat).toHaveCount(0);
+  await expect(a.locator(".sua-ghi b")).toHaveCount(0);
+  await veCuoiTaiLieu(a);
+  await a.keyboard.insertText(". Rồi thôi.");
+  await a.getByRole("button", { name: "Lưu thay đổi" }).click();
+  await expect(a).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
+  expect((await cacToCua(id)).map((t) => doanCua(t.content))).toEqual([[`${TO_3} Rồi thôi.`]]);
 });
 
 test("duong dan sua mot to cu chuyen 308 sang dung luot va dung to; nguoi kia va to la nhan 404", async ({ browser }) => {
@@ -215,7 +248,7 @@ test("goi thang action: trinh duyet nguoi kia va Origin la deu bi tu choi, datab
   const goc = new URL(a.url()).origin;
 
   await moManSua(a, id, 1);
-  await thayChu(a, CAU_MOI);
+  await themCuoi(a, ` ${CAU_MOI}`);
   const gui = a.waitForRequest((r) => r.method() === "POST" && r.headers()["next-action"] !== undefined);
   await a.getByRole("button", { name: "Lưu thay đổi" }).click();
   const y = ghiYeuCau(await gui);
@@ -227,7 +260,11 @@ test("goi thang action: trinh duyet nguoi kia va Origin la deu bi tu choi, datab
 
   const banDau = await cacToCua(id);
   const moc = (await toDaDang(id, 1))?.editedAt?.toISOString();
-  const laThu = [{ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Chữ lạ gửi thẳng." }] }] }];
+  // Than hop le voi luat chi-them: giu nguyen moi to hien co, them mot to moi o cuoi.
+  const laThu = [
+    ...banDau.map((t) => t.content),
+    { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Chữ lạ gửi thẳng." }] }] },
+  ];
 
   // Nguoi kia, cookie cua nguoi kia, dung than goc va dung than voi moc hien tai.
   for (const than of [y.than, [id, y.than[1], laThu, moc]]) {
@@ -244,7 +281,7 @@ test("goi thang action: trinh duyet nguoi kia va Origin la deu bi tu choi, datab
   // Doi chung: cung cach phat lai, dung chu sach va dung Origin thi ghi that.
   const rd = await phatLai(a, y, [id, y.than[1], laThu, moc], goc);
   expect(rd.status).toBeLessThan(400);
-  expect((await cacToCua(id)).map((t) => doanCua(t.content))).toEqual([["Chữ lạ gửi thẳng."]]);
+  expect((await cacToCua(id)).map((t) => doanCua(t.content))).toEqual([...banDau.map((t) => doanCua(t.content)), ["Chữ lạ gửi thẳng."]]);
 });
 
 test("hai the cung sua mot luot: the luu sau bi tu choi voi loi tai lai, khong ghi de ban vua luu", async ({ browser }) => {
@@ -256,23 +293,27 @@ test("hai the cung sua mot luot: the luu sau bi tu choi voi loi tai lai, khong g
 
   await moManSua(a, id, 1);
   await moManSua(the2, id, 1);
-  await thayChu(a, CAU_MOI);
+  await themCuoi(a, ` ${CAU_MOI}`);
   await a.getByRole("button", { name: "Lưu thay đổi" }).click();
   await expect(a).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
   const daLuu = await cacToCua(id);
 
-  await thayChu(the2, "Chữ của thẻ thứ hai.");
+  const THE_HAI = "Chữ của thẻ thứ hai.";
+  await themCuoi(the2, ` ${THE_HAI}`);
   await the2.getByRole("button", { name: "Lưu thay đổi" }).click();
   await expect(the2.locator(".viet-dau .luu--loi")).toHaveText(VUA_SUA_NOI_KHAC);
   await expect(the2).toHaveURL(new RegExp(`/sach/${id}/sua-luot/1$`));
   expect(await cacToCua(id)).toEqual(daLuu);
-  await expect(the2.locator(".viet-chu .ProseMirror")).toHaveText("Chữ của thẻ thứ hai.");
+  const giay2 = the2.locator(".viet-chu .ProseMirror");
+  await expect(giay2).toContainText(THE_HAI);
+  await expect(giay2).not.toContainText(CAU_MOI);
 
   await the2.getByRole("button", { name: "Tải lại" }).click();
   const hoi = the2.getByRole("group", { name: HOI });
   await expect(hoi.getByRole("button", { name: "Sửa tiếp" })).toBeFocused();
   await hoi.getByRole("button", { name: "Tải bản mới" }).click();
-  await expect(the2.locator(".viet-chu .ProseMirror")).toHaveText(CAU_MOI);
+  await expect(giay2).toContainText(CAU_MOI);
+  await expect(giay2).not.toContainText(THE_HAI);
   await expect(the2.locator(".viet-dau .luu--loi")).toHaveCount(0);
 });
 
@@ -284,18 +325,17 @@ test("roi man sua chua luu: quay lai thi khoi phuc chu dang sua, Dung ban da dan
   const giay = a.locator(".viet-chu .ProseMirror");
 
   await moManSua(a, id, 1);
-  await thayChu(a, CAU_MOI);
+  await themCuoi(a, ` ${CAU_MOI}`);
   // Lien ket tren thanh dieu huong di phia client, khong phat beforeunload: chu phai con nho ban tam.
   await a.getByRole("link", { name: "Kệ sách" }).click();
   await expect(a).toHaveURL(new RegExp("/ke-sach$"));
   await moManSua(a, id, 1);
   await expect(a.getByText("Đã khôi phục chữ đang sửa dở.")).toBeVisible();
-  await expect(giay).toHaveText(CAU_MOI);
+  await expect(giay).toHaveText(`${TO_1} ${CAU_MOI}`);
   await a.getByRole("button", { name: "Dùng bản đã đăng" }).click();
   await expect(giay).toHaveText(TO_1);
 
-  await giay.click();
-  await a.keyboard.insertText(" Thêm một câu.");
+  await themCuoi(a, " Thêm một câu.");
   await a.getByRole("button", { name: "Hủy" }).click();
   const hoi = a.getByRole("group", { name: HOI });
   await expect(hoi.getByRole("button", { name: "Sửa tiếp" })).toBeFocused();

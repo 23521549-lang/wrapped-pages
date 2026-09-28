@@ -266,6 +266,30 @@ export async function nhacCua(bookId: string): Promise<string | null> {
 }
 
 /**
+ * Dong thoi gian nhac cua mot cuon trong database e2e, cung thu tu voi biaCua: o mo dau truoc, roi cac o theo vi tri to
+ * dau cua luot. youtubeId null la o go nhac (Tat nhac). Chi doc de kiem. Cung rao mqce_e2e voi datNhac.
+ */
+export async function nhacTheoLuot(bookId: string): Promise<{ roundId: string | null; youtubeId: string | null }[]> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const rows = await sql<{ round_id: string | null; youtube_id: string | null }[]>`
+      select t.round_id, t.youtube_id
+      from book_tracks t
+      left join (select round_id, min(position) as dau from pages group by round_id) k on k.round_id = t.round_id
+      where t.book_id = ${bookId}
+      order by coalesce(k.dau, 0)`;
+    return rows.map((r) => ({ roundId: r.round_id, youtubeId: r.youtube_id }));
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
  * Dong thoi gian bia cua mot cuon trong database e2e, theo dung thu tu man Sua sach ve: o mo dau truoc, roi cac o theo
  * vi tri to dau cua luot. Chi doc de kiem. Cung rao mqce_e2e voi datNhac.
  */

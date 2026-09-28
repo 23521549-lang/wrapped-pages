@@ -18,7 +18,7 @@ test.afterEach(async () => {
  * Cong dung chung cho vung bam 44px o be rong cam ung va khong tran ngang o bon
  * be rong tren moi man cua web. Bon man chinh (ke sach, man doc, man viet, cai dat)
  * di qua doMoiManChinh, cung trang Viet tiep va hai trang Dau thoi gian; cac man con lai di qua doMan: tao sach, sua sach
- * (dong va mo mot o cua hai muc dong thoi gian), sua luot (luot thuong va luot niem phong),
+ * (thu gon, va mo hai dong thoi gian cung bang chon duoi moc dau), sua luot (luot thuong va luot niem phong),
  * ban nhap, cho, trang 404,
  * trang tra loi, man doc cua nguoi doc (co khung Loi hoi dap dang mo o chu), dang nhap (context moi, chua co phien),
  * o test rieng tren web trong: khoi tao va man da xong o ca
@@ -100,14 +100,16 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
     { ten: "tao sach", duong: "/sach/moi", daVe: tenSach },
     { ten: "sua sach", duong: `/sach/${id}/sua`, daVe: tenSach },
     {
-      ten: "sua sach, mo mot o bia va mot o nhac",
+      ten: "sua sach, mo hai dong thoi gian va bang chon duoi moc dau",
       duong: `/sach/${id}/sua`,
       daVe: async (p) => {
-        for (const [muc, nut] of [["Bìa theo lượt", /^(Đổi bìa này|Thêm bìa) /], ["Nhạc theo lượt", /^(Đổi nhạc này|Thêm nhạc) /]] as const) {
-          const vung = p.getByRole("region", { name: muc });
-          await vung.getByRole("button", { name: nut }).first().click();
-          await expect(vung.getByRole("button", { name: "Lưu" })).toBeVisible();
+        for (const [nhan, ma, bang] of [["Bìa", "bia", "Bìa lúc tạo sách"], ["Nhạc nền", "nhac", "Nhạc lúc tạo sách"]] as const) {
+          await p.getByRole("group", { name: nhan, exact: true }).getByRole("button", { name: /Theo lượt$/ }).click();
+          await p.locator(`#${ma}-moc-0`).click();
+          await expect(p.getByRole("group", { name: bang, exact: true })).toBeVisible();
         }
+        // Doi nhip mo va nhip rũ (--dur-tha-mo) chay xong roi moi do.
+        await p.waitForFunction(() => document.getAnimations().every((h) => h.playState !== "running"));
       },
     },
     {
@@ -121,7 +123,10 @@ test("vung bam 44px o be rong cam ung, va khong tran ngang o ca bon be rong, tre
     {
       ten: "sua luot niem phong",
       duong: `/sach/${idThu}/sua-luot/1`,
-      daVe: (p) => expect(p.getByRole("heading", { level: 1, name: "Không sửa được" })).toBeVisible(),
+      daVe: async (p) => {
+        await expect(p.getByRole("heading", { level: 1, name: "Sửa lượt 1" })).toBeVisible();
+        await expect(p.locator(".viet-chu .ProseMirror")).toBeVisible();
+      },
     },
     {
       ten: "ban nhap",
