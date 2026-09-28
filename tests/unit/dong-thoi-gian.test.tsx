@@ -60,6 +60,16 @@ async function moMoc(i: number) {
   await act(async () => {});
 }
 
+/**
+ * Bam Hoan tac khi nut da bat: nut hien ra ngay luc luu xong nhung con tat toi khi luot chuyen (useTransition) ket thuc.
+ * Bam vao luc nut con tat thi khong co gi xay ra; chay ca bo kiem duoi tai nang da roi dung vao khe do.
+ */
+async function bamHoanTac() {
+  const nut = await screen.findByRole<HTMLButtonElement>("button", { name: "Hoàn tác" });
+  await waitFor(() => expect(nut.disabled).toBe(false));
+  fireEvent.click(nut);
+}
+
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { value: () => {}, configurable: true, writable: true });
 });
@@ -118,7 +128,7 @@ describe("dong thoi gian Bia", () => {
     await waitFor(() => expect(rot(1).classList.contains("tg-rot--mo")).toBe(false));
     expect(cacMoc()[1].getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByText("Đã lưu bìa lượt 1.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Hoàn tác" }));
+    await bamHoanTac();
     await waitFor(() => expect(actionRemoveCoverEntry).toHaveBeenCalledWith(SACH, L1));
     await waitFor(() => expect(screen.getByText("Đã trả lại như cũ.")).toBeTruthy());
   });
@@ -128,7 +138,7 @@ describe("dong thoi gian Bia", () => {
     await moMoc(2);
     fireEvent.click(within(rot(2)).getByRole("radio", { name: "Giữ bìa trước" }));
     await waitFor(() => expect(actionRemoveCoverEntry).toHaveBeenCalledWith(SACH, L2));
-    fireEvent.click(await screen.findByRole("button", { name: "Hoàn tác" }));
+    await bamHoanTac();
     await waitFor(() => expect(actionSetCoverEntry).toHaveBeenCalledTimes(1));
     expect(actionSetCoverEntry.mock.calls[0][2].get("cover")).toBe("hoa-dao");
   });
