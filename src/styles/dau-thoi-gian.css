@@ -43,6 +43,9 @@
 @media (max-width: 420px){
   .lich--dtg{ --nhan-w: 36px; }
   .lich--dtg .lich__thu, .lich--dtg .tuan{ gap: 0 2px; }
+  /* Ba not 13px (41px) tran ra ngoai o ngay 36 toi 40px: thu con 11px, khong khe (33px). */
+  .dtg-not{ gap: 0; }
+  .dtg-not__mot svg{ width: 11px; height: 11px; }
 }
 /* Man rat hep: bo cot ten lan; lich chi con mot lan nhac va not nhac tu noi nghia. */
 @media (max-width: 360px){
