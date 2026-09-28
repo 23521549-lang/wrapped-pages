@@ -1,14 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
-import type { DocJson } from "@/lib/doc/types";
 import { checkDraftInput } from "@/lib/doc/validate";
-import { mediaIdsOf } from "@/lib/media/node";
-
-/** Co media nao cua ban goc khong con trong tai lieu dang sua: dem theo id, nen bo A them B van la bo. */
-export function droppedMedia(original: DocJson, current: JSONContent): boolean {
-  const khoi = (current.content ?? []).filter((b): b is JSONContent & { type: string } => typeof b.type === "string");
-  const con = new Set(mediaIdsOf({ content: khoi }));
-  return mediaIdsOf(original).some((id) => !con.has(id));
-}
 
 /** Tien to khoa ban tam cua man sua luot trong sessionStorage. */
 export const ROUND_EDIT_PREFIX = "mqce-sua-luot-";

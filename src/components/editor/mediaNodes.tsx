@@ -10,6 +10,8 @@ import { mediaSrc, type AudioAttrs, type ImageAttrs } from "@/lib/media/node";
 export type MediaNodeOptions = {
   /** Biet danh nguoi viet: chu thay the cua anh va nhan cua ghi am trong man viet. */
   author: string;
+  /** Id cac khoi da dang o man sua luot: chi viet them, nen khoi do khong co nut bo. */
+  khoa: readonly string[];
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -43,10 +45,11 @@ function NutBo({ label, editor, deleteNode }: { label: string } & Pick<ReactNode
 
 function ImageView({ node, editor, extension, deleteNode }: ReactNodeViewProps) {
   const { id, w, h } = node.attrs as ImageAttrs;
+  const { author, khoa } = extension.options as MediaNodeOptions;
   return (
     <NodeViewWrapper>
-      <ImageBlock id={id} w={w} h={h} author={(extension.options as MediaNodeOptions).author}>
-        <NutBo label="Bỏ ảnh" editor={editor} deleteNode={deleteNode} />
+      <ImageBlock id={id} w={w} h={h} author={author}>
+        {!khoa.includes(id) && <NutBo label="Bỏ ảnh" editor={editor} deleteNode={deleteNode} />}
       </ImageBlock>
     </NodeViewWrapper>
   );
@@ -54,10 +57,11 @@ function ImageView({ node, editor, extension, deleteNode }: ReactNodeViewProps) 
 
 function AudioView({ node, editor, extension, deleteNode }: ReactNodeViewProps) {
   const { id, ms, peaks } = node.attrs as AudioAttrs;
+  const { author, khoa } = extension.options as MediaNodeOptions;
   return (
     <NodeViewWrapper>
-      <AudioBlock src={mediaSrc(id)} ms={ms} peaks={peaks} author={(extension.options as MediaNodeOptions).author}>
-        <NutBo label="Bỏ ghi âm" editor={editor} deleteNode={deleteNode} />
+      <AudioBlock src={mediaSrc(id)} ms={ms} peaks={peaks} author={author}>
+        {!khoa.includes(id) && <NutBo label="Bỏ ghi âm" editor={editor} deleteNode={deleteNode} />}
       </AudioBlock>
     </NodeViewWrapper>
   );
@@ -75,7 +79,7 @@ export const ImageBlockNode = Node.create<MediaNodeOptions>({
   selectable: true,
   draggable: false,
   addOptions() {
-    return { author: "" };
+    return { author: "", khoa: [] };
   },
   addAttributes() {
     return { id: THUOC_TINH, w: THUOC_TINH, h: THUOC_TINH };
@@ -116,7 +120,7 @@ export const AudioBlockNode = Node.create<MediaNodeOptions>({
   selectable: true,
   draggable: false,
   addOptions() {
-    return { author: "" };
+    return { author: "", khoa: [] };
   },
   addAttributes() {
     return { id: THUOC_TINH, ms: THUOC_TINH, peaks: THUOC_TINH };

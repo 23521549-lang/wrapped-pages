@@ -13,7 +13,9 @@ import { charCountLabel, groupThousands } from "@/lib/doc/counter";
 import { toPlainJson } from "@/lib/doc/plain";
 import type { DocJson } from "@/lib/doc/types";
 import { checkRoundInput, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS } from "@/lib/doc/validate";
+import { mediaIdsOf } from "@/lib/media/node";
 import { dateLabel, timeAgo } from "@/lib/when";
+import { ChiThem, type TrangThaiChiThem } from "./chiThem";
 import { cutSheets } from "./cutSheets";
 import { DoanKeButton } from "./DoanKeButton";
 import { editorExtensions } from "./extensions";
@@ -21,7 +23,7 @@ import { MediaTools } from "./MediaTools";
 import { NONCE_TAI_LIEU } from "./nonce";
 import { PageBreaks } from "./pageBreaks";
 import { PagedSurface } from "./PagedSurface";
-import { droppedMedia, readRoundEditTemp, roundEditKey, roundEditTemp, staleRoundTempKeys } from "./roundEdit";
+import { readRoundEditTemp, roundEditKey, roundEditTemp, staleRoundTempKeys } from "./roundEdit";
 import { usePagedLayout } from "./usePagedLayout";
 
 export type RoundEditorProps = {
@@ -46,6 +48,10 @@ export type RoundEditorProps = {
   /** Biet danh chu sach: chu thay the va nhan cua khoi media. */
   author: string;
   mediaEnabled: boolean;
+  /** Niem phong cua luot con dong voi nguoi kia: man sua bao mot dong, niem phong van giu nguyen sau khi luu. */
+  niemPhong: boolean;
+  /** Biet danh nguoi kia, cho dong bao niem phong. */
+  partnerNickname: string;
 };
 
 /**
@@ -55,6 +61,14 @@ export type RoundEditorProps = {
 type Hoi = "huy" | "ve-sach" | "tai-lai";
 
 const CAU_HOI = "Bỏ các thay đổi trong lượt này?";
+const LUAT = "Chỉ viết thêm và sửa chính tả. Chữ, ảnh và ghi âm đã đăng không xoá được.";
+const CHUA_DOI: TrangThaiChiThem = { mat: 0, them: 0, sua: 0 };
+
+/** Dong bao khi da viet them hay sua chinh ta: "Viết thêm 2 chữ, sửa 1 lỗi chính tả. ..." */
+function baoThem({ them, sua }: TrangThaiChiThem): string {
+  const phan = [them > 0 ? `viết thêm ${them} chữ` : "", sua > 0 ? `sửa ${sua} lỗi chính tả` : ""].filter(Boolean).join(", ");
+  return `${phan.charAt(0).toUpperCase()}${phan.slice(1)}. Chữ nền xanh nhạt là chữ bạn vừa thêm hay vừa sửa.`;
+}
 // Tran chu cua mot luot dung bang tran cua mot lan dang (PUBLISH_TOTAL_MAX_CHARS), la con so checkRoundInput that su xet.
 const TRAN_LUOT = `Vượt ${groupThousands(PUBLISH_TOTAL_MAX_CHARS)} ký tự, chưa lưu được. Bớt chữ rồi lưu lại.`;
 const LOI = {
@@ -103,9 +117,12 @@ function donTamCu(khoa: string): void {
  * cat lai bang dung duong cua man viet (cutSheets), nen man doc ngat trang dung nhu man sua cho thay. So to cua luot doi
  * duoc. Khong tu luu len may chu: chi "Luu thay doi" moi gui. Chong mat chu bang ban tam trong sessionStorage (chi khoi
  * phuc khi moc phien ban con trung) va canh bao beforeunload.
+ * Luat chi viet them va sua chinh ta (ChiThem): chu cu bi xoa hien lai de tra, con chu cu bi mat thi chua luu duoc;
+ * khoi media cu khong bo duoc.
  */
 export function RoundEditor({
   bookId, bookTitle, roundId, ordinal, first, initialDoc, version, publishedAt, editedAt, now, startSheet, author, mediaEnabled,
+  niemPhong, partnerNickname,
 }: RoundEditorProps) {
   const router = useRouter();
   const khoa = roundEditKey(roundId);
@@ -113,7 +130,7 @@ export function RoundEditor({
   const [error, setError] = useState<string | null>(null);
   const [hoi, setHoi] = useState<Hoi | null>(null);
   const [khoiPhuc, setKhoiPhuc] = useState(false);
-  const [boMedia, setBoMedia] = useState(false);
+  const [chiThem, setChiThem] = useState<TrangThaiChiThem>(CHUA_DOI);
   const [loiDoc, setLoiDoc] = useState("");
   const [pending, startTransition] = useTransition();
   // Anh dang xu ly, tai len hay hop ghi am dang mo: chua chen xong, nen chua cho luu (khoi media khong roi vao giua luc luu).
@@ -133,7 +150,14 @@ export function RoundEditor({
   const suaTiepRef = useRef<HTMLButtonElement>(null);
 
   // Giu nguyen tham chieu giua cac lan render: useEditor so extensions theo tham chieu.
-  const extensions = useMemo(() => [...editorExtensions(author), PageBreaks], [author]);
+  const extensions = useMemo(
+    () => [
+      ...editorExtensions(author, { khoaMedia: mediaIdsOf(initialDoc) }),
+      PageBreaks,
+      ChiThem.configure({ goc: initialDoc, onDoi: setChiThem }),
+    ],
+    [author, initialDoc],
+  );
   const editor = useEditor({
     extensions,
     content: initialDoc,
@@ -168,7 +192,6 @@ export function RoundEditor({
       const json = ed.getJSON();
       if (JSON.stringify(json) === gocRef.current) xoaTam(khoa);
       else luuTam(khoa, version, toPlainJson(json));
-      setBoMedia(droppedMedia(initialDoc, json));
     },
   });
   const { sheetCount, chars, breaks } = usePagedLayout(editor, mirrorRef);
@@ -227,7 +250,8 @@ export function RoundEditor({
 
   function luu() {
     const ed = editor;
-    if (!ed) return;
+    // Con chu cu bi mat thi chua luu (nut Luu da khoa; day la lop chan cuoi o trinh duyet, may chu van tu kiem).
+    if (!ed || chiThem.mat > 0) return;
     // Khoa TRUOC khi cat: cai duoc gui chac chan la cai dang hien tren to (nhu PublishBar).
     ed.setEditable(false, false);
     if (!daDoi(ed)) {
@@ -304,7 +328,6 @@ export function RoundEditor({
     editor.chain().setMeta("addToHistory", false).setContent(initialDoc, { emitUpdate: false }).run();
     xoaTam(khoa);
     setKhoiPhuc(false);
-    setBoMedia(false);
   }
 
   const bayGio = new Date(now);
@@ -358,7 +381,7 @@ export function RoundEditor({
               </div>
             ) : (
               <div className="dang">
-                <button type="button" className="btn" disabled={pending || mediaBan} aria-busy={pending || undefined} onClick={luu}>
+                <button type="button" className="btn" disabled={pending || mediaBan || chiThem.mat > 0} aria-busy={pending || undefined} onClick={luu}>
                   Lưu thay đổi
                 </button>
                 <button ref={nutHuyRef} type="button" className="btn btn--line" disabled={pending} onClick={huy}>Hủy</button>
@@ -383,13 +406,24 @@ export function RoundEditor({
       </div>
 
       <div className="sua-ghi" aria-live="polite">
+        <p className="sua-ghi__dong"><span>{LUAT}</span></p>
+        {niemPhong && (
+          <p className="sua-ghi__dong"><span>{`Lượt này đang niêm phong với ${partnerNickname}. Sửa xong vẫn giữ niêm phong như cũ.`}</span></p>
+        )}
         {khoiPhuc && (
           <p className="sua-ghi__dong">
             <span>Đã khôi phục chữ đang sửa dở.</span>
             <button type="button" className="btn btn--chu" onClick={dungBanDaDang}>Dùng bản đã đăng</button>
           </p>
         )}
-        {boMedia && <p className="field__help">Ảnh hoặc ghi âm bỏ khỏi lượt sẽ bị xóa hẳn sau khi lưu.</p>}
+        {chiThem.mat > 0 ? (
+          <p className="sua-ghi__dong">
+            <span><b>{`Còn ${chiThem.mat} chữ cũ bị xoá.`}</b> Bấm vào chữ gạch ngang để trả lại, rồi mới lưu được.</span>
+            <button type="button" className="btn btn--chu" onClick={() => editor?.chain().focus().traLaiHet().run()}>Trả lại hết</button>
+          </p>
+        ) : chiThem.them + chiThem.sua > 0 ? (
+          <p className="sua-ghi__dong"><span>{baoThem(chiThem)}</span></p>
+        ) : null}
       </div>
 
       <PagedSurface editor={editor} sheetCount={sheetCount} mirrorRef={mirrorRef} firstNumber={first} />

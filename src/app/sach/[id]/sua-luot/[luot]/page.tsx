@@ -41,6 +41,8 @@ export default async function SuaLuot({ params, searchParams }: {
         startSheet={roundSheetParam(query.trang, round.sheets.length)}
         author={me.nickname}
         mediaEnabled={getMediaStore() !== null}
+        niemPhong={round.niemPhong}
+        partnerNickname={me.partnerNickname}
       />
     </>
   );

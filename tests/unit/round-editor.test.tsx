@@ -55,7 +55,8 @@ class ResizeObserverGia {
 function props(p: Partial<RoundEditorProps> = {}): RoundEditorProps {
   return {
     bookId: SACH, bookTitle: "Chuyện chưa kể", roundId: LUOT, ordinal: 2, first: 6, initialDoc: DOC, version: MOC,
-    publishedAt: MOC, editedAt: null, now: "2026-09-20T02:00:00.000Z", startSheet: 1, author: "Linh", mediaEnabled: true, ...p,
+    publishedAt: MOC, editedAt: null, now: "2026-09-20T02:00:00.000Z", startSheet: 1, author: "Linh", mediaEnabled: true,
+    niemPhong: false, partnerNickname: "Mạnh", ...p,
   };
 }
 
@@ -86,6 +87,13 @@ async function go(text: string) {
   // focus cua TipTap chay trong mot khung ve: cho no xong de no khong cuop focus cua buoc sau.
   await act(async () => {
     await new Promise((xongKhung) => requestAnimationFrame(() => xongKhung(null)));
+  });
+}
+
+/** Cho luat chi-them tinh lai (no doi nguoi viet ngung go mot nhip, 300ms). */
+async function choTinh() {
+  await act(async () => {
+    await new Promise((xongNhip) => setTimeout(xongNhip, 400));
   });
 }
 
@@ -289,12 +297,77 @@ describe("RoundEditor", () => {
     expect(sessionStorage.getItem("mqce-sua-trang-abc-1")).toBeNull();
   });
 
-  it("bo anh cua ban goc thi bao truoc anh se bi xoa sau khi luu", async () => {
+  it("luon co dong luat; luot niem phong thi them dong bao niem phong voi ten nguoi kia", async () => {
+    await ve();
+    expect(screen.getByText("Chỉ viết thêm và sửa chính tả. Chữ, ảnh và ghi âm đã đăng không xoá được.")).toBeTruthy();
+    expect(screen.queryByText(/đang niêm phong/)).toBeNull();
+    cleanup();
+    await ve({ niemPhong: true });
+    expect(screen.getByText("Lượt này đang niêm phong với Mạnh. Sửa xong vẫn giữ niêm phong như cũ.")).toBeTruthy();
+  });
+
+  it("xoa mot chu cu: chu do hien gach ngang dung cho, Luu bi khoa; bam vao thi tra lai dung cho", async () => {
+    await ve();
+    // "Chiều nay." nam o vi tri 1..11: "nay" la 7..10.
+    await act(async () => {
+      soanThao().commands.deleteRange({ from: 7, to: 10 });
+    });
+    await choTinh();
+    const mat = document.querySelector<HTMLElement>(".chu-mat");
+    expect(mat?.textContent).toBe("nay");
+    expect(mat?.getAttribute("role")).toBe("button");
+    expect(screen.getByText("Còn 1 chữ cũ bị xoá.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Lưu thay đổi" }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => {
+      fireEvent.click(mat as HTMLElement);
+    });
+    await choTinh();
+    expect(soanThao().getText()).toContain("Chiều nay.");
+    expect(document.querySelector(".chu-mat")).toBeNull();
+    expect((screen.getByRole("button", { name: "Lưu thay đổi" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("Tra lai het: moi chu cu bi xoa ve dung cho", async () => {
+    await ve();
+    await act(async () => {
+      soanThao().commands.deleteRange({ from: 7, to: 10 });
+    });
+    await act(async () => {
+      // Lan xoa truoc lui moi vi tri sau no 3: "Mai kể tiếp." nay bat dau o 10, "kể " la 14..17.
+      soanThao().commands.deleteRange({ from: 14, to: 17 });
+    });
+    await choTinh();
+    expect(document.querySelectorAll(".chu-mat").length).toBe(2);
+    await bam("Trả lại hết");
+    await choTinh();
+    expect(document.querySelector(".chu-mat")).toBeNull();
+    expect(soanThao().getText()).toMatch(/^Chiều nay\.\s+Mai kể tiếp\.$/);
+  });
+
+  it("go them va sua chinh ta: chu moi co nen, bao so chu them va sua; Luu van bam duoc", async () => {
+    await ve({ initialDoc: { type: "doc", content: [doan("Em ngồi bên cửa sỏ.")] } });
+    await act(async () => {
+      // "Em ngồi bên cửa sỏ." bat dau o 1: "sỏ" la 17..19, sua thanh "sổ".
+      soanThao().chain().insertContentAt({ from: 17, to: 19 }, "sổ").run();
+    });
+    await go(" Trời mưa.");
+    await choTinh();
+    expect([...document.querySelectorAll(".chu-moi")].map((x) => x.textContent)).toEqual(["sổ", "Trời mưa"]);
+    expect(screen.getByText("Viết thêm 2 chữ, sửa 1 lỗi chính tả. Chữ nền xanh nhạt là chữ bạn vừa thêm hay vừa sửa.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Lưu thay đổi" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("anh cua ban da dang: khong co nut Bo anh, va khong xoa duoc bang ban phim hay lenh", async () => {
     await ve({ initialDoc: DOC_ANH });
+    expect(screen.queryByRole("button", { name: "Bỏ ảnh" })).toBeNull();
     await act(async () => {
       soanThao().commands.setContent({ type: "doc", content: [doan("Ảnh:"), doan("cuối")] });
     });
-    expect(screen.getByText("Ảnh hoặc ghi âm bỏ khỏi lượt sẽ bị xóa hẳn sau khi lưu.")).toBeTruthy();
+    expect(JSON.stringify(soanThao().getJSON())).toContain(ANH);
+    await act(async () => {
+      soanThao().commands.deleteRange({ from: 5, to: 8 });
+    });
+    expect(JSON.stringify(soanThao().getJSON())).toContain(ANH);
   });
 
   it("?trang=3: con tro o dau to 3 va cuon toi to do", async () => {

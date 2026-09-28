@@ -39,16 +39,17 @@ export const TEXT_EXTENSIONS: Extensions = [TiptapStarterKit.configure(KHONG_DUN
 
 /**
  * So do man viet (va man sua luot): dung cac khoi va dinh dang ma cleanDoc chap nhan, gom ca anh va ghi am o cap cao
- * nhat va gom ca dau doan tren ke. author la biet danh nguoi viet, cho chu thay the va nhan cua khoi media. Them hay
- * bot o day thi phai sua ca cleanDoc (co test doi chieu trong tests/unit/editor-schema.test.ts).
+ * nhat va gom ca dau doan tren ke. author la biet danh nguoi viet, cho chu thay the va nhan cua khoi media. khoaMedia:
+ * id cac khoi media da dang (man sua luot), khoi do khong co nut bo. Them hay bot o day thi phai sua ca cleanDoc (co test
+ * doi chieu trong tests/unit/editor-schema.test.ts).
  */
-export function editorExtensions(author: string): Extensions {
+export function editorExtensions(author: string, { khoaMedia = [] }: { khoaMedia?: readonly string[] } = {}): Extensions {
   return [
     TiptapStarterKit.configure({ ...KHONG_DUNG, document: false }),
     MucMotDoan,
     DoanKe,
     TaiLieuCoMedia,
-    ImageBlockNode.configure({ author }),
-    AudioBlockNode.configure({ author }),
+    ImageBlockNode.configure({ author, khoa: khoaMedia }),
+    AudioBlockNode.configure({ author, khoa: khoaMedia }),
   ];
 }

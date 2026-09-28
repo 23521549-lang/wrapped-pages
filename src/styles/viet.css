@@ -281,8 +281,21 @@
   .niem__form{ animation: none; }
 }
 
-/* Man sua luot: dong khoi phuc ban tam va loi bao media se bi xoa, ngay tren to giay. Trong thi khong chiem cho. */
+/* Man sua luot: dong luat chi-them, dong niem phong, dong khoi phuc ban tam va dong bao chu them hay chu mat, ngay tren
+   to giay. */
 .sua-ghi{ display: grid; justify-items: center; gap: var(--space-2xs); margin: var(--space-md) var(--space-lg) 0; text-align: center; }
 /* Vung aria-live phai luon nam trong cay truy cap (khong display:none) thi trinh doc man hinh moi doc cau chen vao sau; rong thi chi bo khoang cach. */
 .sua-ghi:empty{ margin: 0; }
 .sua-ghi__dong{ display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-sm); margin: 0; font-size: var(--text-sm); color: var(--color-ink-2); }
+.sua-ghi__dong b{ color: var(--color-ink); font-weight: 600; }
+/* Chi viet them (ChiThem): chu vua them hay vua sua chinh ta co nen xanh nhat, khong gach chan. Nen khac bac voi dau
+   doan tren ke (.doan-ke dung --blue-2). */
+.giay-noi-dung .chu-moi{ background-color: var(--blue-1); border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+/* Chu cu bi xoa hien lai dung cho: mo, gach ngang, bam de tra lai. */
+.giay-noi-dung .chu-mat{
+  padding: 0 .2em; margin-inline: .1em; border-radius: 3px; background: var(--color-paper-3); color: var(--color-ink-2);
+  text-decoration: line-through; text-decoration-thickness: 1.5px; cursor: pointer; user-select: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.giay-noi-dung .chu-mat:hover{ color: var(--color-ink); }
+.giay-noi-dung .chu-mat:focus-visible{ outline: 2.5px solid var(--color-focus); outline-offset: 2px; }
