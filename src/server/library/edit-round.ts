@@ -15,10 +15,7 @@ import { bindMedia } from "@/server/media/access";
 import { closedToPartner, sealsOfBook } from "@/server/seal/seals";
 import { findOwnBook } from "./books";
 import { lockOwnBook } from "./remove";
-import { roundsOfBook, type RoundSpan } from "./rounds";
-
-/** Mot dong cua muc Noi dung o man sua sach. sealed: niem phong cua luot con dong voi nguoi kia, chua sua duoc. */
-export type RoundListItem = Pick<RoundSpan, "id" | "ordinal" | "first" | "last" | "publishedAt"> & { sealed: boolean };
+import { roundsOfBook } from "./rounds";
 
 /**
  * Mot luot nhu man sua can. Chu sach sua duoc moi luot, ke ca luot niem phong con dong voi nguoi kia (chu du an 28/09),
@@ -43,22 +40,6 @@ const DEM = 1_000_000;
 
 function laSoThuTu(n: number): boolean {
   return Number.isInteger(n) && n >= 1;
-}
-
-/** Muc Noi dung cua man sua sach: moi luot cua cuon cua chinh ownerId, theo vi tri. null khi khong phai sach cua ownerId. */
-export async function listRoundsForEdit(
-  db: AnyDb, ownerId: string, bookId: string, now: Date = new Date(),
-): Promise<RoundListItem[] | null> {
-  if (!isUuid(bookId)) return null;
-  return readSnapshot(db, async (tx) => {
-    const book = await findOwnBook(tx, ownerId, bookId);
-    if (!book) return null;
-    const [luot, sealRows] = await Promise.all([roundsOfBook(tx, book.id), sealsOfBook(tx, book.id)]);
-    const niemCua = new Map(sealRows.map((s) => [s.roundId, s]));
-    return luot.map((r) => ({
-      id: r.id, ordinal: r.ordinal, first: r.first, last: r.last, publishedAt: r.publishedAt, sealed: closedToPartner(niemCua.get(r.id), now),
-    }));
-  });
 }
 
 /**

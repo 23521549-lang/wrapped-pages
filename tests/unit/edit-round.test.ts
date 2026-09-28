@@ -4,7 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { activity, pages, readSheets, rounds } from "@/server/db/schema";
 import { publishDraft, saveDraft } from "@/server/library/drafts";
 import {
-  editRound, listRoundsForEdit, ownRoundExists, readRoundForEdit, roundOfPosition, type RoundEditResult,
+  editRound, ownRoundExists, readRoundForEdit, roundOfPosition, type RoundEditResult,
 } from "@/server/library/edit-round";
 import { roundsOfBook } from "@/server/library/rounds";
 import { canViewMedia, type UploadRecord } from "@/server/media/access";
@@ -356,15 +356,6 @@ describe("doc luot cho man sua", () => {
     expect(hai).toMatchObject({ ordinal: 2, first: 3, sheets: [to("BÍ MẬT HẸN GIỜ")], niemPhong: true });
     const sai: [string, string, number][] = [[s.seat2.id, s.chung, 1], [s.seat1.id, s.chung, 3], [s.seat1.id, s.chung, 0], [s.seat1.id, "rac", 1]];
     for (const [ai, sach, so] of sai) expect(await readRoundForEdit(s.db, ai, sach, so)).toBeNull();
-  });
-
-  it("listRoundsForEdit: moi luot theo thu tu, danh dau luot con dong; nguoi kia nhan null", async () => {
-    const s = await haiCuon();
-    await dang(s.db, s.seat1.id, s.chung, "Một");
-    await dangNiemPhong(s.db, s.seat1.id, s.chung, CAU_DO, "Hai", "Ba");
-    const ds = await listRoundsForEdit(s.db, s.seat1.id, s.chung);
-    expect(ds?.map((r) => [r.ordinal, r.first, r.last, r.sealed])).toEqual([[1, 1, 1, false], [2, 2, 3, true]]);
-    expect(await listRoundsForEdit(s.db, s.seat2.id, s.chung)).toBeNull();
   });
 
   it("roundOfPosition va ownRoundExists", async () => {

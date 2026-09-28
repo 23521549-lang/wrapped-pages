@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useId, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { actionCreateBook, actionUpdateBook } from "@/app/actions/library";
 import { COVERS, type BookMode, type CoverKey } from "@/lib/book";
@@ -25,6 +25,11 @@ export type BookFormProps = {
   mediaEnabled: boolean;
   /** Kho anh bia cua cuon, moi nhat truoc. Form tao sach luon rong: cuon chua ton tai nen chua co kho. */
   photos: readonly CoverPhotoView[];
+  /**
+   * Chi form sua: phan nam giua Ten sach va Ai doc duoc, cho dung thu tu cua trang Sach moi (Ten, Bia, Nhac nen, Ai doc
+   * duoc). Man Sua sach dat hai dong thoi gian Bia va Nhac nen vao day; chung tu luu, khong di qua nut Luu cua form.
+   */
+  giua?: ReactNode;
 };
 
 /**
@@ -34,7 +39,7 @@ export type BookFormProps = {
  * cap nhat defaultChecked), lech voi state. Thanh cong thi action tu chuyen trang (redirect).
  * Bang bia nam trong CoverPicker; dang cat hay dang tai bia tu tai len thi khoa nut gui.
  */
-export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos }: BookFormProps) {
+export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos, giua }: BookFormProps) {
   const id = useId();
   const doi = useBookEdit(book);
   const [mode, setMode] = useState<BookMode>(book?.mode ?? "chia-se");
@@ -58,8 +63,8 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
     <div className="tao">
       <form className="form" onSubmit={submit} noValidate>
         <TitleField state={doi} disabled={pending} />
-        {/* Bia va nhac chi co o form TAO: khi sua, hai thu do nam o hai muc dong thoi gian (phan quyet B2). */}
-        {book === null && (
+        {/* Bia va nhac: form TAO hoi thang; form SUA dat hai dong thoi gian vao day (phan quyet B2, chu du an 28/09). */}
+        {book !== null ? giua : (
           <>
             <CoverPicker
               value={doi.bia}
@@ -108,11 +113,11 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
 
       <aside className="xem-truoc" aria-label="Xem trước trên kệ">
         <p className="label">Xem trước</p>
-        {/* coverMediaId lay dung cai form se gui: bia anh cu van la bia that ke ca khi kho tat, nen xem truoc hien no. */}
+        {/* Form tao: bia form se gui. Form sua: bia hien hanh tu may chu, doi theo ngay khi mot o bia vua luu (refresh). */}
         <BookCard
           title={doi.title.trim() || "Chưa có tên"}
-          cover={doi.bia.cover ?? COVERS[0]}
-          coverMediaId={doi.bia.photoId}
+          cover={book ? book.cover : doi.bia.cover ?? COVERS[0]}
+          coverMediaId={book ? book.coverMediaId : doi.bia.photoId}
           owner={nickname}
           meta={`${nickname} · ${book ? "đang sửa" : "vừa tạo"}`}
           excerpt={book ? undefined : "Chưa có trang nào."}

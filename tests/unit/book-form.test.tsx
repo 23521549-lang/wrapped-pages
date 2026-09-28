@@ -113,4 +113,23 @@ describe("BookForm o nhac nen", () => {
     expect(screen.getByLabelText("Nhạc nền")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Bìa" })).toBeTruthy();
   });
+
+  it("form sua: phan giua (hai dong thoi gian) nam giua Ten sach va Ai doc duoc; Xem truoc lay bia hien hanh tu may chu", () => {
+    render(
+      <BookForm
+        book={{ id: "b1", title: "Chuyện chưa kể", mode: "chia-se", cover: "cau-go", youtubeId: null, coverMediaId: null }}
+        nickname="Linh"
+        partnerNickname="Manh"
+        mediaEnabled={false}
+        photos={[]}
+        giua={<p data-testid="giua">hai dòng thời gian</p>}
+      />,
+    );
+    const giua = screen.getByTestId("giua");
+    const ten = screen.getByLabelText("Tên sách");
+    const docDuoc = screen.getByRole("group", { name: "Ai đọc được" });
+    expect(ten.compareDocumentPosition(giua) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(giua.compareDocumentPosition(docDuoc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelector(".xem-truoc .book__cover")?.classList.contains("bia--cau-go")).toBe(true);
+  });
 });

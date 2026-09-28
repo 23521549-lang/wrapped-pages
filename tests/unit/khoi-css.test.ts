@@ -34,7 +34,7 @@ describe("khoi CSS", () => {
   it("phep doc bat duoc dung kieu trung ten tung xay ra", () => {
     // Doc ca hai tep that: phep loc bo chon khong duoc lang le bo sot khoi cua tep nao.
     expect(khoiTrongTep("tam-trang.css")).toContain(".o");
-    expect(khoiTrongTep("app.css")).toContain(".moc");
+    expect(khoiTrongTep("app.css")).toContain(".tg-o");
     expect(khoiTrongTep("app.css")).not.toContain(".o");
   });
 });

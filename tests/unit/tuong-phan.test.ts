@@ -253,7 +253,6 @@ const MIEN_TRU: MienTru[] = [
       ".hoat-dong",
       ".book",
       ".nhap-ds",
-      ".luot-ds",
       ".nhan-cu",
       ".nhac-the",
       ".hoi-dap", // khung Loi hoi dap (RoundReplyPanel.tsx): the noi dung tinh; o chu va nut ben trong co vien rieng dat nguong
@@ -266,12 +265,10 @@ const MIEN_TRU: MienTru[] = [
       ".viet-tren",
       ".foot",
       ".nhap + .nhap",
-      ".luot + .luot",
-      // Hai muc dong thoi gian cua man Sua sach (CoverTimeline.tsx, TrackTimeline.tsx): cung vai tro va cung hinh
-      // dang voi .luot-ds ngay tren no, khung noi dung tinh cong vach chia giua cac dong. Moi dieu khien ben trong
-      // (nut, o chon bia, o nhap nhac) co vien va trang thai rieng dat nguong.
-      ".moc-ds",
-      ".moc + .moc",
+      // Hai dong thoi gian cua man Sua sach (DongThoiGian.tsx): vach mong tach dong tom tat khoi danh sach moc ben
+      // duoi, trong cung mot khung. Khung ngoai (.tg__khung) la vien cua dieu khien va dung --color-rule-ui dat nguong;
+      // moi moc la nut co vong focus rieng.
+      ".tg__ds",
       ".go-cua__dong + .go-cua__dong",
       // Vach chia giua cac cot cua khung dang trang (PublishBar.tsx PublishPanel): tach cot chon loai, cot cac o va
       // cot to giay, va tach cau xac nhan khoi danh sach loai. Moi dieu khien ben trong (radio, o nhap, nut) co
@@ -288,9 +285,9 @@ const MIEN_TRU: MienTru[] = [
       // dang chon cua no dung --blue-line tren --blue-1 va dat nguong.
       ".tuan",
       ".chi-tiet",
-      // Dau thoi gian (LichDau.tsx, NhacNgay.tsx): khung the ngay va the Nhac trong ngay, va vach chia giua cac dong
-      // cua danh sach bai. Xap bia lon va moi dong bai la nut khong vien: nhan ra bang noi dung (tranh bia, ten bai)
-      // va vong focus; nut Phat, Bai ke tiep co vien rieng dat nguong.
+      // Dau thoi gian (LichDau.tsx, NhacNgay.tsx): khung the gom ngay dang chon va Nhac trong ngay, va vach chia giua
+      // cac dong cua danh sach bai. Moi dong bai la nut khong vien: nhan ra bang ten bai va vong focus; nut Phat, Bai
+      // ke tiep co vien rieng dat nguong.
       ".dtg-the",
       ".dtg-bai-ds > li + li",
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi

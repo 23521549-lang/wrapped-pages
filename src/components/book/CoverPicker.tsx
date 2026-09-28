@@ -45,8 +45,20 @@ export type CoverPickerProps = {
   onChange: (update: (value: CoverValue) => CoverValue) => void;
   /** Kho anh cua cuon, moi nhat truoc. Sach moi thi rong. */
   photos: readonly CoverPhotoView[];
-  /** Co o "Giu bia dang dung" o dau bang khong. Chi trang Viet tiep bat: hai noi kia bat buoc phai co mot bia. */
+  /**
+   * Co o "Giu bia dang dung" o dau bang khong: trang Viet tiep, va moi moc sau o mo dau cua dong thoi gian Bia o man Sua
+   * sach (o do goi la "Giu bia truoc", dat qua nhanGiu). Trang Sach moi bat buoc phai co mot bia.
+   */
   giuDuoc: boolean;
+  /** Chu hien cua o giu bia; mac dinh "Giữ bìa đang dùng". */
+  nhanGiu?: string;
+  /**
+   * Bang hien tron, khong vung cuon: bang rũ xuống duoi mot moc cua dong thoi gian Bia. Mac dinh la vung cuon cao 300px
+   * co vet mo o day, nhu trang Sach moi.
+   */
+  tron?: boolean;
+  /** Nhan cua bang chi cho trinh doc man hinh (khi o ngoai da co nhan hien), vd "Bìa lượt 3". */
+  nhanDoc?: string;
   /** Cuon dang sua; null la sach moi, bia cho gan toi khi tao sach. */
   bookId: string | null;
   /** Kho media dang bat. Tat thi khong tai len bia moi duoc; moi anh da co trong kho van hien va van chon duoc. */
@@ -68,7 +80,9 @@ export type CoverPickerProps = {
  * cung khong keo dai form.
  * Moi viec bat dong bo mang mot so luot (run): Huy, chon lai hay go component lam ket qua ve sau bi bo qua.
  */
-export function CoverPicker({ value, onChange, photos, giuDuoc, bookId, mediaEnabled, disabled, onBusyChange }: CoverPickerProps) {
+export function CoverPicker({
+  value, onChange, photos, giuDuoc, nhanGiu = "Giữ bìa đang dùng", tron = false, nhanDoc, bookId, mediaEnabled, disabled, onBusyChange,
+}: CoverPickerProps) {
   const id = useId();
   const [step, setStep] = useState<Step>({ kind: "nghi" });
   /** Anh tai len trong chinh phien nay, moi nhat truoc. Kho tu may chu chi doi sau khi trang duoc lam moi. */
@@ -233,8 +247,8 @@ export function CoverPicker({ value, onChange, photos, giuDuoc, bookId, mediaEna
 
   return (
     <fieldset ref={hopRef} className="chon" aria-describedby={value.photoId !== null ? `${id}-du-phong` : undefined}>
-      <legend>Bìa</legend>
-      <div className="cuon-vung" ref={vungRef}>
+      {nhanDoc === undefined ? <legend>Bìa</legend> : <legend className="sr-only">{nhanDoc}</legend>}
+      <div className={tron ? "cuon-vung cuon-vung--tron" : "cuon-vung"} ref={vungRef}>
         <div className="picker">
           {giuDuoc && (
             <label className="swatch swatch--giu">
@@ -245,9 +259,9 @@ export function CoverPicker({ value, onChange, photos, giuDuoc, bookId, mediaEna
                 checked={value.cover === null}
                 disabled={disabled}
                 onChange={() => onChange(() => ({ cover: null, photoId: null }))}
-                aria-label="Giữ bìa đang dùng, lượt này không thêm bìa"
+                aria-label={nhanGiu === "Giữ bìa đang dùng" ? "Giữ bìa đang dùng, lượt này không thêm bìa" : nhanGiu}
               />
-              <span aria-hidden="true">Giữ bìa đang dùng</span>
+              <span aria-hidden="true">{nhanGiu}</span>
             </label>
           )}
           {COVERS.map((c) => (
