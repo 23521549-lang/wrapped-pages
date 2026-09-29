@@ -53,6 +53,17 @@ describe("khung Hoat dong trong app.css", () => {
     expect(khai(CSS, ".hoat-dong__chu")).toContain("overflow-wrap: anywhere");
   });
 
+  it("dau Moi: cot phai xep gio tren dau; dau tan tai cho bang opacity theo --dur-moi-tan, giam chuyen dong thi tat ngay", () => {
+    const le = khai(CSS, ".hoat-dong__le");
+    for (const d of ["display: grid", "justify-items: end"]) expect(le).toContain(d);
+    expect(khai(CSS, ".hoat-dong__moi")).toContain("transition: opacity var(--dur-moi-tan) var(--ease-in-out)");
+    // Chi opacity: cho cua dau van giu, dong khong xe dich khi dau tan.
+    expect(khai(CSS, ".da-xem .hoat-dong__moi")).toBe(" opacity: 0; ");
+    expect(CSS).toContain("@media (prefers-reduced-motion: reduce){ .hoat-dong__moi{ transition: none; } }");
+    const TOKENS = readFileSync("src/styles/tokens.css", "utf8");
+    for (const t of ["--dur-moi-xem: 1000ms;", "--dur-moi-tan: 3000ms;"]) expect(TOKENS).toContain(t);
+  });
+
   it("dong cao toi thieu 44px tren man cam ung va man hep", () => {
     expect(khai(media(CSS, "(pointer: coarse), (max-width: 820px)"), ".hoat-dong__dong")).toContain("min-height: 44px");
   });

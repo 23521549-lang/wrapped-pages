@@ -2,7 +2,9 @@
 -- reading_positions (trang dang doc do). drizzle-kit migrate chay moi migration dang cho trong MOT giao dich chung: mot
 -- buoc kiem duoi RAISE thi ca lan migrate huy, database giu nguyen. Phan chuyen du lieu viet them vao cuoi tep sinh tu
 -- schema.ts: moi dong Hoat dong da co la DA XEM voi ca hai nguoi, de len ban moi khong co dong cu nao boi dau Moi. Ba
--- CHECK viet lai khong siet them loai cu nao, nen du lieu cu luon qua duoc.
+-- CHECK viet lai khong siet them loai cu nao, nen du lieu cu luon qua duoc. Moc da xem giong cach listActivity so:
+-- dong gom thu sai (cung nguoi, niem phong, luot, ngay Viet Nam) mang id lan dau va gio lan moi nhat, nen moi dong trong
+-- nhom lay gio moi nhat cua nhom; dong ghi san cho mai sau (mo-hen-gio) chi da xem toi luc migrate, toi gio mo van Moi.
 CREATE TABLE "activity_seen" (
 	"account_id" uuid NOT NULL,
 	"activity_id" uuid NOT NULL,
@@ -36,7 +38,15 @@ ALTER TABLE "activity" ADD CONSTRAINT "activity_kind" CHECK ("activity"."kind" i
 ALTER TABLE "activity" ADD CONSTRAINT "activity_sach" CHECK ("activity"."kind" in ('doi-mat-khau', 'tha-tam-trang') or ("activity"."book_id" is not null and "activity"."subject_id" is null and ("activity"."round_id" is not null or "activity"."kind" in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac')) and ("activity"."round_id" is null or "activity"."kind" not in ('tao-sach', 'doi-ten-sach'))));--> statement-breakpoint
 ALTER TABLE "activity" ADD CONSTRAINT "activity_niem_phong" CHECK (case when "activity"."kind" in ('moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa') then "activity"."seal_id" is not null when "activity"."kind" in ('dang-trang', 'hoi-dap', 'doi-mat-khau') then true else "activity"."seal_id" is null end);--> statement-breakpoint
 INSERT INTO "activity_seen" ("account_id", "activity_id", "seen_at")
-SELECT a."id", h."id", h."at" FROM "accounts" a CROSS JOIN "activity" h;
+SELECT a."id", h."id", least(
+  CASE WHEN h."kind" = 'thu-sai' THEN (
+    SELECT max(g."at") FROM "activity" g
+    WHERE g."kind" = 'thu-sai' AND g."actor_id" = h."actor_id" AND g."seal_id" = h."seal_id"
+      AND g."book_id" = h."book_id" AND g."round_id" = h."round_id"
+      AND ((g."at" AT TIME ZONE 'UTC') + interval '7 hours')::date = ((h."at" AT TIME ZONE 'UTC') + interval '7 hours')::date
+  ) ELSE h."at" END,
+  now())
+FROM "accounts" a CROSS JOIN "activity" h;
 --> statement-breakpoint
 DO $$
 DECLARE n bigint;

@@ -4,6 +4,7 @@ import { feedDays } from "@/lib/feed/days";
 import { feedLine, type FeedNames, type FeedSentence, type TenBaiHat } from "@/lib/feed/line";
 import type { FeedItem } from "@/lib/feed/types";
 import { timeLabel } from "@/lib/when";
+import { TheoDoiXem } from "./TheoDoiXem";
 
 export type ActivityPanelProps = {
   /** Dong Hoat dong da loc theo nguoi xem (listActivity), moi nhat truoc. */
@@ -37,7 +38,10 @@ function Cau({ doan, ai }: { doan: FeedSentence; ai: string | null }) {
   });
 }
 
-/** Mot dong: dong co sach la mot lien ket phu ca dong, dong khong gan sach la khoi thuong. */
+/**
+ * Mot dong: dong co sach la mot lien ket phu ca dong, dong khong gan sach la khoi thuong. Cot phai la gio, duoi gio la
+ * dau Mới cua viec nguoi kia chua xem (phuong an A): cham va chu dam, an voi trinh doc man hinh vi cau da co ", mới".
+ */
 function Dong({ item, names }: { item: FeedItem; names: FeedNames }) {
   const line = feedLine(item, names);
   const ai = line.avatar === "hen-gio" ? null : line.avatar === "me" ? "Bạn" : names.partner;
@@ -46,7 +50,14 @@ function Dong({ item, names }: { item: FeedItem; names: FeedNames }) {
       <p className="hoat-dong__chu">
         <Cau doan={line.sentence} ai={ai} />
       </p>
-      <time className="hoat-dong__gio" dateTime={item.at.toISOString()}>{timeLabel(item.at)}</time>
+      {/* Ngay sau cau, ngoai the cau: ten lien ket la "cau, mới, gio", con chu cua cau van dung la cau. */}
+      {item.isNew && <span className="sr-only">, mới</span>}
+      <span className="hoat-dong__le">
+        <time className="hoat-dong__gio" dateTime={item.at.toISOString()}>{timeLabel(item.at)}</time>
+        {item.isNew && (
+          <span className="dh dh--moi hoat-dong__moi" aria-hidden="true"><span className="cham" aria-hidden="true" />Mới</span>
+        )}
+      </span>
       {line.chips.length > 0 && (
         <p className="hoat-dong__phu">
           {line.chips.map((chip) => <span key={chip} className="chip">{chip}</span>)}
@@ -67,8 +78,8 @@ function Dong({ item, names }: { item: FeedItem; names: FeedNames }) {
 
 /**
  * Khung Hoat dong cua ke sach. Chi ve du lieu may chu da loc cho nguoi xem.
- * Co dong thi co vung cuon an thanh cuon: vung nhan focus (tabIndex 0) de cuon bang phim, moi ngay mot nhom co
- * tieu de dinh mep tren. Chua co dong nao thi chi co o trong, khong vung cuon, khong vet mo.
+ * Co dong thi co vung cuon an thanh cuon (TheoDoiXem: nhan focus de cuon bang phim, va bao cac dong Moi da xem), moi
+ * ngay mot nhom co tieu de dinh mep tren. Chua co dong nao thi chi co o trong, khong vung cuon, khong vet mo.
  */
 export function ActivityPanel({ items, now, partnerName, baiHat }: ActivityPanelProps) {
   const names: FeedNames = { partner: partnerName, baiHat };
@@ -81,20 +92,20 @@ export function ActivityPanel({ items, now, partnerName, baiHat }: ActivityPanel
           <p className="meta">{partnerName} đăng trang hay mở một trang khóa thì tin hiện ở đây.</p>
         </div>
       ) : (
-        // section co nhan la vai tro region. Thanh cuon an nen vung phai nhan focus de cuon bang phim.
-        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- vung cuon an thanh cuon, khong co cach cuon bang phim nao khac
-        <section className="hoat-dong__cuon" tabIndex={0} aria-label="Hoạt động gần đây">
+        <TheoDoiXem moi={items.filter((i) => i.isNew).map((i) => i.id).join(" ")}>
           {feedDays(items, now).map((day) => (
             <div key={day.key} className="hoat-dong__nhom">
               <h3 className="hoat-dong__ngay">{day.label}</h3>
               <ol className="hoat-dong__ds">
                 {day.items.map((item) => (
-                  <li key={item.id}><Dong item={item} names={names} /></li>
+                  <li key={item.id} data-moi={item.isNew ? "" : undefined} data-id={item.isNew ? item.id : undefined}>
+                    <Dong item={item} names={names} />
+                  </li>
                 ))}
               </ol>
             </div>
           ))}
-        </section>
+        </TheoDoiXem>
       )}
     </section>
   );

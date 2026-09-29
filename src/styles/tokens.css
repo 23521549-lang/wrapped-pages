@@ -86,6 +86,10 @@
   /* Nghi thuc mo: moi ky tu, va chu ky con tro nhap nhay. JS doc qua msTuCss. */
   --dur-go: 18ms;
   --dur-nhay: 1000ms;
+  /* Dau Moi cua dong Hoat dong: dong nam trong khung nhin chung nay moi tinh la da xem (TheoDoiXem doc qua msTuCss),
+     roi dau tan cham (chu du an 30/09: tan nhanh qua thi khong kip thay). */
+  --dur-moi-xem: 1000ms;
+  --dur-moi-tan: 3000ms;
 
   /* Nut: mot ban kinh cho ca ba cap nut (nen, vien, chu). */
   --radius-nut: 8px;

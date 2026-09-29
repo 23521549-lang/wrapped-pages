@@ -192,6 +192,13 @@ a.hoat-dong__dong:focus-visible{ outline-offset: -2.5px; }
 /* dong co sach: re chuot hay di toi bang phim thi cau doi sang muc chinh, khong to nen, khong gach chan */
 a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-dong__chu{ color: var(--color-ink); }
 .hoat-dong__gio{ font-size: var(--text-xs); line-height: calc(var(--text-sm) * 1.45); color: var(--color-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* cot phai cua dong: gio, duoi gio la dau Moi (phuong an A, cung kieu "Trang mới" cua ke). Da xem thi dau tan tai cho,
+   chi opacity, nen cho cua no van giu toi lan ve sau va dong khong xe dich. */
+.hoat-dong__le{ display: grid; justify-items: end; gap: .15rem; }
+.hoat-dong__moi{ font-size: var(--text-xs); line-height: 1.4; transition: opacity var(--dur-moi-tan) var(--ease-in-out); }
+.hoat-dong__moi .cham{ width: 6px; height: 6px; }
+.da-xem .hoat-dong__moi{ opacity: 0; }
+@media (prefers-reduced-motion: reduce){ .hoat-dong__moi{ transition: none; } }
 .hoat-dong__phu{ grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0 var(--space-sm); }
 /* nhan phu trong dong Hoat dong la dau hieu trang thai, khong phai nut: chu nho, khong nen, khong bo tron */
 .hoat-dong__phu .chip{ padding: 0; background: none; border-radius: 0; font-size: var(--text-xs); color: var(--color-ink-2); }

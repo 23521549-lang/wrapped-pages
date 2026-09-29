@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { listActivity } from "@/server/feed/list";
 import { listShelf, type ShelfBook as Sach } from "@/server/library/shelf";
 import { coverSlots } from "@/server/library/timeline";
+import { tenCacBai } from "@/server/media/ten-youtube";
 import { currentMoods } from "@/server/mood/moods";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
@@ -15,6 +16,7 @@ import { BauTroi } from "@/components/tam-trang/BauTroi";
 import { TroiTam } from "@/components/tam-trang/troi-tam";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
+import { docChiTietNhac } from "@/lib/feed/detail";
 import { chiaTamTrang, conLai, troiHien } from "@/lib/tam-trang/lich";
 import { timeAgo } from "@/lib/when";
 
@@ -35,7 +37,16 @@ export default async function KeSach() {
   // listShelf sap theo to dang gan nhat, nen cuon dau tien co to chinh la cuon co trang gan nhat.
   const recent = shelf.find((b) => b.pageCount > 0);
   // Dong thoi gian bia doc cho DUNG MOT cuon: chi khung sach lon moi tu doi bia, the tren ke luon giu bia moi nhat.
-  const biaCuaKhung = recent === undefined ? [] : (await coverSlots(db, recent.id)).flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]));
+  // Ten bai cua cac dong doi nhac lay tu YouTube o may chu (tenCacBai), song song voi bia; lay khong duoc thi dong ghi
+  // "Bản nhạc trên YouTube".
+  const [oBia, baiHat] = await Promise.all([
+    recent === undefined ? [] : coverSlots(db, recent.id),
+    tenCacBai(feed.flatMap((i) => {
+      const id = i.kind === "doi-nhac" ? docChiTietNhac(i.detail)?.sau?.youtubeId : null;
+      return id ? [id] : [];
+    })),
+  ]);
+  const biaCuaKhung = oBia.flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]));
   // Khong ai giu tam trang thi dai troi khong hien, tuc khong con nut tam dung nao tren trang: khung bia tu dat mot nut.
   const coDaiTroi = minh !== null || kia !== null;
   const fresh = shelf.reduce((n, b) => n + b.newCount, 0);
@@ -50,7 +61,7 @@ export default async function KeSach() {
   });
   const cuaBan = shelf.filter((b) => b.mine).map(theKe);
   const cuaKia = shelf.filter((b) => !b.mine).map(theKe);
-  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} />;
+  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} />;
 
   return (
     <>

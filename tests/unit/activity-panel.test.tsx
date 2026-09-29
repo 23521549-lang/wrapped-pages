@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { ActivityPanel } from "@/components/feed/ActivityPanel";
 import type { FeedItem } from "@/lib/feed/types";
 import { DONG_MAC_DINH } from "../helpers/feed";
+
+// Vung cuon theo doi dau Moi goi action da xem; o day chi ve, khong gui gi.
+vi.mock("@/app/actions/feed", () => ({ actionSeenActivity: vi.fn(async () => ({ ok: true })) }));
 
 const NOW = new Date("2026-09-15T15:00:00+07:00");
 const SACH = "11111111-1111-4111-8111-111111111111";
@@ -111,5 +114,22 @@ describe("ActivityPanel: co su kien", () => {
     const ghi = tang.querySelector(".hoat-dong__ghi.hoat-dong__ghi--loi-nhan");
     expect(ghi?.textContent).toBe("Lời nhắn: Cho em nè");
     expect(ghi?.querySelector(".sr-only")?.textContent).toBe("Lời nhắn: ");
+  });
+
+  it("dong Moi: li mang data-moi va data-id; cot phai la gio roi dau Mới; trinh doc man hinh nghe ', mới' ngay sau cau", () => {
+    const moi = su({ isNew: true });
+    const { container } = ve([moi, su()]);
+    const [coMoi, khongMoi] = Array.from(container.querySelectorAll("li"));
+    expect([coMoi.hasAttribute("data-moi"), coMoi.getAttribute("data-id")]).toEqual([true, moi.id]);
+    const le = coMoi.querySelector(".hoat-dong__dong > .hoat-dong__le");
+    expect(Array.from(le?.children ?? []).map((c) => c.className)).toEqual(["hoat-dong__gio", "dh dh--moi hoat-dong__moi"]);
+    const dau = le?.querySelector(".hoat-dong__moi");
+    expect([dau?.textContent, dau?.getAttribute("aria-hidden"), dau?.querySelector(".cham")?.getAttribute("aria-hidden")])
+      .toEqual(["Mới", "true", "true"]);
+    expect(coMoi.querySelector(".hoat-dong__chu + .sr-only")?.textContent).toBe(", mới");
+    expect(coMoi.querySelector(".hoat-dong__chu .sr-only")).toBeNull();
+    expect([khongMoi.hasAttribute("data-moi"), khongMoi.hasAttribute("data-id")]).toEqual([false, false]);
+    expect(khongMoi.querySelector(".hoat-dong__moi, .sr-only")).toBeNull();
+    expect(khongMoi.querySelector(".hoat-dong__le > time.hoat-dong__gio")).not.toBeNull();
   });
 });

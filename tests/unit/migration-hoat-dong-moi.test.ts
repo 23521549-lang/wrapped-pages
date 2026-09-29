@@ -97,6 +97,28 @@ describe("migration 0016 hoat dong moi", () => {
     expect(r.rows[0]).toEqual({ n: 8, lech: 0 });
   });
 
+  it("dong gom thu sai da xem toi lan thu moi nhat cua nhom; dong ghi san cho mai sau van thanh Moi khi toi gio", async () => {
+    const c = new PGlite();
+    await len(c, 15);
+    await gieo(c);
+    // Them mot lan thu sai cung nhom, cung ngay Viet Nam (dong gom mang id cua lan dau, gio cua lan moi nhat), va mot
+    // dong mo-hen-gio ghi san cho mot luc con xa.
+    await c.exec(`
+      insert into activity (kind, actor_id, book_id, seal_id, round_id, shared, at) values
+        ('thu-sai', '${A2}', '${B1}', '${S1}', '${R1}', true, '2026-09-02 09:30:00+00'),
+        ('mo-hen-gio', '${A1}', '${B1}', '${S1}', '${R1}', true, '2099-01-01 00:00:00+00');
+    `);
+    await len(c, 16);
+    const r = await c.query<{ kind: string; at: string; seen: string }>(`
+      select a.kind, a.at::text as at, s.seen_at::text as seen from activity_seen s join activity a on a.id = s.activity_id
+      where s.account_id = '${A1}' and a.kind in ('thu-sai', 'mo-hen-gio') order by a.at`);
+    const [dau, sau, henGio] = r.rows;
+    expect([dau.kind, dau.seen, sau.seen]).toEqual(["thu-sai", sau.at, sau.at]);
+    expect(henGio.kind).toBe("mo-hen-gio");
+    expect(new Date(henGio.seen).getTime()).toBeLessThan(new Date(henGio.at).getTime());
+    expect(new Date(henGio.seen).getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
   it("sau 0016: loai moi ghi duoc dung hinh; loai cu gan niem phong van nhu truoc", async () => {
     const c = new PGlite();
     await len(c, 15);
