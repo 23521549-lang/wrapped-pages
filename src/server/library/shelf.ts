@@ -39,7 +39,7 @@ export type ShelfBook = {
 };
 
 /** To co it nhat mot nut chu chua ky tu khong phai khoang trang (cung tap khoang trang voi docExcerpt). */
-const HAS_TEXT = sql`exists (select 1 from jsonb_path_query(${pages.content}, '$.** ? (@.type == "text").text') as chu(v) where (chu.v #>> '{}') ~ ${NOT_BLANK_PATTERN})`;
+export const HAS_TEXT = sql`exists (select 1 from jsonb_path_query(${pages.content}, '$.** ? (@.type == "text").text') as chu(v) where (chu.v #>> '{}') ~ ${NOT_BLANK_PATTERN})`;
 
 /** Nguoi xem da tung thay to dang xet (pages) chua. Dung trong truy van co bang pages. */
 function daXemSql(viewerId: string): SQL {
@@ -70,9 +70,9 @@ function newestRounds(tx: AnyDb, ids: string[]) {
  * tien co chu mang dau khong rong. Phep do rong de nguyen o markedExcerpt, nguon that duy nhat, de SQL va JS khong the
  * lech nhau; mot luot chi co vai to mang dau nen tai ve het van re. Chi duoc goi voi cac luot DA MO voi nguoi xem.
  */
-function markedSheets(tx: AnyDb, roundIds: string[]) {
+export function markedSheets(tx: AnyDb, roundIds: string[]) {
   return tx
-    .select({ bookId: pages.bookId, position: pages.position, content: pages.content })
+    .select({ bookId: pages.bookId, roundId: pages.roundId, position: pages.position, content: pages.content })
     .from(pages)
     .where(and(inArray(pages.roundId, roundIds), CO_DAU_KE))
     .orderBy(pages.bookId, pages.position);
@@ -86,23 +86,26 @@ function markedSheets(tx: AnyDb, roundIds: string[]) {
  * buoc phai co: thieu no thi truy van khong con menh de where nao, tuc lay moi to cua moi cuon khong loc niem phong.
  * Vi the kieu la SQL chu khong phai SQL | undefined; and(...) cua drizzle luon mang them | undefined nen noi goi phai
  * khang dinh bang dau ! - moi dieu kien truyen vao deu la SQL that.
+ * theoLuot: moi LUOT mot dong thay vi moi cuon (khung sach lon luan phien): chia nhom va hat giong theo ma luot.
  */
-function drawOfDay(tx: AnyDb, loc: SQL, viewerId: string, now: Date) {
+export function drawOfDay(tx: AnyDb, loc: SQL, viewerId: string, now: Date, theoLuot = false) {
+  const nhom = theoLuot ? pages.roundId : pages.bookId;
   const candidates = tx
     .select({
       bookId: pages.bookId,
+      roundId: pages.roundId,
       position: pages.position,
       content: pages.content,
-      k: sql<number>`row_number() over (partition by ${pages.bookId} order by ${pages.position}) - 1`.as("k"),
-      n: sql<number>`count(*) over (partition by ${pages.bookId})`.as("n"),
+      k: sql<number>`row_number() over (partition by ${nhom} order by ${pages.position}) - 1`.as("k"),
+      n: sql<number>`count(*) over (partition by ${nhom})`.as("n"),
     })
     .from(pages)
     .innerJoin(books, eq(books.id, pages.bookId))
     .where(loc)
     .as("ung_vien");
-  const seed = sql`${candidates.bookId}::text || ':' || ${viewerId}::text || ':' || ${dayKey(now)}::text`;
+  const seed = sql`${theoLuot ? candidates.roundId : candidates.bookId}::text || ':' || ${viewerId}::text || ':' || ${dayKey(now)}::text`;
   return tx
-    .select({ bookId: candidates.bookId, position: candidates.position, content: candidates.content })
+    .select({ bookId: candidates.bookId, roundId: candidates.roundId, position: candidates.position, content: candidates.content })
     .from(candidates)
     .where(sql`${candidates.k} = mod(('x' || substr(md5(${seed}), 1, 8))::bit(32)::bigint, ${candidates.n})`);
 }

@@ -1,3 +1,4 @@
+import type { ReactNode, Ref } from "react";
 import Link from "next/link";
 import { LockedBars } from "@/components/reader/LockedSheet";
 import { BiaTuDoi, NutDungHieuUng, type BiaChon } from "./BiaTuDoi";
@@ -33,17 +34,36 @@ export type OpenBookProps = {
   /** Cuon rieng tu cua chinh nguoi xem. */
   isPrivate: boolean;
   action: { label: string; href: string };
+  /**
+   * Nhan trang thai cua luot chua doc (khung sach lon luan phien, spec 5a muc E3): dac la "Bạn chưa đọc" (cham dac, chu
+   * dam xanh nhu "Trang mới" cua ke), khong dac la "{tên} chưa đọc" (cham rong: chi la thong tin, khong phai viec cua minh).
+   */
+  nhan?: { chu: string; dac: boolean } | null;
+  /** Dong dem "Lượt chưa đọc 1 / 4" khi khung dang luan phien. */
+  dem?: string | null;
+  /** Chu trang phai thay cho excerpt khi dang go (GoChu); excerpt van quyet dinh co doan hay khong. */
+  chuPhai?: ReactNode;
+  /** Dang doi luot: hai trang mo di (CSS .dang-doi). */
+  dangDoi?: boolean;
+  /**
+   * Nut tam dung cua khung luan phien: "luon" (trang khong co dai troi: nut hien ca khi giam chuyen dong, vi luot van
+   * doi), "giam" (co dai troi: nut cua dai troi lo khi co chuyen dong, nut nay chi hien khi giam chuyen dong). Khong co
+   * thi theo luat cu: tu dat nut khi tuDatNut va cuon co tu hai bia.
+   */
+  nutLuanPhien?: "luon" | "giam";
+  /** The article cua khung: khung luan phien nghe con tro va focus o day de dung doi luot. */
+  khungRef?: Ref<HTMLElement>;
 };
 
 /**
  * Trang phai cua cuon sach mo. Khoa: chi dong he lo (neu co) va vach nhoe trang tri, chu that khong co trong DOM.
  * Rieng tu: chu cua chinh nguoi xem, lam mo cho nguoi sau lung khong doc duoc, an voi trinh doc man hinh.
  */
-function TrangPhai({ excerpt, locked, isPrivate }: Pick<OpenBookProps, "excerpt" | "locked" | "isPrivate">) {
+function TrangPhai({ excerpt, locked, isPrivate, chuPhai }: Pick<OpenBookProps, "excerpt" | "locked" | "isPrivate" | "chuPhai">) {
   if (locked) {
     return (
       <div className="trang-khoa">
-        {excerpt && <p className="he-lo">{excerpt}</p>}
+        {excerpt && <p className="he-lo">{chuPhai ?? excerpt}</p>}
         <LockedBars />
         <p className="trang-che trang-che--duoi"><GlyphKhoa /><span><b>Trang khóa</b>, vượt thử thách để đọc</span></p>
       </div>
@@ -57,7 +77,7 @@ function TrangPhai({ excerpt, locked, isPrivate }: Pick<OpenBookProps, "excerpt"
       </>
     );
   }
-  return excerpt ? <p className="vua-viet__chu">{excerpt}</p> : null;
+  return excerpt ? <p className="vua-viet__chu">{chuPhai ?? excerpt}</p> : null;
 }
 
 /**
@@ -67,10 +87,13 @@ function TrangPhai({ excerpt, locked, isPrivate }: Pick<OpenBookProps, "excerpt"
  * Ca khung la mot lien ket toi man doc o dung to cua doan trich (lop phu dau DOM, nut chinh nam tren no va ngoai no),
  * nen khong co lien ket long nhau.
  */
-export function OpenBook({ who, title, covers, tuDatNut, dauHref, pageCount, position, readHref, when, excerpt, locked, isPrivate, action }: OpenBookProps) {
+export function OpenBook({
+  who, title, covers, tuDatNut, dauHref, pageCount, position, readHref, when, excerpt, locked, isPrivate, action,
+  nhan, dem, chuPhai, dangDoi, nutLuanPhien, khungRef,
+}: OpenBookProps) {
   return (
-    <article className="vua-viet" aria-label="Một trang trong sách">
-      <div className="sach-mo">
+    <article ref={khungRef} className="vua-viet" aria-label="Một trang trong sách">
+      <div className={dangDoi ? "sach-mo dang-doi" : "sach-mo"}>
         <Link className="sach-mo__lien" href={readHref}>
           <span className="sr-only">{`Đọc ${title} ${locked ? "từ" : "tại"} trang ${position}`}</span>
         </Link>
@@ -79,7 +102,15 @@ export function OpenBook({ who, title, covers, tuDatNut, dauHref, pageCount, pos
             <p className="vua-viet__ai"><b>{who}</b> vừa viết</p>
             <h2 className="vua-viet__ten d">{title}</h2>
             <p className="vua-viet__phu">{pageCount} trang, {when}</p>
-            {tuDatNut && covers.length > 1 && <NutDungHieuUng />}
+            {nhan && (
+              <p className="dau-hieu vua-viet__nhan">
+                <span className={nhan.dac ? "dh dh--moi" : "dh"}>
+                  <span className={nhan.dac ? "cham" : "cham cham--rong"} aria-hidden="true" />{nhan.chu}
+                </span>
+              </p>
+            )}
+            {dem && <p className="vua-viet__dem">{dem}</p>}
+            {nutLuanPhien ? <NutDungHieuUng kieu={nutLuanPhien} /> : tuDatNut && covers.length > 1 && <NutDungHieuUng />}
           </div>
           <div className="tranh-dan">
             <BiaTuDoi covers={covers} href={dauHref} nhan={`Dấu thời gian của ${title}`} />
@@ -87,7 +118,7 @@ export function OpenBook({ who, title, covers, tuDatNut, dauHref, pageCount, pos
           <Link className="btn sach-mo__nut" href={action.href}>{action.label}</Link>
         </div>
         <div className="sach-mo__to sach-mo__to--phai">
-          <TrangPhai excerpt={excerpt} locked={locked} isPrivate={isPrivate} />
+          <TrangPhai excerpt={excerpt} locked={locked} isPrivate={isPrivate} chuPhai={chuPhai} />
           {!locked && <span className="sach-mo__so" aria-hidden="true">{position}</span>}
         </div>
       </div>

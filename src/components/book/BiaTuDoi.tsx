@@ -165,11 +165,13 @@ export function BiaTuDoi({ covers, href, nhan }: BiaTuDoiProps) {
  * no thi bia tu doi ma khong co duong dung nao, trai WCAG SC 2.2.2. Nut doi DUNG lua chon da luu ma dai troi van dung,
  * nen van la mot co che chu khong phai hai (phan quyet B4). May bat giam chuyen dong thi khong co gi chay, va nut duoc
  * giau bang CSS - cung cach voi nut cua dai troi - de HTML may chu va lan ve dau cua trinh duyet khong lech nhau.
+ * kieu cho khung sach lon luan phien (luot van doi ca khi giam chuyen dong): "luon" hien ca khi giam chuyen dong,
+ * "giam" chi hien khi giam chuyen dong (luc nut cua dai troi bi giau). Van la mot cong tac chung, khong them co che.
  */
-export function NutDungHieuUng() {
+export function NutDungHieuUng({ kieu }: { kieu?: "luon" | "giam" }) {
   const [dung, datDung] = useTamDung();
   return (
-    <button type="button" className="btn btn--chu bia-dung" onClick={() => datDung(!dung)}>
+    <button type="button" className={kieu ? `btn btn--chu bia-dung bia-dung--${kieu}` : "btn btn--chu bia-dung"} onClick={() => datDung(!dung)}>
       {dung ? NHAN_CHAY : NHAN_DUNG}
     </button>
   );

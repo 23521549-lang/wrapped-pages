@@ -90,6 +90,10 @@
      roi dau tan cham (chu du an 30/09: tan nhanh qua thi khong kip thay). */
   --dur-moi-xem: 1000ms;
   --dur-moi-tan: 3000ms;
+  /* Khung sach lon luan phien: moi luot chua doc dung chung nay (KhungLuanPhien doc qua msTuCss), roi hai trang mo di
+     chung kia truoc khi doi sang luot ke. */
+  --dur-luan-phien: 15000ms;
+  --dur-doi-luot: 240ms;
 
   /* Nut: mot ban kinh cho ca ba cap nut (nen, vien, chu). */
   --radius-nut: 8px;

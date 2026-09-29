@@ -80,4 +80,26 @@ describe("OpenBook", () => {
     expect(html).toContain('<p class="vua-viet__chu vua-viet__chu--mo" aria-hidden="true">Dòng chữ thật</p>');
     expect(chu(html)).toContain("Riêng tưMở sách để đọc");
   });
+
+  it("luot chua doc: nhan cham dac 'Bạn chưa đọc' hay cham rong '{tên} chưa đọc', dong dem, sau dong phu", () => {
+    const html = mo({ nhan: { chu: "Bạn chưa đọc", dac: true }, dem: "Lượt chưa đọc 1 / 4" });
+    expect(html).toContain('<p class="vua-viet__phu">4 trang, vừa xong</p><p class="dau-hieu vua-viet__nhan"><span class="dh dh--moi"><span class="cham" aria-hidden="true"></span>Bạn chưa đọc</span></p><p class="vua-viet__dem">Lượt chưa đọc 1 / 4</p>');
+    const rong = mo({ nhan: { chu: "Linh chưa đọc", dac: false } });
+    expect(rong).toContain('<p class="dau-hieu vua-viet__nhan"><span class="dh"><span class="cham cham--rong" aria-hidden="true"></span>Linh chưa đọc</span></p>');
+    expect(rong).not.toContain("vua-viet__dem");
+    expect(mo()).not.toContain("vua-viet__nhan");
+  });
+
+  it("khung luan phien: chu trang phai thay duoc (dang go), lop dang-doi, va nut tam dung theo kieu", () => {
+    const html = mo({ chuPhai: createElement("span", { className: "dang-go" }, "Dòng"), dangDoi: true, nutLuanPhien: "luon" });
+    expect(html).toContain('<p class="vua-viet__chu"><span class="dang-go">Dòng</span></p>');
+    expect(html).toContain('<div class="sach-mo dang-doi">');
+    expect(html).toContain('class="btn btn--chu bia-dung bia-dung--luon"');
+    expect(mo({ nutLuanPhien: "giam" })).toContain('class="btn btn--chu bia-dung bia-dung--giam"');
+    const khoa = mo({ locked: true, excerpt: "Dòng hé lộ", chuPhai: createElement("span", null, "Dòng") });
+    expect(khoa).toContain('<p class="he-lo"><span>Dòng</span></p>');
+    // Mac dinh: mot bia va khong tu dat nut thi khong co nut; khong dang doi thi khong co lop.
+    expect(mo()).not.toContain("bia-dung");
+    expect(mo()).toContain('<div class="sach-mo">');
+  });
 });
