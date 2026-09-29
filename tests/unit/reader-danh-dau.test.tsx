@@ -22,7 +22,7 @@ const { lamMoi, router, danhDau } = vi.hoisted(() => {
 // Router phai la MOT doi tuong duy nhat qua moi lan ve. Tra ve doi tuong moi o moi lan ve thi hieu ung don dep cua
 // Reader chay lai lien tuc va tu gui khung dang hen, che mat dung loi dang kiem o day.
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("@/app/actions/library", () => ({ actionMarkRead: danhDau }));
+vi.mock("@/app/actions/library", () => ({ actionMarkRead: danhDau, actionSavePosition: vi.fn(async () => undefined) }));
 vi.mock("@/app/actions/seal", () => ({
   actionAnswer: vi.fn(async () => ({ error: "" })),
   actionGiftKey: vi.fn(async () => ({ error: "" })),

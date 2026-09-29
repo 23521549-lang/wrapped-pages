@@ -7,6 +7,7 @@ import { createBook, findOwnBook, updateBook } from "@/server/library/books";
 import { publishDraft, saveDraft, setDraftTrim } from "@/server/library/drafts";
 import { editRound, type RoundEditResult } from "@/server/library/edit-round";
 import { markRead } from "@/server/library/pages";
+import { savePosition } from "@/server/library/positions";
 import { deleteUnpublishedBook, discardDraft, type DeleteBookResult } from "@/server/library/remove";
 import { setCoverEntry, setTrackEntry, type TimelineResult } from "@/server/library/timeline";
 import { readMe } from "@/server/web/guard";
@@ -85,6 +86,18 @@ export async function actionMarkRead(bookId: string, positions: number[]): Promi
   const me = await readMe();
   if (!me) return [];
   return await markRead(db, me.accountId, bookId, positions);
+}
+
+/**
+ * Luu trang dang doc do cua nguoi dang dang nhap (spec 5a muc F1): man doc goi khi khung dung yen o mot trang du lau.
+ * savePosition kiem quyen doc va trang ton tai. Khong refresh(), khong bao loi: mat mot lan luu chi la lan mo sau mo o
+ * trang truoc do.
+ */
+export async function actionSavePosition(bookId: string, position: number): Promise<void> {
+  if (typeof bookId !== "string" || typeof position !== "number") return;
+  const me = await readMe();
+  if (!me) return;
+  await savePosition(db, me.accountId, bookId, position);
 }
 
 /**

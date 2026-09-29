@@ -1,5 +1,5 @@
-import { and, asc, count, eq, gt, gte, lte, sql } from "drizzle-orm";
-import { books, pages, readSheets, rounds } from "@/server/db/schema";
+import { and, asc, count, eq, gt, gte, lte, or, sql } from "drizzle-orm";
+import { books, pages, readingPositions, readSheets, rounds } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { hopLeChiThem } from "@/lib/doc/chi-them";
@@ -192,6 +192,15 @@ export async function editRound(
         .update(readSheets)
         .set({ position: sql`${readSheets.position} - ${DEM - delta}` })
         .where(and(eq(readSheets.bookId, book), gt(readSheets.position, last + DEM)));
+      // Trang dang doc do (moi nguoi mot dong moi cuon, khong vuong khoa chinh): sau luot thi doi theo delta, nam o
+      // phan luot bi cat thi kep ve to cuoi con lai cua luot. Khong cham updated_at: day la doi cho, khong phai lan doc.
+      await tx
+        .update(readingPositions)
+        .set({ position: sql`case when ${readingPositions.position} > ${last} then ${readingPositions.position} + ${delta} else ${first + n - 1} end` })
+        .where(and(
+          eq(readingPositions.bookId, book),
+          or(gt(readingPositions.position, last), gte(readingPositions.position, first + n)),
+        ));
     }
     await tx
       .update(rounds)

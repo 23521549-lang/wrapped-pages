@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { actionMarkRead } from "@/app/actions/library";
+import { actionMarkRead, actionSavePosition } from "@/app/actions/library";
 import { SealPanel } from "@/components/seal/SealPanel";
 import { TypeReveal } from "@/components/seal/TypeReveal";
 import { ClockSkew, useClockSkew } from "@/components/seal/useTimeLeft";
@@ -21,6 +21,8 @@ import { useShownSheets } from "./ShownSheets";
  * hay dong tab.
  */
 const CHO_MS = 600;
+/** Khung dung yen bao lau thi luu trang dang doc do (spec 5a muc F1): lau hon CHO_MS, vi day la cho mo lan sau. */
+const LUU_VI_TRI_MS = 1200;
 
 export type ReaderProps = {
   bookId: string;
@@ -41,6 +43,8 @@ export type ReaderProps = {
   revealAt: RevealTarget | null;
   /** Vi tri cac to nguoi xem da tung thay, de khong gui lai mot khung da ghi. */
   seen: readonly number[];
+  /** Trang dang doc do may chu da luu cho nguoi xem (tinh tu 1), hay null: dung o trang do thi khong luu lai. */
+  lastPosition?: number | null;
   /** Chi sach cua nguoi kia moi ghi to da xem (chu sach khong co dong nao). */
   trackRead: boolean;
   /** Nguoi xem la chu sach: to chua sua duoc co dong "Dang niem phong" thay cho nut sua. */
@@ -60,6 +64,7 @@ type NghiThuc = { sealId: string; dangGo: boolean };
 /** Man doc phia trinh duyet: sach lat duoc, to niem phong, nghi thuc mo, khung thu thach, ghi cac to nguoi kia da thay. */
 export function Reader({
   bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, seen, trackRead, mine, editedAt, editHref,
+  lastPosition = null,
 }: ReaderProps) {
   const router = useRouter();
   const moId = useId();
@@ -69,6 +74,9 @@ export function Reader({
   const pending = useRef<number[] | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inflight = useRef<Promise<void> | null>(null);
+  // Trang dang doc do da luu (tu may chu, roi theo cac lan luu xong trong tab nay) va dong ho cua lan luu dang hen.
+  const daLuuViTri = useRef(lastPosition);
+  const henViTri = useRef<ReturnType<typeof setTimeout> | null>(null);
   // To dang hien song o ShownSheetsProvider (neu co) de cot phai cua man doc cung theo; khung thu thach van doc no.
   const { shown, setShown } = useShownSheets(start);
   // Lech dong ho do mot lan cho ca man doc: khung thu thach go ra gan lai khi lat trang van dem dung.
@@ -128,6 +136,18 @@ export function Reader({
   const onShow = useCallback(
     (first: number, last: number) => {
       setShown({ first, last });
+      // Trang dang doc do la trang trai cua khung, voi ca sach cua minh lan cua nguoi kia. Khung moi hien ra thi huy lan
+      // luu cua khung truoc: lat nhanh qua mot trang khong doi cho mo lan sau. Luu hong thi im lang, lan dung sau thu lai.
+      if (henViTri.current) clearTimeout(henViTri.current);
+      henViTri.current = null;
+      if (first !== daLuuViTri.current) {
+        henViTri.current = setTimeout(() => {
+          henViTri.current = null;
+          actionSavePosition(bookId, first).then(() => {
+            daLuuViTri.current = first;
+          }, () => {});
+        }, LUU_VI_TRI_MS);
+      }
       if (trackRead) {
         // Chi to that su hien VA may chu chiu ghi moi duoc gui: to trong luot con niem phong voi nguoi xem bi markRead
         // loc bo im lang, nen bo khoi khung gui - de no khong bi nho nham la da ghi, va van duoc gui khi niem phong vua
@@ -153,7 +173,7 @@ export function Reader({
       // Khung dung yen ma khong con to dang go thi thoi: quay lai thi to do hien thang, khong go lai tu dau.
       if (moIndex !== null && (moIndex + 1 < first || moIndex + 1 > last)) stopReveal();
     },
-    [moIndex, stopReveal, setShown, trackRead, flush, khoaKey],
+    [moIndex, stopReveal, setShown, trackRead, flush, khoaKey, bookId],
   );
 
   useEffect(
@@ -166,6 +186,9 @@ export function Reader({
       // khoi hang doi (app-router-instance.js, dispatchAction), refresh se chay song song voi no.
       if (timer.current) clearTimeout(timer.current);
       timer.current = null;
+      // Trang chua dung du LUU_VI_TRI_MS thi khong phai cho mo lan sau: bo luon, nhu khung da xem.
+      if (henViTri.current) clearTimeout(henViTri.current);
+      henViTri.current = null;
       const p = inflight.current;
       if (p) void p.then(() => router.refresh());
     },

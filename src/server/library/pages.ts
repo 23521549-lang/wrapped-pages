@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, max } from "drizzle-orm";
-import { books, pages, readSheets } from "@/server/db/schema";
+import { books, pages, readingPositions, readSheets } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { GOP_DOC_MS, ghiHayGop } from "@/server/feed/record";
@@ -23,6 +23,8 @@ export type ReaderView = {
    * xem nao nen voi ho luon la to 1: man doc cua chinh minh khong dung so nay (startSheet chi doc no khi mine sai).
    */
   firstUnread: number;
+  /** Trang dang doc do cua nguoi xem (savePosition), tinh tu 1; null khi chua co. startSheet tu bo so vuot cuon. */
+  lastPosition: number | null;
 };
 
 /** Tai lieu dung thay cho to khoa: chi dong he lo, hoac mot doan trong. Khong bao gio chua noi dung that. */
@@ -46,7 +48,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const book = await findReadableBook(tx, viewerId, bookId);
     if (!book) return null;
     const mine = book.ownerId === viewerId;
-    const [rows, daXem, sealRows, luot, replies, bia, nhac] = await Promise.all([
+    const [rows, daXem, sealRows, luot, replies, bia, nhac, [dangDoc]] = await Promise.all([
       tx
         .select({ position: pages.position, content: pages.content, publishedAt: pages.publishedAt, roundId: pages.roundId })
         .from(pages)
@@ -62,6 +64,10 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
       book.mode === "chia-se" ? repliesOfBook(tx, book.id) : Promise.resolve<ReaderReply[]>([]),
       newestCover(tx, book.id),
       newestTrack(tx, book.id),
+      tx
+        .select({ position: readingPositions.position })
+        .from(readingPositions)
+        .where(and(eq(readingPositions.accountId, viewerId), eq(readingPositions.bookId, book.id))),
     ]);
     // Bia va nhac chay trong CUNG anh chup voi cac cau tren, nen mot lan Dang chen vao giua khong the ghep bia cua
     // trang thai nay voi to cua trang thai kia. Cuon khong con o bia nao coi nhu khong ton tai (nhu readOwnBook).
@@ -95,7 +101,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     // To nho nhat chua thay: man doc mo o day khi duong dan khong kem ?trang (src/lib/reading.ts). Chu sach khong co
     // dong da xem nao nen ra to 1, va startSheet bo qua so nay voi cuon cua chinh minh.
     const firstUnread = rows.find((r) => !coRoi.has(r.position))?.position ?? 0;
-    return { book: view, mine, sheets, seals, rounds, replies, seen, firstUnread };
+    return { book: view, mine, sheets, seals, rounds, replies, seen, firstUnread, lastPosition: dangDoc?.position ?? null };
   });
 }
 

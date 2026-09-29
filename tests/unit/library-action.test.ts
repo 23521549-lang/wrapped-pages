@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   actionDeleteBook, actionDiscardDraft, actionEditRound, actionPublish, actionRemoveCoverEntry, actionRemoveTrackEntry,
-  actionSetCoverEntry, actionSetDraftTrim, actionSetTrackEntry, actionUpdateBook,
+  actionSavePosition, actionSetCoverEntry, actionSetDraftTrim, actionSetTrackEntry, actionUpdateBook,
 } from "@/app/actions/library";
 import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "@/app/actions/messages";
 import { DOC_LIMITS } from "@/lib/doc/validate";
@@ -17,8 +17,9 @@ import { DOC_LIMITS } from "@/lib/doc/validate";
 
 const {
   readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
-  sweepMediaAfterResponse, setDraftTrim, setCoverEntry, setTrackEntry, redirect, refresh,
+  sweepMediaAfterResponse, setDraftTrim, setCoverEntry, setTrackEntry, savePosition, redirect, refresh,
 } = vi.hoisted(() => ({
+  savePosition: vi.fn(async () => true),
   readMe: vi.fn(),
   updateBook: vi.fn(),
   findOwnBook: vi.fn(),
@@ -43,6 +44,7 @@ vi.mock("@/server/library/drafts", () => ({ publishDraft, saveDraft: vi.fn(), se
 vi.mock("@/server/library/timeline", () => ({ setCoverEntry, setTrackEntry }));
 vi.mock("@/server/library/edit-round", () => ({ editRound }));
 vi.mock("@/server/library/pages", () => ({ markRead: vi.fn() }));
+vi.mock("@/server/library/positions", () => ({ savePosition }));
 vi.mock("@/server/library/remove", () => ({ deleteUnpublishedBook, discardDraft }));
 vi.mock("@/server/web/media-sweep", () => ({ sweepMediaAfterResponse }));
 vi.mock("@/server/db", () => ({ db: { la: "db-gia" } }));
@@ -79,7 +81,7 @@ function truoc(a: { mock: { invocationCallOrder: number[] } }, b: { mock: { invo
 afterEach(() => {
   for (const f of [
     readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
-    sweepMediaAfterResponse, redirect, refresh,
+    sweepMediaAfterResponse, redirect, refresh, savePosition,
   ]) f.mockReset();
   redirect.mockImplementation((to: string) => {
     throw Object.assign(new Error(`redirect:${to}`), { di: to });
@@ -91,6 +93,25 @@ afterEach(() => {
  * Ly do: giu ca hai la hai duong ghi cho cung mot gia tri." Nen action chi chuyen tiep ten va che do, va khong con hen
  * don rac: doi ten hay che do khong bao gio bien mot anh bia thanh rac.
  */
+describe("actionSavePosition", () => {
+  it("chua dang nhap thi khong luu; dang nhap thi luu cho dung nguoi, khong refresh", async () => {
+    readMe.mockResolvedValue(null);
+    await actionSavePosition(BOOK, 3);
+    expect(savePosition).not.toHaveBeenCalled();
+    readMe.mockResolvedValue(ME);
+    await actionSavePosition(BOOK, 3);
+    expect(savePosition).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, BOOK, 3);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("dau vao khong phai chuoi va so thi khong cham database", async () => {
+    readMe.mockResolvedValue(ME);
+    await actionSavePosition(7 as unknown as string, 3);
+    await actionSavePosition(BOOK, "3" as unknown as number);
+    expect(savePosition).not.toHaveBeenCalled();
+  });
+});
+
 describe("actionUpdateBook", () => {
   it("sua xong: chi chuyen tiep ten va che do, khong hen don rac, roi chuyen trang", async () => {
     readMe.mockResolvedValue(ME);
