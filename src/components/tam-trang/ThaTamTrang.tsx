@@ -256,7 +256,11 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia }: {
         </div>
       </div>
 
-      <section className="tha" id={HOP} aria-labelledby={`${HOP}-t`} hidden={!mo} inert={dangTha || undefined} ref={hopRef}>
+      {/* data-giu-lam-moi: hop dang mo thi Ke sach khong tu lam moi (TuCapNhat). */}
+      <section
+        className="tha" id={HOP} aria-labelledby={`${HOP}-t`} hidden={!mo} inert={dangTha || undefined} ref={hopRef}
+        data-giu-lam-moi={mo || undefined}
+      >
         <div className="tha__dau">
           <div>
             <h2 className="d" id={`${HOP}-t`}>Thả tâm trạng</h2>

@@ -5,7 +5,8 @@ import { act, cleanup, render } from "@testing-library/react";
 /*
  * TuCapNhat (spec 5a muc G): khi tab dang duoc xem, cu --dur-tu-cap-nhat (15 giay; jsdom khong co token) hoi phien ban
  * cua Ke sach; khac phien ban luc trang ve thi router.refresh(). Tab vua hien lai thi hoi ngay. Khong lam moi khi dang go
- * (focus o o nhap), khi co hop dang mo (aria-expanded), khi mot action dang chay (aria-busy), hay khi dau Moi con dang tan.
+ * (focus o o nhap), khi co hop dang mo (data-giu-lam-moi), khi mot action dang chay (aria-busy), hay khi dau Moi con dang
+ * tan. Mot nut aria-expanded thuong (vd "Mở rộng" ke) khong chan.
  */
 
 const { phienBan, router } = vi.hoisted(() => ({
@@ -51,7 +52,7 @@ const BAN: [string, () => void][] = [
   }],
   ["co hop dang mo", () => {
     const b = document.createElement("button");
-    b.setAttribute("aria-expanded", "true");
+    b.dataset.giuLamMoi = "true";
     document.body.append(b);
   }],
   ["mot action dang chay", () => {
@@ -103,6 +104,16 @@ describe("TuCapNhat", () => {
     await qua(CHU_KY);
     expect(router.refresh).not.toHaveBeenCalled();
     for (const e of document.body.querySelectorAll("textarea, button, li")) e.remove();
+    await qua(CHU_KY);
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("nut aria-expanded thuong (ke dang mo rong) khong chan lam moi", async () => {
+    const b = document.createElement("button");
+    b.setAttribute("aria-expanded", "true");
+    document.body.append(b);
+    phienBan.mockResolvedValue("v2");
+    render(<TuCapNhat phienBan="v1" />);
     await qua(CHU_KY);
     expect(router.refresh).toHaveBeenCalledTimes(1);
   });

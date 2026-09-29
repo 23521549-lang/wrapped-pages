@@ -10,13 +10,14 @@ const CHU_KY_MAC_DINH = 15_000;
 
 /**
  * Trang dang ban voi nguoi dung, lam moi luc nay la cat ngang viec ho dang lam (spec 5a muc G2): dang go (focus o o
- * nhap), co hop dang mo (aria-expanded, vd hop Tha tam trang), mot action dang chay (aria-busy), hay dau Moi con dang
+ * nhap), co hop dang mo (phan tu tu danh dau data-giu-lam-moi, vd hop Tha tam trang; khong xet aria-expanded chung
+ * chung vi "Mở rộng" ke giu aria-expanded suot luc ke mo rong), mot action dang chay (aria-busy), hay dau Moi con dang
  * tan (TheoDoiXem dat data-tan la luc tan xong: lam moi giua chung se lam dau bien mat giua chung).
  */
 function dangBan(): boolean {
   const o = document.activeElement;
   if (o instanceof HTMLElement && (o.isContentEditable || o.matches("input, textarea, select"))) return true;
-  if (document.querySelector('[aria-expanded="true"], [aria-busy="true"]')) return true;
+  if (document.querySelector('[data-giu-lam-moi], [aria-busy="true"]')) return true;
   const bay = Date.now();
   return [...document.querySelectorAll<HTMLElement>("[data-tan]")].some((e) => Number(e.dataset.tan) > bay);
 }

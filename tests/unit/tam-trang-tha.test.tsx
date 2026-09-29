@@ -217,6 +217,16 @@ describe("ThaTamTrang: hop chon", () => {
     expect(nutMo().getAttribute("aria-expanded")).toBe("false");
     expect(document.activeElement).toBe(nutMo());
   });
+
+  it("hop dang mo thi mang data-giu-lam-moi (ke khong tu lam moi luc nay); dong thi go", () => {
+    const { container } = ve();
+    const hop = () => container.querySelector("#tha-tam-trang") as HTMLElement;
+    expect(hop().hasAttribute("data-giu-lam-moi")).toBe(false);
+    fireEvent.click(nutMo());
+    expect(hop().hasAttribute("data-giu-lam-moi")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Thôi" }));
+    expect(hop().hasAttribute("data-giu-lam-moi")).toBe(false);
+  });
 });
 
 /*
