@@ -84,6 +84,14 @@ Ba trạng thái của trang phải:
 - Bìa rút theo túi xáo: đi hết danh sách rồi mới lặp, và không bao giờ hiện lại bìa vừa hiện, kể cả lần đổi đầu tiên.
 - Dừng được, theo WCAG SC 2.2.2: không đổi khi trang bị ẩn, khi con trỏ đang trên khung, khi khung giữ focus, khi đã chọn tạm dừng, và không bao giờ đổi khi máy bật giảm chuyển động. Nút "Tạm dừng hiệu ứng" là **một** công tắc dùng chung với bầu trời; khi không ai giữ tâm trạng (không có dải trời) thì khung sách tự đặt một nút cấp chữ cùng công tắc đó ngay dưới nó.
 
+### Khung sách lớn luân phiên (đợt năm, 5a)
+
+- Khung sách lớn hiện các **lượt chưa đọc** của cả hai phía, mới nhất trước, tối đa sáu: lượt của người kia mà mình còn trang chưa đọc (nhãn **"Bạn chưa đọc"**, chấm đặc, chữ đậm `--blue-ink` như "Trang mới"), và lượt của mình trong cuốn chia sẻ mà người kia còn trang chưa đọc (nhãn **"{tên} chưa đọc"**, chấm rỗng `.cham--rong`, chữ `--color-ink-2`: chỉ là thông tin, không phải việc của mình). Nhãn nằm ngay dưới dòng "N trang, thời điểm".
+- Không có lượt nào chưa đọc: khung như cũ (cuốn có trang gần nhất). Một lượt: hiện lượt đó, không luân phiên, không dòng đếm. Từ hai lượt: thêm dòng đếm "Lượt chưa đọc 1 / 4" (`--text-xs`, `--color-ink-3`, số thẳng hàng) và cứ **15 giây** (`--dur-luan-phien`) đổi sang lượt kế, đổi cả cuốn (tên, bìa, nút).
+- Lần đổi: chữ trang trái, tranh dán và trang phải mờ đi `--dur-doi-luot` (240ms, chỉ `opacity`), rồi lượt mới hiện và trang phải **gõ từng chữ** đúng nhịp mở khóa (`--dur-go`, con trỏ `.con-tro` nháy thêm một chu kỳ rồi tắt). Lượt còn niêm phong với người xem chỉ gõ dòng hé lộ. Lần vẽ đầu hiện đủ chữ ngay. Trình đọc màn hình đọc bản đầy đủ một lần (chữ ẩn), phần đang gõ ẩn với nó; vùng không `aria-live`.
+- Đoạn của mỗi lượt: đoạn đã chọn (dấu `doanKe`), không thì một đoạn ngẫu nhiên cố định theo ngày trong các trang có chữ của lượt, hay dòng hé lộ khi lượt còn niêm phong. Nút chính: lượt của người kia "Đọc tiếp" (qua tấm bìa, tới trang đang đọc dở), lượt của mình "Viết tiếp". Cả khung mở đúng trang của đoạn đang hiện.
+- Dừng khi con trỏ hay focus ở trong khung, khi tab ẩn, và theo công tắc "Tạm dừng hiệu ứng" chung. Giảm chuyển động: **vẫn đổi lượt** nhưng đổi ngay, không mờ, không gõ; vì lượt vẫn đổi nên lúc đó vẫn phải có một nút tạm dừng: trang không có dải trời thì nút của khung hiện cả khi giảm chuyển động (`.bia-dung--luon`), trang có dải trời thì nút của khung chỉ hiện khi giảm chuyển động (`.bia-dung--giam`, lúc nút của dải trời bị giấu). Mỗi lúc chỉ một nút.
+
 ## 6. Dấu hiệu trạng thái
 
 Dấu hiệu không phải nút, nên trông khác hẳn nút: không nền, không viền, không bo tròn. Mỗi dấu hiệu là một ký hiệu nhỏ 12px kèm chữ.
@@ -117,6 +125,8 @@ Nền giấy của mỗi bìa là một cặp token trong `tokens.css` (`--bia-n
 - Màn rộng (trên 900px): cột cao đúng bằng cuốn sách mở bên cạnh. Cách làm: lưới kéo giãn cả hàng, cột đặt `height: 0; min-height: 100%` nên không bao giờ tự kéo dài hàng; dài hơn thì cuộn bên trong.
 - Màn hẹp (từ 900px trở xuống), hoặc khi chưa có cuốn sách mở: cao tối đa 340px.
 - Giữ nguyên: ẩn thanh cuộn nhưng có vệt mờ ở đáy, vùng cuộn nhận Tab (`tabindex="0"`, vai trò vùng, có nhãn), tiêu đề ngày dính mép trên, không cuộn ngang.
+- **Dấu Mới (đợt năm, phương án A).** Việc người kia làm mà mình chưa xem có ở cột phải, ngay dưới giờ, một chấm 6px và chữ đậm "Mới" (`.dh--moi`, cỡ `--text-xs`); trình đọc màn hình nghe ", mới" ngay sau câu. Việc của chính mình không bao giờ có dấu. Tính là đã xem khi con trỏ hay focus vào dòng, hoặc dòng nằm trong khung nhìn (ít nhất một nửa, vùng cuộn cắt sẵn phần khuất) liên tục `--dur-moi-xem` (1 giây). Lúc đó dấu **tan chậm** `--dur-moi-tan` (3 giây, chủ dự án chọn: tan nhanh quá thì không kịp thấy), chỉ `opacity`, chỗ của dấu vẫn giữ nên dòng không xê dịch; giảm chuyển động thì ẩn ngay. Trình duyệt gom các dòng vừa xem, gửi một lần sau 800ms; máy chủ chỉ ghi dòng người đó được thấy. Dòng gộp (đổi liền nhiều lần) cập nhật giờ thì lại là Mới.
+- **Loại mới (đợt năm):** thả tâm trạng (dòng phụ là lời nhắn, bấm tới Lịch hoa), tạo sách, đổi tên sách ("đổi tên **A** thành **B**", câu có hai phần đậm), đổi bìa và đổi nhạc (theo lượt hay lúc tạo sách; nhãn là tên tranh, "Ảnh của X", tên bài và kênh lấy ở máy chủ, "Tắt nhạc", "Giữ bìa trước", "Phát tiếp bài trước"), sửa trang, và "X đã đọc tới trang N" (chỉ chủ sách thấy). Đổi liền nhiều lần trong 10 phút (đọc: 30 phút) gộp thành một dòng; đổi rồi đổi lại như cũ thì dòng biến mất. Trang đăng kèm bìa hay nhạc riêng của lượt có nhãn "Bìa mới", "Nhạc mới".
 
 ## 9. Chuyển động và vi tương tác
 
@@ -127,7 +137,7 @@ Chỉ có hai vi tương tác trên kệ, cả hai do người dùng kích hoạ
 
 Với `prefers-reduced-motion: reduce`: sách không rút ra (chỉ còn bóng đổi màu 150ms), tranh dán giữ nguyên góc nghiêng. Không hiện dần từng khối khi cuộn.
 
-Trang Kệ sách có đúng hai hiệu ứng **tự chạy**, cả hai được chủ dự án chọn có chủ ý và cả hai nghe **một** công tắc "Tạm dừng hiệu ứng": nét vẽ của bầu trời trong dải trời, và bìa tự đổi của khung sách lớn (mục 5). Cả hai đứng yên hẳn khi máy bật giảm chuyển động. Không thêm hiệu ứng tự chạy nào khác.
+Trang Kệ sách có đúng ba thứ **tự chạy**, cả ba được chủ dự án chọn có chủ ý và cả ba nghe **một** công tắc "Tạm dừng hiệu ứng": nét vẽ của bầu trời trong dải trời, bìa tự đổi của khung sách lớn, và khung sách lớn luân phiên các lượt chưa đọc (đợt năm, mục 5). Hai thứ đầu đứng yên hẳn khi máy bật giảm chuyển động; khung luân phiên vẫn đổi lượt nhưng không mờ, không gõ. Dấu Mới tan chậm của cột Hoạt động là phản hồi cho việc người dùng vừa xem, không phải hiệu ứng tự chạy. Không thêm hiệu ứng tự chạy nào khác.
 
 ## 10. Chữ trên giao diện
 
@@ -287,6 +297,15 @@ Bốn quyết định chủ dự án duyệt qua bản mô phỏng. Spec: `docs/
 - **Sửa trang chỉ viết thêm và sửa chính tả**, máy chủ kiểm lại; chữ cũ bị xoá hiện gạch ngang đúng chỗ và bấm là trả lại (mục 12).
 - **Sửa được cả trang niêm phong**: "Sửa trang N" có dưới mọi tờ của chủ sách; niêm phong giữ nguyên, người kia không thấy chữ nào (mục 12). Màn đọc không đổi gì khác.
 - **Sửa sách xếp như Sách mới**, bỏ khung Nội dung; Bìa và Nhạc nền là hai dòng thời gian thu gọn, bấm mốc thì bảng chọn rũ xuống, chọn là lưu, có Hoàn tác (mục 15). Viết tiếp giữ nguyên.
+
+## 17c. Đợt năm, phần 5a (30/09)
+
+Chủ dự án duyệt qua bản mô phỏng (phương án A cho dấu Mới, tan chậm). Spec: `docs/superpowers/specs/2026-09-30-dot-nam-a-hoat-dong-ke-sach.md`.
+
+- **Dấu Mới và bảy loại mới** trên cột Hoạt động (mục 8).
+- **Khung sách lớn luân phiên** các lượt chưa đọc của cả hai phía (mục 5).
+- **Mở sách ở trang đang đọc dở**, theo tài khoản, với mọi cuốn (của mình lẫn của người kia): màn đọc lưu trang trái của khung khi khung đứng yên 1,2 giây; lần sau mở không kèm `?trang` thì ra đúng trang đó, thắng cả "trang đầu chưa đọc". Sửa lượt làm số trang đổi thì vị trí dời theo (nằm trong phần bị cắt thì về trang cuối của lượt). Không có giao diện riêng.
+- **Kệ tự cập nhật**: tab đang được xem thì cứ 15 giây (`--dur-tu-cap-nhat`) hỏi một chuỗi phiên bản rẻ; khác lúc vẽ thì làm mới trang (không tải lại). Không làm mới khi đang gõ, khi hộp "Thả tâm trạng" đang mở (hộp tự đánh dấu `data-giu-lam-moi`; không xét `aria-expanded` chung chung vì nút "Mở rộng" kệ giữ nó suốt lúc kệ mở rộng), khi một action đang chạy (`aria-busy`), hay khi dấu Mới còn đang tan.
 
 ## 17b. Hiệu năng (27/09, trước khi đưa lên production)
 
