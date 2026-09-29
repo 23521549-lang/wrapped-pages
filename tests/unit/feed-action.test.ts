@@ -1,19 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { actionSeenActivity } from "@/app/actions/feed";
+import { actionPhienBanKe, actionSeenActivity } from "@/app/actions/feed";
 import { CAN_DANG_NHAP } from "@/app/actions/messages";
 
 /*
- * Action "da xem" tren ham gia: luat database o feed-seen.test.ts. O day chi kiem: nguoi dang nhap truoc, chi chuoi
- * duoc chuyen xuong markSeen, nguoi xem luon la readMe(). Khong refresh(): dau Moi tan tai cho, trang khong ve lai.
+ * Action "da xem" va phien ban Ke sach tren ham gia: luat database o feed-seen.test.ts va phien-ban-ke.test.ts. O day chi
+ * kiem: nguoi dang nhap truoc, chi chuoi duoc chuyen xuong markSeen, nguoi xem luon la readMe(). Khong refresh(): dau
+ * Moi tan tai cho, trang khong ve lai.
  */
 
-const { readMe, markSeen, refresh } = vi.hoisted(() => ({
+const { readMe, markSeen, phienBanKe, refresh } = vi.hoisted(() => ({
   readMe: vi.fn(),
   markSeen: vi.fn(async () => undefined),
+  phienBanKe: vi.fn(async () => "3|1700000000000|0|"),
   refresh: vi.fn(),
 }));
 vi.mock("@/server/web/guard", () => ({ readMe }));
 vi.mock("@/server/feed/seen", () => ({ markSeen }));
+vi.mock("@/server/feed/version", () => ({ phienBanKe }));
 vi.mock("@/server/db", () => ({ db: { la: "db-gia" } }));
 vi.mock("next/cache", () => ({ refresh }));
 
@@ -44,5 +47,17 @@ describe("actionSeenActivity", () => {
     readMe.mockResolvedValue(ME);
     expect(await actionSeenActivity("tat-ca")).toEqual({ ok: true });
     expect(markSeen).not.toHaveBeenCalled();
+  });
+});
+
+describe("actionPhienBanKe", () => {
+  it("chua dang nhap thi chuoi rong; dang nhap thi phien ban cua dung nguoi dang nhap", async () => {
+    readMe.mockResolvedValue(null);
+    expect(await actionPhienBanKe()).toBe("");
+    expect(phienBanKe).not.toHaveBeenCalled();
+    readMe.mockResolvedValue(ME);
+    expect(await actionPhienBanKe()).toBe("3|1700000000000|0|");
+    expect(phienBanKe).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId);
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

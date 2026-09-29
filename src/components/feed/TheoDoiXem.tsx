@@ -4,8 +4,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { actionSeenActivity } from "@/app/actions/feed";
 import { msTuCss } from "@/components/reader/Flipbook";
 
-/** Chi dung khi token thieu hay sai don vi; nguon that la --dur-moi-xem (1000ms) trong tokens.css. */
+/** Chi dung khi token thieu hay sai don vi; nguon that la --dur-moi-xem (1000ms) va --dur-moi-tan (3000ms) trong tokens.css. */
 const XEM_MAC_DINH = 1000;
+const TAN_MAC_DINH = 3000;
 /** Gom cac dong vua xem trong chung nay roi gui mot lan. */
 const GOM_MS = 800;
 /**
@@ -22,7 +23,8 @@ const hien = () => document.visibilityState === "visible";
  * (spec 5a muc D). Dong Moi la li[data-moi][data-id]. Tinh da xem khi: dong nam trong khung nhin it nhat mot nua lien
  * tuc --dur-moi-xem (khung nhin la cua so: vung cuon cat san phan khuat, nen khung Hoat dong nam duoi man hinh dien
  * thoai chua cuon toi thi chua tinh), hay khi con tro, focus vao dong. Tab an thi khong tinh, hien lai thi quan sat lai.
- * Da xem thi dong mang lop da-xem ngay (CSS cho dau tan tai cho, khong xe dich), id gom lai gui mot lan sau GOM_MS;
+ * Da xem thi dong mang lop da-xem ngay (CSS cho dau tan tai cho, khong xe dich) va data-tan (luc tan xong, de TuCapNhat
+ * khong lam moi giua chung), id gom lai gui mot lan sau GOM_MS;
  * gui loi thi bo qua (lan mo sau dong van Moi, xem lai la xong). moi la chuoi id cac dong Moi: danh sach doi (trang ve
  * lai) thi quan sat lai tu dau.
  */
@@ -34,10 +36,12 @@ export function TheoDoiXem({ moi, children }: { moi: string; children: ReactNode
     if (!vung || moi === "") return undefined;
     const dong = [...vung.querySelectorAll<HTMLElement>("li[data-moi][data-id]")].filter((li) => !li.classList.contains("da-xem"));
     if (dong.length === 0) return undefined;
-    const giu = (() => {
-      const ms = msTuCss(getComputedStyle(document.documentElement).getPropertyValue("--dur-moi-xem"));
-      return Number.isFinite(ms) && ms > 0 ? ms : XEM_MAC_DINH;
-    })();
+    const token = (ten: string, macDinh: number) => {
+      const ms = msTuCss(getComputedStyle(document.documentElement).getPropertyValue(ten));
+      return Number.isFinite(ms) && ms > 0 ? ms : macDinh;
+    };
+    const giu = token("--dur-moi-xem", XEM_MAC_DINH);
+    const tan = token("--dur-moi-tan", TAN_MAC_DINH);
 
     const cho = new Set<string>();
     let hen: ReturnType<typeof setTimeout> | null = null;
@@ -57,6 +61,8 @@ export function TheoDoiXem({ moi, children }: { moi: string; children: ReactNode
     const xem = (li: HTMLElement) => {
       if (li.classList.contains("da-xem")) return;
       li.classList.add("da-xem");
+      // Luc dau tan xong: TuCapNhat khong lam moi truoc luc nay, de dau khong bien mat giua chung.
+      li.dataset.tan = String(Date.now() + tan);
       thoiDem(li);
       quan?.unobserve(li);
       if (li.dataset.id) cho.add(li.dataset.id);

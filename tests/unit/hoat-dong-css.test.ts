@@ -61,7 +61,7 @@ describe("khung Hoat dong trong app.css", () => {
     expect(khai(CSS, ".da-xem .hoat-dong__moi")).toBe(" opacity: 0; ");
     expect(CSS).toContain("@media (prefers-reduced-motion: reduce){ .hoat-dong__moi{ transition: none; } }");
     const TOKENS = readFileSync("src/styles/tokens.css", "utf8");
-    for (const t of ["--dur-moi-xem: 1000ms;", "--dur-moi-tan: 3000ms;"]) expect(TOKENS).toContain(t);
+    for (const t of ["--dur-moi-xem: 1000ms;", "--dur-moi-tan: 3000ms;", "--dur-tu-cap-nhat: 15000ms;"]) expect(TOKENS).toContain(t);
   });
 
   it("dong cao toi thieu 44px tren man cam ung va man hep", () => {

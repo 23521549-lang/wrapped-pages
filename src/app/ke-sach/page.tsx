@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { db } from "@/server/db";
 import { listActivity } from "@/server/feed/list";
+import { phienBanKe } from "@/server/feed/version";
 import { listShelf, type ShelfBook as Sach } from "@/server/library/shelf";
 import { coverSlots } from "@/server/library/timeline";
 import { unreadRounds, type LuotChuaDoc } from "@/server/library/unread-rounds";
@@ -10,6 +11,7 @@ import { tenCacBai } from "@/server/media/ten-youtube";
 import { currentMoods } from "@/server/mood/moods";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
+import { TuCapNhat } from "@/components/TuCapNhat";
 import { KhungLuanPhien, type LuotKhung } from "@/components/book/KhungLuanPhien";
 import { OpenBook } from "@/components/book/OpenBook";
 import { Ngan, type SachTrenKe } from "@/components/book/Ngan";
@@ -28,11 +30,12 @@ export default async function KeSach() {
   const me = await requireMe();
   // Mot now cho ca ke va dong Hoat dong: hen gio vua toi gio thi the sach va dong "da toi gio mo" noi cung mot dieu.
   const now = new Date();
-  const [shelf, feed, moods, chuaDoc] = await Promise.all([
+  const [shelf, feed, moods, chuaDoc, phienBan] = await Promise.all([
     listShelf(db, me.accountId, now),
     listActivity(db, me.accountId, now),
     currentMoods(db, now),
     unreadRounds(db, me.accountId, now),
+    phienBanKe(db, me.accountId, now),
   ]);
   // Dai troi: mac dinh troi cua nguoi kia, troi cua minh o o cua so (hoac la troi lon khi chi minh co); them cham mau
   // tren nut va hop chon o dong tieu de.
@@ -111,6 +114,8 @@ export default async function KeSach() {
   return (
     <>
       <AppNav me={me} current="ke-sach" />
+      {/* Ke tu cap nhat khi tab dang duoc xem (spec 5a muc G): khong ve gi. */}
+      <TuCapNhat phienBan={phienBan} />
       <main className="man">
         <HoaDefs />
         {/* Troi tam cua lan tha (spec bo sung B5) di tu hop tha sang dai troi: mot ngu canh boc ca hai, khong ve the nao. */}

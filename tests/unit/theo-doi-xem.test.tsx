@@ -92,6 +92,8 @@ describe("TheoDoiXem", () => {
     const { container } = ve();
     fireEvent.pointerOver(dong(container, "b").querySelector("button") as HTMLElement);
     expect(dong(container, "b").classList.contains("da-xem")).toBe(true);
+    // Luc dau tan xong (--dur-moi-tan, jsdom dung mac dinh 3 giay): ke khong tu lam moi truoc luc do.
+    expect(Number(dong(container, "b").dataset.tan)).toBe(Date.now() + 3000);
     fireEvent.focusIn(dong(container, "a").querySelector("button") as HTMLElement);
     fireEvent.pointerOver(container.querySelector("li:not([data-moi]) button") as HTMLElement);
     act(() => vi.advanceTimersByTime(799));
