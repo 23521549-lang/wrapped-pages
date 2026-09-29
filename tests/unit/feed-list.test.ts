@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
-import { activity, books, sealAttempts, seals } from "@/server/db/schema";
+import { activity, activitySeen, bookCovers, books, bookTracks, moods, sealAttempts, seals } from "@/server/db/schema";
 import { FEED_LIMIT, listActivity } from "@/server/feed/list";
 import { recordActivity } from "@/server/feed/record";
 import type { BookMode } from "@/lib/book";
 import { dayKey } from "@/lib/when";
+import { DONG_MAC_DINH } from "../helpers/feed";
 import { haiCuon } from "../helpers/library";
 import { luotChu } from "../helpers/round";
 
@@ -29,6 +30,8 @@ async function ke() {
   await them(s.rieng, 2);
   await them(s.rieng, 3, 4);
   await them(s.rieng, 10);
+  // Cac dong tao-sach do haiCuon ghi ra khong thuoc cac bai nay: moi ca chi thay dung su kien no tu ghi.
+  await s.db.delete(activity);
   const luotCua = (bookId: string, position: number): string => {
     const id = luot.get(`${bookId}:${position}`);
     if (!id) throw new Error(`chua dung luot cho to ${position}`);
@@ -53,11 +56,11 @@ describe("listActivity: ai thay gi", () => {
     const { db, seat1, seat2, chung, tren } = await ke();
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-10)), kind: "dang-trang", sealId: null });
     const cuaChu = {
-      id: expect.any(String), kind: "dang-trang", at: phut(-10), bookId: chung, bookTitle: "Chuyện chưa kể",
+      ...DONG_MAC_DINH, id: expect.any(String), kind: "dang-trang", at: phut(-10), bookId: chung, bookTitle: "Chuyện chưa kể",
       firstPosition: 1, lastPosition: 2, sealKind: null, note: null, count: 1,
     };
     expect(await listActivity(db, seat1.id, NOW)).toEqual([{ ...cuaChu, by: "me" }]);
-    expect(await listActivity(db, seat2.id, NOW)).toEqual([{ ...cuaChu, by: "partner" }]);
+    expect(await listActivity(db, seat2.id, NOW)).toEqual([{ ...cuaChu, by: "partner", isNew: true }]);
   });
 
   it("hoi-dap: chu sach va nguoi hoi dap deu thay, khoang to cua luot, khong chip; sach chuyen rieng tu thi chi chu sach thay", async () => {
@@ -120,10 +123,10 @@ describe("listActivity: ai thay gi", () => {
     const { db, seat1, seat2 } = await ke();
     await recordActivity(db, { kind: "doi-mat-khau", actorId: seat2.id, subjectId: seat1.id, at: phut(-3) });
     const dong = {
-      id: expect.any(String), kind: "doi-mat-khau", at: phut(-3), bookId: null, bookTitle: null,
+      ...DONG_MAC_DINH, id: expect.any(String), kind: "doi-mat-khau", at: phut(-3), bookId: null, bookTitle: null,
       firstPosition: null, lastPosition: null, sealKind: null, note: null, count: 1,
     };
-    expect(await listActivity(db, seat1.id, NOW)).toEqual([{ ...dong, by: "partner" }]);
+    expect(await listActivity(db, seat1.id, NOW)).toEqual([{ ...dong, by: "partner", isNew: true }]);
     expect(await listActivity(db, seat2.id, NOW)).toEqual([{ ...dong, by: "me" }]);
   });
 
@@ -224,7 +227,10 @@ describe("listActivity: du lieu tra ve", () => {
     for (const lo of [seat1.id, seat2.id, cauDo, "quán cũ"]) expect(chu).not.toContain(lo);
     for (const i of items) {
       expect(Object.keys(i).sort()).toEqual(
-        ["at", "bookId", "bookTitle", "by", "count", "firstPosition", "id", "kind", "lastPosition", "note", "sealKind"],
+        [
+          "at", "biaMoi", "bookId", "bookTitle", "by", "count", "detail", "firstPosition", "id", "isNew", "kind", "lastPosition",
+          "nhacMoi", "note", "ordinal", "sealKind", "weather",
+        ],
       );
     }
   });
@@ -241,8 +247,8 @@ describe("listActivity: du lieu tra ve", () => {
     await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-5), 5), kind: "tang-khoa", sealId: khoaRieng.id });
     const items = await listActivity(db, seat2.id, NOW);
     expect(items).toEqual([{
-      id: expect.any(String), kind: "tang-khoa", by: "partner", at: phut(-5), bookId: chung, bookTitle: "Chuyện chưa kể",
-      firstPosition: 5, lastPosition: 5, sealKind: null, note: null, count: 1,
+      ...DONG_MAC_DINH, id: expect.any(String), kind: "tang-khoa", by: "partner", at: phut(-5), bookId: chung,
+      bookTitle: "Chuyện chưa kể", firstPosition: 5, lastPosition: 5, sealKind: null, note: null, count: 1, isNew: true,
     }]);
   });
 
@@ -265,5 +271,70 @@ describe("listActivity: du lieu tra ve", () => {
     await db.transaction(async (tx) => {
       await expect(listActivity(tx, seat1.id, NOW)).rejects.toThrow("readSnapshot");
     });
+  });
+});
+
+describe("listActivity: bay loai cua dot nam va dau Moi", () => {
+  it("tha tam trang: ca hai thay, kem kieu troi va loi nhan; thu lai thi ca hai mat dong", async () => {
+    const { db, seat1, seat2 } = await ke();
+    const [m] = await db.insert(moods).values({ accountId: seat2.id, weather: "mua-phun", note: "Nhớ ghê", setAt: phut(-5), endsAt: phut(600) }).returning({ id: moods.id });
+    await recordActivity(db, { kind: "tha-tam-trang", actorId: seat2.id, at: phut(-5), moodId: m.id });
+    const dong = (ds: Awaited<ReturnType<typeof listActivity>>) => ds.map((i) => [i.kind, i.by, i.weather, i.note, i.bookId]);
+    expect(dong(await listActivity(db, seat1.id, NOW))).toEqual([["tha-tam-trang", "partner", "mua-phun", "Nhớ ghê", null]]);
+    expect(dong(await listActivity(db, seat2.id, NOW))).toEqual([["tha-tam-trang", "me", "mua-phun", "Nhớ ghê", null]]);
+    await db.update(moods).set({ withdrawn: true }).where(eq(moods.id, m.id));
+    expect(await listActivity(db, seat1.id, NOW)).toEqual([]);
+    expect(await listActivity(db, seat2.id, NOW)).toEqual([]);
+  });
+
+  it("da doc: chi chu sach thay; nguoi doc khong thay dong ve chinh viec minh doc", async () => {
+    const { db, seat1, seat2, chung, tren } = await ke();
+    await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-2), 3), kind: "da-doc", detail: { den: 3 } });
+    expect((await listActivity(db, seat1.id, NOW)).map((i) => [i.kind, i.by, i.detail])).toEqual([["da-doc", "partner", { den: 3 }]]);
+    expect(await listActivity(db, seat2.id, NOW)).toEqual([]);
+  });
+
+  it("tao sach, doi ten, doi bia cua cuon rieng tu: nguoi kia khong thay, chu sach thay", async () => {
+    const { db, seat1, seat2, rieng } = await ke();
+    const cuon = { actorId: seat1.id, bookId: rieng, mode: "rieng-tu", at: phut(-3) } as const;
+    await recordActivity(db, { ...cuon, kind: "tao-sach" });
+    await recordActivity(db, { ...cuon, kind: "doi-ten-sach", detail: { truoc: "A", sau: "B" } });
+    await recordActivity(db, { ...cuon, kind: "doi-bia", roundId: null, detail: { truoc: null, sau: null } });
+    expect(await listActivity(db, seat2.id, NOW)).toEqual([]);
+    expect((await listActivity(db, seat1.id, NOW)).map((i) => i.kind).sort()).toEqual(["doi-bia", "doi-ten-sach", "tao-sach"]);
+  });
+
+  it("dang trang: co o bia rieng thi biaMoi, co o nhac rieng thi nhacMoi", async () => {
+    const { db, seat1, seat2, chung, tren, luotCua } = await ke();
+    await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-9), 3), kind: "dang-trang", sealId: null });
+    await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-8), 4), kind: "dang-trang", sealId: null });
+    await db.insert(bookCovers).values({ bookId: chung, roundId: luotCua(chung, 3), cover: "hoa-dao", coverMediaId: null });
+    await db.insert(bookTracks).values({ bookId: chung, roundId: luotCua(chung, 3), youtubeId: null });
+    await db.insert(bookTracks).values({ bookId: chung, roundId: luotCua(chung, 4), youtubeId: "dQw4w9WgXcQ" });
+    expect((await listActivity(db, seat2.id, NOW)).map((i) => [i.firstPosition, i.biaMoi, i.nhacMoi])).toEqual([[4, false, true], [3, true, true]]);
+  });
+
+  it("doi bia, doi nhac: so thu tu luot theo vi tri to; o mo dau la null", async () => {
+    const { db, seat1, seat2, chung, luotCua } = await ke();
+    const cuon = { actorId: seat1.id, bookId: chung, mode: "chia-se", detail: { truoc: null, sau: null } } as const;
+    await recordActivity(db, { ...cuon, kind: "doi-bia", roundId: luotCua(chung, 7), at: phut(-3) });
+    await recordActivity(db, { ...cuon, kind: "doi-nhac", roundId: null, at: phut(-2) });
+    // Luot 1 gom to 1 va 2, moi to sau do la mot luot: to 7 thuoc luot thu 6.
+    expect((await listActivity(db, seat2.id, NOW)).map((i) => [i.kind, i.ordinal])).toEqual([["doi-nhac", null], ["doi-bia", 6]]);
+  });
+
+  it("dau Moi: chi viec nguoi kia; da xem tai dung at thi het moi; dong gop cap nhat at thi lai moi", async () => {
+    const { db, seat1, seat2, chung, tren } = await ke();
+    await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-9), 3), kind: "sua-trang" });
+    await recordActivity(db, { ...tren(seat1.id, chung, "chia-se", phut(-8), 4), kind: "sua-trang" });
+    const moi = async () => (await listActivity(db, seat1.id, NOW)).map((i) => [i.by, i.isNew]);
+    expect(await moi()).toEqual([["me", false], ["partner", true]]);
+    const [cuaKia] = await db.select({ id: activity.id }).from(activity).where(eq(activity.actorId, seat2.id));
+    await db.insert(activitySeen).values({ accountId: seat1.id, activityId: cuaKia.id, seenAt: phut(-9) });
+    expect(await moi()).toEqual([["me", false], ["partner", false]]);
+    await db.update(activity).set({ at: phut(-1) }).where(eq(activity.id, cuaKia.id));
+    expect(await moi()).toEqual([["partner", true], ["me", false]]);
+    // Lan xem cua nguoi nay khong anh huong nguoi kia.
+    expect((await listActivity(db, seat2.id, NOW)).map((i) => [i.by, i.isNew])).toEqual([["me", false], ["partner", true]]);
   });
 });

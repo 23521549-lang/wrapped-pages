@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { ActivityPanel } from "@/components/feed/ActivityPanel";
 import type { FeedItem } from "@/lib/feed/types";
+import { DONG_MAC_DINH } from "../helpers/feed";
 
 const NOW = new Date("2026-09-15T15:00:00+07:00");
 const SACH = "11111111-1111-4111-8111-111111111111";
@@ -13,7 +14,7 @@ let dem = 0;
 function su(sua: Partial<FeedItem> = {}): FeedItem {
   dem += 1;
   return {
-    id: `su-kien-${dem}`, kind: "dang-trang", by: "partner", at: NOW,
+    ...DONG_MAC_DINH, id: `su-kien-${dem}`, kind: "dang-trang", by: "partner", at: NOW,
     bookId: SACH, bookTitle: "Chuyện chưa kể", firstPosition: 1, lastPosition: 2,
     sealKind: null, note: null, count: 1, ...sua,
   };

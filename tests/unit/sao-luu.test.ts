@@ -115,6 +115,11 @@ async function gieo(c: PGlite) {
     insert into activity (kind, actor_id, book_id, seal_id, round_id, shared, at) values
       ('hoi-dap', '${A2}', '${B1}', null, '${R1}', true, now());
     insert into activity (kind, actor_id, subject_id, shared, at) values ('doi-mat-khau', '${A1}', '${A2}', false, now());
+    insert into activity (kind, actor_id, mood_id, shared, at) select 'tha-tam-trang', '${A1}', id, true, now() from moods;
+    insert into activity (kind, actor_id, book_id, round_id, detail, shared, at) values
+      ('da-doc', '${A2}', '${B1}', '${R1}', '{"den": 1}', true, now());
+    insert into activity_seen (account_id, activity_id, seen_at) select '${A2}', id, at from activity where kind = 'dang-trang';
+    insert into reading_positions (account_id, book_id, position) values ('${A2}', '${B1}', 2);
   `);
 }
 

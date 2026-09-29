@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { feedDays } from "@/lib/feed/days";
 import type { FeedItem } from "@/lib/feed/types";
+import { DONG_MAC_DINH } from "../helpers/feed";
 
 const NOW = new Date("2026-09-15T15:00:00+07:00");
 let dem = 0;
@@ -9,7 +10,7 @@ let dem = 0;
 function dong(iso: string): FeedItem {
   dem += 1;
   return {
-    id: `su-kien-${dem}`, kind: "dang-trang", by: "partner", at: new Date(iso),
+    ...DONG_MAC_DINH, id: `su-kien-${dem}`, kind: "dang-trang", by: "partner", at: new Date(iso),
     bookId: "11111111-1111-4111-8111-111111111111", bookTitle: "Chuyện chưa kể", firstPosition: 1, lastPosition: 1,
     sealKind: null, note: null, count: 1,
   };
