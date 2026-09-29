@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, giongNhau } from "@/lib/feed/detail";
 
+const ANH = "33333333-3333-4333-8333-333333333333";
+
 /*
  * Cot detail cua bang activity la jsonb, database chi bat no la mot object. Hinh dang cua tung loai do cac ham doc nay
  * kiem: dung hinh thi tra dung kieu, sai hinh (du lieu la, ban cu) thi tra null de dong Hoat dong bo nhan chu khong vo.
@@ -14,12 +16,13 @@ describe("doc chi tiet su kien", () => {
     expect(docChiTietTen(null)).toBeNull();
   });
 
-  it("doi-bia: moi ben la tranh (co co anh hay khong) hoac null la giu bia truoc", () => {
-    const v = { truoc: null, sau: { cover: "hoa-dao", anh: true } };
+  it("doi-bia: moi ben la tranh (kem ma anh khi la anh tu tai len) hoac null la giu bia truoc", () => {
+    const v = { truoc: null, sau: { cover: "hoa-dao", anhId: ANH } };
     expect(docChiTietBia(v)).toEqual(v);
-    expect(docChiTietBia({ truoc: { cover: "nui-xa", anh: false }, sau: null })).toEqual({ truoc: { cover: "nui-xa", anh: false }, sau: null });
-    expect(docChiTietBia({ truoc: null, sau: { cover: "khong-co", anh: false } })).toBeNull();
+    expect(docChiTietBia({ truoc: { cover: "nui-xa", anhId: null }, sau: null })).toEqual({ truoc: { cover: "nui-xa", anhId: null }, sau: null });
+    expect(docChiTietBia({ truoc: null, sau: { cover: "khong-co", anhId: null } })).toBeNull();
     expect(docChiTietBia({ truoc: null, sau: { cover: "hoa-dao" } })).toBeNull();
+    expect(docChiTietBia({ truoc: null, sau: { cover: "hoa-dao", anhId: "khong-phai-uuid" } })).toBeNull();
     expect(docChiTietBia({ sau: null })).toBeNull();
   });
 
@@ -39,8 +42,10 @@ describe("doc chi tiet su kien", () => {
 
   it("giongNhau so sanh hai gia tri truoc va sau theo noi dung", () => {
     expect(giongNhau(null, null)).toBe(true);
-    expect(giongNhau({ cover: "nui-xa", anh: false }, { cover: "nui-xa", anh: false })).toBe(true);
-    expect(giongNhau({ cover: "nui-xa", anh: false }, { cover: "nui-xa", anh: true })).toBe(false);
+    expect(giongNhau({ cover: "nui-xa", anhId: null }, { cover: "nui-xa", anhId: null })).toBe(true);
+    expect(giongNhau({ cover: "nui-xa", anhId: ANH }, { cover: "nui-xa", anhId: ANH })).toBe(true);
+    expect(giongNhau({ cover: "nui-xa", anhId: ANH }, { cover: "nui-xa", anhId: "44444444-4444-4444-8444-444444444444" })).toBe(false);
+    expect(giongNhau({ cover: "nui-xa", anhId: null }, { cover: "nui-xa", anhId: ANH })).toBe(false);
     expect(giongNhau({ youtubeId: null }, null)).toBe(false);
     expect(giongNhau("Cũ", "Cũ")).toBe(true);
     expect(giongNhau("Cũ", "Mới")).toBe(false);

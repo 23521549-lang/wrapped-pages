@@ -15,6 +15,7 @@ import { bindMedia } from "@/server/media/access";
 import { closedToPartner, sealsOfBook } from "@/server/seal/seals";
 import { findOwnBook } from "./books";
 import { lockOwnBook } from "./remove";
+import { GOP_DOI_MS, ghiHayGop } from "@/server/feed/record";
 import { roundsOfBook } from "./rounds";
 
 /**
@@ -108,7 +109,7 @@ export async function ownRoundExists(db: AnyDb, ownerId: string, bookId: string,
  * - edited_at tinh ngay trong cau UPDATE: now (mac dinh gio database, test truyen moc co dinh) nhung khong som hon
  *   published_at, va sau moc phien ban cu it nhat 1 ms, nen CHECK rounds_edited_at khong vo va tab giu moc cu luon nhan
  *   "stale", khong ghi de im lang.
- * Niem phong va dong Hoat dong bam round_id nen khong phai doi gi. Khong ghi su kien Hoat dong nao.
+ * Niem phong va dong Hoat dong bam round_id nen khong phai doi gi. Luu thay doi thi ghi (hay gop) mot dong sua-trang.
  */
 export async function editRound(
   db: AnyDb, ownerId: string, bookId: string, roundId: string, sheets: readonly DocJson[], base: Date, now?: Date,
@@ -119,10 +120,11 @@ export async function editRound(
   const kept = normalizeSheets(trimTrailingBlank(sheets));
   if (kept.length === 0 || kept.length > MAX_SHEETS_PER_PUBLISH) return "invalid";
   return db.transaction(async (tx): Promise<RoundEditResult> => {
-    const book = await lockOwnBook(tx, ownerId, bookId);
+    const sach = await lockOwnBook(tx, ownerId, bookId);
     // Drizzle COMMIT khi ham tra ve binh thuong. Moi duong tra ve truoc "saved" deu nam TRUOC lenh ghi dau tien
     // (tx.delete(pages) o duoi) va moi thu truoc chung chi la lenh doc. Khong them lenh ghi nao vao khoang nay.
-    if (!book) return "not-found";
+    if (!sach) return "not-found";
+    const book = sach.id;
     const [round] = await tx
       .select({
         id: rounds.id,
@@ -197,6 +199,9 @@ export async function editRound(
         editedAt: sql`greatest(${now ? sql`${now.toISOString()}::timestamptz` : sql`now()`}, ${rounds.publishedAt}, coalesce(${rounds.editedAt}, ${rounds.publishedAt}) + interval '1 millisecond')`,
       })
       .where(eq(rounds.id, round.id));
+    await ghiHayGop(tx, {
+      kind: "sua-trang", actorId: ownerId, at: now ?? new Date(), bookId: book, roundId: round.id, mode: sach.mode,
+    }, GOP_DOI_MS);
     return { status: "saved", first };
   });
 }

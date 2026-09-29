@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
-import { asc, eq, isNotNull } from "drizzle-orm";
+import { asc, eq, isNotNull, ne } from "drizzle-orm";
 import { viPham, type TestDb } from "../helpers/db";
 import { dang, haiCuon, to } from "../helpers/library";
 import { activity, bookCovers, books, bookTracks, drafts, media, pages, readSheets, rounds, seals } from "@/server/db/schema";
@@ -224,7 +224,7 @@ describe("dang trang", () => {
     const { db, seat1, chung } = await haiCuon();
     await saveDraft(db, seat1.id, chung, to("nháp"), 1);
     await expect(publishDraft(db, seat1.id, chung, [to(`Mưa${String.fromCharCode(0)}`)])).rejects.toThrow();
-    expect([await db.select().from(pages), await db.select().from(rounds), await db.select().from(activity)]).toEqual([[], [], []]);
+    expect([await db.select().from(pages), await db.select().from(rounds), await suKienDang(db)]).toEqual([[], [], []]);
     expect(await db.select().from(drafts)).toHaveLength(1);
   });
 });
@@ -233,6 +233,9 @@ describe("dang trang", () => {
  * Moi cuon da co san mot o bia mo dau tu luc tao sach (createBook), nen cac ca duoi day chi hoi ve cac o GAN VOI MOT
  * LUOT: do la tat ca nhung gi mot lan dang duoc phep sinh ra.
  */
+/** Su kien Hoat dong tru dong tao-sach cua buoc dung (createBook trong haiCuon): cai lan dang co the ghi. */
+const suKienDang = (db: TestDb) => db.select().from(activity).where(ne(activity.kind, "tao-sach"));
+
 async function oCuaLuot(db: TestDb) {
   const bia = await db
     .select({ roundId: bookCovers.roundId, cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId })
@@ -359,7 +362,7 @@ describe("publishDraft sinh o cua luot", () => {
     const qua = { kind: "cau-do" as const, question: "a".repeat(201), answers: ["mưa"], hints: [] };
     await expect(publishDraft(db, seat1.id, chung, [to("một")], qua)).rejects.toThrow();
     expect([
-      await db.select().from(pages), await db.select().from(rounds), await db.select().from(activity), await db.select().from(seals),
+      await db.select().from(pages), await db.select().from(rounds), await suKienDang(db), await db.select().from(seals),
     ]).toEqual([[], [], [], []]);
     expect(await oCuaLuot(db)).toEqual({ bia: [], nhac: [] });
     expect(await db.select({ bia: drafts.cover, nhac: drafts.youtubeId }).from(drafts)).toEqual([{ bia: "hoa-dao", nhac: "dQw4w9WgXcQ" }]);

@@ -1,4 +1,5 @@
 import { COVERS, type CoverKey } from "@/lib/book";
+import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 
 /*
@@ -7,8 +8,11 @@ import { YOUTUBE_ID } from "@/lib/youtube";
  * dong Hoat dong bo nhan cua no chu khong vo.
  */
 
-/** Gia tri mot o bia: tranh (anh la anh tu tai len, tranh la tranh du phong cua no); null la "Giữ bìa trước". */
-export type GiaTriBia = { cover: CoverKey; anh: boolean } | null;
+/**
+ * Gia tri mot o bia: tranh, va anhId khi o dung anh tu tai len (tranh la tranh du phong cua anh); null la "Giữ bìa
+ * trước". Giu ma anh chu khong chi co/khong: doi tu anh nay sang anh khac cung la mot lan doi.
+ */
+export type GiaTriBia = { cover: CoverKey; anhId: string | null } | null;
 /** Gia tri mot o nhac: ma video, hay youtubeId null la o tat nhac; null la "Phát tiếp bài trước" (khong co o). */
 export type GiaTriNhac = { youtubeId: string | null } | null;
 
@@ -22,8 +26,10 @@ const tenHopLe = (v: unknown): v is string => typeof v === "string" && v.length 
 
 function docBia(v: unknown): GiaTriBia | undefined {
   if (v === null) return null;
-  if (!laObject(v) || typeof v.anh !== "boolean" || !(COVERS as readonly unknown[]).includes(v.cover)) return undefined;
-  return { cover: v.cover as CoverKey, anh: v.anh };
+  if (!laObject(v) || !(COVERS as readonly unknown[]).includes(v.cover)) return undefined;
+  const { anhId } = v;
+  if (anhId !== null && !(typeof anhId === "string" && isUuid(anhId))) return undefined;
+  return { cover: v.cover as CoverKey, anhId };
 }
 
 function docNhac(v: unknown): GiaTriNhac | undefined {

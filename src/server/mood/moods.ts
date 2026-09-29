@@ -1,13 +1,15 @@
 import { and, desc, eq, gt, gte, lt, sql } from "drizzle-orm";
 import { accounts, moods } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
+import { recordActivity } from "@/server/feed/record";
 import { khoangThang, MOOD_TTL_MS, type DongLich, type Thang } from "@/lib/tam-trang/lich";
 import type { Weather } from "@/lib/tam-trang/troi";
 
 /*
  * Tam trang cua hai nguoi. Nhan db lam tham so, khong import next hay server-only, nen chay duoc tren database that
  * va PGlite. now la tham so de moc hieu luc (ends_at > now) cua ke sach va cua lan tha dung cung mot dong ho.
- * Khong ghi dong Hoat dong nao: tam trang khong thuoc dong Hoat dong.
+ * Moi lan tha ghi mot dong Hoat dong tha-tam-trang (dot nam) trong cung giao dich; thu lai khong ghi gi, dong cua tam
+ * trang da thu lai tu an khi doc (listActivity).
  */
 
 export type Mood = { id: string; accountId: string; weather: Weather; note: string | null; setAt: Date; endsAt: Date };
@@ -59,6 +61,7 @@ export async function setMood(db: AnyDb, accountId: string, weather: Weather, no
       .insert(moods)
       .values({ accountId, weather, note, setAt: luc, endsAt: new Date(luc.getTime() + MOOD_TTL_MS) })
       .returning(COT);
+    await recordActivity(tx, { kind: "tha-tam-trang", actorId: accountId, at: moi.setAt, moodId: moi.id });
     return moi;
   });
 }

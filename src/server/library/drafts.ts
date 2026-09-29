@@ -88,7 +88,7 @@ export async function setDraftTrim(
   return db.transaction(async (tx): Promise<DraftTrimResult> => {
     // Hai duong tra ve som deu nam truoc lenh ghi dau tien (insert o duoi); truoc do chi co lenh doc:
     // lockOwnBook la SELECT ... FOR UPDATE, lockCover cung vay.
-    const id = await lockOwnBook(tx, ownerId, bookId);
+    const id = (await lockOwnBook(tx, ownerId, bookId))?.id;
     if (!id) return "not-found";
     if (coverMediaId !== null && !(await lockCover(tx, ownerId, id, coverMediaId))) return "invalid-cover";
     await tx

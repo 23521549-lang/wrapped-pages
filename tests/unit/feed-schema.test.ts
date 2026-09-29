@@ -48,7 +48,7 @@ function moiLoai(s: CoNiemPhong): { [K in FeedKind]: ActivityEvent & { kind: K }
     "tha-tam-trang": { kind: "tha-tam-trang", actorId: s.seat2.id, at: NOW, moodId: s.moodId },
     "tao-sach": { ...cuaSach, kind: "tao-sach" },
     "doi-ten-sach": { ...cuaSach, kind: "doi-ten-sach", detail: { truoc: "Cũ", sau: "Mới" } },
-    "doi-bia": { ...cuaSach, kind: "doi-bia", roundId: null, detail: { truoc: { cover: "nui-xa", anh: false }, sau: { cover: "hoa-dao", anh: false } } },
+    "doi-bia": { ...cuaSach, kind: "doi-bia", roundId: null, detail: { truoc: { cover: "nui-xa", anhId: null }, sau: { cover: "hoa-dao", anhId: null } } },
     "doi-nhac": { ...cuaSach, kind: "doi-nhac", roundId: s.roundId, detail: { truoc: null, sau: { youtubeId: null } } },
     "sua-trang": { ...cuaChu, kind: "sua-trang" },
     "da-doc": { ...cuaChu, actorId: s.seat2.id, kind: "da-doc", detail: { den: 3 } },
@@ -105,7 +105,7 @@ describe("bang activity", () => {
     expect(rows.find((r) => r.kind === "doi-bia")).toEqual({
       id: expect.any(String), kind: "doi-bia", actorId: s.seat1.id, subjectId: null, bookId: s.chung, sealId: null,
       roundId: null, moodId: null, shared: true, at: NOW,
-      detail: { truoc: { cover: "nui-xa", anh: false }, sau: { cover: "hoa-dao", anh: false } },
+      detail: { truoc: { cover: "nui-xa", anhId: null }, sau: { cover: "hoa-dao", anhId: null } },
     });
     expect(rows.find((r) => r.kind === "tao-sach")).toMatchObject({ roundId: null, detail: null, sealId: null });
     expect(rows.find((r) => r.kind === "da-doc")).toMatchObject({ roundId: s.roundId, detail: { den: 3 } });

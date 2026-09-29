@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, max } from "drizzle-orm";
 import { books, pages, readSheets } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
+import { GOP_DOC_MS, ghiHayGop } from "@/server/feed/record";
 import type { DocJson } from "@/lib/doc/types";
 import { MAX_SHOWN_SHEETS } from "@/lib/flip";
 import type { ReaderReply } from "@/lib/round-reply";
@@ -123,7 +124,7 @@ export async function markRead(
   if (muon.some((p) => !Number.isInteger(p) || p < 1)) return [];
   return await db.transaction(async (tx) => {
     const [book] = await tx
-      .select({ id: books.id, ownerId: books.ownerId })
+      .select({ id: books.id, ownerId: books.ownerId, mode: books.mode })
       .from(books)
       .where(and(eq(books.id, bookId), readableBy(viewerId)))
       .for("share");
@@ -137,8 +138,14 @@ export async function markRead(
     const rows = muon
       .filter((p) => p <= last && sealAt(khoa, p) === undefined)
       .map((p) => ({ accountId: viewerId, bookId: book.id, position: p }));
-    // Moi duong tra ve deu nam truoc lenh ghi duy nhat o duoi, va truoc do chi co lenh doc.
+    // Moi duong tra ve deu nam truoc lenh ghi dau tien o duoi, va truoc do chi co lenh doc.
     if (rows.length === 0) return [];
+    // Cac to DA co trong bang truoc lenh chen: to moi ghi lan dau moi la mot lan doc dang bao (dong da-doc).
+    const coSan = new Set((await tx
+      .select({ position: readSheets.position })
+      .from(readSheets)
+      .where(and(eq(readSheets.accountId, viewerId), eq(readSheets.bookId, book.id), inArray(readSheets.position, rows.map((r) => r.position)))))
+      .map((r) => r.position));
     // Khong dung RETURNING: onConflictDoNothing khong tra lai dong da co san, ma dong da co san van la dong DA GHI -
     // bo sot chung se lam man doc gui lai mai mot to no ghi xong tu lau. Cung khong duoc tra thang rows: lenh chen
     // gap mot tuple DANG CHEN cua giao dich khac thi coi la dung do va bo qua ngay chu khong cho, nen giao dich kia
@@ -154,6 +161,16 @@ export async function markRead(
         inArray(readSheets.position, rows.map((r) => r.position)),
       ))
       .orderBy(asc(readSheets.position));
+    const moi = daGhi.map((r) => r.position).filter((p) => !coSan.has(p));
+    if (moi.length > 0) {
+      const den = Math.max(...moi);
+      const [to] = await tx.select({ roundId: pages.roundId }).from(pages).where(and(eq(pages.bookId, book.id), eq(pages.position, den)));
+      if (to) {
+        await ghiHayGop(tx, {
+          kind: "da-doc", actorId: viewerId, at: now, bookId: book.id, roundId: to.roundId, mode: book.mode, detail: { den },
+        }, GOP_DOC_MS);
+      }
+    }
     return daGhi.map((r) => r.position);
   });
 }

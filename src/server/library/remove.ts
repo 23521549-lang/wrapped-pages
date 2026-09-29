@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { books, drafts, pages } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
+import type { BookMode } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 
 export type DeleteBookResult = "deleted" | "not-found" | "has-pages";
@@ -9,14 +10,15 @@ export type DiscardDraftResult = "discarded" | "not-found";
 /**
  * Khoa dong sach cua chinh ownerId (FOR UPDATE): xep hang voi publishDraft, saveDraft va editRound tren cung khoa.
  * Chi SELECT ... FOR UPDATE, khong ghi gi, nen goi truoc moi duong tra ve som cua mot giao dich van an toan.
+ * Tra ca che do cuon (doc tren chinh dong vua khoa): su kien Hoat dong ghi trong giao dich can biet cuon co chia se.
  */
-export async function lockOwnBook(tx: AnyDb, ownerId: string, bookId: string): Promise<string | null> {
+export async function lockOwnBook(tx: AnyDb, ownerId: string, bookId: string): Promise<{ id: string; mode: BookMode } | null> {
   const [book] = await tx
-    .select({ id: books.id })
+    .select({ id: books.id, mode: books.mode })
     .from(books)
     .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)))
     .for("update");
-  return book?.id ?? null;
+  return book ?? null;
 }
 
 /**
@@ -30,7 +32,7 @@ export async function deleteUnpublishedBook(db: AnyDb, ownerId: string, bookId: 
   if (!isUuid(bookId)) return "not-found";
   return db.transaction(async (tx): Promise<DeleteBookResult> => {
     // Hai duong return som deu nam truoc lenh ghi duy nhat (delete o cuoi); truoc do chi co lenh doc.
-    const id = await lockOwnBook(tx, ownerId, bookId);
+    const id = (await lockOwnBook(tx, ownerId, bookId))?.id;
     if (!id) return "not-found";
     const [page] = await tx.select({ position: pages.position }).from(pages).where(eq(pages.bookId, id)).limit(1);
     if (page) return "has-pages";
@@ -47,7 +49,7 @@ export async function deleteUnpublishedBook(db: AnyDb, ownerId: string, bookId: 
 export async function discardDraft(db: AnyDb, ownerId: string, bookId: string): Promise<DiscardDraftResult> {
   if (!isUuid(bookId)) return "not-found";
   return db.transaction(async (tx): Promise<DiscardDraftResult> => {
-    const id = await lockOwnBook(tx, ownerId, bookId);
+    const id = (await lockOwnBook(tx, ownerId, bookId))?.id;
     if (!id) return "not-found";
     const removed = await tx.delete(drafts).where(eq(drafts.bookId, id)).returning({ bookId: drafts.bookId });
     return removed.length > 0 ? "discarded" : "not-found";

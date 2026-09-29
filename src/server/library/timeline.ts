@@ -8,6 +8,8 @@ import { YOUTUBE_ID } from "@/lib/youtube";
 import { attachCover, lockCover } from "@/server/media/cover";
 import { khoangLuot, roundsOfBook } from "./rounds";
 import { lockOwnBook } from "./remove";
+import { GOP_DOI_MS, ghiHayGop } from "@/server/feed/record";
+import { giongNhau, type GiaTriBia } from "@/lib/feed/detail";
 
 /** Bia hien hanh cua mot cuon, dung ten truong ma giao dien van dung. */
 export type CoverNow = { cover: CoverKey; coverMediaId: string | null };
@@ -144,7 +146,7 @@ async function luotCuaSach(tx: AnyDb, bookId: string, roundId: string): Promise<
  */
 export async function setCoverEntry(
   db: AnyDb, ownerId: string, bookId: string, roundId: string | null,
-  value: { cover: CoverKey; coverMediaId: string | null } | null,
+  value: { cover: CoverKey; coverMediaId: string | null } | null, now: Date = new Date(),
 ): Promise<TimelineResult> {
   if (!isUuid(bookId)) return "not-found";
   if (roundId !== null && !isUuid(roundId)) return "not-found";
@@ -152,18 +154,24 @@ export async function setCoverEntry(
   if (value !== null && value.coverMediaId !== null && !isUuid(value.coverMediaId)) return "invalid";
   return db.transaction(async (tx): Promise<TimelineResult> => {
     // Moi duong tra ve som nam truoc lenh ghi dau tien; truoc chung chi co lenh doc va hai lenh khoa dong.
-    const id = await lockOwnBook(tx, ownerId, bookId);
-    if (!id) return "not-found";
+    const sach = await lockOwnBook(tx, ownerId, bookId);
+    if (!sach) return "not-found";
+    const { id } = sach;
     if (roundId !== null && !(await luotCuaSach(tx, id, roundId))) return "not-found";
     const cuaO = and(eq(bookCovers.bookId, id), roundId === null ? isNull(bookCovers.roundId) : eq(bookCovers.roundId, roundId));
+    const [o] = await tx.select({ cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId }).from(bookCovers).where(cuaO);
+    const truoc = o === undefined ? null : { cover: o.cover, anhId: o.coverMediaId };
+    const baoDoi = (sau: GiaTriBia) => ghiHayGop(tx, {
+      kind: "doi-bia", actorId: ownerId, at: now, bookId: id, roundId, mode: sach.mode, detail: { truoc, sau },
+    }, GOP_DOI_MS);
     if (value === null) {
-      const [o] = await tx.select({ id: bookCovers.id }).from(bookCovers).where(cuaO);
       // Cho nay von da trong thi khong co gi de don. Luat chi tu choi khi CHINH o dang bi don la o bia cuoi cung, nen
       // don mot cho trong tra "saved": bao "last-cover" o day la noi doi ve mot o khong he ton tai.
       if (o === undefined) return "saved";
       const [{ n }] = await tx.select({ n: count() }).from(bookCovers).where(eq(bookCovers.bookId, id));
       if (n <= 1) return "last-cover";
       await tx.delete(bookCovers).where(cuaO);
+      await baoDoi(null);
       return "saved";
     }
     if (value.coverMediaId !== null && !(await lockCover(tx, ownerId, id, value.coverMediaId))) return "invalid-cover";
@@ -176,6 +184,8 @@ export async function setCoverEntry(
       await tx.insert(bookCovers).values({ bookId: id, roundId, cover: value.cover, coverMediaId: value.coverMediaId });
     }
     if (value.coverMediaId !== null) await attachCover(tx, id, value.coverMediaId);
+    const sau = { cover: value.cover, anhId: value.coverMediaId };
+    if (!giongNhau(truoc, sau)) await baoDoi(sau);
     return "saved";
   });
 }
@@ -187,23 +197,31 @@ export async function setCoverEntry(
  */
 export async function setTrackEntry(
   db: AnyDb, ownerId: string, bookId: string, roundId: string | null,
-  value: { youtubeId: string | null } | null,
+  value: { youtubeId: string | null } | null, now: Date = new Date(),
 ): Promise<TimelineResult> {
   if (!isUuid(bookId)) return "not-found";
   if (roundId !== null && !isUuid(roundId)) return "not-found";
   if (value !== null && value.youtubeId !== null && !YOUTUBE_ID.test(value.youtubeId)) return "invalid";
   return db.transaction(async (tx): Promise<TimelineResult> => {
     // Nhu setCoverEntry: hai duong tra ve som deu nam truoc lenh ghi dau tien.
-    const id = await lockOwnBook(tx, ownerId, bookId);
-    if (!id) return "not-found";
+    const sach = await lockOwnBook(tx, ownerId, bookId);
+    if (!sach) return "not-found";
+    const { id } = sach;
     if (roundId !== null && !(await luotCuaSach(tx, id, roundId))) return "not-found";
     const cuaO = and(eq(bookTracks.bookId, id), roundId === null ? isNull(bookTracks.roundId) : eq(bookTracks.roundId, roundId));
+    const [o] = await tx.select({ youtubeId: bookTracks.youtubeId }).from(bookTracks).where(cuaO);
+    const truoc = o === undefined ? null : { youtubeId: o.youtubeId };
     if (value === null) {
       await tx.delete(bookTracks).where(cuaO);
-      return "saved";
+    } else {
+      const da = await tx.update(bookTracks).set({ youtubeId: value.youtubeId }).where(cuaO).returning({ id: bookTracks.id });
+      if (da.length === 0) await tx.insert(bookTracks).values({ bookId: id, roundId, youtubeId: value.youtubeId });
     }
-    const da = await tx.update(bookTracks).set({ youtubeId: value.youtubeId }).where(cuaO).returning({ id: bookTracks.id });
-    if (da.length === 0) await tx.insert(bookTracks).values({ bookId: id, roundId, youtubeId: value.youtubeId });
+    if (!giongNhau(truoc, value)) {
+      await ghiHayGop(tx, {
+        kind: "doi-nhac", actorId: ownerId, at: now, bookId: id, roundId, mode: sach.mode, detail: { truoc, sau: value },
+      }, GOP_DOI_MS);
+    }
     return "saved";
   });
 }

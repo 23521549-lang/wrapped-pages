@@ -18,7 +18,7 @@ const NIEM_PHONG: Record<FeedKind, SealKind | null> = {
 /** Chi tiet dung hinh mac dinh cua bon loai co detail. */
 const CHI_TIET: Partial<Record<FeedKind, unknown>> = {
   "doi-ten-sach": { truoc: "Nhật ký chạy bộ", sau: "Chạy bộ mùa thu" },
-  "doi-bia": { truoc: null, sau: { cover: "hoa-dao", anh: false } },
+  "doi-bia": { truoc: null, sau: { cover: "hoa-dao", anhId: null } },
   "doi-nhac": { truoc: null, sau: { youtubeId: "dQw4w9WgXcQ" } },
   "da-doc": { den: 6 },
 };
@@ -128,8 +128,8 @@ describe("feedLine: bay loai cua dot nam", () => {
 
   it.each<[string, Partial<FeedItem>, string, string[]]>([
     ["tranh o luot 2", { ordinal: 2 }, "Linh đổi bìa lượt 2 của **Chuyện chưa kể**", ["Cành hoa đào"]],
-    ["anh o mo dau", { detail: { truoc: null, sau: { cover: "nui-xa", anh: true } } }, "Linh đổi bìa lúc tạo sách của **Chuyện chưa kể**", ["Ảnh của Linh"]],
-    ["giu bia truoc", { ordinal: 3, detail: { truoc: { cover: "nui-xa", anh: false }, sau: null } }, "Linh đổi bìa lượt 3 của **Chuyện chưa kể**", ["Giữ bìa trước"]],
+    ["anh o mo dau", { detail: { truoc: null, sau: { cover: "nui-xa", anhId: "33333333-3333-4333-8333-333333333333" } } }, "Linh đổi bìa lúc tạo sách của **Chuyện chưa kể**", ["Ảnh của Linh"]],
+    ["giu bia truoc", { ordinal: 3, detail: { truoc: { cover: "nui-xa", anhId: null }, sau: null } }, "Linh đổi bìa lượt 3 của **Chuyện chưa kể**", ["Giữ bìa trước"]],
     ["chi tiet la", { ordinal: 1, detail: { sau: 1 } }, "Linh đổi bìa lượt 1 của **Chuyện chưa kể**", []],
   ])("doi bia: %s", (_ten, sua, chu, chips) => {
     const line = feedLine(su("doi-bia", "partner", sua), TEN);
@@ -139,7 +139,7 @@ describe("feedLine: bay loai cua dot nam", () => {
   });
 
   it("doi bia bang anh cua chinh minh: Ảnh của bạn", () => {
-    expect(feedLine(su("doi-bia", "me", { detail: { truoc: null, sau: { cover: "nui-xa", anh: true } } }), TEN).chips).toEqual(["Ảnh của bạn"]);
+    expect(feedLine(su("doi-bia", "me", { detail: { truoc: null, sau: { cover: "nui-xa", anhId: "33333333-3333-4333-8333-333333333333" } } }), TEN).chips).toEqual(["Ảnh của bạn"]);
   });
 
   it.each<[string, unknown, string[]]>([

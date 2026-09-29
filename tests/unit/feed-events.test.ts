@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, ne, sql } from "drizzle-orm";
 import { accounts, activity, drafts, pages, roundReplies, sealAttempts, sealReplies, seals } from "@/server/db/schema";
 import { createSeat } from "@/server/identity/accounts";
 import { login } from "@/server/identity/login";
@@ -29,6 +29,8 @@ function suKien(db: TestDb) {
     })
     .from(activity)
     .leftJoin(khoang, eq(khoang.roundId, activity.roundId))
+    // Dong tao-sach cua buoc dung (createBook trong haiCuon) khong thuoc cac bai ve lan dang.
+    .where(ne(activity.kind, "tao-sach"))
     .orderBy(asc(activity.at), asc(activity.kind));
 }
 

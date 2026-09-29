@@ -104,7 +104,9 @@ describe("editRound: doi so to", () => {
     expect(await daXem(s)).toEqual([1, 6, 7]);
     const [niem] = await sealsOfBook(s.db, s.chung);
     expect([niem.firstPosition, niem.lastPosition]).toEqual([6, 7]);
-    expect(await s.db.select().from(activity).orderBy(asc(activity.id))).toEqual(hoatDong);
+    const sau = await s.db.select().from(activity).orderBy(asc(activity.id));
+    expect(sau.filter((r) => r.kind !== "sua-trang")).toEqual(hoatDong);
+    expect(sau.filter((r) => r.kind === "sua-trang").map((r) => [r.roundId, r.bookId])).toEqual([[(await moc(s, 2)).id, s.chung]]);
   });
 
   it("giam so to cua luot dau: to sau lui lai, to da xem sau luot tru theo", async () => {

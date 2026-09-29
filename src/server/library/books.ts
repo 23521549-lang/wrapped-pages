@@ -2,6 +2,7 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
+import { GOP_DOI_MS, ghiHayGop, recordActivity } from "@/server/feed/record";
 import type { BookInput, BookSettings, CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { attachCover, lockCover } from "@/server/media/cover";
@@ -61,9 +62,9 @@ export async function readOwnBook(db: AnyDb, ownerId: string, bookId: string): P
  * dang cho gan cua chinh ownerId), tao cuon, roi gan bia vao cuon. Bia khong dung duoc thi tra null va khong tao gi.
  * Khong co bia tu tai len thi luon tao duoc, nen kieu tra ve khi coverMediaId la null khong co null.
  */
-export function createBook(db: AnyDb, ownerId: string, input: BookInput & { coverMediaId: null }): Promise<string>;
-export function createBook(db: AnyDb, ownerId: string, input: BookInput): Promise<string | null>;
-export async function createBook(db: AnyDb, ownerId: string, input: BookInput): Promise<string | null> {
+export function createBook(db: AnyDb, ownerId: string, input: BookInput & { coverMediaId: null }, now?: Date): Promise<string>;
+export function createBook(db: AnyDb, ownerId: string, input: BookInput, now?: Date): Promise<string | null>;
+export async function createBook(db: AnyDb, ownerId: string, input: BookInput, now: Date = new Date()): Promise<string | null> {
   const { coverMediaId } = input;
   return db.transaction(async (tx) => {
     // Drizzle COMMIT giao dich khi ham tra ve binh thuong, chi ROLLBACK khi co loi nem ra. Nen moi duong return sau day
@@ -79,6 +80,7 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput): 
     if (input.youtubeId !== null) {
       await tx.insert(bookTracks).values({ bookId: row.id, roundId: null, youtubeId: input.youtubeId });
     }
+    await recordActivity(tx, { kind: "tao-sach", actorId: ownerId, at: now, bookId: row.id, mode: input.mode });
     return row.id;
   });
 }
@@ -88,14 +90,22 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput): 
  * Bia va nhac KHONG o day: chung song o hai dong thoi gian va chi doi qua setCoverEntry / setTrackEntry, de mot gia tri
  * khong co hai duong ghi.
  */
-export async function updateBook(db: AnyDb, ownerId: string, bookId: string, input: BookSettings): Promise<BookUpdate> {
+export async function updateBook(
+  db: AnyDb, ownerId: string, bookId: string, input: BookSettings, now: Date = new Date(),
+): Promise<BookUpdate> {
   if (!isUuid(bookId)) return "not-found";
   return db.transaction(async (tx): Promise<BookUpdate> => {
     // Nhu createBook: return trong giao dich la COMMIT chu khong phai ROLLBACK, nen duong return duoi day chi dung chung
     // nao truoc no chi con lenh doc - findOwnBook la SELECT. Lenh ghi duy nhat (tx.update) nam sau no.
     const book = await findOwnBook(tx, ownerId, bookId);
     if (!book) return "not-found";
-    await tx.update(books).set({ ...input, updatedAt: new Date() }).where(and(eq(books.id, book.id), eq(books.ownerId, ownerId)));
+    await tx.update(books).set({ ...input, updatedAt: now }).where(and(eq(books.id, book.id), eq(books.ownerId, ownerId)));
+    if (input.title !== book.title) {
+      await ghiHayGop(tx, {
+        kind: "doi-ten-sach", actorId: ownerId, at: now, bookId: book.id, mode: input.mode,
+        detail: { truoc: book.title, sau: input.title },
+      }, GOP_DOI_MS);
+    }
     return "saved";
   });
 }

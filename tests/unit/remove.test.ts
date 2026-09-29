@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import { activity, bookCovers, books, drafts, media, pages } from "@/server/db/schema";
 import { listDrafts, publishDraft, saveDraft } from "@/server/library/drafts";
 import { deleteUnpublishedBook, discardDraft } from "@/server/library/remove";
@@ -61,7 +61,9 @@ describe("deleteUnpublishedBook", () => {
   it("xoa sach chua dang khong ghi dong Hoat dong nao (khong co recordActivity tren duong nay)", async () => {
     const s = await haiCuon();
     await saveDraft(s.db, s.seat1.id, s.chung, to("một"), 1);
-    const truoc = (await s.db.select().from(activity)).length;
+    // Chi tinh dong cua cac cuon khac: dong tao-sach cua chinh cuon bi xoa mat theo khoa ngoai (xoa theo), khong phai
+    // mot su kien moi. Neu duong xoa co ghi gi, so dong con lai se lon hon.
+    const truoc = (await s.db.select().from(activity).where(ne(activity.bookId, s.chung))).length;
     expect(await deleteUnpublishedBook(s.db, s.seat1.id, s.chung)).toBe("deleted");
     expect((await s.db.select().from(activity)).length).toBe(truoc);
   });

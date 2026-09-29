@@ -1,8 +1,17 @@
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { activity } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
-import type { ChiTietBia, ChiTietDaDoc, ChiTietNhac, ChiTietTen } from "@/lib/feed/detail";
+import {
+  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, giongNhau,
+  type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietTen,
+} from "@/lib/feed/detail";
 import type { LoaiNiemPhong } from "@/lib/feed/types";
+
+/** Cua so gop cua doi ten, doi bia, doi nhac va sua trang: thu vai lan lien nhau chi thanh mot dong. */
+export const GOP_DOI_MS = 10 * 60_000;
+/** Cua so gop cua da doc: mot buoi doc (lat qua nhieu trang) chi thanh mot dong. */
+export const GOP_DOC_MS = 30 * 60_000;
 
 /** Phan chung cua moi su kien gan mot luot: ai lam, luc nao, luot nao, va che do cuon ngay luc ghi. */
 type BookEvent = { actorId: string; at: Date; bookId: string; roundId: string; mode: BookMode };
@@ -44,4 +53,79 @@ export async function recordActivity(tx: AnyDb, event: ActivityEvent): Promise<v
   }
   const { mode, ...rest } = event;
   await tx.insert(activity).values({ ...rest, shared: mode === "chia-se" });
+}
+
+/** Cac loai ghi qua ghiHayGop. */
+export type SuKienGop = Extract<ActivityEvent, { kind: "doi-ten-sach" | "doi-bia" | "doi-nhac" | "sua-trang" | "da-doc" }>;
+
+/**
+ * Ghi mot su kien, hay gop vao dong cung loai cua cung nguoi o cung cuon (doi bia, doi nhac, sua trang: cung o, cung
+ * luot) con trong cua so cuaSoMs: dong do nhan at moi (nen lai la Moi voi nguoi kia) va gia tri sau moi, giu gia tri
+ * truoc cua lan dau. Doi roi doi lai nhu cu thi xoa dong: khong co gi doi de bao. da-doc giu trang xa nhat va luot
+ * cua trang do. Khoa dong cu (FOR UPDATE) de hai lan ghi cung luc khong gop chong nhau.
+ */
+export async function ghiHayGop(tx: AnyDb, event: SuKienGop, cuaSoMs: number): Promise<void> {
+  const theoO = event.kind === "doi-bia" || event.kind === "doi-nhac" || event.kind === "sua-trang";
+  const [cu] = await tx
+    .select({ id: activity.id, detail: activity.detail })
+    .from(activity)
+    .where(and(
+      eq(activity.actorId, event.actorId),
+      eq(activity.kind, event.kind),
+      eq(activity.bookId, event.bookId),
+      theoO ? (event.roundId === null ? isNull(activity.roundId) : eq(activity.roundId, event.roundId)) : undefined,
+      gt(activity.at, new Date(event.at.getTime() - cuaSoMs)),
+    ))
+    .orderBy(desc(activity.at))
+    .limit(1)
+    .for("update");
+  if (!cu) {
+    await recordActivity(tx, event);
+    return;
+  }
+  const cuaDong = eq(activity.id, cu.id);
+  switch (event.kind) {
+    case "sua-trang":
+      await tx.update(activity).set({ at: event.at }).where(cuaDong);
+      return;
+    case "da-doc": {
+      const cuDen = docChiTietDaDoc(cu.detail)?.den ?? 0;
+      const xaHon = event.detail.den >= cuDen;
+      await tx
+        .update(activity)
+        .set({ at: event.at, detail: { den: Math.max(cuDen, event.detail.den) }, ...(xaHon ? { roundId: event.roundId } : {}) })
+        .where(cuaDong);
+      return;
+    }
+    case "doi-ten-sach": {
+      const truoc = docChiTietTen(cu.detail)?.truoc ?? event.detail.truoc;
+      await gopDoi(tx, cu.id, event.at, truoc, event.detail.sau);
+      return;
+    }
+    case "doi-bia": {
+      const truoc = docChiTietBia(cu.detail)?.truoc;
+      await gopDoi(tx, cu.id, event.at, truoc === undefined ? event.detail.truoc : truoc, event.detail.sau);
+      return;
+    }
+    case "doi-nhac": {
+      const truoc = docChiTietNhac(cu.detail)?.truoc;
+      await gopDoi(tx, cu.id, event.at, truoc === undefined ? event.detail.truoc : truoc, event.detail.sau);
+      return;
+    }
+    default: {
+      const khongCo: never = event;
+      throw new Error(`loai gop la: ${String(khongCo)}`);
+    }
+  }
+}
+
+/** Gop mot lan doi: gia tri sau bang gia tri truoc (doi roi doi lai) thi xoa dong, khong thi cap nhat. */
+async function gopDoi<T extends ChiTietTen["truoc"] | ChiTietBia["truoc"] | ChiTietNhac["truoc"]>(
+  tx: AnyDb, id: string, at: Date, truoc: T, sau: T,
+): Promise<void> {
+  if (giongNhau(truoc, sau)) {
+    await tx.delete(activity).where(eq(activity.id, id));
+    return;
+  }
+  await tx.update(activity).set({ at, detail: { truoc, sau } }).where(eq(activity.id, id));
 }

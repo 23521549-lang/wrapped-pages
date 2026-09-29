@@ -57,7 +57,7 @@ const tenO = (ordinal: number | null) => (ordinal === null ? "lúc tạo sách" 
 
 function nhanBia(v: GiaTriBia, ai: string): string {
   if (v === null) return "Giữ bìa trước";
-  return v.anh ? `Ảnh của ${ai === "Bạn" ? "bạn" : ai}` : COVER_NAME[v.cover];
+  return v.anhId !== null ? `Ảnh của ${ai === "Bạn" ? "bạn" : ai}` : COVER_NAME[v.cover];
 }
 
 function nhanNhac(v: GiaTriNhac, baiHat: TenBaiHat): string {
