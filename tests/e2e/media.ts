@@ -165,6 +165,9 @@ export async function toCuaKhoi(page: Page, chon: string): Promise<number> {
  */
 export async function chonBia(page: Page, ten: string): Promise<void> {
   const bang = page.getByRole("group", { name: "Bìa" });
+  // Dem sau khi bang da hien: ngay sau lan tai, noi dung trang con nam trong khoi stream an (khung giu cho van hien)
+  // them mot nhip, luc do cac o chua vao cay truy cap nen dem ra 0.
+  await expect(bang.getByRole("radio").first()).toBeVisible();
   const truoc = await bang.getByRole("radio").count();
   await page.getByLabel("Thêm ảnh của bạn làm bìa").setInputFiles({
     name: ten, mimeType: "image/png", buffer: await anhPng(page, 800, 600),

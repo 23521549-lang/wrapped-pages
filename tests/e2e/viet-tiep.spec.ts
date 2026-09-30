@@ -78,6 +78,7 @@ test("tai nhieu anh bia lien tiep roi chon lai anh dau tien: moi anh con trong b
   await a.goto(`/sach/${id}/viet-tiep`);
   const bang = a.getByRole("group", { name: "Bìa" });
   const demO = () => bang.getByRole("radio").count();
+  await expect(bang.getByRole("radio").first()).toBeVisible();
   const truoc = await demO();
 
   await chonBia(a, "anh-1.jpg");
