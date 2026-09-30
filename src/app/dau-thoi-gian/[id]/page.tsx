@@ -56,7 +56,8 @@ export default async function DauThoiGianCuaSach({ params, searchParams }: {
   const chu = book.ownerId === me.accountId ? "bạn" : me.partnerNickname;
   return (
     <>
-      <AppNav me={me} current="dau-thoi-gian" subpage />
+      {/* Khung phat nhac nam trong trang: nav khong dinh, de khong gi (ke ca nav) de len trinh phat YouTube. */}
+      <AppNav me={me} current="dau-thoi-gian" subpage sticky={false} />
       <main className="shell man">
         <div className="head">
           <div>
@@ -65,6 +66,7 @@ export default async function DauThoiGianCuaSach({ params, searchParams }: {
           </div>
         </div>
         <LichDau
+          bookId={book.id}
           dau={hien}
           thangDau={thang}
           chonDau={ngayMacDinh(gomTheoNgay(dau, thang), laThangNay(thang, now) ? homNay : null, soNgayCua(thang))}

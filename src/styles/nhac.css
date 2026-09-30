@@ -1,0 +1,109 @@
+/* ===== Nhac chung va So nhac thang (dot nam 5b). Chi dung token. ===== */
+
+/* ---------- Trinh phat chung (src/components/music/MayPhatChung.tsx) ---------- */
+/* Mot khung phat duy nhat, con truc tiep cua body. Tren o giu cho cua trang (.mph--lon): dat dung len o bang toa do tai
+   lieu, nen cuon trang khong can tinh lai; nav cua trang co o giu cho khong dinh, nen khong gi de len. Khong con o: cua
+   so video nho o goc duoi ben phai, video tren (man rong 16:9 cao 200px, man hep o vuong 200x200), thanh mong duoi. */
+.mph{ position: fixed; right: var(--space-md); bottom: var(--space-md); z-index: calc(var(--z-sticky) + 10); width: 356px;
+  display: grid; grid-template-columns: minmax(0, 1fr); border-radius: var(--radius-sm); background: var(--color-paper); overflow: hidden;
+  box-shadow: var(--shadow-lift), inset 0 0 0 1px var(--color-rule-ui); }
+.mph__may{ position: relative; height: 200px; min-width: 200px; background: var(--color-paper-3); }
+.mph__may iframe{ position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.mph--lon{ position: absolute; right: auto; bottom: auto; z-index: var(--z-raised); box-shadow: none; }
+.mph--lon .mph__may{ height: 100%; min-height: 200px; }
+.mph__thanh{ display: flex; align-items: center; gap: var(--space-2xs); min-height: 48px; padding: 2px 2px 2px var(--space-sm); }
+.mph__ten{ display: grid; flex: 1; min-width: 0; line-height: 1.3; border-radius: 4px; }
+.mph__ten b, .mph__ten span{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mph__ten b{ font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.mph__ten span{ font-size: var(--text-xs); color: var(--color-ink-3); }
+.mph__ten:hover b{ color: var(--blue-ink); }
+.mph__nut{ display: flex; flex: none; }
+.mph__i{ display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: var(--radius-nut); background: none; color: var(--color-ink-2); cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.mph__i:hover{ background: var(--color-paper-2); color: var(--color-ink); }
+.mph__i svg{ width: 18px; height: 18px; }
+body.co-mph{ padding-bottom: calc(248px + 2 * var(--space-md)); }
+@media (max-width: 600px){
+  .mph{ right: var(--space-sm); bottom: var(--space-sm); width: 200px; }
+  .mph--lon{ width: auto; }
+  .mph__thanh{ flex-wrap: wrap; padding: var(--space-2xs) 2px 2px; }
+  .mph__ten{ flex-basis: 100%; padding-inline: var(--space-xs); }
+  .mph__nut{ width: 100%; justify-content: space-between; }
+  body.co-mph{ padding-bottom: calc(296px + 2 * var(--space-sm)); }
+}
+
+/* ---------- Dau thoi gian: dai "So nhac theo thang" ---------- */
+.so-thang{ margin: 0 0 var(--space-xl); }
+.so-thang__dau{ display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .25rem var(--space-sm); margin-bottom: var(--space-md); }
+.so-thang__dau h2{ font-size: var(--text-md); line-height: 1.3; }
+.so-thang__phu{ font-size: var(--text-sm); color: var(--color-ink-3); }
+.so-thang__ds{ display: grid; grid-template-columns: repeat(auto-fill, minmax(min(12.5rem, 100%), 1fr)); gap: var(--space-md); }
+/* moi thang mot cuon so mong: bia giay cua mot tranh, gay trai, ten thang va so bai */
+.so{ position: relative; display: grid; grid-template-columns: 6px minmax(0, 1fr); min-height: 7.5rem; border-radius: var(--radius-sach);
+  background: linear-gradient(var(--bia-tren), var(--bia-duoi)); box-shadow: var(--shadow-rest); color: var(--color-ink); overflow: hidden;
+  transition: box-shadow var(--dur-short) var(--ease-out); }
+.so::before{ content: ''; background: color-mix(in oklch, var(--bia-duoi) 90%, var(--color-ink) 10%); }
+.so__chu{ display: grid; align-content: space-between; gap: var(--space-xs); padding: var(--space-md); }
+.so__ten{ font-family: var(--font-display); font-weight: var(--dwght); font-size: var(--text-md); line-height: 1.2; }
+.so__phu{ font-size: var(--text-sm); color: var(--color-ink-2); }
+.so__lien{ position: absolute; inset: 0; border-radius: var(--radius-sach); }
+.so__lien:focus-visible{ outline-offset: 3px; }
+.so:has(.so__lien:hover){ box-shadow: var(--shadow-lift); }
+.so--dang{ background: var(--color-paper-2); box-shadow: inset 0 0 0 1px var(--color-rule-ui); }
+.so--dang::before{ background: var(--color-rule-ui); }
+.so--dang .so__phu b{ font-weight: 600; color: var(--color-ink); }
+
+/* ---------- Trang so nhac mot thang ---------- */
+/* Loi quay lai: mot lien ket chu nho nam trong khoi tieu de (co khoang cach cua .head voi thanh dieu huong), khong vien. */
+.ve-lai{ display: inline-flex; align-items: center; gap: .3rem; min-height: 44px; margin: -.75rem 0 .25rem -.35rem; padding: 0 .35rem;
+  border-radius: var(--radius-nut); font-size: var(--text-sm); font-weight: 600; color: var(--color-ink-2); }
+.ve-lai svg{ width: 16px; height: 16px; }
+.ve-lai:hover{ color: var(--color-ink); }
+.sn-thang{ display: flex; gap: var(--space-xs); }
+.sn{ display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); margin-bottom: var(--space-2xl); }
+/* khung phat o chinh giua, 16:9, toi thieu 200px; trinh phat chung dat len o nay */
+.sn__phat{ display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+.sn__may{ position: relative; width: 100%; min-width: 0; max-width: 46rem; margin-inline: auto; aspect-ratio: 16 / 9; min-height: 200px; border-radius: var(--radius-sm); background: var(--color-paper-3);
+  box-shadow: inset 0 0 0 1px var(--color-rule-ui); display: grid; place-items: center; color: var(--color-ink-3); font-size: var(--text-sm); text-align: center; padding: var(--space-md); }
+.sn__dang{ text-align: center; font-size: var(--text-sm); color: var(--color-ink-2); min-height: 1.5em; }
+.sn__dang b{ color: var(--color-ink); font-weight: 600; }
+/* cac danh sach phat canh nhau, mot cot tren man hep */
+.pl-ds{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); gap: var(--space-lg); align-items: start; }
+.pl{ border-radius: var(--radius-sm); background: var(--color-paper); box-shadow: inset 0 0 0 1px var(--color-rule-ui); overflow: hidden; }
+.pl--dang{ box-shadow: inset 0 0 0 1px var(--blue-line); }
+.pl__dau{ display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-md); }
+.pl__phat{ display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--blue-line); background: var(--blue-2); color: var(--blue-ink); cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out); }
+.pl__phat:hover{ background: var(--blue-3); }
+.pl__phat svg{ width: 18px; height: 18px; }
+.pl__ten{ display: grid; min-width: 0; line-height: 1.35; }
+.pl__ten b{ font-weight: 600; color: var(--color-ink); }
+.pl__ten span{ font-size: var(--text-sm); color: var(--color-ink-3); }
+/* vach chia trang tri giua dau danh sach va cac bai, giua cac bai (tren the li, khong tren nut) */
+.pl__bai{ border-top: 1px solid var(--color-rule); }
+.pl__bai > li + li{ border-top: 1px solid var(--color-rule); }
+.bai{ display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); align-items: start; gap: var(--space-sm); width: 100%; min-height: 44px; padding: .55rem var(--space-md);
+  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out); }
+.bai:hover{ background: var(--color-paper-2); }
+.bai:focus-visible{ outline-offset: -3px; }
+.bai__so{ font-size: var(--text-sm); color: var(--color-ink-3); font-variant-numeric: tabular-nums; line-height: 1.45; }
+.bai__chu{ display: grid; min-width: 0; line-height: 1.4; }
+.bai__ten{ font-weight: 600; color: var(--color-ink); overflow-wrap: anywhere; }
+.bai__phu{ font-size: var(--text-sm); color: var(--color-ink-3); overflow-wrap: anywhere; }
+.bai--dang{ background: var(--blue-1); }
+.bai--dang:hover{ background: var(--blue-1); }
+.bai--dang .bai__ten{ color: var(--blue-ink); }
+/* ba vach song thay so thu tu cua bai dang phat */
+.song{ display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; color: var(--blue-ink); }
+.song i{ width: 3px; height: 100%; border-radius: 1px; background: currentColor; transform-origin: bottom; transform: scaleY(.6); }
+.bai--chay .song i{ animation: song-nhip 900ms var(--ease-in-out) infinite; }
+.bai--chay .song i:nth-child(2){ animation-delay: -300ms; }
+.bai--chay .song i:nth-child(3){ animation-delay: -600ms; }
+@keyframes song-nhip{ 0%, 100%{ transform: scaleY(.35); } 50%{ transform: scaleY(1); } }
+.so-trong{ font-size: var(--text-sm); color: var(--color-ink-2); }
+
+@media (prefers-reduced-motion: reduce){
+  .bai--chay .song i{ animation: none; }
+  .mph__i, .pl__phat, .bai, .so{ transition: none; }
+}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useImperativeHandle, useRef, useState, type Ref } from "react";
-import { useMayPhatDanhSach, type TrangThaiMay } from "@/components/music/useMayPhatDanhSach";
+import { useEffect, useEffectEvent, useImperativeHandle, type Ref } from "react";
+import { OPhat, useNhacChung, type BaiPhat, type HangDoi } from "@/components/music/MayPhatChung";
 import { baiPhatDuoc } from "@/lib/dau-thoi-gian";
 
 /** Mot dau nhac cua ngay dang chon, da dung san o may chu. youtubeId null la o go nhac. */
@@ -19,10 +19,11 @@ export type BaiNgay = {
 /** Dieu khien tu lich: bam mot ngay thi goi chonNgay voi danh sach nhac cua ngay do, NGAY trong cu bam. */
 export type DieuKhienNhac = {
   /**
-   * Bam mot ngay. `cungNgay`: bam lai dung ngay dang chon - dang co bai thi phat tiep, khong phat lai tu dau. Ngay khac:
-   * dung bai cu, phat tuan tu tu bai dau cua ngay moi (ngay khong co bai phat duoc thi chi dung).
+   * Bam mot ngay (nhan: khoa ngay, "2026-09-15"). `cungNgay`: bam lai dung ngay dang chon - dang co bai thi phat tiep,
+   * khong phat lai tu dau. Ngay khac: phat tuan tu tu bai dau cua ngay moi (ngay khong co bai phat duoc thi dung han nhac
+   * cua cuon nay).
    */
-  chonNgay: (ds: readonly BaiNgay[], cungNgay: boolean) => void;
+  chonNgay: (ds: readonly BaiNgay[], nhan: string, cungNgay: boolean) => void;
 };
 
 /** Ten hien cua mot bai: ten lay tu YouTube, hay cau thay khi khong lay duoc. */
@@ -44,53 +45,58 @@ function BaiKe() {
   );
 }
 
-/**
- * Phan "Nhạc trong ngày" trong the cua cot phai: khung phat YouTube, dong dang phat, nut Phat/Tam dung va Bai ke tiep,
- * danh sach bai cua ngay theo thu tu luot. Nhac CHI tu phat khi nguoi dung bam mot ngay (lich goi chonNgay); doi thang
- * khong dung toi nhac. Het bai thi sang bai ke, bai hong thi bo qua. Ngay khong co bai nao phat duoc thi khong co trinh
- * phat nao (khong phai trinh phat an).
- */
-export function NhacNgay({ ds, ref }: { ds: readonly BaiNgay[]; ref: Ref<DieuKhienNhac> }) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  /** Vi tri bai dang nap hay dang phat trong ds; null la chua phat bai nao. */
-  const [dang, setDang] = useState<number | null>(null);
-  const [trangThai, setTrangThai] = useState<TrangThaiMay | "tai">("tai");
-  /** Tang len de tao lai trinh phat sau khi nap API hong. */
-  const [lanTao, setLanTao] = useState(0);
-  const dau = baiPhatDuoc(ds, 0);
-  const coMay = dau >= 0;
+/** Cac bai phat duoc cua mot ngay (bo o go nhac), theo thu tu luot. */
+const baiPhat = (ds: readonly BaiNgay[]): BaiPhat[] =>
+  ds.flatMap((b) => (b.youtubeId === null ? [] : [{ youtubeId: b.youtubeId, ten: tenBai(b), kenh: b.kenh }]));
 
-  const phatTu = (danhSach: readonly BaiNgay[], tu: number) => {
-    const k = baiPhatDuoc(danhSach, tu);
-    if (k < 0) {
-      may.ngung();
-      setDang(null);
-      setTrangThai((t) => (t === "loi" ? t : "dung"));
-      return;
-    }
-    setDang(k);
-    may.nap(danhSach[k].youtubeId ?? "");
+/**
+ * Phan "Nhạc trong ngày" trong the cua cot phai: o giu cho khung phat (trinh phat chung dat len do), dong dang phat, nut
+ * Phat/Tam dung va Bai ke tiep, danh sach bai cua ngay theo thu tu luot. Nhac CHI tu phat khi nguoi dung bam mot ngay
+ * (lich goi chonNgay); doi thang khong dung toi nhac. Het bai thi sang bai ke, bai hong thi bo qua. Ngay khong co bai nao
+ * phat duoc thi khong co trinh phat nao (khong phai trinh phat an). Nhac di theo khi roi trang (spec 5b C4): chu la
+ * "dtg-<id cuon>", ve lai trang nay thi khung phat ve lai o giu cho.
+ */
+export function NhacNgay({ ds, nhan, chu, href, ref }: {
+  ds: readonly BaiNgay[];
+  /** Khoa ngay dang chon, "2026-09-15". */
+  nhan: string;
+  chu: string;
+  href: string;
+  ref: Ref<DieuKhienNhac>;
+}) {
+  const nhac = useNhacChung();
+  const hangCua = (danhSach: readonly BaiNgay[], nhanNgay: string): HangDoi => ({ chu, nhan: nhanNgay, href, ds: [baiPhat(danhSach)] });
+  const coMay = baiPhat(ds).length > 0;
+  const cuaCuon = nhac.hang?.chu === chu;
+  const cuaNgay = cuaCuon && nhac.hang?.nhan === nhan;
+  /** Vi tri trong ds cua bai thu k trong hang doi (hang doi bo o go nhac). */
+  const viTri = ds.flatMap((b, i) => (b.youtubeId === null ? [] : [i]));
+  const dang = cuaNgay && nhac.vt !== null ? (viTri[nhac.vt.bai] ?? null) : null;
+  const phatTu = (danhSach: readonly BaiNgay[], nhanNgay: string, i: number) => {
+    const k = baiPhatDuoc(danhSach, i);
+    if (k >= 0) nhac.phatTu(hangCua(danhSach, nhanNgay), { ds: 0, bai: danhSach.slice(0, k).filter((b) => b.youtubeId !== null).length });
   };
 
-  const may = useMayPhatDanhSach(hostRef, coMay ? `may-${lanTao}` : null, coMay ? ds[dau].youtubeId : null, {
-    doi: setTrangThai,
-    ketThuc: () => phatTu(ds, (dang ?? -1) + 1),
-    hong: () => phatTu(ds, (dang ?? -1) + 1),
+  // Vua mo trang ma ngay chon san co nhac: nap san bai dau (khong phat), neu khong co gi dang nghe.
+  const napSan = useEffectEvent(() => {
+    if (coMay) nhac.chuanBi(hangCua(ds, nhan));
   });
+  useEffect(() => {
+    napSan();
+  }, []);
 
   useImperativeHandle(ref, () => ({
-    chonNgay: (moi, cungNgay) => {
+    chonNgay: (moi, nhanMoi, cungNgay) => {
       if (cungNgay && dang !== null) return;
-      // Chua co trinh phat (ngay truoc khong co nhac) thi mot trinh phat moi sap duoc tao: dang nap. Nap API hong thi
-      // tao lai trinh phat de thu lan nua.
-      if (!coMay || trangThai === "loi") setTrangThai("tai");
-      if (trangThai === "loi") setLanTao((n) => n + 1);
-      phatTu(moi, 0);
+      if (baiPhatDuoc(moi, 0) >= 0) phatTu(moi, nhanMoi, 0);
+      // Ngay khong co nhac: dung han nhac cua cuon nay; nhac dang nghe tu trang khac thi de yen.
+      else if (cuaCuon) nhac.tat();
     },
   }));
 
-  const soBai = ds.filter((b) => b.youtubeId !== null).length;
+  const soBai = viTri.length;
   const bai = dang === null ? null : ds[dang];
+  const trangThai = cuaCuon ? nhac.trangThai : "dung";
   const chay = bai !== null && trangThai === "phat";
   const ke = dang === null ? -1 : baiPhatDuoc(ds, dang + 1);
   const trangThaiChu = trangThai === "loi" ? "Không phát được" : trangThai === "tai" ? "Đang nạp" : chay ? "Đang phát" : "Tạm dừng";
@@ -100,14 +106,18 @@ export function NhacNgay({ ds, ref }: { ds: readonly BaiNgay[]; ref: Ref<DieuKhi
   return (
     <section className="dtg-nhac" aria-labelledby="dtg-nhac-t">
       <h3 className="d" id="dtg-nhac-t">Nhạc trong ngày</h3>
-      {coMay && <div className="dtg-nhac__may" ref={hostRef} />}
+      {coMay && (
+        <OPhat chu={chu} className="dtg-nhac__may">
+          {nhac.hang !== null && !cuaCuon && <p className="dtg-nhac__khac">Nhạc khác đang phát ở góc dưới. Bấm Phát để nghe nhạc của ngày này.</p>}
+        </OPhat>
+      )}
       {coMay ? (
         <div className="dtg-nhac__dang">
           <p className="dtg-nhac__chu" aria-live="polite">
             {bai === null ? (
               <>
                 <b>{`${soBai} bài trong ngày`}</b>
-                <span>{trangThai === "loi" ? "Không nạp được trình phát YouTube." : "Bấm Phát, hay chọn một bài."}</span>
+                <span>{cuaCuon && trangThai === "loi" ? "Không nạp được trình phát YouTube." : "Bấm Phát, hay chọn một bài."}</span>
               </>
             ) : (
               <>
@@ -121,14 +131,14 @@ export function NhacNgay({ ds, ref }: { ds: readonly BaiNgay[]; ref: Ref<DieuKhi
               type="button"
               className="btn"
               onClick={() => {
-                if (chay) may.tam();
-                else if (dang === null) phatTu(ds, 0);
-                else may.choi();
+                if (chay) nhac.tam();
+                else if (dang === null) phatTu(ds, nhan, 0);
+                else nhac.choi();
               }}
             >
               {chay ? "Tạm dừng" : "Phát"}
             </button>
-            <button type="button" className="btn btn--quiet btn--icon" aria-label="Bài kế tiếp" disabled={ke < 0} onClick={() => phatTu(ds, ke)}>
+            <button type="button" className="btn btn--quiet btn--icon" aria-label="Bài kế tiếp" disabled={ke < 0} onClick={() => phatTu(ds, nhan, ke)}>
               <BaiKe />
             </button>
           </div>
@@ -157,7 +167,7 @@ export function NhacNgay({ ds, ref }: { ds: readonly BaiNgay[]; ref: Ref<DieuKhi
                   type="button"
                   className={dangBai ? (chay ? "dtg-bai dtg-bai--dang dtg-bai--chay" : "dtg-bai dtg-bai--dang") : "dtg-bai"}
                   aria-current={dangBai ? "true" : undefined}
-                  onClick={() => phatTu(ds, i)}
+                  onClick={() => phatTu(ds, nhan, i)}
                 >
                   <span className="dtg-bai__so">{dangBai ? <VachSong /> : thuTu[i]}</span>
                   <span className="dtg-bai__ten">{tenBai(b)}</span>

@@ -24,12 +24,12 @@ export type KhiMayPhat = {
   hong: () => void;
 };
 
-/** Ten cua iframe cho trinh doc man hinh. */
-const TEN_KHUNG = "Nhạc trong ngày";
+/** Ten cua iframe cho trinh doc man hinh: trinh phat chung phat nhac cua nhieu trang (So nhac, Dau thoi gian). */
+const TEN_KHUNG = "Trình phát nhạc";
 
 /**
- * MOT trinh phat YouTube that trong hostRef cho ca danh sach nhac trong ngay cua trang Dau thoi gian (spec bo sung B4
- * ban hai): doi bai bang loadVideoById tren cung trinh phat, khong tao lai. `khoa` null la khong co trinh phat (ngay
+ * MOT trinh phat YouTube that trong hostRef cho trinh phat chung (MayPhatChung: So nhac, nhac trong ngay cua Dau thoi
+ * gian): doi bai bang loadVideoById tren cung trinh phat, khong tao lai. `khoa` null la khong co trinh phat (ngay
  * khong co bai nao phat duoc); doi khoa thi trinh phat cu bi huy va tao moi (noi goi doi khoa de thu nap lai sau loi).
  * `idDau` chi doc luc tao: bai hien san (chua phat) khi trinh phat vua dung xong. Trinh phat thay mot the div tao rieng
  * ben trong host (khong phai nut React), nen React khong bao gio mat dau nut cua minh.

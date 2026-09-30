@@ -66,8 +66,9 @@
 .dtg-nhac{ display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); padding: var(--space-lg); min-width: 0; }
 .dtg-nhac h3{ font-size: var(--text-base); line-height: 1.3; }
 /* Khung phat: 16:9, khong bao gio thap hon 200px (luat trinh phat YouTube); khong lop nao de len no. */
-.dtg-nhac__may{ position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 200px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-paper-3); }
-.dtg-nhac__may iframe{ position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+/* O giu cho: trinh phat chung (nhac.css, .mph--lon) dat dung len o nay; nhac khac dang phat thi o hien mot dong chu. */
+.dtg-nhac__may{ position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9; min-height: 200px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-paper-3); }
+.dtg-nhac__khac{ padding: var(--space-md); font-size: var(--text-sm); color: var(--color-ink-2); text-align: center; }
 .dtg-nhac__dang{ display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
 /* Het cho cho ten bai thi CA CUM hai nut xuong hang duoi, khong ep ten bai thanh cot chu hep, khong tach doi hai nut. */
 .dtg-nhac__chu{ flex: 1 1 10rem; min-width: 0; }

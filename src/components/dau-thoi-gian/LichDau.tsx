@@ -32,6 +32,8 @@ export type DauHien = {
 };
 
 export type LichDauProps = {
+  /** Cuon cua trang: chu cua hang doi nhac ("dtg-<id>") va trang nguon cua cua so nhac nho. */
+  bookId: string;
   /** Moi dau nhac cua cuon, theo thu tu dong thoi gian. */
   dau: readonly DauHien[];
   /** Thang mo san (tu ?thang hay thang cua dau moi nhat) va ngay chon san trong thang do. */
@@ -66,7 +68,10 @@ const baiNgay = (ds: readonly DauHien[]): BaiNgay[] =>
  * phai la mot the gom ten ngay dang chon va Nhac trong ngay. Doi thang ngay tai cho (duong dan van ghi ?thang=) nen ngay
  * dang chon, cot phai va bai dang phat giu nguyen. Nhac chi tu phat khi bam mot ngay.
  */
-export function LichDau({ dau, thangDau, chonDau, tao, thangNay, homNay, now }: LichDauProps) {
+/** Khoa cua mot ngay, "2026-09-15": nhan cua hang doi nhac trong ngay. */
+const khoaNgay = (t: Thang, so: number) => `${thangKhoa(t)}-${String(so).padStart(2, "0")}`;
+
+export function LichDau({ bookId, dau, thangDau, chonDau, tao, thangNay, homNay, now }: LichDauProps) {
   const theoThang = useMemo(() => gomTheoThang(dau), [dau]);
   const [thang, setThang] = useState(thangDau);
   const [chon, setChon] = useState({ thang: thangDau, so: chonDau });
@@ -89,7 +94,7 @@ export function LichDau({ dau, thangDau, chonDau, tao, thangNay, homNay, now }: 
   const bamNgay = (so: number) => {
     const cungNgay = thangKhoa(chon.thang) === khoa && chon.so === so;
     setChon({ thang, so });
-    nhacRef.current?.chonNgay(baiNgay(trongThang[so] ?? []), cungNgay);
+    nhacRef.current?.chonNgay(baiNgay(trongThang[so] ?? []), khoaNgay(thang, so), cungNgay);
   };
 
   return (
@@ -154,7 +159,13 @@ export function LichDau({ dau, thangDau, chonDau, tao, thangNay, homNay, now }: 
               <h2 className="d">{tenNgay(chon.thang, chon.so, now)}</h2>
               <p>{dauChon.length === 0 ? "Ngày này không đổi nhạc." : `${soLuot} lượt đăng, ${dauChon.length} lần đổi nhạc.`}</p>
             </div>
-            <NhacNgay ref={nhacRef} ds={baiNgay(dauChon)} />
+            <NhacNgay
+              ref={nhacRef}
+              ds={baiNgay(dauChon)}
+              nhan={khoaNgay(chon.thang, chon.so)}
+              chu={`dtg-${bookId}`}
+              href={`/dau-thoi-gian/${bookId}`}
+            />
           </div>
         </aside>
       </div>

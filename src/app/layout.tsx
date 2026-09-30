@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
 import { InkDefs } from "@/components/book/CoverArt";
+import { MayPhatChung } from "@/components/music/MayPhatChung";
 import { lopPhong } from "./phong";
 
 export const metadata: Metadata = { title: "Món Quà Của Em" };
@@ -28,7 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Bo loc muc cua moi bia khai mot lan o day; CoverArt chi tro toi no bang id. */}
         <InkDefs />
-        {children}
+        {/* Mot trinh phat nhac chung cho moi trang (5b): layout goc khong bao gio bi go khi doi trang mem. */}
+        <MayPhatChung>{children}</MayPhatChung>
       </body>
     </html>
   );

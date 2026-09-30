@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { actionMarkRead, actionSavePosition } from "@/app/actions/library";
+import { useTatNhacChung } from "@/components/music/MayPhatChung";
 import { SealPanel } from "@/components/seal/SealPanel";
 import { TypeReveal } from "@/components/seal/TypeReveal";
 import { ClockSkew, useClockSkew } from "@/components/seal/useTimeLeft";
@@ -66,6 +67,8 @@ export function Reader({
   bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, seen, trackRead, mine, editedAt, editHref,
   lastPosition = null,
 }: ReaderProps) {
+  // Mo sach ra doc thi tat nhac nghe tu So nhac hay Dau thoi gian (spec 5b C1); nhac cua cuon do la cua MusicRoom.
+  useTatNhacChung();
   const router = useRouter();
   const moId = useId();
   // Cac to da ghi (tu may chu, cong cac khung vua gui trong tab nay): khung nao cung da ghi thi khong goi nua.

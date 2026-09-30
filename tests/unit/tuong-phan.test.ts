@@ -290,6 +290,11 @@ const MIEN_TRU: MienTru[] = [
       // ke tiep co vien rieng dat nguong.
       ".dtg-the",
       ".dtg-bai-ds > li + li",
+      // So nhac thang (SoNhac.tsx): vach chia giua dau mot danh sach phat va cac bai, va giua cac dong bai, trong cung
+      // mot the. Khung the (.pl) dung --color-rule-ui dat nguong; moi dong bai la nut khong vien, nhan ra bang ten bai
+      // va vong focus; nut tron phat co vien --blue-line rieng dat nguong.
+      ".pl__bai",
+      ".pl__bai > li + li",
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
       // phan tren cua chinh the, khong phai vien cua dieu khien nao.
       ".nhap__hoi",

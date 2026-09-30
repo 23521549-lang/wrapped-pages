@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
 import { LichDau, type DauHien } from "@/components/dau-thoi-gian/LichDau";
+import { MayPhatChung } from "@/components/music/MayPhatChung";
 import { YT_HOST, YT_STATE, type YTNamespace, type YTPlayerOptions } from "@/components/music/youtubeApi";
 
 vi.mock("next/link", () => ({
@@ -64,7 +65,9 @@ const NOW = new Date(Date.UTC(2026, 8, 26, 5));
 
 async function ve(props: Partial<Parameters<typeof LichDau>[0]> = {}) {
   const kq = render(
-    <LichDau dau={DAU} thangDau={{ y: 2026, m: 9 }} chonDau={22} tao={{ y: 2026, m: 8 }} thangNay={{ y: 2026, m: 9 }} homNay={26} now={NOW} {...props} />,
+    <MayPhatChung>
+      <LichDau bookId="s1" dau={DAU} thangDau={{ y: 2026, m: 9 }} chonDau={22} tao={{ y: 2026, m: 8 }} thangNay={{ y: 2026, m: 9 }} homNay={26} now={NOW} {...props} />
+    </MayPhatChung>,
   );
   // Promise nap API (window.YT da san) tao trinh phat trong mot vi tac vu.
   await act(async () => {});
@@ -155,7 +158,7 @@ describe("LichDau: nhac trong ngay", () => {
     await ve({ chonDau: 15 });
     expect(cacMay).toHaveLength(1);
     expect(may().opts).toMatchObject({ host: YT_HOST, videoId: A, playerVars: { controls: 1, autoplay: 0, loop: 0 } });
-    expect(may().khung.title).toBe("Nhạc trong ngày");
+    expect(may().khung.title).toBe("Trình phát nhạc");
     await san();
     expect(may().loadVideoById).not.toHaveBeenCalled();
     expect(may().playVideo).not.toHaveBeenCalled();
