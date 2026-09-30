@@ -1,4 +1,4 @@
-import { and, eq, gte, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { activity, books, bookTracks, rounds } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -24,6 +24,10 @@ type Tho = { youtubeId: string; at: Date; ownerId: string; bookId: string; title
 async function baiTrong(tx: AnyDb, viewerId: string, from: Date | null, to: Date): Promise<Tho[]> {
   const thay = or(eq(books.ownerId, viewerId), eq(books.mode, "chia-se"));
   const lucO = sql`coalesce(${rounds.publishedAt}, ${books.createdAt})`;
+  // So sanh mot bieu thuc SQL tran (khong phai cot) voi moc gio: drizzle khong biet kieu nen khong doi Date, va driver
+  // postgres-js tu choi mot Date tran lam tham so. Gui chuoi ISO kem ep kieu timestamptz, nhu moThu.
+  const tu = (x: Date): SQL => sql`${lucO} >= ${x.toISOString()}::timestamptz`;
+  const truoc = (x: Date): SQL => sql`${lucO} < ${x.toISOString()}::timestamptz`;
   const [oNhac, doiNhac] = await Promise.all([
     tx
       .select({
@@ -33,7 +37,7 @@ async function baiTrong(tx: AnyDb, viewerId: string, from: Date | null, to: Date
       .from(bookTracks)
       .innerJoin(books, eq(books.id, bookTracks.bookId))
       .leftJoin(rounds, eq(rounds.id, bookTracks.roundId))
-      .where(and(thay, isNotNull(bookTracks.youtubeId), from === null ? undefined : gte(lucO, from), lt(lucO, to))),
+      .where(and(thay, isNotNull(bookTracks.youtubeId), from === null ? undefined : tu(from), truoc(to))),
     tx
       .select({
         detail: activity.detail, at: activity.at, ownerId: books.ownerId, bookId: books.id, title: books.title,

@@ -66,7 +66,7 @@ export default async function DauThoiGian() {
                     <p className="so__ten">{ten}</p>
                     <p className="so__phu">{`${s.soBai} bài, ${s.soDanhSach === 1 ? "một" : "hai"} danh sách`}</p>
                   </div>
-                  <Link className="so__lien" href={`/dau-thoi-gian/thang/${s.thang}`} aria-label={`Sổ nhạc ${ten.toLowerCase()}, ${s.soBai} bài`} />
+                  <Link className="so__lien" href={`/dau-thoi-gian/thang/${s.thang}`} aria-label={`Sổ nhạc ${tenThang(t)}${t.y === nay.y ? "" : `, ${t.y}`}, ${s.soBai} bài`} />
                 </li>,
               ];
             })}
