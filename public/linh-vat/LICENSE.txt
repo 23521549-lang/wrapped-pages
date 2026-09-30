@@ -1,6 +1,6 @@
 Ảnh linh vật và hạt hiệu ứng trong thư mục này lấy từ hai bộ của Microsoft, giấy phép MIT:
 - Fluent Emoji Animated: https://github.com/microsoft/fluentui-emoji-animated (chip, gau-bong, gau-tui, ca-heo, chim-canh-cut, ho-con, cu-meo, khi-con, gau-truc)
-- Fluent Emoji (3D): https://github.com/microsoft/fluentui-emoji (tim, tim-lap-lanh, tim-lon, vet-son, lap-lanh, giot, dau-gian, va-cham)
+- Fluent Emoji (3D): https://github.com/microsoft/fluentui-emoji (tim, tim-lap-lanh, tim-lon, vet-son, lap-lanh, giot, dau-gian, va-cham, ngu)
 Đã thu nhỏ và đổi sang WebP. Nguyên văn giấy phép:
 
     MIT License

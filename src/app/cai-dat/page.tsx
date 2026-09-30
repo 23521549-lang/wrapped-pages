@@ -1,9 +1,12 @@
 import { connection } from "next/server";
+import { db } from "@/server/db";
+import { trangThaiChip } from "@/server/chip/tro-chuyen";
 import { requireMe } from "@/server/web/guard";
 import { readSettingsView } from "@/server/web/settings";
 import { actionReveal } from "@/app/actions/identity";
 import { AppNav } from "@/components/AppNav";
 import { Button } from "@/components/Button";
+import { CaiDatChip } from "@/components/linh-vat/CaiDatChip";
 import { RenameForm } from "./RenameForm";
 
 const ngay = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeZone: "Asia/Ho_Chi_Minh" });
@@ -12,7 +15,7 @@ const ngay = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeZone: "
 export default async function CaiDat() {
   await connection();
   const me = await requireMe();
-  const { nickname, written, received } = await readSettingsView(me.accountId);
+  const [{ nickname, written, received }, chip] = await Promise.all([readSettingsView(me.accountId), trangThaiChip(db, me.accountId)]);
 
   return (
     <>
@@ -36,6 +39,8 @@ export default async function CaiDat() {
               <p className="muc__x">Đổi biệt danh hoặc lời nhắn sẽ đổi luôn mật khẩu của người kia. Nhớ gửi mật khẩu mới cho họ.</p>
               <RenameForm />
             </section>
+
+            <CaiDatChip an={chip.an} tuNoi={chip.tuNoi} tenKia={me.partnerNickname} />
           </div>
 
           <div className="cai-dat__cot">

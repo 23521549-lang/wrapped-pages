@@ -1,32 +1,50 @@
 "use client";
 
-import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
-import { actionCamXucChoToi, actionDaXemCamXuc, actionThaCamXuc } from "@/app/actions/cam-xuc";
-import { CHUA_THA_CAM_XUC } from "@/app/actions/messages";
+import Link from "next/link";
+import { Fragment, useEffect, useEffectEvent, useRef, useState } from "react";
+import { actionCamXucChoToi, actionDaXemCamXuc } from "@/app/actions/cam-xuc";
+import { actionChaoChip } from "@/app/actions/chip";
 import { msTuCss } from "@/components/reader/Flipbook";
-import { CAM_XUC, CHIP, dongMangToi, LOAI_CAM_XUC, type LoaiCamXuc } from "@/lib/cam-xuc";
+import { CAM_XUC, CHIP, dongMangToi, type LoaiCamXuc } from "@/lib/cam-xuc";
+import { tachDam } from "@/lib/chip";
 import type { CamXucToi } from "@/server/cam-xuc/cam-xuc";
+import type { LoiChao, TrangThaiChip } from "@/server/chip/tro-chuyen";
+import { AnhLinhVat } from "./AnhLinhVat";
 import { dienHieuUng, VANG_MAT } from "./hieu-ung";
+import { TroChuyen } from "./TroChuyen";
 
-/** Cac cam xuc da dien tren trinh duyet nay: moi cam xuc chi dien mot lan (spec D1). */
+/** Cac cam xuc da dien tren trinh duyet nay: moi cam xuc chi dien mot lan (5d, spec D1). */
 const KHOA_DA_DIEN = "mqce-cam-xuc-da-dien";
+/** Chip dang thu nho tren trinh duyet nay (5e, spec F1). */
+const KHOA_THU_NHO = "mqce-chip-thu-nho";
+/** Lan cuoi Chip tu noi tren trinh duyet nay: hai lan tu noi cach nhau it nhat 10 phut (5e, spec C2). */
+const KHOA_NOI_LUC = "mqce-chip-noi-luc";
+const CACH_TU_NOI_MS = 10 * 60_000;
 
-function daDien(id: string): boolean {
+function docLuu(khoa: string): unknown {
   try {
-    return (JSON.parse(localStorage.getItem(KHOA_DA_DIEN) ?? "[]") as unknown[]).includes(id);
+    const v = localStorage.getItem(khoa);
+    return v === null ? null : (JSON.parse(v) as unknown);
   } catch {
-    return false;
+    return null;
   }
 }
 
-function ghiDaDien(id: string): void {
+function ghiLuu(khoa: string, v: unknown): void {
   try {
-    const cu = (JSON.parse(localStorage.getItem(KHOA_DA_DIEN) ?? "[]") as unknown[]).filter((x): x is string => typeof x === "string");
-    localStorage.setItem(KHOA_DA_DIEN, JSON.stringify([...cu.filter((x) => x !== id), id].slice(-24)));
+    localStorage.setItem(khoa, JSON.stringify(v));
   } catch {
-    // Trinh duyet chan luu tru: cung lam cam xuc do dien lai mot lan o trang sau, khong sao.
+    // Trinh duyet chan luu tru: lan sau quen, khong sao.
   }
 }
+
+function cacDaDien(): string[] {
+  const ds = docLuu(KHOA_DA_DIEN);
+  return Array.isArray(ds) ? ds.filter((x): x is string => typeof x === "string") : [];
+}
+
+const daDien = (id: string) => cacDaDien().includes(id);
+const ghiDaDien = (id: string) => ghiLuu(KHOA_DA_DIEN, [...cacDaDien().filter((x) => x !== id), id].slice(-24));
 
 const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const giamChuyenDong = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
@@ -35,42 +53,34 @@ const msToken = (ten: string, macDinh: number) => {
   return Number.isFinite(ms) && ms > 0 ? ms : macDinh;
 };
 
-/** Bong bong dang noi: linh vat mang cam xuc nguoi kia toi (nhan), hay vua mang cam xuc cua minh di (gui). */
+/** Bong bong dang noi: ban cam xuc mang cam xuc nguoi kia toi (nhan), hay vua mang cam xuc cua minh di (gui). */
 type Dang = { kieu: "nhan"; cx: CamXucToi } | { kieu: "gui"; loai: LoaiCamXuc };
 
-/** Anh linh vat: dong o che do thuong, khung dau tinh khi nguoi dung xin giam chuyen dong (khong can JS). */
-function AnhLinhVat({ loai, className }: { loai: LoaiCamXuc | null; className: string }) {
-  const lv = loai === null ? CHIP : CAM_XUC[loai];
-  return (
-    <picture className={className}>
-      <source srcSet={lv.anhTinh} media="(prefers-reduced-motion: reduce)" />
-      {/* oxlint-disable-next-line nextjs/no-img-element -- WebP dong tu public/, da thu nho san; next/image toi uu lai se mat chuyen dong. */}
-      <img src={lv.anh} alt="" width={176} height={176} decoding="async" />
-    </picture>
-  );
+function ChuDam({ cau }: { cau: string }) {
+  return <>{tachDam(cau).map((d) => (d.dam ? <b key={d.o}>{d.chu}</b> : <Fragment key={d.o}>{d.chu}</Fragment>))}</>;
 }
 
+export type LinhVatProps = { tenMinh: string; tenKia: string; hangDau: CamXucToi[]; trangThai: TrangThaiChip };
+
 /**
- * Chip va Kho cam xuc (dot nam 5d, spec C, D): ga con Chip ngoi goc duoi ben trai moi trang da dang nhap. Bam Chip mo Kho
- * cam xuc: tam cam xuc, moi cam xuc mot linh vat rieng; chon mot roi Tha thi linh vat do mang toi nguoi kia. Ben nhan,
- * Chip hoa thanh linh vat cua cam xuc, noi cau cua nguoi tha trong bong bong va dien hieu ung vai giay tren mot lop phu
- * ca man, xuyen chuot (ngoai le chu du an duyet: duoc de len khung YouTube). Hang cho doc san o may chu, hoi lai moi 15
- * giay khi tab dang duoc xem. Ngoi yen thi khong bao gio de len khung YouTube: cham mot khung phat thi tam an.
+ * Chip (dot nam 5d, 5e): ga con ngoi goc duoi ben trai moi trang da dang nhap. Bam Chip mo to tro chuyen (trong do co Kho
+ * cam xuc). Cam xuc nguoi kia tha: Chip hoa thanh ban cua cam xuc, noi cau cua nguoi tha, dien hieu ung tren mot lop phu ca
+ * man, xuyen chuot (ngoai le chu du an duyet: duoc de len khung YouTube). Chip tu chao khi vao, khi quay lai, khi thuc day
+ * (cau co san tu may chu, khong goi AI). Thu nho: ho dau o mep trai. Tat trong Cai dat: khong ngoi goc, nhung cam xuc van
+ * duoc mang toi. Ngoi yen thi khong bao gio de len khung YouTube: cham mot khung phat thi tam an.
  */
-export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia: string; hangDau: CamXucToi[] }) {
-  const id = useId();
-  const [mo, setMo] = useState(false);
-  const [chon, setChon] = useState<LoaiCamXuc | null>(null);
-  const [loi, setLoi] = useState("");
-  const [dangGui, setDangGui] = useState(false);
+export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
+  const [moTc, setMoTc] = useState(false);
   const [hang, setHang] = useState(hangDau);
   const [dang, setDang] = useState<Dang | null>(null);
   const [dien, setDien] = useState<LoaiCamXuc | null>(null);
   const [tranh, setTranh] = useState(false);
   const [bao, setBao] = useState("");
+  const [nguDen, setNguDen] = useState(trangThai.nguDen);
+  const [thuNho, setThuNho] = useState(false);
+  const [loiChao, setLoiChao] = useState<LoiChao | null>(null);
   const gocRef = useRef<HTMLDivElement>(null);
   const nutRef = useRef<HTMLButtonElement>(null);
-  const khoRef = useRef<HTMLElement>(null);
   const lopRef = useRef<HTMLDivElement>(null);
   const henRef = useRef(new Set<ReturnType<typeof setTimeout>>());
   /** Chuot dang tren bong bong hay focus dang trong no: chua tu dong, doc cho xong. */
@@ -91,20 +101,21 @@ export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia:
     };
   }, []);
 
-  // --- Nhan: dien lan luot hang cho ---
+  function dongBong() {
+    for (const t of henRef.current) clearTimeout(t);
+    henRef.current.clear();
+    setDien(null);
+    setDang(null);
+    setLoiChao(null);
+  }
+
   /** Bong bong tu dong sau 8 giay, tru khi nguoi dung dang re chuot hay focus trong no (thi hen lai 2 giay nua). */
   function tuDong() {
     if (giuRef.current) sau(2000, tuDong);
     else dongBong();
   }
 
-  function dongBong() {
-    for (const t of henRef.current) clearTimeout(t);
-    henRef.current.clear();
-    setDien(null);
-    setDang(null);
-  }
-
+  // --- Nhan: dien lan luot hang cho ---
   const batDau = useEffectEvent(() => {
     if (dang !== null) return;
     const [cx, ...conLai] = hang;
@@ -114,9 +125,10 @@ export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia:
     ghiDaDien(cx.id);
     void actionDaXemCamXuc(cx.id).catch(() => {});
     const lv = CAM_XUC[cx.loai];
-    // Kho dang mo thi dong; focus dang trong kho thi ve Chip, khong roi ve body.
-    if (khoRef.current?.contains(document.activeElement)) nutRef.current?.focus();
-    setMo(false);
+    // To tro chuyen dang mo thi dong; focus dang trong to thi ve Chip, khong roi ve body.
+    if (gocRef.current?.querySelector(".tc")?.contains(document.activeElement)) nutRef.current?.focus();
+    setMoTc(false);
+    setLoiChao(null);
     setDang({ kieu: "nhan", cx });
     setBao(`${lv.ten} mang tới: ${tenKia} ${lv.cau}.`);
     if (!giamChuyenDong()) {
@@ -132,16 +144,16 @@ export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia:
     return () => clearTimeout(t);
   }, [dang, hang]);
 
-  // Hieu ung: lop phu chi co trong DOM luc dang dien; do tam Chip lam goc xuat phat.
+  // Hieu ung: lop phu chi co trong DOM luc dang dien; do tam linh vat o goc lam goc xuat phat.
   useEffect(() => {
     const lop = lopRef.current;
-    const nut = nutRef.current;
+    const nut = gocRef.current?.querySelector(".linh-vat__nut");
     if (dien === null || !lop || !nut) return;
     const r = nut.getBoundingClientRect();
     return dienHieuUng(dien, lop, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
   }, [dien]);
 
-  // Hoi lai moi 15 giay khi tab dang duoc xem va khong dang dien; tab an thi thoi, xem lai thi hoi ngay.
+  // Hoi lai hang cho moi 15 giay khi tab dang duoc xem va khong dang dien; tab an thi thoi, xem lai thi hoi ngay.
   const hoi = useEffectEvent(() => {
     if (document.visibilityState !== "visible" || dang?.kieu === "nhan") return;
     void actionCamXucChoToi().then((ds) => setHang(ds.filter((x) => !daDien(x.id))), () => {});
@@ -155,6 +167,30 @@ export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia:
     return () => {
       clearInterval(hen);
       document.removeEventListener("visibilitychange", khiXem);
+    };
+  }, []);
+
+  // Thu nho nho theo trinh duyet; Chip tu chao mot lan moi lan mo trang (may chu ghi lan cuoi thay web).
+  const chao = useEffectEvent((loi: LoiChao | null) => {
+    const nho = docLuu(KHOA_THU_NHO) === true;
+    setThuNho(nho);
+    if (loi === null || nho || trangThai.an || dang !== null) return;
+    const luc = docLuu(KHOA_NOI_LUC);
+    if (typeof luc === "number" && Date.now() - luc < CACH_TU_NOI_MS) return;
+    ghiLuu(KHOA_NOI_LUC, Date.now());
+    setLoiChao(loi);
+    setBao(tachDam(loi.cau).map((d) => d.chu).join(""));
+    sau(8000, tuDong);
+  });
+  useEffect(() => {
+    let con = true;
+    void actionChaoChip().then((loi) => {
+      if (con) chao(loi);
+    }, () => {
+      if (con) chao(null);
+    });
+    return () => {
+      con = false;
     };
   }, []);
 
@@ -187,115 +223,80 @@ export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia:
     };
   }, []);
 
-  // --- Kho cam xuc ---
-  useEffect(() => {
-    if (!mo) return;
-    (khoRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]') ?? khoRef.current?.querySelector<HTMLButtonElement>(".cx"))?.focus();
-    // Bam ra ngoai thi dong; Esc tu bat ky dieu khien nao trong kho thi dong va tra focus ve Chip (nghe tren chinh kho,
-    // nhu hop Tha tam trang).
-    const kho = khoRef.current;
-    const ngoai = (e: PointerEvent) => {
-      if (!gocRef.current?.contains(e.target as Node)) setMo(false);
-    };
-    const phim = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      setMo(false);
-      nutRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", ngoai);
-    kho?.addEventListener("keydown", phim);
-    return () => {
-      document.removeEventListener("pointerdown", ngoai);
-      kho?.removeEventListener("keydown", phim);
-    };
-  }, [mo]);
+  function daTha(loai: LoaiCamXuc) {
+    const lv = CAM_XUC[loai];
+    setMoTc(false);
+    nutRef.current?.focus();
+    setLoiChao(null);
+    setDang((cu) => (cu?.kieu === "nhan" ? cu : { kieu: "gui", loai }));
+    setBao(`${lv.ten} đang mang ${lv.camXuc} tới ${tenKia}.`);
+    sau(5000, () => setDang((cu) => (cu?.kieu === "gui" ? null : cu)));
+  }
 
-  async function tha() {
-    if (chon === null || dangGui) return;
-    setDangGui(true);
-    setLoi("");
-    try {
-      const r = await actionThaCamXuc(chon);
-      if ("error" in r) {
-        setLoi(r.error);
-        return;
-      }
-      const lv = CAM_XUC[chon];
-      setMo(false);
-      nutRef.current?.focus();
-      setDang((cu) => (cu?.kieu === "nhan" ? cu : { kieu: "gui", loai: chon }));
-      setBao(`${lv.ten} đang mang ${lv.camXuc} tới ${tenKia}.`);
-      sau(5000, () => setDang((cu) => (cu?.kieu === "gui" ? null : cu)));
-    } catch {
-      setLoi(CHUA_THA_CAM_XUC);
-    } finally {
-      setDangGui(false);
+  function doiThuNho(nho: boolean) {
+    setThuNho(nho);
+    ghiLuu(KHOA_THU_NHO, nho);
+    if (nho) {
+      setMoTc(false);
+      setLoiChao(null);
     }
+    requestAnimationFrame(() => nutRef.current?.focus());
   }
 
   const hinh = dang === null ? null : dang.kieu === "nhan" ? dang.cx.loai : dang.loai;
   const lv = hinh === null ? null : CAM_XUC[hinh];
+  const ngu = nguDen !== null && dang === null;
+  const coNut = dang !== null || !trangThai.an;
+  const nho = thuNho && dang === null;
   const lop = [
     "linh-vat",
     dang?.kieu === "nhan" ? "linh-vat--mang" : "",
     dien !== null && VANG_MAT[dien] !== undefined ? `linh-vat--vang-${dien}` : "",
+    nho ? "linh-vat--thu-nho" : "",
     tranh && dien === null ? "linh-vat--tranh" : "",
   ].filter(Boolean).join(" ");
+  const giu = {
+    onPointerEnter: () => { giuRef.current = true; },
+    onPointerLeave: () => { giuRef.current = false; },
+    onFocus: () => { giuRef.current = true; },
+    onBlur: () => { giuRef.current = false; },
+  };
+  const nutDong = (ten: string) => (
+    <button
+      type="button"
+      className="loi-lv__dong"
+      aria-label={`Đóng lời ${ten}`}
+      onClick={() => {
+        dongBong();
+        nutRef.current?.focus();
+      }}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
+    </button>
+  );
 
   return (
     <>
       <p className="sr-only" aria-live="polite">{bao}</p>
       <div className={lop} ref={gocRef}>
-        {mo && (
-          <section className="kho-cx" id={`${id}-kho`} ref={khoRef} aria-labelledby={`${id}-t`}>
-            <h2 className="d kho-cx__t" id={`${id}-t`}>Kho cảm xúc</h2>
-            <p className="kho-cx__phu">Mỗi cảm xúc có một bạn nhỏ mang tới {tenKia}.</p>
-            <ul className="kho-cx__ds">
-              {LOAI_CAM_XUC.map((loai) => (
-                <li key={loai}>
-                  <button
-                    type="button"
-                    className="cx"
-                    aria-pressed={chon === loai}
-                    onClick={() => {
-                      setChon(loai);
-                      setLoi("");
-                    }}
-                  >
-                    {chon === loai ? (
-                      <AnhLinhVat loai={loai} className="cx__hinh" />
-                    ) : (
-                      // oxlint-disable-next-line nextjs/no-img-element -- anh tinh tu public/ da thu nho san; next/image se bien WebP dong thanh anh qua may chu anh cua Next.
-                      <img className="cx__hinh" src={CAM_XUC[loai].anhTinh} alt="" width={176} height={176} decoding="async" />
-                    )}
-                    <span className="cx__ten">{CAM_XUC[loai].camXuc}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {loi !== "" && <p className="form__loi" role="alert">{loi}</p>}
-            <div className="kho-cx__chan">
-              <p className="kho-cx__cau" aria-live="polite">
-                {chon === null
-                  ? "Chưa chọn cảm xúc nào."
-                  : <>{`${CAM_XUC[chon].ten} sẽ nói với ${tenKia}: `}<b>{tenMinh}</b>{` ${CAM_XUC[chon].cau}`}</>}
-              </p>
-              <button type="button" className="btn" disabled={chon === null || dangGui} aria-busy={dangGui || undefined} onClick={() => void tha()}>
-                Thả
-              </button>
-            </div>
-          </section>
+        {moTc && (
+          <TroChuyen
+            tenMinh={tenMinh}
+            tenKia={tenKia}
+            nguDen={nguDen}
+            coKhoa={trangThai.coKhoa}
+            doiNgu={setNguDen}
+            dong={() => {
+              setMoTc(false);
+              nutRef.current?.focus();
+            }}
+            thuNho={() => doiThuNho(true)}
+            daTha={daTha}
+          />
         )}
         {dang !== null && lv !== null && (
           // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- chi giu bong bong lai khi re chuot hay focus, khong phai mot dieu khien.
-          <div
-            className="loi-lv"
-            onPointerEnter={() => { giuRef.current = true; }}
-            onPointerLeave={() => { giuRef.current = false; }}
-            onFocus={() => { giuRef.current = true; }}
-            onBlur={() => { giuRef.current = false; }}
-          >
+          <div className="loi-lv" {...giu}>
             <p className="loi-lv__chu">
               {dang.kieu === "nhan" ? (
                 <>
@@ -309,30 +310,50 @@ export function LinhVat({ tenMinh, tenKia, hangDau }: { tenMinh: string; tenKia:
                 </>
               )}
             </p>
-            <button
-              type="button"
-              className="loi-lv__dong"
-              aria-label={`Đóng lời ${lv.ten}`}
-              onClick={() => {
-                dongBong();
-                nutRef.current?.focus();
-              }}
-            >
-              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
-            </button>
+            {nutDong(lv.ten)}
           </div>
         )}
-        <button
-          ref={nutRef}
-          type="button"
-          className="linh-vat__nut"
-          aria-label={`${CHIP.ten}, mở Kho cảm xúc`}
-          aria-expanded={mo}
-          aria-controls={mo ? `${id}-kho` : undefined}
-          onClick={() => setMo((x) => !x)}
-        >
-          <AnhLinhVat key={hinh ?? "chip"} loai={hinh} className="linh-vat__hinh" />
-        </button>
+        {dang === null && loiChao !== null && (
+          // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- chi giu bong bong lai khi re chuot hay focus, khong phai mot dieu khien.
+          <div className="loi-lv loi-lv--chao" {...giu}>
+            <div className="loi-lv__than">
+              <p className="loi-lv__chu"><ChuDam cau={loiChao.cau} /></p>
+              <div className="loi-lv__hang">
+                {loiChao.nut !== null && <Link className="btn btn--line btn--sm" href={loiChao.nut.href}>{loiChao.nut.nhan}</Link>}
+                <button
+                  type="button"
+                  className="btn btn--chu btn--sm"
+                  onClick={() => {
+                    dongBong();
+                    setMoTc(true);
+                  }}
+                >
+                  Nói chuyện với Chíp
+                </button>
+              </div>
+            </div>
+            {nutDong(CHIP.ten)}
+          </div>
+        )}
+        {coNut && (
+          <button
+            ref={nutRef}
+            type="button"
+            className="linh-vat__nut"
+            aria-label={nho ? `${CHIP.ten} đang thu nhỏ, bấm để hiện lại` : `${CHIP.ten}, mở trò chuyện`}
+            aria-expanded={nho ? undefined : moTc}
+            onClick={() => {
+              if (nho) doiThuNho(false);
+              else setMoTc((x) => !x);
+            }}
+          >
+            <AnhLinhVat key={hinh ?? "chip"} loai={hinh} className="linh-vat__hinh" tinh={ngu} />
+            {ngu && (
+              // oxlint-disable-next-line nextjs/no-img-element -- anh tinh tu public/, da thu nho san.
+              <img className="linh-vat__ngu" src="/linh-vat/ngu.webp" alt="" width={96} height={96} decoding="async" />
+            )}
+          </button>
+        )}
       </div>
       {dien !== null && <div className="hieu-ung" ref={lopRef} aria-hidden="true" />}
     </>

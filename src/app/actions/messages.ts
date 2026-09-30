@@ -30,3 +30,8 @@ export const CHON_CAM_XUC = "Chọn một cảm xúc trong kho nhé.";
 export const CHO_THA_TIEP = "Chíp vừa chạy đi, vài giây nữa thả tiếp nhé.";
 /** Action tha cam xuc nem loi (mat mang): kho hien cau nay, giu nguyen lua chon. */
 export const CHUA_THA_CAM_XUC = "Chưa gửi được cảm xúc. Thử lại nhé.";
+
+/** Chip biet noi (5e): tin rong hay qua dai, gui lien tay, action nem loi (mat mang). */
+export const TIN_CHIP_HONG = "Nói gì đó với Chíp nhé, tối đa 500 ký tự.";
+export const CHO_CHIP_TRA_LOI = "Chíp đang nghe, chờ Chíp trả lời đã nhé.";
+export const CHUA_GUI_CHIP = "Chưa gửi được cho Chíp. Thử lại nhé.";
