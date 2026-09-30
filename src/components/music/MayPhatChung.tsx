@@ -250,11 +250,23 @@ export function MayPhatChung({ children }: { children: ReactNode }) {
     const theoDoi = new ResizeObserver(dat);
     theoDoi.observe(o.el);
     theoDoi.observe(document.body);
+    // O giu cho co the nam trong cot dinh (position: sticky, vd cot phai cua Dau thoi gian): khi cuon, o doi cho trong tai
+    // lieu nen khung phai theo, moi khung hinh mot lan.
+    let khungHinh = 0;
+    const khiCuon = () => {
+      if (khungHinh === 0) khungHinh = requestAnimationFrame(() => {
+        khungHinh = 0;
+        dat();
+      });
+    };
     addEventListener("resize", dat);
+    addEventListener("scroll", khiCuon, { passive: true });
     void document.fonts?.ready.then(dat);
     return () => {
       theoDoi.disconnect();
+      cancelAnimationFrame(khungHinh);
       removeEventListener("resize", dat);
+      removeEventListener("scroll", khiCuon);
     };
   }, [cheDo, o]);
 
