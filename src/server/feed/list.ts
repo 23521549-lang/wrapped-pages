@@ -107,13 +107,13 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
         bookId: r.bookId, bookTitle: r.bookTitle, firstPosition: r.firstPosition, lastPosition: r.lastPosition,
         sealKind: r.sealKind, count: 1,
         note: r.kind === "tang-khoa" ? r.giftNote : r.kind === "tha-tam-trang" ? r.moodNote : null,
-        isNew: false, detail: r.detail, weather: r.weather, biaMoi: r.biaMoi, nhacMoi: r.nhacMoi, ordinal: r.ordinal,
+        isNew: false, detail: r.detail, weather: r.weather, biaMoi: r.biaMoi, nhacMoi: r.nhacMoi, ordinal: r.ordinal, tenLuot: null,
       })),
       ...sai.map((r): FeedItem => ({
         id: r.id, kind: "thu-sai", by: by(r.actorId), at: r.at,
         bookId: r.bookId, bookTitle: r.bookTitle, firstPosition: r.firstPosition, lastPosition: r.lastPosition,
         sealKind: r.sealKind, note: null, count: r.count,
-        isNew: false, detail: null, weather: null, biaMoi: false, nhacMoi: false, ordinal: null,
+        isNew: false, detail: null, weather: null, biaMoi: false, nhacMoi: false, ordinal: null, tenLuot: null,
       })),
     ];
     // Sap xep on dinh: cung gio thi dong khac thu-sai dung truoc, dung thu tu cua tung truy van.

@@ -4,7 +4,8 @@ import type { SealKind } from "@/lib/seal/types";
 import { phanThang, tenThang, thangKhoa } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
 import {
-  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, docChiTietThu, type GiaTriBia, type GiaTriNhac,
+  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietNhanViet, docChiTietTen, docChiTietTenLuot, docChiTietThu,
+  docChiTietTuChoi, type GiaTriBia, type GiaTriNhac,
 } from "./detail";
 import type { FeedItem } from "./types";
 
@@ -120,8 +121,35 @@ export function feedLine(item: FeedItem, names: FeedNames): FeedLine {
   const moSach = `/sach/${sach.bookId}`;
   const cau = (before: string, after = ""): FeedSentence => [thuong(before), dam(sach.title), ...(after === "" ? [] : [thuong(after)])];
   const dong = (sentence: FeedSentence, href: string, chips: string[] = []): FeedLine => ({ sentence, chips, extra: null, href, avatar });
+  const nguoiKia = mine ? names.partner : "bạn";
 
   switch (item.kind) {
+    // Sach viet cung (5c): cac de nghi va cau tra loi gan ca cuon, dan toi cuon (man doc co nut nhan loi, xin, rut).
+    case "moi-viet":
+      return dong(cau(`${ai} mời ${nguoiKia} viết cùng `), moSach);
+    case "xin-viet":
+      return dong(cau(`${ai} xin viết cùng `), moSach);
+    case "nhan-viet":
+      return docChiTietNhanViet(item.detail)?.tu === "xin-viet"
+        ? dong(cau(`${ai} đồng ý cho ${nguoiKia} viết cùng `), moSach)
+        : dong(cau(`${ai} nhận lời viết cùng `), moSach);
+    case "tu-choi": {
+      const viec = docChiTietTuChoi(item.detail)?.viec;
+      if (viec === "moi-viet") return dong(cau(`${ai} chưa nhận lời viết cùng `), moSach);
+      if (viec === "xin-viet") return dong(cau(`${ai} chưa đồng ý cho ${nguoiKia} viết cùng `), moSach);
+      if (viec === "xoa-sach") return dong(cau(`${ai} muốn giữ lại `), moSach);
+      return dong(cau(`${ai} trả lời đề nghị về `), moSach);
+    }
+    // Dong y hay giu lai nam o muc Xoa cuon cua Sua sach (va o Ke sach).
+    case "de-nghi-xoa":
+      return dong(cau(`${ai} đề nghị xóa `), `${moSach}/sua`);
+    case "doi-ten-luot": {
+      const ten = docChiTietTenLuot(item.detail);
+      const toi = item.firstPosition === null ? moSach : `${moSach}?trang=${item.firstPosition}`;
+      return ten === null || item.ordinal === null
+        ? dong(cau(`${ai} đổi tên một lượt của `), toi)
+        : dong([thuong(`${ai} đổi tên lượt ${item.ordinal} của `), dam(sach.title), thuong(" thành "), dam(ten.sau)], toi);
+    }
     case "tao-sach":
       return dong(cau(`${ai} tạo cuốn `), moSach);
     case "doi-ten-sach": {
@@ -149,11 +177,13 @@ export function feedLine(item: FeedItem, names: FeedNames): FeedLine {
 
   const k = khoangCua(item);
   const trang = pageRange(k.first, k.last);
-  const nguoiKia = mine ? names.partner : "bạn";
   let sentence: FeedSentence;
   switch (item.kind) {
     case "dang-trang":
-      sentence = cau(`${ai} đăng ${k.last - k.first + 1} trang mới trong `);
+      // Sach viet cung: moi luot co ten rieng, nhu mot chuong (5c muc I2).
+      sentence = item.tenLuot === null
+        ? cau(`${ai} đăng ${k.last - k.first + 1} trang mới trong `)
+        : [thuong(`${ai} viết lượt `), dam(item.tenLuot), thuong(" trong "), dam(sach.title)];
       break;
     case "moi-trao-doi":
       sentence = cau(`${ai} mời ${nguoiKia} viết trang trả lời trong `);

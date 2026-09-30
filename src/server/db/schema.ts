@@ -10,6 +10,7 @@ import type { FeedKind } from "@/lib/feed/types";
 import type { MediaKind, MediaMime } from "@/lib/media/kinds";
 import type { SealKind } from "@/lib/seal/types";
 import type { Weather } from "@/lib/tam-trang/troi";
+import type { LoaiDeNghi } from "@/lib/viet-cung";
 
 /** Dung hai cho ngoi. Khong co vai dat san. */
 export const accounts = pgTable("accounts", {
@@ -66,9 +67,11 @@ export const trustedDevices = pgTable("trusted_devices", {
 }, (t) => ({ byAccount: index("trusted_devices_account_idx").on(t.accountId, t.lastLoginAt) }));
 
 /**
- * Moi cuon thuoc dung mot nguoi. "chia-se": nguoi kia doc duoc; "rieng-tu": nguoi kia khong thay gi, ke ca ten.
+ * Moi cuon do mot nguoi tao (owner_id). "chia-se": nguoi kia doc duoc; "rieng-tu": nguoi kia khong thay gi, ke ca ten.
  * Danh sach trong check phai khop MODES cua src/lib/book.ts (co test). Bia va nhac KHONG o day: moi cuon giu mot dong
  * thoi gian bia (book_covers) va mot dong thoi gian nhac (book_tracks), moi luot nhieu nhat mot o.
+ * viet_cung_tu (dot nam 5c): khac null la SACH VIET CUNG tu luc do, ca hai nguoi la nguoi viet; sach viet cung luon chia
+ * se (books_viet_cung). owner_id van la nguoi tao, va la nguoi viet cua moi trang niem phong cu.
  */
 export const books = pgTable("books", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -77,8 +80,10 @@ export const books = pgTable("books", {
   mode: text("mode").$type<BookMode>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  vietCungTu: timestamp("viet_cung_tu", { withTimezone: true }),
 }, (t) => ({
   modeValue: check("books_mode", sql`${t.mode} in ('chia-se', 'rieng-tu')`),
+  vietCung: check("books_viet_cung", sql`${t.vietCungTu} is null or ${t.mode} = 'chia-se'`),
   byOwner: index("books_owner_idx").on(t.ownerId),
 }));
 
@@ -86,15 +91,21 @@ export const books = pgTable("books", {
  * Mot luot dang: moi lan publishDraft la mot luot, cac to cua no cung published_at. Don vi sua noi dung la mot luot
  * (editRound): so to cua luot doi duoc, cac to sau doi theo. edited_at la lan sua gan nhat, null la chua sua lan nao,
  * khong bao gio som hon published_at.
+ * tac_gia_id (5c): nguoi viet luot; moi luot cu (0018) la cua chu cuon. Moi luat cap luot, cap trang (ai sua, trang moi,
+ * da doc) theo cot nay. ten: ten luot trong sach viet cung, 60 trong CHECK phai khop TEN_LUOT_TOI_DA cua
+ * src/lib/viet-cung.ts; null hien "Lượt N".
  */
 export const rounds = pgTable("rounds", {
   id: uuid("id").primaryKey().defaultRandom(),
   bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
   editedAt: timestamp("edited_at", { withTimezone: true }),
+  tacGiaId: uuid("tac_gia_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  ten: text("ten"),
 }, (t) => ({
   byBook: index("rounds_book_idx").on(t.bookId, t.publishedAt),
   editedAfterPublish: check("rounds_edited_at", sql`${t.editedAt} is null or ${t.editedAt} >= ${t.publishedAt}`),
+  tenLuot: check("rounds_ten", sql`${t.ten} is null or char_length(${t.ten}) between 1 and 60`),
 }));
 
 /**
@@ -216,7 +227,9 @@ export const roundReplies = pgTable("round_replies", {
  * - doi-bia, doi-nhac: co sach; luot null la o mo dau luc tao sach. tao-sach, doi-ten-sach: co sach, khong luot.
  * - doi-mat-khau: chi nguoi doi va nguoi bi doi. tha-tam-trang: chi nguoi tha va mood_id, luon chia se.
  * - gui-thu (5b): chi nguoi gui va detail { thang }, luon chia se; noi dung thu nam o thu_thang, khong bao gio o day.
- * - detail: chi doi-ten-sach, doi-bia, doi-nhac, da-doc, gui-thu, luon la mot object (hinh dang: src/lib/feed/detail.ts).
+ * - 5c: moi-viet, xin-viet, nhan-viet, tu-choi, de-nghi-xoa gan sach, khong luot; doi-ten-luot gan sach va luot.
+ * - detail: chi doi-ten-sach, doi-bia, doi-nhac, da-doc, gui-thu, nhan-viet, tu-choi, doi-ten-luot, luon la mot object
+ *   (hinh dang: src/lib/feed/detail.ts).
  * - seal_id: bat buoc voi nam loai niem phong; dang-trang, hoi-dap duoc co (nhu cu); bay loai moi khong bao gio co.
  * Danh sach trong activity_kind phai khop FEED_KINDS cua src/lib/feed/types.ts, cung thu tu (co test).
  */
@@ -237,11 +250,11 @@ export const activity = pgTable("activity", {
 }, (t) => ({
   kindValue: check(
     "activity_kind",
-    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap', 'tha-tam-trang', 'tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'sua-trang', 'da-doc', 'gui-thu')`,
+    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap', 'tha-tam-trang', 'tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'sua-trang', 'da-doc', 'gui-thu', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa', 'doi-ten-luot')`,
   ),
   sach: check(
     "activity_sach",
-    sql`${t.kind} in ('doi-mat-khau', 'tha-tam-trang', 'gui-thu') or (${t.bookId} is not null and ${t.subjectId} is null and (${t.roundId} is not null or ${t.kind} in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac')) and (${t.roundId} is null or ${t.kind} not in ('tao-sach', 'doi-ten-sach')))`,
+    sql`${t.kind} in ('doi-mat-khau', 'tha-tam-trang', 'gui-thu') or (${t.bookId} is not null and ${t.subjectId} is null and (${t.roundId} is not null or ${t.kind} in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa')) and (${t.roundId} is null or ${t.kind} not in ('tao-sach', 'doi-ten-sach', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa')))`,
   ),
   niemPhong: check(
     "activity_niem_phong",
@@ -257,7 +270,7 @@ export const activity = pgTable("activity", {
   ),
   chiTiet: check(
     "activity_detail",
-    sql`(${t.detail} is not null) = (${t.kind} in ('doi-ten-sach', 'doi-bia', 'doi-nhac', 'da-doc', 'gui-thu')) and (${t.detail} is null or jsonb_typeof(${t.detail}) = 'object')`,
+    sql`(${t.detail} is not null) = (${t.kind} in ('doi-ten-sach', 'doi-bia', 'doi-nhac', 'da-doc', 'gui-thu', 'nhan-viet', 'tu-choi', 'doi-ten-luot')) and (${t.detail} is null or jsonb_typeof(${t.detail}) = 'object')`,
   ),
   thu: check(
     "activity_thu",
@@ -360,11 +373,13 @@ export const mediaSweeps = pgTable("media_sweeps", {
 }));
 
 /**
- * Moi cuon co toi da mot ban nhap, cua chinh chu sach. Nguoi kia khong bao gio thay.
+ * Moi nguoi viet co toi da mot ban nhap moi cuon (khoa chinh book_id, account_id): sach viet cung co hai ban nhap rieng.
+ * Nguoi kia khong bao gio thay ban nhap cua minh: moi cau doc nhap loc theo account_id cua nguoi xem.
  * Dat sau media vi cover_media_id tro toi media.id: khai sau thi tham chieu la thang, khong phai vong.
  */
 export const drafts = pgTable("drafts", {
-  bookId: uuid("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
+  bookId: uuid("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   content: jsonb("content").$type<DocJson>().notNull(),
   sheetCount: integer("sheet_count").notNull().default(1),
   /** O bia cua luot sap dang: tranh ve san; null la luot nay khong them o bia nao. */
@@ -377,6 +392,7 @@ export const drafts = pgTable("drafts", {
   dropTrack: boolean("drop_track").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
+  pk: primaryKey({ columns: [t.bookId, t.accountId] }),
   coverValue: check("drafts_cover", sql`${t.cover} is null or ${t.cover} in ('nui-xa', 'khom-truc', 'trang-nuoc', 'chim-bay', 'hoa-dao', 'doi-chim', 'thuyen-trang', 'cau-go', 'doi-thong', 'meo-mai')`),
   coverMedia: check("drafts_cover_media", sql`${t.coverMediaId} is null or ${t.cover} is not null`),
   youtubeIdValue: check("drafts_youtube_id", sql`${t.youtubeId} is null or ${t.youtubeId} ~ '^[A-Za-z0-9_-]{11}$'`),
@@ -465,4 +481,19 @@ export const thuThang = pgTable("thu_thang", {
   thangDang: check("thu_thang_thang", sql`${t.thang} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
   noiDungDai: check("thu_thang_noi_dung", sql`char_length(${t.noiDung}) between 1 and 1000`),
   moSau: check("thu_thang_mo_luc", sql`${t.moLuc} is null or ${t.moLuc} >= ${t.guiLuc}`),
+}));
+
+/**
+ * De nghi dang cho cua mot cuon (dot nam 5c), moi cuon nhieu nhat mot (khoa chinh book_id): moi-viet (chu cuon moi
+ * nguoi kia viet cung), xin-viet (nguoi kia xin viet vao cuon cua chu), xoa-sach (mot nguoi viet de nghi xoa sach viet
+ * cung). tu_id la nguoi gui; nguoi nhan luon la tai khoan con lai. Danh sach trong de_nghi_loai phai khop LOAI_DE_NGHI
+ * cua src/lib/viet-cung.ts (co test). Luat ai gui duoc gi nam o src/server/viet-cung/de-nghi.ts.
+ */
+export const deNghi = pgTable("de_nghi", {
+  bookId: uuid("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
+  loai: text("loai").$type<LoaiDeNghi>().notNull(),
+  tuId: uuid("tu_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  luc: timestamp("luc", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  loaiValue: check("de_nghi_loai", sql`${t.loai} in ('moi-viet', 'xin-viet', 'xoa-sach')`),
 }));

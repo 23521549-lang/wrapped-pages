@@ -46,8 +46,8 @@ export async function saveDraft(
     const now = new Date();
     await tx
       .insert(drafts)
-      .values({ bookId: book.id, content: bound, sheetCount: n, updatedAt: now })
-      .onConflictDoUpdate({ target: drafts.bookId, set: { content: bound, sheetCount: n, updatedAt: now } });
+      .values({ bookId: book.id, accountId: ownerId, content: bound, sheetCount: n, updatedAt: now })
+      .onConflictDoUpdate({ target: [drafts.bookId, drafts.accountId], set: { content: bound, sheetCount: n, updatedAt: now } });
     return now;
   });
 }
@@ -93,8 +93,8 @@ export async function setDraftTrim(
     if (coverMediaId !== null && !(await lockCover(tx, ownerId, id, coverMediaId))) return "invalid-cover";
     await tx
       .insert(drafts)
-      .values({ bookId: id, content: TRANG_TRONG, cover, coverMediaId, youtubeId, dropTrack, updatedAt: now })
-      .onConflictDoUpdate({ target: drafts.bookId, set: { cover, coverMediaId, youtubeId, dropTrack, updatedAt: now } });
+      .values({ bookId: id, accountId: ownerId, content: TRANG_TRONG, cover, coverMediaId, youtubeId, dropTrack, updatedAt: now })
+      .onConflictDoUpdate({ target: [drafts.bookId, drafts.accountId], set: { cover, coverMediaId, youtubeId, dropTrack, updatedAt: now } });
     // Gan anh vao cuon ngay: tu day no la tai san cua cuon, nen buoc don rac khong bao gio cham toi no nua.
     if (coverMediaId !== null) await attachCover(tx, id, coverMediaId);
     return "saved";
@@ -237,7 +237,7 @@ export async function publishDraft(
     if (bound.length !== kept.length) return null;
     const [{ last }] = await tx.select({ last: max(pages.position) }).from(pages).where(eq(pages.bookId, book.id));
     const first = (last ?? 0) + 1;
-    const [round] = await tx.insert(rounds).values({ bookId: book.id, publishedAt: now }).returning({ id: rounds.id });
+    const [round] = await tx.insert(rounds).values({ bookId: book.id, publishedAt: now, tacGiaId: ownerId }).returning({ id: rounds.id });
     const su = { actorId: ownerId, bookId: book.id, roundId: round.id, mode: book.mode, at: now };
     await tx.insert(pages).values(bound.map((content, i) => ({ bookId: book.id, roundId: round.id, position: first + i, content, publishedAt: now })));
     // Thu tu khoa giu nguyen luat thuong truc: dong books da khoa o dau giao dich, roi toi anh bia (lockCover), roi moi

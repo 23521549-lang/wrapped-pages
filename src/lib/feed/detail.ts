@@ -1,6 +1,7 @@
 import { COVERS, type CoverKey } from "@/lib/book";
 import { phanThang } from "@/lib/tam-trang/lich";
 import { isUuid } from "@/lib/uuid";
+import { LOAI_DE_NGHI, type LoaiDeNghi } from "@/lib/viet-cung";
 import { YOUTUBE_ID } from "@/lib/youtube";
 
 /*
@@ -23,6 +24,12 @@ export type ChiTietNhac = { truoc: GiaTriNhac; sau: GiaTriNhac };
 export type ChiTietDaDoc = { den: number };
 /** Thu cua thang nao (YYYY-MM): chi thang, noi dung thu khong bao gio nam o dong Hoat dong. */
 export type ChiTietThu = { thang: string };
+/** Nhan loi viet cung (5c): tu mot loi moi hay mot loi xin, de chon cau. */
+export type ChiTietNhanViet = { tu: "moi-viet" | "xin-viet" };
+/** Tu choi mot de nghi (5c): loi moi, loi xin hay de nghi xoa. */
+export type ChiTietTuChoi = { viec: LoaiDeNghi };
+/** Doi ten luot (5c): ten cu (null la luot chua dat ten, hien "Lượt N") va ten moi. */
+export type ChiTietTenLuot = { truoc: string | null; sau: string };
 
 const laObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const tenHopLe = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -61,6 +68,20 @@ export function docChiTietDaDoc(v: unknown): ChiTietDaDoc | null {
 
 export function docChiTietThu(v: unknown): ChiTietThu | null {
   return laObject(v) && phanThang(v.thang) !== null ? { thang: v.thang as string } : null;
+}
+
+export function docChiTietNhanViet(v: unknown): ChiTietNhanViet | null {
+  return laObject(v) && (v.tu === "moi-viet" || v.tu === "xin-viet") ? { tu: v.tu } : null;
+}
+
+export function docChiTietTuChoi(v: unknown): ChiTietTuChoi | null {
+  return laObject(v) && (LOAI_DE_NGHI as readonly unknown[]).includes(v.viec) ? { viec: v.viec as LoaiDeNghi } : null;
+}
+
+export function docChiTietTenLuot(v: unknown): ChiTietTenLuot | null {
+  if (!laObject(v) || !("truoc" in v) || !tenHopLe(v.sau)) return null;
+  const { truoc } = v;
+  return truoc === null || tenHopLe(truoc) ? { truoc, sau: v.sau } : null;
 }
 
 /**

@@ -1,14 +1,18 @@
 import { and, eq, sql } from "drizzle-orm";
-import { pages, rounds } from "@/server/db/schema";
+import { books, pages, rounds } from "@/server/db/schema";
 import type { TestDb } from "./db";
 import { to } from "./library";
 
 /** Moc dang mac dinh cua luot ghi thang trong test. */
 export const MOC_LUOT = new Date("2026-09-01T00:00:00.000Z");
 
-/** Ghi thang mot luot chua co to nao cua mot cuon, tra id. Chi de dung du lieu kiem rang buoc. */
-export async function taoLuot(db: TestDb, bookId: string, publishedAt: Date = MOC_LUOT): Promise<string> {
-  const [r] = await db.insert(rounds).values({ bookId, publishedAt }).returning({ id: rounds.id });
+/**
+ * Ghi thang mot luot chua co to nao cua mot cuon, tra id. Chi de dung du lieu kiem rang buoc. Nguoi viet mac dinh la chu
+ * cuon (nhu moi luot cua sach mot nguoi viet); sach viet cung truyen tacGiaId.
+ */
+export async function taoLuot(db: TestDb, bookId: string, publishedAt: Date = MOC_LUOT, tacGiaId?: string): Promise<string> {
+  const tacGia = tacGiaId ?? (await db.select({ id: books.ownerId }).from(books).where(eq(books.id, bookId)))[0].id;
+  const [r] = await db.insert(rounds).values({ bookId, publishedAt, tacGiaId: tacGia }).returning({ id: rounds.id });
   return r.id;
 }
 

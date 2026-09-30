@@ -2,13 +2,15 @@ import type { SealKind } from "@/lib/seal/types";
 import type { Weather } from "@/lib/tam-trang/troi";
 
 /**
- * Muoi sau loai su kien cua dong Hoat dong: tam loai cu, bay loai cua dot nam 5a (tha tam trang, tao sach, doi ten,
- * doi bia, doi nhac, sua trang, da doc), roi gui thu thang (5b). Danh sach trong CHECK activity_kind cua bang activity phai khop dung danh sach
- * nay, ca thu tu (co test).
+ * Hai muoi hai loai su kien cua dong Hoat dong: tam loai cu, bay loai cua dot nam 5a (tha tam trang, tao sach, doi ten,
+ * doi bia, doi nhac, sua trang, da doc), gui thu thang (5b), roi sau loai cua sach viet cung (5c: moi, xin, nhan loi, tu
+ * choi, de nghi xoa, doi ten luot). Danh sach trong CHECK activity_kind cua bang activity phai khop dung danh sach nay, ca
+ * thu tu (co test).
  */
 export const FEED_KINDS = [
   "dang-trang", "moi-trao-doi", "mo-hen-gio", "mo-trang", "thu-sai", "tang-khoa", "doi-mat-khau", "hoi-dap",
   "tha-tam-trang", "tao-sach", "doi-ten-sach", "doi-bia", "doi-nhac", "sua-trang", "da-doc", "gui-thu",
+  "moi-viet", "xin-viet", "nhan-viet", "tu-choi", "de-nghi-xoa", "doi-ten-luot",
 ] as const;
 export type FeedKind = (typeof FEED_KINDS)[number];
 
@@ -17,7 +19,9 @@ export const LOAI_NIEM_PHONG = ["moi-trao-doi", "mo-hen-gio", "mo-trang", "thu-s
 export type LoaiNiemPhong = (typeof LOAI_NIEM_PHONG)[number];
 
 /** Loai co cot detail (CHECK activity_detail); doc bang cac ham cua src/lib/feed/detail.ts. */
-export const LOAI_CO_CHI_TIET = ["doi-ten-sach", "doi-bia", "doi-nhac", "da-doc", "gui-thu"] as const satisfies readonly FeedKind[];
+export const LOAI_CO_CHI_TIET = [
+  "doi-ten-sach", "doi-bia", "doi-nhac", "da-doc", "gui-thu", "nhan-viet", "tu-choi", "doi-ten-luot",
+] as const satisfies readonly FeedKind[];
 
 /** Ai lam: chinh nguoi xem hay nguoi kia. Dong Hoat dong khong bao gio mang id tai khoan. */
 export type FeedActor = "me" | "partner";
@@ -49,6 +53,8 @@ export type FeedItem = {
   /** dang-trang: luot co o bia rieng, o nhac rieng (doi bia, doi nhac cung lan dang). */
   biaMoi: boolean;
   nhacMoi: boolean;
-  /** doi-bia, doi-nhac: so thu tu luot cua o; null la o mo dau luc tao sach (va moi loai khac). */
+  /** doi-bia, doi-nhac, doi-ten-luot: so thu tu luot; null la o mo dau luc tao sach (va moi loai khac). */
   ordinal: number | null;
+  /** dang-trang trong sach viet cung: ten luot vua dang (null khi luot khong ten, va moi loai khac). */
+  tenLuot: string | null;
 };

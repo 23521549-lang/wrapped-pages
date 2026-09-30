@@ -229,7 +229,7 @@ describe("listActivity: du lieu tra ve", () => {
       expect(Object.keys(i).sort()).toEqual(
         [
           "at", "biaMoi", "bookId", "bookTitle", "by", "count", "detail", "firstPosition", "id", "isNew", "kind", "lastPosition",
-          "nhacMoi", "note", "ordinal", "sealKind", "weather",
+          "nhacMoi", "note", "ordinal", "sealKind", "tenLuot", "weather",
         ],
       );
     }

@@ -81,10 +81,10 @@ async function gieo(c: PGlite) {
       ('${M2}', '${A2}', '${B2}', 'ghi-am', 'audio/webm', 2000, null, null, 1234, '${PEAKS}', '${B2}/${M2}.webm');
     insert into media_objects (store_key) values ('cho/${M2}.jpg');
     insert into media_sweeps (id, ran_at) values (1, '2026-03-04 05:06:07.1+00');
-    insert into rounds (id, book_id, published_at, edited_at) values
-      ('${R1}', '${B1}', '2026-09-01 00:00:00.123456+00', '2026-09-02 03:04:05.654321+00'),
-      ('${R2}', '${B1}', '2026-09-03 00:00:00+00', null),
-      ('${R3}', '${B1}', '2026-09-04 00:00:00+00', null);
+    insert into rounds (id, book_id, published_at, edited_at, tac_gia_id, ten) values
+      ('${R1}', '${B1}', '2026-09-01 00:00:00.123456+00', '2026-09-02 03:04:05.654321+00', '${A1}', null),
+      ('${R2}', '${B1}', '2026-09-03 00:00:00+00', null, '${A1}', 'Mưa phùn đầu ngõ'),
+      ('${R3}', '${B1}', '2026-09-04 00:00:00+00', null, '${A1}', null);
     insert into pages (book_id, round_id, position, content, published_at) values
       ('${B1}', '${R1}', 1, '${DOC}', '2026-09-01 00:00:00.123456+00'),
       ('${B1}', '${R2}', 2, '{"type":"doc","content":[]}', '2026-09-03 00:00:00+00'),
@@ -96,8 +96,9 @@ async function gieo(c: PGlite) {
     insert into book_tracks (book_id, round_id, youtube_id) values
       ('${B1}', null, 'dQw4w9WgXcQ'),
       ('${B1}', '${R2}', null);
-    insert into drafts (book_id, content, sheet_count, cover, cover_media_id, youtube_id) values
-      ('${B2}', '${DOC}', 3, 'nui-xa', null, '5qap5aO4i9A');
+    insert into drafts (book_id, account_id, content, sheet_count, cover, cover_media_id, youtube_id) values
+      ('${B2}', '${A2}', '${DOC}', 3, 'nui-xa', null, '5qap5aO4i9A');
+    insert into de_nghi (book_id, loai, tu_id, luc) values ('${B1}', 'xin-viet', '${A2}', '2026-09-06 07:08:09.123456+00');
     insert into read_sheets (account_id, book_id, position) values ('${A2}', '${B1}', 1), ('${A2}', '${B1}', 2);
     insert into seals (id, book_id, round_id, kind, question, answers, hints, teaser) values
       ('${S1}', '${B1}', '${R1}', 'cau-do', 'Mình gặp nhau ở đâu?', '["hồ tây","Hồ Tây"]', '["nước"]', 'Ngày ấy...');

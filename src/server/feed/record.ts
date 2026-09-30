@@ -4,7 +4,8 @@ import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
 import {
   docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, giongNhau,
-  type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietTen, type ChiTietThu,
+  type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietNhanViet, type ChiTietTen, type ChiTietTenLuot,
+  type ChiTietThu, type ChiTietTuChoi,
 } from "@/lib/feed/detail";
 import type { LoaiNiemPhong } from "@/lib/feed/types";
 
@@ -22,7 +23,8 @@ type SachEvent = { actorId: string; at: Date; bookId: string; mode: BookMode };
  * Mot su kien cua dong Hoat dong. Kieu buoc moi loai co dung cac cot cua no, giong cac CHECK cua bang activity:
  * loai gan niem phong phai co sealId; dang-trang co sealId khi lan dang kem cau do hay hen gio; hoi-dap bam luot, khong
  * bao gio gan niem phong; doi-mat-khau chi co nguoi doi va nguoi bi doi; tha-tam-trang chi co nguoi tha va tam trang;
- * gui-thu chi co nguoi gui va thang; nam loai co detail mang dung hinh cua src/lib/feed/detail.ts.
+ * gui-thu chi co nguoi gui va thang; cac loai co detail mang dung hinh cua src/lib/feed/detail.ts. Sau loai cua sach viet
+ * cung (5c): bon loai de nghi va tra loi gan ca cuon, doi-ten-luot gan luot.
  */
 export type ActivityEvent =
   | (BookEvent & { kind: "dang-trang"; sealId: string | null })
@@ -34,6 +36,10 @@ export type ActivityEvent =
   | (SachEvent & { kind: "doi-ten-sach"; detail: ChiTietTen })
   | (SachEvent & { kind: "doi-bia"; roundId: string | null; detail: ChiTietBia })
   | (SachEvent & { kind: "doi-nhac"; roundId: string | null; detail: ChiTietNhac })
+  | (SachEvent & { kind: "moi-viet" | "xin-viet" | "de-nghi-xoa" })
+  | (SachEvent & { kind: "nhan-viet"; detail: ChiTietNhanViet })
+  | (SachEvent & { kind: "tu-choi"; detail: ChiTietTuChoi })
+  | (BookEvent & { kind: "doi-ten-luot"; detail: ChiTietTenLuot })
   | { kind: "tha-tam-trang"; actorId: string; at: Date; moodId: string }
   | { kind: "gui-thu"; actorId: string; at: Date; detail: ChiTietThu }
   | { kind: "doi-mat-khau"; actorId: string; subjectId: string; at: Date };

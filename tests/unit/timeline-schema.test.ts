@@ -101,27 +101,27 @@ describe("bang book_tracks", () => {
 describe("bon cot bia va nhac cua ban nhap", () => {
   it("mac dinh la khong co o nao", async () => {
     const { db, book } = await motCuon();
-    await db.insert(drafts).values({ bookId: book.id, content: TRONG });
+    await db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: TRONG });
     expect(await db.select({ c: drafts.cover, m: drafts.coverMediaId, y: drafts.youtubeId, d: drafts.dropTrack }).from(drafts))
       .toEqual([{ c: null, m: null, y: null, d: false }]);
   });
 
   it("anh bia phai di cung mot tranh ve san", async () => {
     const { db, book } = await motCuon();
-    await db.insert(drafts).values({ bookId: book.id, content: TRONG });
+    await db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: TRONG });
     await viPham(db.update(drafts).set({ cover: null, coverMediaId: randomUUID() }), "drafts_cover_media");
   });
 
   it("o go nhac khong di cung mot ma video", async () => {
     const { db, book } = await motCuon();
-    await db.insert(drafts).values({ bookId: book.id, content: TRONG });
+    await db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: TRONG });
     await db.update(drafts).set({ dropTrack: true, youtubeId: null });
     await viPham(db.update(drafts).set({ dropTrack: true, youtubeId: "5qap5aO4i9A" }), "drafts_drop_track");
   });
 
   it("tranh ve san cua nhap chi nhan gia tri trong COVERS", async () => {
     const { db, book } = await motCuon();
-    await db.insert(drafts).values({ bookId: book.id, content: TRONG });
+    await db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: TRONG });
     await viPham(db.update(drafts).set({ cover: "anh-tai-len" as never }), "drafts_cover");
   });
 });

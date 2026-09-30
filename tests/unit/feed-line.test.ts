@@ -13,6 +13,7 @@ const NIEM_PHONG: Record<FeedKind, SealKind | null> = {
   "dang-trang": null, "moi-trao-doi": "trao-doi", "mo-hen-gio": "hen-gio", "mo-trang": "cau-do", "thu-sai": "cau-do",
   "tang-khoa": "cau-do", "doi-mat-khau": null, "hoi-dap": null, "tha-tam-trang": null, "tao-sach": null,
   "doi-ten-sach": null, "doi-bia": null, "doi-nhac": null, "sua-trang": null, "da-doc": null, "gui-thu": null,
+  "moi-viet": null, "xin-viet": null, "nhan-viet": null, "tu-choi": null, "de-nghi-xoa": null, "doi-ten-luot": null,
 };
 
 /** Chi tiet dung hinh mac dinh cua bon loai co detail. */
@@ -22,13 +23,19 @@ const CHI_TIET: Partial<Record<FeedKind, unknown>> = {
   "doi-nhac": { truoc: null, sau: { youtubeId: "dQw4w9WgXcQ" } },
   "da-doc": { den: 6 },
   "gui-thu": { thang: "2026-09" },
+  "nhan-viet": { tu: "moi-viet" },
+  "tu-choi": { viec: "moi-viet" },
+  "doi-ten-luot": { truoc: null, sau: "Phở cuốn ngày mưa" },
 };
+
+/** Loai gan sach nhung khong gan luot (CHECK activity_sach). */
+const KHONG_LUOT: ReadonlySet<FeedKind> = new Set(["tao-sach", "doi-ten-sach", "moi-viet", "xin-viet", "nhan-viet", "tu-choi", "de-nghi-xoa"]);
 
 /** Mot dong mau dung hinh cho moi loai: gan sach tru doi-mat-khau va tha-tam-trang, kieu niem phong theo loai. */
 function su(kind: FeedKind, by: FeedActor, sua: Partial<FeedItem> = {}): FeedItem {
   dem += 1;
   const coSach = kind !== "doi-mat-khau" && kind !== "tha-tam-trang" && kind !== "gui-thu";
-  const coLuot = coSach && kind !== "tao-sach" && kind !== "doi-ten-sach";
+  const coLuot = coSach && !KHONG_LUOT.has(kind);
   return {
     ...DONG_MAC_DINH,
     id: `su-kien-${dem}`, kind, by, at: new Date("2026-09-15T08:00:00.000Z"),
@@ -200,5 +207,35 @@ describe("feedLine: thu thang (dot nam, 5b)", () => {
   it("chi tiet hong thi van co cau, dan toi Lich hoa", () => {
     const line = feedLine(su("gui-thu", "partner", { detail: { thang: "13-2026" } }), TEN);
     expect([cau(line), line.href]).toEqual(["Linh đã viết **thư tháng** cho bạn", "/tam-trang"]);
+  });
+});
+
+describe("feedLine: sach viet cung (dot nam, 5c)", () => {
+  const MO = `/sach/${SACH}`;
+  it.each<[string, FeedItem, string, string]>([
+    ["moi-viet cua nguoi kia", su("moi-viet", "partner"), "Linh mời bạn viết cùng **Chuyện chưa kể**", MO],
+    ["moi-viet cua minh", su("moi-viet", "me"), "Bạn mời Linh viết cùng **Chuyện chưa kể**", MO],
+    ["xin-viet cua nguoi kia", su("xin-viet", "partner"), "Linh xin viết cùng **Chuyện chưa kể**", MO],
+    ["xin-viet cua minh", su("xin-viet", "me"), "Bạn xin viết cùng **Chuyện chưa kể**", MO],
+    ["nhan-viet tu loi moi", su("nhan-viet", "partner"), "Linh nhận lời viết cùng **Chuyện chưa kể**", MO],
+    ["nhan-viet tu loi xin", su("nhan-viet", "me", { detail: { tu: "xin-viet" } }), "Bạn đồng ý cho Linh viết cùng **Chuyện chưa kể**", MO],
+    ["nhan-viet tu loi xin, nguoi kia", su("nhan-viet", "partner", { detail: { tu: "xin-viet" } }), "Linh đồng ý cho bạn viết cùng **Chuyện chưa kể**", MO],
+    ["tu-choi loi moi", su("tu-choi", "partner"), "Linh chưa nhận lời viết cùng **Chuyện chưa kể**", MO],
+    ["tu-choi loi xin", su("tu-choi", "me", { detail: { viec: "xin-viet" } }), "Bạn chưa đồng ý cho Linh viết cùng **Chuyện chưa kể**", MO],
+    ["tu-choi de nghi xoa", su("tu-choi", "partner", { detail: { viec: "xoa-sach" } }), "Linh muốn giữ lại **Chuyện chưa kể**", MO],
+    ["de-nghi-xoa", su("de-nghi-xoa", "partner"), "Linh đề nghị xóa **Chuyện chưa kể**", `${MO}/sua`],
+    ["doi-ten-luot", su("doi-ten-luot", "me", { ordinal: 2 }), "Bạn đổi tên lượt 2 của **Chuyện chưa kể** thành **Phở cuốn ngày mưa**", `${MO}?trang=3`],
+    ["dang-trang co ten luot", su("dang-trang", "partner", { tenLuot: "Cháo gà sáng thứ bảy" }), "Linh viết lượt **Cháo gà sáng thứ bảy** trong **Chuyện chưa kể**", `${MO}?trang=3`],
+  ])("%s", (_ten, item, chu, href) => {
+    const line = feedLine(item, TEN);
+    expect(cau(line)).toBe(chu);
+    expect(line.href).toBe(href);
+    expect(line.extra).toBeNull();
+  });
+
+  it("chi tiet hong thi van co cau chung, khong vo", () => {
+    expect(cau(feedLine(su("nhan-viet", "partner", { detail: null }), TEN))).toBe("Linh nhận lời viết cùng **Chuyện chưa kể**");
+    expect(cau(feedLine(su("tu-choi", "partner", { detail: { viec: "?" } }), TEN))).toBe("Linh trả lời đề nghị về **Chuyện chưa kể**");
+    expect(cau(feedLine(su("doi-ten-luot", "partner", { detail: {} }), TEN))).toBe("Linh đổi tên một lượt của **Chuyện chưa kể**");
   });
 });

@@ -166,7 +166,9 @@ export async function dangToThang(bookId: string, ...cacTo: (string | DocJson)[]
     const luc = new Date();
     await sql.begin(async (tx) => {
       const [{ cuoi }] = await tx<{ cuoi: number | null }[]>`select max(position) as cuoi from pages where book_id = ${bookId}`;
-      const [{ id }] = await tx<{ id: string }[]>`insert into rounds (book_id, published_at) values (${bookId}, ${luc}) returning id`;
+      // Luot ghi thang la cua chu cuon, nhu moi luot cua sach mot nguoi viet (5c: rounds.tac_gia_id).
+      const [{ id }] = await tx<{ id: string }[]>`insert into rounds (book_id, published_at, tac_gia_id)
+        select ${bookId}, ${luc}, owner_id from books where id = ${bookId} returning id`;
       let position = cuoi ?? 0;
       for (const x of cacTo) {
         position += 1;

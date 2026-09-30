@@ -74,17 +74,17 @@ describe("bang sach, to, ban nhap va moc doc", () => {
     expect(row.content).toEqual(DOC);
   });
 
-  it("moi cuon chi co mot ban nhap", async () => {
+  it("moi nguoi viet chi co mot ban nhap moi cuon", async () => {
     const { db, book } = await motCuon();
-    await db.insert(drafts).values({ bookId: book.id, content: DOC });
-    await expect(db.insert(drafts).values({ bookId: book.id, content: DOC })).rejects.toThrow();
+    await db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: DOC });
+    await expect(db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: DOC })).rejects.toThrow();
   });
 
   it("xoa cuon thi mat luon to, ban nhap va cac to da xem cua cuon do", async () => {
     const { db, book, seat2 } = await motCuon();
     const roundId = await taoLuot(db, book.id);
     await db.insert(pages).values({ bookId: book.id, roundId, position: 1, content: DOC });
-    await db.insert(drafts).values({ bookId: book.id, content: DOC });
+    await db.insert(drafts).values({ bookId: book.id, accountId: book.ownerId, content: DOC });
     await db.insert(readSheets).values({ accountId: seat2.id, bookId: book.id, position: 1 });
     await db.delete(books).where(eq(books.id, book.id));
     expect(await db.select().from(pages)).toHaveLength(0);

@@ -46,7 +46,8 @@ async function to(db: TestDb, bookId: string, position: number, ...content: Khoi
   await themLuot(db, bookId, position, [{ type: "doc", content }]);
 }
 async function nhap(db: TestDb, bookId: string, ...content: Khoi[]) {
-  await db.execute(sql`insert into drafts (book_id, content) values (${bookId}, ${JSON.stringify({ type: "doc", content })}::jsonb)`);
+  await db.execute(sql`insert into drafts (book_id, account_id, content)
+    select ${bookId}, owner_id, ${JSON.stringify({ type: "doc", content })}::jsonb from books where id = ${bookId}`);
 }
 
 /** Niem phong ghi thang vao bang, phu dung luot cua mot to. Hen gio mo sau NOW 30 phut. */
