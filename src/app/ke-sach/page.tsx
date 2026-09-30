@@ -9,6 +9,7 @@ import { coverSlots } from "@/server/library/timeline";
 import { unreadRounds, type LuotChuaDoc } from "@/server/library/unread-rounds";
 import { tenCacBai } from "@/server/media/ten-youtube";
 import { currentMoods } from "@/server/mood/moods";
+import { nhacThu } from "@/server/thu/thu";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { TuCapNhat } from "@/components/TuCapNhat";
@@ -22,7 +23,8 @@ import { TroiTam } from "@/components/tam-trang/troi-tam";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
 import { docChiTietNhac } from "@/lib/feed/detail";
-import { chiaTamTrang, conLai, troiHien } from "@/lib/tam-trang/lich";
+import { chiaTamTrang, conLai, thangKhoa, troiHien } from "@/lib/tam-trang/lich";
+import { loiNhacThu } from "@/lib/thu";
 import { timeAgo } from "@/lib/when";
 
 export default async function KeSach() {
@@ -30,12 +32,13 @@ export default async function KeSach() {
   const me = await requireMe();
   // Mot now cho ca ke va dong Hoat dong: hen gio vua toi gio thi the sach va dong "da toi gio mo" noi cung mot dieu.
   const now = new Date();
-  const [shelf, feed, moods, chuaDoc, phienBan] = await Promise.all([
+  const [shelf, feed, moods, chuaDoc, phienBan, nhac] = await Promise.all([
     listShelf(db, me.accountId, now),
     listActivity(db, me.accountId, now),
     currentMoods(db, now),
     unreadRounds(db, me.accountId, now),
     phienBanKe(db, me.accountId, now),
+    nhacThu(db, me.accountId, now),
   ]);
   // Dai troi: mac dinh troi cua nguoi kia, troi cua minh o o cua so (hoac la troi lon khi chi minh co); them cham mau
   // tren nut va hop chon o dong tieu de.
@@ -133,6 +136,16 @@ export default async function KeSach() {
                   <p className="ke-dau__phu">
                     {shelf.length > 0 ? `${shelf.length} cuốn${fresh > 0 ? `, ${fresh} trang mới` : ""}` : "Chưa có cuốn nào"}
                   </p>
+                  {/* Nhac thu thang (5b E4): tu ngay 1 toi khi chinh minh gui thu thang vua khep; bam la sang cho viet o Lich hoa. */}
+                  {nhac !== null && (
+                    <Link className="dh dh--moi ke-thu" href={`/tam-trang#thu-${thangKhoa(nhac.thang)}`}>
+                      <svg viewBox="0 0 30 22" aria-hidden="true" focusable="false">
+                        <rect x="1.5" y="1.5" width="27" height="19" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M2 3 15 13 28 3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                      </svg>
+                      {loiNhacThu(nhac.tt, nhac.thang, me.partnerNickname)}
+                    </Link>
+                  )}
                 </div>
               )}
               nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}

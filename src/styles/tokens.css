@@ -96,6 +96,8 @@
   --dur-doi-luot: 240ms;
   /* Ke sach tu cap nhat: tab dang duoc xem thi cu chung nay hoi phien ban cua ke mot lan (TuCapNhat). */
   --dur-tu-cap-nhat: 15000ms;
+  /* La thu troi (5b): tab dang duoc xem thi cu chung nay hoi co thu moi cua nguoi kia khong (LaThuBay). */
+  --dur-hoi-thu: 20000ms;
 
   /* Nut: mot ban kinh cho ca ba cap nut (nen, vien, chu). */
   --radius-nut: 8px;

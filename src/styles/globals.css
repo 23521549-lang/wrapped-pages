@@ -6,6 +6,7 @@
 @import "./tam-trang.css";
 @import "./dau-thoi-gian.css";
 @import "./nhac.css";
+@import "./thu.css";
 @import "./khung-cho.css";
 
 html, body { overflow-x: clip; }

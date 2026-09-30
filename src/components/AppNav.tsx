@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { db } from "@/server/db";
+import { thuChuaMo } from "@/server/thu/thu";
 import type { Me } from "@/server/web/guard";
+import { LaThuBay } from "./thu/LaThuBay";
 import { Logo } from "./Logo";
 import { LINKS, type NavSection } from "./nav-links";
 
@@ -11,38 +14,43 @@ export type { NavSection };
  * (tao, sua, doc sach): lien ket mang aria-current="true" thay vi "page".
  * sticky = false cho man co thanh dinh rieng ben duoi (man viet), de hai thanh khong chong nhau, va cho man doc
  * sach co nhac, de nav khong bao gio de len trinh phat YouTube.
+ * Kem la thu troi (5b): thu nguoi kia gui ma nguoi dang vao chua mo, doc san o may chu de doi trang khong chop.
  */
-export function AppNav({ me, current, subpage = false, sticky = true }: {
+export async function AppNav({ me, current, subpage = false, sticky = true }: {
   me: Me;
   current: NavSection | null;
   subpage?: boolean;
   sticky?: boolean;
 }) {
+  const thu = await thuChuaMo(db, me.accountId);
   return (
-    <nav className={sticky ? "nav" : "nav nav--tinh"} aria-label="Điều hướng chính">
-      <div className="nav__in shell">
-        <Link className="wordmark d" href="/ke-sach">
-          <Logo className="wordmark__logo" />Món Quà Của Em
-        </Link>
-        <div className="nav__links">
-          {LINKS.map((l) => (
-            <Link
-              key={l.key}
-              className="nav__link"
-              href={l.href}
-              aria-current={l.key === current ? (subpage ? "true" : "page") : undefined}
-            >
-              {l.label}
-            </Link>
-          ))}
+    <>
+      <nav className={sticky ? "nav" : "nav nav--tinh"} aria-label="Điều hướng chính">
+        <div className="nav__in shell">
+          <Link className="wordmark d" href="/ke-sach">
+            <Logo className="wordmark__logo" />Món Quà Của Em
+          </Link>
+          <div className="nav__links">
+            {LINKS.map((l) => (
+              <Link
+                key={l.key}
+                className="nav__link"
+                href={l.href}
+                aria-current={l.key === current ? (subpage ? "true" : "page") : undefined}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
+          <div className="nav__right">
+            <span className="who">Đang vào: <b>{me.nickname}</b></span>
+            {/* /viet chuyen huong luc bam, nen tai truoc khong co gi de dung lai. Nut cap chu: hanh dong chinh cua
+                moi man nam trong man, khong nam tren thanh dieu huong. */}
+            <Link className="btn btn--chu" href="/viet" prefetch={false}>Trang mới</Link>
+          </div>
         </div>
-        <div className="nav__right">
-          <span className="who">Đang vào: <b>{me.nickname}</b></span>
-          {/* /viet chuyen huong luc bam, nen tai truoc khong co gi de dung lai. Nut cap chu: hanh dong chinh cua
-              moi man nam trong man, khong nam tren thanh dieu huong. */}
-          <Link className="btn btn--chu" href="/viet" prefetch={false}>Trang mới</Link>
-        </div>
-      </div>
-    </nav>
+      </nav>
+      <LaThuBay tenKia={me.partnerNickname} tenMinh={me.nickname} dau={thu} />
+    </>
   );
 }

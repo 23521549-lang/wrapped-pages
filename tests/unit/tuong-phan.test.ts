@@ -295,6 +295,11 @@ const MIEN_TRU: MienTru[] = [
       // va vong focus; nut tron phat co vien --blue-line rieng dat nguong.
       ".pl__bai",
       ".pl__bai > li + li",
+      // Tong ket thang tren Lich hoa (TongKetThang.tsx): vach tach dong tom tat khoi phan tha xuong trong cung mot o; khung o
+      // (.thg) dung --color-rule-ui dat nguong va nut tom tat co vong focus rieng. Cua so doc thu (HopThu.tsx): vach tach
+      // thu nguoi kia khoi to giay tra loi trong cung mot to thu; to giay tra loi co vien --color-rule-ui rieng dat nguong.
+      ".thg__noi",
+      ".thu-hop__tl",
       // Hop xac nhan xoa sach / bo nhap tren the /ban-nhap (DraftRemove.tsx): duong ke tach hang cau hoi khoi
       // phan tren cua chinh the, khong phai vien cua dieu khien nao.
       ".nhap__hoi",
