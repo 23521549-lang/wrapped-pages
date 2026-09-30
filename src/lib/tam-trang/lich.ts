@@ -45,16 +45,33 @@ function soThang(t: Thang): number {
   return t.y * 12 + t.m - 1;
 }
 
+/** Khoa thang YYYY-MM, thang 01 toi 12. Khop CHECK thu_thang_thang cua bang thu_thang (co test). */
 const MAU_THANG = /^([0-9]{4})-(0[1-9]|1[0-2])$/;
+
+/** Thang cua mot khoa YYYY-MM; sai dang (hay khong phai chuoi) thi null. */
+export function phanThang(q: unknown): Thang | null {
+  if (typeof q !== "string") return null;
+  const khop = MAU_THANG.exec(q);
+  return khop === null ? null : { y: Number(khop[1]), m: Number(khop[2]) };
+}
 
 /** Tham so ?thang=YYYY-MM. Sai dang, truoc nam 2000 hay o tuong lai thi ve thang hien tai: lich khong co gi de xem o do. */
 export function docThang(q: unknown, now: Date): Thang {
   const nay = thangCua(now);
-  if (typeof q !== "string") return nay;
-  const khop = MAU_THANG.exec(q);
-  if (khop === null) return nay;
-  const t = { y: Number(khop[1]), m: Number(khop[2]) };
-  return t.y < 2000 || soThang(t) > soThang(nay) ? nay : t;
+  const t = phanThang(q);
+  return t === null || t.y < 2000 || soThang(t) > soThang(nay) ? nay : t;
+}
+
+/** Thang dung truoc thang `sau` (theo thu tu lich). */
+export function truocThang(t: Thang, sau: Thang): boolean {
+  return soThang(t) < soThang(sau);
+}
+
+const TEN_THANG = ["Một", "Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy", "Tám", "Chín", "Mười", "Mười Một", "Mười Hai"] as const;
+
+/** "tháng Chín": ten thang bang chu, cua thu thang va tong ket thang (5b). */
+export function tenThang(t: Thang): string {
+  return `tháng ${TEN_THANG[t.m - 1]}`;
 }
 
 export function laThangNay(t: Thang, now: Date): boolean {

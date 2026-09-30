@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { accounts, thuThang } from "@/server/db/schema";
+import { phanThang } from "@/lib/tam-trang/lich";
 import { viPham } from "../helpers/db";
 import { seedHai } from "../helpers/seed";
 
@@ -23,6 +24,14 @@ describe("bang thu_thang", () => {
   it.each([["2026-9"], ["2026-13"], ["2026-00"], ["26-09"], ["2026/09"], [""]])("thang sai dang %s bi tu choi", async (thang) => {
     const s = await seedHai();
     await viPham(s.db.insert(thuThang).values({ accountId: s.seat1.id, thang, noiDung: "Thư" }), "thu_thang_thang");
+  });
+
+  it("CHECK thu_thang_thang nhan dung nhung thang phanThang nhan", async () => {
+    const s = await seedHai();
+    for (const thang of ["2026-01", "2026-12", "1999-10", "2026-13", "2026-1", "2026-001", "x2026-09", "2026-09x"]) {
+      const ghi = await s.db.insert(thuThang).values({ accountId: s.seat1.id, thang, noiDung: "Thư" }).then(() => true, () => false);
+      expect(ghi, thang).toBe(phanThang(thang) !== null);
+    }
   });
 
   it("noi dung rong hay qua 1000 ky tu bi tu choi; dung 1000 ky tu co dau thi duoc", async () => {

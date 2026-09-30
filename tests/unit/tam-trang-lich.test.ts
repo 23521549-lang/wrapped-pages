@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  chiaTamTrang, conLai, docThang, gomLich, khoangThang, laThangNay, luoiThang, MOOD_TTL_MS, ngayTrongThang, soNgayCua,
-  tenNgay, thaLabel, thangCua, thangKhoa, thangSau, thangTruoc, troiHien, xoayHoa, type DongLich,
+  chiaTamTrang, conLai, docThang, gomLich, khoangThang, laThangNay, luoiThang, MOOD_TTL_MS, ngayTrongThang, phanThang, soNgayCua,
+  tenNgay, tenThang, thaLabel, thangCua, thangKhoa, thangSau, thangTruoc, troiHien, xoayHoa, type DongLich,
 } from "@/lib/tam-trang/lich";
 
 /** 22.09.2026, 22:00 gio Viet Nam. */
@@ -34,6 +34,15 @@ describe("thang theo gio Viet Nam", () => {
     for (const q of ["2026-10", "2027-01", "2026-13", "2026-00", "2026-9", "1999-12", "abc", "", 202608, null, undefined, ["2026-08"]]) {
       expect(docThang(q, NOW), String(q)).toEqual({ y: 2026, m: 9 });
     }
+  });
+
+  it("phanThang: chi nhan dung dang YYYY-MM, khong ve thang nao khac; tenThang goi thang bang chu (5b)", () => {
+    expect(phanThang("2026-09")).toEqual({ y: 2026, m: 9 });
+    expect(phanThang("1999-12")).toEqual({ y: 1999, m: 12 });
+    for (const hong of ["2026-13", "2026-9", "2026-00", " 2026-09", 202609, null, undefined]) expect(phanThang(hong)).toBeNull();
+    expect([1, 4, 9, 10, 11, 12].map((m) => tenThang({ y: 2026, m }))).toEqual([
+      "tháng Một", "tháng Tư", "tháng Chín", "tháng Mười", "tháng Mười Một", "tháng Mười Hai",
+    ]);
   });
 
   it("khoang cua thang bat dau va ket thuc luc 00:00 gio Viet Nam", () => {

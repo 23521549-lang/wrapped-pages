@@ -1,5 +1,5 @@
 import { COVERS, type CoverKey } from "@/lib/book";
-import { docThang } from "@/lib/thu";
+import { phanThang } from "@/lib/tam-trang/lich";
 import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 
@@ -60,7 +60,7 @@ export function docChiTietDaDoc(v: unknown): ChiTietDaDoc | null {
 }
 
 export function docChiTietThu(v: unknown): ChiTietThu | null {
-  return laObject(v) && docThang(v.thang) !== null ? { thang: v.thang as string } : null;
+  return laObject(v) && phanThang(v.thang) !== null ? { thang: v.thang as string } : null;
 }
 
 /**

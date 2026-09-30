@@ -1,8 +1,8 @@
 import { COVER_NAME } from "@/lib/book";
 import { pageRange, pageRangeTitle } from "@/lib/seal/reader";
 import type { SealKind } from "@/lib/seal/types";
+import { phanThang, tenThang, thangKhoa } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
-import { tenThang } from "@/lib/thu";
 import {
   docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, docChiTietThu, type GiaTriBia, type GiaTriNhac,
 } from "./detail";
@@ -105,13 +105,13 @@ export function feedLine(item: FeedItem, names: FeedNames): FeedLine {
 
   // Thu thang: dan toi Lich hoa, o dung thang (tam-trang/page mo o do va cuon toi cho thu).
   if (item.kind === "gui-thu") {
-    const thu = docChiTietThu(item.detail);
-    const ten = thu === null ? "thư tháng" : `thư ${tenThang(thu.thang)}`;
+    const t = phanThang(docChiTietThu(item.detail)?.thang);
+    const ten = t === null ? "thư tháng" : `thư ${tenThang(t)}`;
     return {
       sentence: mine ? [thuong("Bạn đã gửi "), dam(ten), thuong(` cho ${names.partner}`)] : [thuong(`${ai} đã viết `), dam(ten), thuong(" cho bạn")],
       chips: [],
       extra: null,
-      href: thu === null ? "/tam-trang" : `/tam-trang#thu-${thu.thang}`,
+      href: t === null ? "/tam-trang" : `/tam-trang#thu-${thangKhoa(t)}`,
       avatar,
     };
   }
