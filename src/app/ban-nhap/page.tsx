@@ -51,7 +51,8 @@ export default async function BanNhap() {
                 </p>
                 <p className="nhap__m">{savedLabel(d.updatedAt, now)} · {d.sheetCount} trang nháp</p>
                 {d.excerpt && <p className="nhap__x">{d.excerpt}</p>}
-                <DraftRemove bookId={d.bookId} hasPages={d.hasPages} headingId={TIEU_DE}>
+                {/* Sach viet cung (5c muc D3): chi bo duoc nhap cua minh, khong xoa sach mot minh duoc. */}
+                <DraftRemove bookId={d.bookId} hasPages={d.hasPages || d.vietCung} headingId={TIEU_DE}>
                   <Link className="btn btn--sm" href={`/sach/${d.bookId}/viet-tiep`}>Viết tiếp</Link>
                 </DraftRemove>
               </li>

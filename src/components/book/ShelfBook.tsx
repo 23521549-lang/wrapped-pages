@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CoverKey } from "@/lib/book";
+import { NgoiBut } from "@/components/viet-cung/NgoiBut";
 import { CoverArt } from "./CoverArt";
 import { CoverImage } from "./CoverImage";
 
@@ -37,6 +38,13 @@ export type ShelfBookProps = {
   lockedCount: number;
   /** Sach rieng tu cua chinh nguoi xem (sach rieng tu cua nguoi kia khong bao gio toi day). */
   isPrivate: boolean;
+  /**
+   * Sach viet cung (5c): hai chu cai dau cua hai nguoi viet (nguoi tao truoc) o goc bia, so luot thay cho so trang, va
+   * biet danh nguoi kia cho dau "Lượt mới của {tên}".
+   */
+  vietCung?: { doi: readonly [string, string]; luot: number; nguoiKia: string };
+  /** Cuon cua minh dang cho nguoi kia nhan loi moi viet cung: biet danh nguoi kia, cho dau "Chờ {tên} nhận lời". */
+  choNhanLoi?: string;
 };
 
 /**
@@ -44,21 +52,32 @@ export type ShelfBookProps = {
  * ky hieu nho (khong nen, khong vien). Ca cuon la mot lien ket, nen vung bam va vong focus bao tron cuon sach.
  * Vi tuong tac duy nhat: re chuot hay focus thi cuon sach nhich ra khoi ke (chi transform, co nhanh giam chuyen dong).
  */
-export function ShelfBook({ title, href, cover, coverMediaId, pageCount, when, newCount, lockedCount, isPrivate }: ShelfBookProps) {
-  const coDauHieu = newCount > 0 || lockedCount > 0 || isPrivate;
+export function ShelfBook({
+  title, href, cover, coverMediaId, pageCount, when, newCount, lockedCount, isPrivate, vietCung, choNhanLoi,
+}: ShelfBookProps) {
+  const coDauHieu = newCount > 0 || lockedCount > 0 || isPrivate || choNhanLoi !== undefined;
+  const phu = vietCung ? `${vietCung.luot} lượt, ${when}` : pageCount > 0 ? `${pageCount} trang, ${when}` : `Chưa có trang, ${when}`;
   return (
     <li className="cuon">
       <Link className="cuon__lien" href={href}>
         <span className={`cuon__bia bia--${cover}`}>
           <CoverArt cover={cover} />
           <CoverImage mediaId={coverMediaId} />
+          {vietCung && (
+            <span className="cuon__doi" aria-hidden="true"><span>{vietCung.doi[0]}</span><span>{vietCung.doi[1]}</span></span>
+          )}
         </span>
         <span className="cuon__chu">
           <span className="cuon__ten d">{title}</span>
-          <span className="cuon__phu">{pageCount > 0 ? `${pageCount} trang, ${when}` : `Chưa có trang, ${when}`}</span>
+          <span className="cuon__phu">{phu}</span>
           {coDauHieu && (
             <span className="dau-hieu">
-              {newCount > 0 && <span className="dh dh--moi"><span className="cham" aria-hidden="true" />{newCount} trang mới</span>}
+              {newCount > 0 && (
+                vietCung
+                  ? <span className="dh dh--moi dh--dong"><span className="cham" aria-hidden="true" />Lượt mới của {vietCung.nguoiKia}</span>
+                  : <span className="dh dh--moi"><span className="cham" aria-hidden="true" />{newCount} trang mới</span>
+              )}
+              {choNhanLoi !== undefined && <span className="dh dh--cho dh--dong"><NgoiBut />Chờ {choNhanLoi} nhận lời</span>}
               {lockedCount > 0 && <span className="dh dh--khoa"><GlyphKhoa />{lockedCount} trang khóa</span>}
               {isPrivate && <span className="dh dh--rieng"><GlyphRieng />Riêng tư</span>}
             </span>

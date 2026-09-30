@@ -10,6 +10,7 @@ import { unreadRounds, type LuotChuaDoc } from "@/server/library/unread-rounds";
 import { tenCacBai } from "@/server/media/ten-youtube";
 import { currentMoods } from "@/server/mood/moods";
 import { nhacThu } from "@/server/thu/thu";
+import { deNghiToiToi } from "@/server/viet-cung/de-nghi";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { TuCapNhat } from "@/components/TuCapNhat";
@@ -22,9 +23,12 @@ import { BauTroi } from "@/components/tam-trang/BauTroi";
 import { TroiTam } from "@/components/tam-trang/troi-tam";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
+import { LoiMoi } from "@/components/viet-cung/LoiMoi";
+import { NgoiBut } from "@/components/viet-cung/NgoiBut";
 import { docChiTietNhac } from "@/lib/feed/detail";
 import { chiaTamTrang, conLai, thangKhoa, troiHien } from "@/lib/tam-trang/lich";
 import { loiNhacThu } from "@/lib/thu";
+import { chuCaiDau } from "@/lib/viet-cung";
 import { timeAgo } from "@/lib/when";
 
 export default async function KeSach() {
@@ -32,13 +36,14 @@ export default async function KeSach() {
   const me = await requireMe();
   // Mot now cho ca ke va dong Hoat dong: hen gio vua toi gio thi the sach va dong "da toi gio mo" noi cung mot dieu.
   const now = new Date();
-  const [shelf, feed, moods, chuaDoc, phienBan, nhac] = await Promise.all([
+  const [shelf, feed, moods, chuaDoc, phienBan, nhac, deNghi] = await Promise.all([
     listShelf(db, me.accountId, now),
     listActivity(db, me.accountId, now),
     currentMoods(db, now),
     unreadRounds(db, me.accountId, now),
     phienBanKe(db, me.accountId, now),
     nhacThu(db, me.accountId, now),
+    deNghiToiToi(db, me.accountId),
   ]);
   // Dai troi: mac dinh troi cua nguoi kia, troi cua minh o o cua so (hoac la troi lon khi chi minh co); them cham mau
   // tren nut va hop chon o dong tieu de.
@@ -69,9 +74,21 @@ export default async function KeSach() {
     id: b.id, title: b.title, cover: b.cover, coverMediaId: b.coverMediaId,
     pageCount: b.pageCount, newCount: b.newCount, lockedCount: b.lockedCount,
     isPrivate: b.mode === "rieng-tu", when: when(b),
+    // Sach viet cung (5c muc E2): hai chu cai dau, nguoi tao truoc; so luot thay so trang.
+    vietCung: b.vietCung
+      ? {
+        doi: b.mine
+          ? [chuCaiDau(me.nickname), chuCaiDau(me.partnerNickname)]
+          : [chuCaiDau(me.partnerNickname), chuCaiDau(me.nickname)],
+        luot: b.roundCount, nguoiKia: me.partnerNickname,
+      }
+      : undefined,
+    choNhanLoi: b.choNhanLoi ? me.partnerNickname : undefined,
   });
-  const cuaBan = shelf.filter((b) => b.mine).map(theKe);
-  const cuaKia = shelf.filter((b) => !b.mine).map(theKe);
+  // Ba ngan (5c muc E1): Hai Ngòi Bút (sach viet cung, cua ca hai) o dau, roi ke cua minh va ke cua nguoi kia.
+  const viet = shelf.filter((b) => b.vietCung).map(theKe);
+  const cuaBan = shelf.filter((b) => b.mine && !b.vietCung).map(theKe);
+  const cuaKia = shelf.filter((b) => !b.mine && !b.vietCung).map(theKe);
   const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} />;
   // Mot luot chua doc thanh prop cua khung sach lon (spec 5a muc E): luot cua nguoi kia "Đọc tiếp" mo cuon qua tam bia
   // toi trang dang doc do; luot cua minh "Viết tiếp". Ca khung mo dung trang cua doan dang hien.
@@ -93,7 +110,7 @@ export default async function KeSach() {
   } else if (recent) {
     khungLon = (
       <OpenBook
-        who={recent.mine ? "Bạn" : recent.ownerNickname}
+        who={recent.vietCung ? `${me.nickname} và ${me.partnerNickname}` : recent.mine ? "Bạn" : recent.ownerNickname}
         title={recent.title}
         covers={biaCua.get(recent.id) ?? []}
         tuDatNut={!coDaiTroi}
@@ -105,7 +122,7 @@ export default async function KeSach() {
         excerpt={recent.excerpt}
         locked={recent.excerptLocked}
         isPrivate={recent.mode === "rieng-tu"}
-        action={recent.mine
+        action={recent.mine || recent.vietCung
           ? { label: "Viết tiếp", href: `/sach/${recent.id}/viet-tiep` }
           // "Đọc tiếp" la mo cuon sach de doc tiep: qua tam bia nhu moi loi vao tu ke (chu du an chot 26/09), roi man
           // doc mo o trang dang doc do. Chi ca khung sach lon mo thang to cua doan trich.
@@ -146,6 +163,8 @@ export default async function KeSach() {
                       {loiNhacThu(nhac.tt, nhac.thang, me.partnerNickname)}
                     </Link>
                   )}
+                  {/* De nghi viet cung gui toi minh (5c muc E4): cung cho, cung kieu dong nhac thu. */}
+                  <LoiMoi dong={deNghi.map((d) => ({ bookId: d.bookId, title: d.title, loai: d.loai }))} partnerNickname={me.partnerNickname} />
                 </div>
               )}
               nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}
@@ -171,6 +190,15 @@ export default async function KeSach() {
                   {hoatDong}
                 </div>
 
+                {viet.length > 0 && (
+                  <Ngan
+                    ten="Hai Ngòi Bút"
+                    books={viet}
+                    trong=""
+                    dau={<NgoiBut />}
+                    ghi="Sách hai người cùng viết. Mỗi lượt đăng có tên riêng."
+                  />
+                )}
                 <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." />
                 <Ngan
                   ten={`Kệ của ${me.partnerNickname}`}

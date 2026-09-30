@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { CoverKey } from "@/lib/book";
 import { soCot, soCuonCuaTang } from "@/lib/luoi-cot";
 import { ShelfBook } from "./ShelfBook";
@@ -29,6 +29,10 @@ export type SachTrenKe = {
   lockedCount: number;
   isPrivate: boolean;
   when: string;
+  /** Sach viet cung (5c): xem ShelfBookProps.vietCung. */
+  vietCung?: { doi: readonly [string, string]; luot: number; nguoiKia: string };
+  /** Cuon cua minh dang cho nguoi kia nhan loi moi: biet danh nguoi kia. */
+  choNhanLoi?: string;
 };
 
 export type NganProps = {
@@ -36,6 +40,10 @@ export type NganProps = {
   books: readonly SachTrenKe[];
   /** Chu cua ngan trong. */
   trong: string;
+  /** Dau dung truoc ten ngan (ke Hai Ngòi Bút: dau hai ngoi but). */
+  dau?: ReactNode;
+  /** Dong ghi nho duoi dau ngan. */
+  ghi?: string;
 };
 
 /**
@@ -49,7 +57,7 @@ export type NganProps = {
  * khong co JavaScript van thay dung ba tang va khong thay mot nut vo dung nao. Ngay khi gan, mot layout effect (chay
  * truoc khi ve, nen khong nhay va khong xo dich) doc so cot, cat danh sach va bo lop cat do.
  */
-export function Ngan({ ten, books, trong }: NganProps) {
+export function Ngan({ ten, books, trong, dau, ghi }: NganProps) {
   const luoiRef = useRef<HTMLUListElement>(null);
   /** null la chua do xong: may chu con dang cat bang CSS. */
   const [cot, setCot] = useState<number | null>(null);
@@ -88,9 +96,10 @@ export function Ngan({ ten, books, trong }: NganProps) {
   return (
     <section className="ngan" aria-label={ten}>
       <div className="ngan__dau">
-        <h2 className="d">{ten}</h2>
+        <h2 className="d">{dau}{ten}</h2>
         <span className="ngan__dem">{books.length} cuốn</span>
       </div>
+      {ghi && <p className="ngan__ghi">{ghi}</p>}
       {books.length === 0 ? (
         <div className="ngan__trong">
           <p>{trong}</p>
@@ -113,6 +122,8 @@ export function Ngan({ ten, books, trong }: NganProps) {
                   newCount={b.newCount}
                   lockedCount={b.lockedCount}
                   isPrivate={b.isPrivate}
+                  vietCung={b.vietCung}
+                  choNhanLoi={b.choNhanLoi}
                 />
               ))}
             </ul>
