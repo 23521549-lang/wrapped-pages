@@ -73,7 +73,10 @@
   .thg__so{ grid-template-columns: minmax(0, 1fr); }
   .thg__tom{ flex-wrap: wrap; gap: var(--space-xs) var(--space-sm); }
   .thg__chu{ flex-basis: calc(100% - 5.5rem); }
-  .thg__tt{ order: 3; margin-left: 2.75rem; }
+  /* Hang rieng duoi ten thang: an phan rong con lai (tru mui ten) va xuong dong, ke ca dau "Mới" (.dh von nowrap), vi
+     biet danh toi 20 ky tu lam cau "... đã viết cho bạn" dai hon cho trong o 320px, the .thg an tran nen chu bi cat mat. */
+  .thg__tt{ order: 3; flex: 1 1 0; min-width: 0; margin-left: 2.75rem; overflow-wrap: anywhere; }
+  .thg__tt .dh{ white-space: normal; }
   .thg__mui{ order: 4; margin-left: auto; }
   .thu-la{ padding-inline: var(--space-md); }
 }

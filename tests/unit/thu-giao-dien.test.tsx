@@ -316,6 +316,14 @@ describe("thu.css", () => {
     expect(CSS).toMatch(/\.ke-thu\{[^}]*overflow-wrap: anywhere/);
   });
 
+  it("nhan trang thai thu o dong tom tat thang xuong dong o man hep, khong bi cat khi biet danh dai (toi 20 ky tu)", () => {
+    const hep = CSS.slice(CSS.indexOf("@media (max-width: 760px)"));
+    expect(hep).toMatch(/\.thg__tt\{[^}]*flex: 1 1 0/);
+    expect(hep).toMatch(/\.thg__tt\{[^}]*min-width: 0/);
+    expect(hep).toMatch(/\.thg__tt\{[^}]*overflow-wrap: anywhere/);
+    expect(hep).toMatch(/\.thg__tt \.dh\{[^}]*white-space: normal/);
+  });
+
   it("mau va lop xep chong di qua token, khong ma mau viet tay", () => {
     expect(CSS).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(CSS).not.toMatch(/oklch\(/);
