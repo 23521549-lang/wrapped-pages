@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { unstable_rethrow, useRouter } from "next/navigation";
@@ -52,6 +52,8 @@ export type RoundEditorProps = {
   niemPhong: boolean;
   /** Biet danh nguoi kia, cho dong bao niem phong. */
   partnerNickname: string;
+  /** Sach viet cung (5c muc H3): o "Tên lượt" dat ngay tren cac dong ghi chu, doi ten khong dung toi noi dung luot. */
+  tenLuot?: ReactNode;
 };
 
 /**
@@ -122,7 +124,7 @@ function donTamCu(khoa: string): void {
  */
 export function RoundEditor({
   bookId, bookTitle, roundId, ordinal, first, initialDoc, version, publishedAt, editedAt, now, startSheet, author, mediaEnabled,
-  niemPhong, partnerNickname,
+  niemPhong, partnerNickname, tenLuot,
 }: RoundEditorProps) {
   const router = useRouter();
   const khoa = roundEditKey(roundId);
@@ -405,6 +407,7 @@ export function RoundEditor({
         />
       </div>
 
+      {tenLuot}
       <div className="sua-ghi" aria-live="polite">
         <p className="sua-ghi__dong"><span>{LUAT}</span></p>
         {niemPhong && (

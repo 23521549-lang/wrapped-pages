@@ -8,6 +8,8 @@ import { roundsOfBook } from "@/server/library/rounds";
 import { listShelf } from "@/server/library/shelf";
 import { unreadRounds } from "@/server/library/unread-rounds";
 import { dang, dangTen, haiCuon, vietCung } from "../helpers/library";
+import { CAU_DO, dangNiemPhong } from "../helpers/seal";
+import { traLoi, xinViet } from "@/server/viet-cung/de-nghi";
 
 /*
  * Doc sach viet cung theo nguoi viet tung luot (5c muc E2, E5, G4, G5): trang cua chinh minh khong bao gio la "trang
@@ -110,5 +112,22 @@ describe("unreadRounds sach viet cung", () => {
     await markRead(s.db, s.seat2.id, s.sach, [1], T);
     expect((await unreadRounds(s.db, s.seat2.id, T)).map((l) => [l.first, l.mine])).toEqual([[3, false]]);
     expect((await unreadRounds(s.db, s.seat1.id, T)).map((l) => [l.first, l.mine])).toEqual([[3, true]]);
+  });
+});
+
+describe("niem phong cu khi cuon thanh sach viet cung (5c muc B5)", () => {
+  it("trang niem phong cu van khoa voi nguoi kia: chi dong he lo, khong ghi da doc, van dem la trang khoa", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    await dang(db, seat1.id, chung, "Mở");
+    await dangNiemPhong(db, seat1.id, chung, CAU_DO, "Hé lộ", "Bí mật thật");
+    expect(await xinViet(db, seat2.id, chung, T)).toBe("sent");
+    expect(await traLoi(db, seat1.id, chung, true, T)).toBe("accepted");
+    const v = await readBook(db, seat2.id, chung, T);
+    expect(v?.vietCung).toBe(true);
+    // Luot niem phong co hai to (to 2, to 3), ca hai con khoa; khong to nao mang chu that.
+    expect(v?.sheets.map((s) => s.locked)).toEqual([false, true, true]);
+    expect(JSON.stringify(v?.sheets)).not.toContain("Bí mật thật");
+    expect(await markRead(db, seat2.id, chung, [1, 2], T)).toEqual([1]);
+    expect((await listShelf(db, seat2.id, T)).find((b) => b.id === chung)).toMatchObject({ vietCung: true, lockedCount: 2 });
   });
 });

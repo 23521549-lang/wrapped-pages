@@ -57,10 +57,11 @@ export function SheetText({ doc, author }: { doc: DocJson; author: string }) {
  * Mot to trong khung sach. i la chi so to tu 0, null la mat giay tron. children la lop bong khi dang lat.
  * renderSheet ve rieng phan ben trong to (xem FlipbookProps.renderSheet); tra undefined thi ve SheetText.
  */
-function Sheet({ sheets, author, renderSheet, i, side, extra, children }: {
+function Sheet({ sheets, author, renderSheet, renderHead, i, side, extra, children }: {
   sheets: readonly DocJson[];
   author: string;
   renderSheet?: (i: number) => ReactNode;
+  renderHead?: (i: number) => ReactNode;
   i: number | null;
   side: Side;
   extra?: string;
@@ -71,6 +72,7 @@ function Sheet({ sheets, author, renderSheet, i, side, extra, children }: {
   const rieng = renderSheet?.(i);
   return (
     <div className={cls}>
+      {renderHead?.(i)}
       {rieng === undefined ? <SheetText doc={sheets[i]} author={author} /> : rieng}
       <span className="to-giay__so">{i + 1}</span>
       {children}
@@ -92,6 +94,11 @@ export type FlipbookProps = {
    * do ve nhu thuong. Duoc goi cho moi mat giay dang hien, ke ca hai mat cua la dang lat.
    */
   renderSheet?: (i: number) => ReactNode;
+  /**
+   * Ve dong dau trang trong LE TREN cua to (sach viet cung, 5c: ten luot va nguoi viet). Dat tuyet doi trong le nhu so
+   * trang, nen khong vao vung chu va khong doi cho ngat trang. Tra null thi to khong co dong dau trang.
+   */
+  renderHead?: (i: number) => ReactNode;
   /** Goi moi khi khung dung yen, voi vi tri (tu 1) cua to dau va to cuoi dang hien. */
   onShow?: (first: number, last: number) => void;
   /**
@@ -106,7 +113,7 @@ export type FlipbookProps = {
  * cu dau tren trang, vuot ngang tren man cam ung. Moi chi so lay tu src/lib/flip.ts; o day chi ve va chay
  * chuyen dong (chi transform va opacity).
  */
-export function Flipbook({ title, sheets, author, start, renderSheet, onShow, renderFoot }: FlipbookProps) {
+export function Flipbook({ title, sheets, author, start, renderSheet, renderHead, onShow, renderFoot }: FlipbookProps) {
   const n = sheets.length;
   const [mode, setMode] = useState<FlipMode | null>(null);
   // To dau cua khung dang hien. Giu to chu khong giu khung, nen doi che do van mo dung cho dang doc.
@@ -250,11 +257,11 @@ export function Flipbook({ title, sheets, author, start, renderSheet, onShow, re
     const shown = viewSheets(m, view, n);
     return m === "doi" ? (
       <>
-        <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={shown[0]} side="trai" />
-        <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={shown[1]} side="phai" />
+        <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={shown[0]} side="trai" />
+        <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={shown[1]} side="phai" />
       </>
     ) : (
-      <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={shown[0]} side="don" />
+      <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={shown[0]} side="don" />
     );
   };
   const khung = { "--so-to": m === "doi" ? 2 : 1, "--k": k, visibility: mode === null ? "hidden" : undefined } as CSSProperties;
@@ -291,11 +298,11 @@ export function Flipbook({ title, sheets, author, start, renderSheet, onShow, re
               <div className="sach__lop">
                 {m === "doi" ? (
                   <>
-                    <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={turn.plan.left} side="trai" />
-                    <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={turn.plan.right} side="phai" />
+                    <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={turn.plan.left} side="trai" />
+                    <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={turn.plan.right} side="phai" />
                   </>
                 ) : (
-                  <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={turn.plan.right} side="don" />
+                  <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={turn.plan.right} side="don" />
                 )}
               </div>
               <div
@@ -304,10 +311,10 @@ export function Flipbook({ title, sheets, author, start, renderSheet, onShow, re
                 style={{ transform: `rotateY(${turn.plan.fromDeg}deg)` }}
                 aria-hidden="true"
               >
-                <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={turn.plan.front} side={m === "doi" ? "phai" : "don"}>
+                <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={turn.plan.front} side={m === "doi" ? "phai" : "don"}>
                   <span ref={frontShade} className="la__bong" />
                 </Sheet>
-                <Sheet sheets={sheets} author={author} renderSheet={renderSheet} i={turn.plan.back} side="trai" extra="la__sau">
+                <Sheet sheets={sheets} author={author} renderSheet={renderSheet} renderHead={renderHead} i={turn.plan.back} side="trai" extra="la__sau">
                   <span ref={backShade} className="la__bong" />
                 </Sheet>
               </div>

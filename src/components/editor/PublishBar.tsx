@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type Ref } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type Ref } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { actionPublish } from "@/app/actions/library";
+import { CAN_TEN_LUOT } from "@/app/actions/messages";
 import { cauOLuot, type TrimInput } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
 import { parseSealInput } from "@/lib/seal/input";
+import { parseTenLuot, TEN_LUOT_TOI_DA } from "@/lib/viet-cung";
 import { luaChon, SealFields, SealKinds } from "./SealPicker";
 import { blankAnswerIds, emptySeal, localInputValue, sealPayload, type SealChoice, type SealDraft } from "./sealDraft";
 
@@ -20,6 +22,8 @@ export type PublishDeps = {
   beforePublish: () => Promise<void>;
   /** Dang hong thi mo lai vung soan thao va cho tu luu chay lai. */
   afterFail: () => void;
+  /** Sach viet cung (5c muc H2): khong niem phong, ten luot bat buoc. */
+  vietCung?: boolean;
 };
 
 /** So to se duoc dang neu bam Dang luc nay, hoac ly do chua dang duoc. Tinh lai moi lan xep trang. */
@@ -52,10 +56,13 @@ export function cauXacNhan(kind: SealChoice, partnerNickname: string | null): { 
  * chon niem phong; so to tinh lai qua refresh() moi lan xep trang, va lop an toan thuc su van la prepare() chay
  * lai sau beforePublish() trong publish().
  */
-export function usePublish({ bookId, partnerNickname, prepare, beforePublish, afterFail }: PublishDeps) {
+export function usePublish({ bookId, partnerNickname, prepare, beforePublish, afterFail, vietCung = false }: PublishDeps) {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState<SanSang>({ count: 0 });
   const [seal, setSeal] = useState<SealDraft>(emptySeal);
+  // O ten luot cua sach viet cung va co bao thieu ten (hien duoi o, focus ve o).
+  const [tenLuot, setTenLuot] = useState("");
+  const [tenLoi, setTenLoi] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState<ReadonlySet<number>>(KHONG_LOI);
   const [minMo, setMinMo] = useState("");
@@ -99,11 +106,64 @@ export function usePublish({ bookId, partnerNickname, prepare, beforePublish, af
     baoLoi(null);
   }
 
+  function changeTen(next: string) {
+    setTenLuot(next);
+    setTenLoi(false);
+  }
+
+  /**
+   * Buoc gui chung cua ca hai loai sach: khoa vung soan thao va luu nhap lan cuoi, cat lai cac to tu chu dang co, roi goi
+   * actionPublish. Dang thanh cong thi action chuyen trang; hong thi mo lai vung soan thao.
+   */
+  function gui(sealGui: unknown, ten: string | null) {
+    startTransition(async () => {
+      await beforePublish();
+      try {
+        // Chay lai prepare() sau beforePublish() (vung soan thao da khoa, nhap da luu), dung ket qua moi nay
+        // de dang thay vi so to dang hien: cai duoc dang la dung chu co tren trang luc bam Dang, ke ca chu
+        // vua go sau lan xep trang cuoi.
+        const fresh = prepare();
+        if ("error" in fresh) {
+          setError(fresh.error);
+          afterFail();
+          return;
+        }
+        const r = await actionPublish(bookId, fresh.sheets, sealGui, ten);
+        if (r && "error" in r) {
+          setError(r.error);
+          afterFail();
+        }
+      } catch (err) {
+        // actionPublish thanh cong thi redirect() ben trong nem mot loi dieu huong dac biet: phai de no
+        // di tiep cho Next xu ly, khong duoc nuot. Loi khac (mat mang, ham nguoi lanh) moi la
+        // that bai that su can bao cho nguoi dung va mo lai man hinh.
+        unstable_rethrow(err);
+        setError("Mất kết nối lúc đăng trang. Kiểm tra mạng rồi thử lại.");
+        afterFail();
+      }
+    });
+  }
+
   /** root: khung niem phong, de dua focus toi dong dap an loi dau tien. */
   function publish(root: HTMLElement | null) {
     // Trang vua bi xoa trang trong luc chon niem phong: bao ngay, chua cham toi ban nhap hay tu luu.
     if ("error" in ready) {
       baoLoi(ready.error);
+      return;
+    }
+    // Sach viet cung: khong niem phong; ten luot bat buoc, kiem som bang dung parseTenLuot cua may chu (5c muc H2).
+    if (vietCung) {
+      const ten = parseTenLuot(tenLuot);
+      if (ten === null) {
+        flushSync(() => {
+          setError(null);
+          setTenLoi(true);
+        });
+        root?.querySelector<HTMLInputElement>(".ten-luot input")?.focus();
+        return;
+      }
+      baoLoi(null);
+      gui(null, ten);
       return;
     }
     // Kiem niem phong TRUOC khi cham toi ban nhap: sai thi khung van mo, beforePublish chua chay nen tu luu
@@ -134,35 +194,13 @@ export function usePublish({ bookId, partnerNickname, prepare, beforePublish, af
       return;
     }
     baoLoi(null);
-    startTransition(async () => {
-      await beforePublish();
-      try {
-        // Chay lai prepare() sau beforePublish() (vung soan thao da khoa, nhap da luu), dung ket qua moi nay
-        // de dang thay vi so to dang hien: cai duoc dang la dung chu co tren trang luc bam Dang, ke ca chu
-        // vua go sau lan xep trang cuoi.
-        const fresh = prepare();
-        if ("error" in fresh) {
-          setError(fresh.error);
-          afterFail();
-          return;
-        }
-        const r = await actionPublish(bookId, fresh.sheets, payload.seal);
-        if (r && "error" in r) {
-          setError(r.error);
-          afterFail();
-        }
-      } catch (err) {
-        // actionPublish thanh cong thi redirect() ben trong nem mot loi dieu huong dac biet: phai de no
-        // di tiep cho Next xu ly, khong duoc nuot. Loi khac (mat mang, ham nguoi lanh) moi la
-        // that bai that su can bao cho nguoi dung va mo lai man hinh.
-        unstable_rethrow(err);
-        setError("Mất kết nối lúc đăng trang. Kiểm tra mạng rồi thử lại.");
-        afterFail();
-      }
-    });
+    gui(payload.seal, null);
   }
 
-  return { open, ready, seal, error, invalid, minMo, pending, start, cancel, refresh, changeSeal, publish };
+  return {
+    open, ready, seal, error, invalid, minMo, pending, start, cancel, refresh, changeSeal, publish,
+    vietCung, tenLuot, tenLoi, changeTen,
+  };
 }
 
 export type PublishFlow = ReturnType<typeof usePublish>;
@@ -196,6 +234,39 @@ export function PublishButton({ flow, ref }: { flow: PublishFlow; ref?: Ref<HTML
  * Khung dang trang kem niem phong, gom hai cot: cot trai chon loai niem phong, cau xac nhan va hai nut; cot
  * giua cac o cua loai da chon (khong co khi chon Khong). To giay dang viet la cot thu ba, do Editor ve.
  */
+/**
+ * O "Tên lượt" thay cho cot chon niem phong o sach viet cung (5c muc H2): bat buoc, toi da TEN_LUOT_TOI_DA ky tu, doi lai
+ * duoc khi sua luot. Enter trong o la bam Dang. Thieu ten thi cau nhac hien duoi o va focus ve o (usePublish lo).
+ */
+function TenLuot({ flow, onDang }: { flow: PublishFlow; onDang: () => void }) {
+  const id = useId();
+  return (
+    <div className="ten-luot">
+      <label className="ten-luot__t" htmlFor={id}>Tên lượt</label>
+      <p className="ten-luot__ghi" id={`${id}-ghi`}>Mỗi lượt trong sách viết cùng có tên riêng, như một chương. Đổi lại được khi sửa lượt.</p>
+      <input
+        className="input"
+        id={id}
+        type="text"
+        value={flow.tenLuot}
+        maxLength={TEN_LUOT_TOI_DA}
+        placeholder="Tên chương này"
+        autoComplete="off"
+        aria-invalid={flow.tenLoi}
+        aria-describedby={flow.tenLoi ? `${id}-ghi ${id}-loi` : `${id}-ghi`}
+        disabled={flow.pending}
+        onChange={(e) => flow.changeTen(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          onDang();
+        }}
+      />
+      {flow.tenLoi && <p className="form__loi" id={`${id}-loi`} role="alert">{CAN_TEN_LUOT}</p>}
+    </div>
+  );
+}
+
 export function PublishPanel({ flow, bookId, bookTitle, partnerNickname, oLuot, onCancel }: {
   flow: PublishFlow;
   bookId: string;
@@ -207,29 +278,34 @@ export function PublishPanel({ flow, bookId, bookTitle, partnerNickname, oLuot, 
   onCancel: () => void;
 }) {
   const hopRef = useRef<HTMLDivElement>(null);
-  const { seal, ready, error, pending } = flow;
-  const cau = cauXacNhan(seal.kind, partnerNickname);
+  const { seal, ready, error, pending, vietCung } = flow;
+  // Sach viet cung khong co niem phong: cau xac nhan nhu "Không".
+  const cau = cauXacNhan(vietCung ? "khong" : seal.kind, partnerNickname);
   const loai = luaChon(partnerNickname).find((c) => c.kind === seal.kind);
 
   // Vua mo: dua dau man viet len dinh cua so (thanh tren dinh san o do, ba cot vua phan con lai), roi focus
-  // loai dang chon de ban phim di tiep tu cot trai.
+  // loai dang chon (hay o ten luot o sach viet cung) de ban phim di tiep tu cot trai.
   useEffect(() => {
     const hop = hopRef.current;
     if (!hop) return;
     hop.closest(".viet")?.scrollIntoView({ block: "start" });
-    hop.querySelector<HTMLInputElement>('input[type="radio"]:checked')?.focus({ preventScroll: true });
+    hop.querySelector<HTMLInputElement>('input[type="radio"]:checked, .ten-luot input')?.focus({ preventScroll: true });
   }, []);
 
   return (
     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- khung xac nhan gom nhom loai (fieldset rieng) va cac o cua loai; khong tag ngu nghia nao trong danh sach de xuat khop dung.
-    <div ref={hopRef} className={seal.kind === "khong" ? "niem niem--khong" : "niem"} role="group" aria-label="Xác nhận đăng trang">
+    <div ref={hopRef} className={vietCung || seal.kind === "khong" ? "niem niem--khong" : "niem"} role="group" aria-label="Xác nhận đăng trang">
       <div className="niem__chon">
-        <SealKinds
-          partnerNickname={partnerNickname}
-          value={seal.kind}
-          onChange={(kind) => flow.changeSeal({ ...seal, kind })}
-          disabled={pending}
-        />
+        {vietCung ? (
+          <TenLuot flow={flow} onDang={() => flow.publish(hopRef.current)} />
+        ) : (
+          <SealKinds
+            partnerNickname={partnerNickname}
+            value={seal.kind}
+            onChange={(kind) => flow.changeSeal({ ...seal, kind })}
+            disabled={pending}
+          />
+        )}
         <div className="niem__cuoi">
           {"error" in ready ? (
             <p className="dang-hoi__chu">{ready.error}</p>
@@ -254,7 +330,7 @@ export function PublishPanel({ flow, bookId, bookTitle, partnerNickname, oLuot, 
           </div>
         </div>
       </div>
-      {seal.kind !== "khong" && (
+      {!vietCung && seal.kind !== "khong" && (
         <div className="niem__form" key={seal.kind}>
           <div className="niem__dau">
             <h2 className="d niem__ten">{loai?.ten}</h2>

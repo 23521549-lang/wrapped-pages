@@ -30,6 +30,7 @@ export default async function VietSach({ params }: { params: Promise<{ id: strin
         author={me.nickname}
         mediaEnabled={getMediaStore() !== null}
         oLuot={draft?.trim ?? { cover: null, coverMediaId: null, youtubeId: null, dropTrack: false }}
+        vietCung={book.vietCungTu !== null}
       />
     </>
   );

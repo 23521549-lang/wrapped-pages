@@ -87,9 +87,12 @@
 .ten-luot__ghi{ font-size: var(--text-sm); color: var(--color-ink-2); line-height: 1.55; }
 .ten-luot__hang{ display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
 .ten-luot__hang .input{ flex: 1 1 14rem; min-width: 0; }
-.ten-luot__xong{ font-size: var(--text-sm); color: var(--color-ink-2); min-height: 1.5em; }
+.ten-luot__xong{ display: block; font-size: var(--text-sm); color: var(--color-ink-2); min-height: 1.5em; }
 .ten-luot--sua{ max-width: 44rem; margin-block: var(--space-lg) var(--space-md); }
 
 @media (prefers-reduced-motion: reduce){
   .luot{ transition: none; }
 }
+
+/* ---------- So nhac: danh sach chung "Hai Ngòi Bút" ---------- */
+.pl__ten b .ngoi{ margin-right: .35rem; }

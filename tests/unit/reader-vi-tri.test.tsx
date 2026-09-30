@@ -33,7 +33,7 @@ const props = (sua: Partial<ReaderProps> = {}): ReaderProps => ({
   bookId: "b1", title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
   looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }],
   seals: [], ownerName: "Linh", readerName: "Minh", now: T0, start: 0, revealAt: null, seen: [], trackRead: true,
-  mine: false, editedAt: [null, null, null], editHref: [null, null, null],
+  editedAt: [null, null, null], editHref: [null, null, null],
   ...sua,
 });
 
@@ -116,7 +116,7 @@ describe("Reader: luu trang dang doc do", () => {
   });
 
   it("sach cua minh cung luu", () => {
-    render(<Reader {...props({ trackRead: false, mine: true, start: 2 })} />);
+    render(<Reader {...props({ trackRead: false, start: 2 })} />);
     cho(LUU_MS);
     expect(luu.mock.calls).toEqual([["b1", 3]]);
   });

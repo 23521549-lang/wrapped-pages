@@ -223,7 +223,6 @@ describe("Reader: to khoa", () => {
         revealAt={null}
         seen={[]}
         trackRead={false}
-        mine={false}
         editedAt={[null]}
         editHref={[null]}
       />,

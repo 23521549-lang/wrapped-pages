@@ -50,7 +50,7 @@ function props(p: Partial<ReaderProps> = {}): ReaderProps {
     bookId: BOOK, title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
     looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }], seals: [],
     ownerName: "Linh", readerName: "Mạnh", now: NOW, start: 0, revealAt: null, seen: [], trackRead: false,
-    mine: true, editedAt: [null, null, null], editHref: [SUA_1, SUA_2, SUA_3], ...p,
+    editedAt: [null, null, null], editHref: [SUA_1, SUA_2, SUA_3], ...p,
   };
 }
 
@@ -91,7 +91,7 @@ describe("Reader: dai ghi chu duoi cuon sach", () => {
   });
 
   it("nguoi kia: thay Da sua luc voi time day du, khong co lien ket sua nao", () => {
-    render(<Reader {...props({ mine: false, editHref: [null, null, null], editedAt: [SUA, null, null] })} />);
+    render(<Reader {...props({ editHref: [null, null, null], editedAt: [SUA, null, null] })} />);
     const time = document.querySelector(".trang-ghi__sua time");
     expect(time?.getAttribute("dateTime")).toBe(SUA.toISOString());
     expect(time?.textContent).toBe("Đã sửa lúc 14:05");
@@ -99,7 +99,7 @@ describe("Reader: dai ghi chu duoi cuon sach", () => {
   });
 
   it("nguoi kia, khong to nao da sua: khong co dai trong", () => {
-    const { container } = render(<Reader {...props({ mine: false, editHref: [null, null, null] })} />);
+    const { container } = render(<Reader {...props({ editHref: [null, null, null] })} />);
     expect(container.querySelector("ul.trang-ghi")).toBeNull();
     expect(container.querySelector(".doc__chan")).toBeNull();
   });

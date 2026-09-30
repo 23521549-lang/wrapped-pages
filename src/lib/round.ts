@@ -7,17 +7,18 @@ export function roundEditPath(bookId: string, ordinal: number, sheet = 1): strin
 }
 
 /**
- * Duong sua cua tung to cho man doc. Chu sach: moi to (ke ca to cua luot niem phong con dong, chu du an 28/09) tro toi
- * man sua luot chua no, mo ngay to do. Nguoi kia, hay to khong thuoc luot nao: null.
+ * Duong sua cua tung to cho man doc. To cua luot do nguoi xem viet (mine; sach mot nguoi viet thi moi luot cua chu sach,
+ * sach viet cung thi luot cua ai nguoi do sua, 5c): tro toi man sua luot chua no, mo ngay to do, ke ca to cua luot niem
+ * phong con dong (chu du an 28/09). To cua nguoi kia, hay to khong thuoc luot nao: null.
  */
 export function editHrefs(
-  bookId: string, mine: boolean, sheets: readonly { roundId: string; position: number }[],
-  rounds: readonly { id: string; ordinal: number; first: number }[],
+  bookId: string, sheets: readonly { roundId: string; position: number }[],
+  rounds: readonly { id: string; ordinal: number; first: number; mine: boolean }[],
 ): (string | null)[] {
   const luotCua = new Map(rounds.map((r) => [r.id, r]));
   return sheets.map((s) => {
     const r = luotCua.get(s.roundId);
-    return mine && r ? roundEditPath(bookId, r.ordinal, s.position - r.first + 1) : null;
+    return r?.mine ? roundEditPath(bookId, r.ordinal, s.position - r.first + 1) : null;
   });
 }
 

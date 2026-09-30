@@ -48,8 +48,6 @@ export type ReaderProps = {
   lastPosition?: number | null;
   /** Chi sach cua nguoi kia moi ghi to da xem (chu sach khong co dong nao). */
   trackRead: boolean;
-  /** Nguoi xem la chu sach: to chua sua duoc co dong "Dang niem phong" thay cho nut sua. */
-  mine: boolean;
   /** Lan sua gan nhat cua tung to, cung thu tu voi sheets. */
   editedAt: readonly (Date | null)[];
   /**
@@ -57,6 +55,11 @@ export type ReaderProps = {
    * voi nguoi kia), hay nguoi xem khong phai chu sach (khi do moi phan tu deu null va ma ve nut khong chay).
    */
   editHref: readonly (string | null)[];
+  /**
+   * Dong dau trang cua tung to (sach viet cung, 5c muc G2): ten luot va nguoi viet, cung thu tu voi sheets. Khong truyen
+   * (sach mot nguoi viet) thi to khong co dong dau trang.
+   */
+  dauTrang?: readonly { ten: string; ai: string }[];
 };
 
 /** Nghi thuc mo cua man doc nay: niem phong nao, va chu con dang hien dan tren to dau cua no khong. */
@@ -64,8 +67,8 @@ type NghiThuc = { sealId: string; dangGo: boolean };
 
 /** Man doc phia trinh duyet: sach lat duoc, to niem phong, nghi thuc mo, khung thu thach, ghi cac to nguoi kia da thay. */
 export function Reader({
-  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, seen, trackRead, mine, editedAt, editHref,
-  lastPosition = null,
+  bookId, title, sheets, looks, seals, ownerName, readerName, now, start, revealAt, seen, trackRead, editedAt, editHref,
+  lastPosition = null, dauTrang,
 }: ReaderProps) {
   // Mo sach ra doc thi tat nhac nghe tu So nhac hay Dau thoi gian (spec 5b C1); nhac cua cuon do la cua MusicRoom.
   useTatNhacChung();
@@ -216,11 +219,20 @@ export function Reader({
     [looks, sheets, ownerName, dangGo, moIndex, stopReveal],
   );
 
-  // Dai duoi cuon sach: "Da sua luc ..." cho ca hai nguoi, nut sua hay dong niem phong chi cho chu sach. Khong co gi
-  // de hien thi khong ve dai. Vi tri to la chi so cong mot vi vi tri lien nhau tu 1.
+  // Dong dau trang trong le tren (sach viet cung): ten luot dam, nguoi viet. Nam ngoai vung chu nen khong doi cho ngat trang.
+  const renderHead = useCallback(
+    (i: number): ReactNode => {
+      const d = dauTrang?.[i];
+      return d ? <span className="dau-trang"><b>{d.ten}</b><span>{d.ai}</span></span> : null;
+    },
+    [dauTrang],
+  );
+
+  // Dai duoi cuon sach: "Da sua luc ..." cho ca hai nguoi, nut sua cho nguoi viet luot (5c: sach viet cung co luot cua
+  // ca hai). Khong co gi de hien thi khong ve dai. Vi tri to la chi so cong mot vi vi tri lien nhau tu 1.
   const renderFoot = useCallback(
     (dangHien: readonly (number | null)[]): ReactNode => {
-      const coGi = dangHien.some((i) => i !== null && (editedAt[i] !== null || mine));
+      const coGi = dangHien.some((i) => i !== null && (editedAt[i] !== null || editHref[i] !== null));
       if (!coGi) return null;
       return (
         <ul className="trang-ghi" aria-label="Ghi chú trang đang mở">
@@ -241,7 +253,7 @@ export function Reader({
         </ul>
       );
     },
-    [editedAt, editHref, mine, now],
+    [editedAt, editHref, now],
   );
 
   const moSeal = nghiThuc === null ? undefined : seals.find((s) => s.id === nghiThuc.sealId);
@@ -249,7 +261,16 @@ export function Reader({
 
   return (
     <>
-      <Flipbook title={title} sheets={sheets} author={ownerName} start={start} renderSheet={renderSheet} onShow={onShow} renderFoot={renderFoot} />
+      <Flipbook
+        title={title}
+        sheets={sheets}
+        author={ownerName}
+        start={start}
+        renderSheet={renderSheet}
+        renderHead={dauTrang ? renderHead : undefined}
+        onShow={onShow}
+        renderFoot={renderFoot}
+      />
       {/* Vung live co mat tu lan ve dau, nen khung chen vao sau hydrate duoc trinh doc man hinh doc len. */}
       <div aria-live="polite">
         {moSeal && (

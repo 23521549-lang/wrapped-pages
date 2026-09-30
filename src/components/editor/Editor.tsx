@@ -36,13 +36,17 @@ export type EditorProps = {
   mediaEnabled: boolean;
   /** Hai o bia va nhac ma ban nhap dang giu cho luot nay; buoc dang bao lai bang mot dong chu tinh. */
   oLuot: TrimInput;
+  /** Sach viet cung (5c): buoc dang co o Ten luot thay cho niem phong. */
+  vietCung?: boolean;
 };
 
 type Snapshot = { doc: unknown; sheets: number };
 
 const KHOA_TAP_TRUNG = "mqce-tap-trung";
 
-export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initialSavedAt, author, mediaEnabled, oLuot }: EditorProps) {
+export function Editor({
+  bookId, bookTitle, partnerNickname, initialDoc, initialSavedAt, author, mediaEnabled, oLuot, vietCung = false,
+}: EditorProps) {
   const [status, setStatus] = useState<SaveStatus | null>(
     initialSavedAt ? { kind: "da-luu", at: initialSavedAt } : null,
   );
@@ -106,6 +110,7 @@ export function Editor({ bookId, bookTitle, partnerNickname, initialDoc, initial
   const dang = usePublish({
     bookId,
     partnerNickname,
+    vietCung,
     prepare,
     beforePublish,
     afterFail: () => {

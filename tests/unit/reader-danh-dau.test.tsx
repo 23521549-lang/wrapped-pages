@@ -38,7 +38,7 @@ const props = (sua: Partial<ReaderProps> = {}): ReaderProps => ({
   bookId: "b1", title: "Thu", sheets: [to("Mot"), to("Hai"), to("Ba")],
   looks: [{ kind: "thuong" }, { kind: "thuong" }, { kind: "thuong" }],
   seals: [], ownerName: "Linh", readerName: "Minh", now: T0, start: 0, revealAt: null, seen: [], trackRead: true,
-  mine: false, editedAt: [null, null, null], editHref: [null, null, null],
+  editedAt: [null, null, null], editHref: [null, null, null],
   ...sua,
 });
 

@@ -2,11 +2,12 @@
 
 import { useEffect, useEffectEvent } from "react";
 import { OPhat, useNhacChung, type HangDoi } from "@/components/music/MayPhatChung";
+import { NgoiBut } from "@/components/viet-cung/NgoiBut";
 
 /** Mot bai trong so, da dung san chu o may chu. nguon: "Chuyện chưa kể, lượt 2", ", riêng tư" khi cuon rieng tu. */
 export type BaiSoHien = { key: string; youtubeId: string; ten: string; kenh: string | null; nguon: string };
-/** Mot danh sach phat: "Của Linh", so bai; bai theo luc dat. */
-export type DanhSachHien = { khoa: string; ten: string; bai: BaiSoHien[] };
+/** Mot danh sach phat: "Của Linh", so bai; bai theo luc dat. chung: danh sach "Hai Ngòi Bút" (5c), mang dau hai ngoi but. */
+export type DanhSachHien = { khoa: string; ten: string; bai: BaiSoHien[]; chung?: boolean };
 
 function TamGiac() {
   return <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6 3.8v12.4a.6.6 0 0 0 .9.5l9.8-6.2a.6.6 0 0 0 0-1L6.9 3.3a.6.6 0 0 0-.9.5Z" fill="currentColor" /></svg>;
@@ -76,7 +77,7 @@ export function SoNhac({ thang, href, ds }: { thang: string; href: string; ds: r
                   </button>
                 )}
                 <p className="pl__ten" id={`pl-${d.khoa}`}>
-                  <b>{d.ten}</b>
+                  <b>{d.chung && <NgoiBut />}{d.ten}</b>
                   <span>{d.bai.length === 0 ? "Chưa đặt bài nào trong tháng" : `${d.bai.length} bài trong tháng`}</span>
                 </p>
               </div>

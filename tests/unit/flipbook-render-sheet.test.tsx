@@ -48,6 +48,29 @@ describe("Flipbook: renderSheet", () => {
   });
 });
 
+describe("Flipbook: renderHead (sach viet cung, 5c muc G2)", () => {
+  it("dong dau trang nam trong to, NGOAI vung chu (le tren), canh so trang; vung chu giu nguyen", () => {
+    const { container } = render(
+      <Flipbook
+        title="Thu"
+        author="Linh"
+        sheets={[to("Chu that")]}
+        start={0}
+        renderHead={() => <span className="dau-trang"><b>Mưa phùn</b><span>Linh</span></span>}
+      />,
+    );
+    const dau = container.querySelector(".to-giay > .dau-trang");
+    expect(dau?.textContent).toBe("Mưa phùnLinh");
+    expect(container.querySelector(".giay-noi-dung .dau-trang")).toBeNull();
+    expect(container.querySelector(".to-giay .giay-noi-dung")?.textContent).toBe("Chu that");
+  });
+
+  it("khong truyen renderHead thi khong co dong dau trang", () => {
+    const { container } = render(<Flipbook title="Thu" author="Linh" sheets={[to("Chu that")]} start={0} />);
+    expect(container.querySelector(".dau-trang")).toBeNull();
+  });
+});
+
 describe("Flipbook: onShow", () => {
   it("bao to dang hien khi khung dung yen", () => {
     const onShow = vi.fn();

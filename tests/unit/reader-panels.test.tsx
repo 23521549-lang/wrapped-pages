@@ -53,7 +53,6 @@ const ve = (start: number) => (
     revealAt={null}
     seen={[]}
     trackRead={false}
-    mine={false}
     editedAt={[null, null, null]}
     editHref={[null, null, null]}
   />

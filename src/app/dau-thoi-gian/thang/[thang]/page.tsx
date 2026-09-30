@@ -25,13 +25,15 @@ export default async function SoNhacThang({ params }: { params: Promise<{ thang:
   const t = phanThang(khoa);
   if (t === null || !thangDaKhep(t, now)) notFound();
   const [bai, cacSo] = await Promise.all([baiCuaThang(db, me.accountId, t), thangCoNhac(db, me.accountId, now)]);
-  const ten = await tenCacBai([...bai.kia, ...bai.minh].map((b) => b.youtubeId));
-  const hien = (ds: BaiSo[]): BaiSoHien[] => ds.map((b) => ({
+  const ten = await tenCacBai([...bai.kia, ...bai.minh, ...bai.chung].map((b) => b.youtubeId));
+  // Danh sach chung (5c muc J1) ghi them ai dat bai; hai danh sach rieng thi khong can.
+  const hien = (ds: BaiSo[], ghiAi = false): BaiSoHien[] => ds.map((b) => ({
     key: `${b.youtubeId}-${b.at.getTime()}`,
     youtubeId: b.youtubeId,
     ten: ten[b.youtubeId]?.ten ?? THAY_TEN_BAI,
     kenh: ten[b.youtubeId]?.kenh ?? null,
-    nguon: `${b.bookTitle}, ${b.ordinal === null ? "lúc tạo sách" : `lượt ${b.ordinal}`}${b.rieng ? ", riêng tư" : ""}`,
+    nguon: `${b.bookTitle}, ${b.ordinal === null ? "lúc tạo sách" : `lượt ${b.ordinal}`}${b.rieng ? ", riêng tư" : ""}`
+      + (ghiAi ? `, ${b.ai === "minh" ? me.nickname : me.partnerNickname} đặt` : ""),
   }));
 
   const k = thangKhoa(t);
@@ -70,6 +72,8 @@ export default async function SoNhacThang({ params }: { params: Promise<{ thang:
           ds={[
             { khoa: "kia", ten: `Của ${me.partnerNickname}`, bai: hien(bai.kia) },
             { khoa: "minh", ten: `Của ${me.nickname}`, bai: hien(bai.minh) },
+            // Danh sach "Hai Ngòi Bút" chi hien khi co bai (5c muc J1).
+            ...(bai.chung.length > 0 ? [{ khoa: "chung", ten: "Hai Ngòi Bút", chung: true, bai: hien(bai.chung, true) }] : []),
           ]}
         />
       </main>

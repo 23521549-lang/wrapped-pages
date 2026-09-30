@@ -6,6 +6,7 @@ import { getMediaStore } from "@/server/media/get-store";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { RoundEditor } from "@/components/editor/RoundEditor";
+import { TenLuotForm } from "@/components/viet-cung/TenLuotForm";
 import { joinSheets } from "@/lib/doc/join";
 import { roundSheetParam, SO_TRANG } from "@/lib/round";
 
@@ -43,6 +44,9 @@ export default async function SuaLuot({ params, searchParams }: {
         mediaEnabled={getMediaStore() !== null}
         niemPhong={round.niemPhong}
         partnerNickname={me.partnerNickname}
+        tenLuot={round.vietCung
+          ? <TenLuotForm key={round.ten ?? ""} bookId={id} roundId={round.id} ordinal={round.ordinal} ten={round.ten} />
+          : undefined}
       />
     </>
   );

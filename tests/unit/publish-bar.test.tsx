@@ -108,7 +108,8 @@ describe("PublishBar kem niem phong", () => {
     fireEvent.change(o("Câu hỏi"), { target: { value: "Hôm đó em nghĩ gì?" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
-    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" });
+    // Tham so thu tu la ten luot: sach mot nguoi viet luon null (5c).
+    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], { kind: "trao-doi", question: "Hôm đó em nghĩ gì?" }, null);
     expect(p.beforePublish).toHaveBeenCalledTimes(1);
     expect(p.beforePublish.mock.invocationCallOrder[0]).toBeLessThan(actionPublish.mock.invocationCallOrder[0]);
     expect(p.prepare).toHaveBeenCalledTimes(2);
@@ -223,7 +224,7 @@ describe("PublishBar kem niem phong", () => {
     expect(cauXacNhan()).toBe("Đăng 2 trang vào Chuyện chưa kể, Linh đọc được ngay.");
     fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
     await waitFor(() => expect(p.afterFail).toHaveBeenCalledTimes(1));
-    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null);
+    expect(actionPublish).toHaveBeenCalledWith("b", [SHEET, SHEET], null, null);
   });
 });
 
@@ -255,5 +256,48 @@ describe("dong chu tinh o buoc dang", () => {
     const cuoi = document.querySelector(".niem__cuoi");
     expect(cuoi?.querySelectorAll("input, select, textarea").length).toBe(0);
     expect(document.querySelectorAll(".dang-hoi__nut button").length).toBe(2);
+  });
+});
+
+describe("PublishBar sach viet cung (5c muc H2)", () => {
+  /** Mo hop dang cua sach viet cung: khong niem phong, co o Ten luot. */
+  function moHopVietCung() {
+    const p = {
+      prepare: vi.fn((): { sheets: DocJson[] } | { error: string } => ({ sheets: [SHEET] })),
+      onCancel: vi.fn(),
+      beforePublish: vi.fn(async () => {}),
+      afterFail: vi.fn(),
+    };
+    render(<Khung bookId="b" partnerNickname="Linh" vietCung {...p} />);
+    fireEvent.click(screen.getByRole("button", { name: "Đăng trang" }));
+    return p;
+  }
+
+  it("khong co lua chon niem phong; o Ten luot duoc focus; cau xac nhan nhu dang thuong", async () => {
+    moHopVietCung();
+    expect(screen.queryAllByRole("radio")).toEqual([]);
+    await waitFor(() => expect(document.activeElement).toBe(o("Tên lượt")));
+    expect(cauXacNhan()).toBe("Đăng 1 trang vào Chuyện chưa kể, Linh đọc được ngay.");
+  });
+
+  it("chua dat ten ma bam Dang: nhac duoi o, focus ve o, khong goi beforePublish hay action", () => {
+    const p = moHopVietCung();
+    fireEvent.change(o("Tên lượt"), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Đăng" }));
+    expect(screen.getByRole("alert").textContent).toBe("Đặt tên cho lượt này rồi hãy đăng nhé.");
+    expect(o("Tên lượt").getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(o("Tên lượt"));
+    expect(p.beforePublish).not.toHaveBeenCalled();
+    expect(actionPublish).not.toHaveBeenCalled();
+    fireEvent.change(o("Tên lượt"), { target: { value: "M" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("co ten: gui niem phong null va ten da gom khoang trang; Enter trong o cung la Dang", async () => {
+    const p = moHopVietCung();
+    fireEvent.change(o("Tên lượt"), { target: { value: "  Bánh mì   chợ Hàng Da " } });
+    fireEvent.keyDown(o("Tên lượt"), { key: "Enter" });
+    await waitFor(() => expect(actionPublish).toHaveBeenCalledWith("b", [SHEET], null, "Bánh mì chợ Hàng Da"));
+    expect(p.beforePublish).toHaveBeenCalledTimes(1);
   });
 });

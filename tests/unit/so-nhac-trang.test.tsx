@@ -136,3 +136,16 @@ describe("SoNhac", () => {
     expect(may().stopVideo).toHaveBeenCalled();
   });
 });
+
+describe("danh sach Hai Ngòi Bút (5c muc J)", () => {
+  it("danh sach chung mang dau hai ngoi but, phat noi tiep sau hai danh sach rieng", async () => {
+    await ve([...DS, { khoa: "chung", ten: "Hai Ngòi Bút", chung: true, bai: [
+      { key: "3", youtubeId: C, ten: "Mùa thu cho em", kenh: "Ngọc Lễ", nguon: "Những bữa sáng, lượt 3, Linh đặt" },
+    ] }]);
+    const chung = dsCua("Hai Ngòi Bút");
+    expect(chung.querySelector(".pl__ten .ngoi")).not.toBeNull();
+    expect(within(chung).getByText("Ngọc Lễ, Những bữa sáng, lượt 3, Linh đặt")).toBeTruthy();
+    expect(within(chung).getByRole("button", { name: "Phát Hai Ngòi Bút" })).toBeTruthy();
+    expect(dsCua("Của Linh").querySelector(".ngoi")).toBeNull();
+  });
+});
