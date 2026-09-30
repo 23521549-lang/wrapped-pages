@@ -128,6 +128,12 @@ async function gieo(c: PGlite) {
       ('${A2}', 'bat-ngo', '2026-09-30 10:00:00.654321+00', '2026-09-30 10:01:00+00'),
       ('${A1}', 'yeu', '2026-09-30 11:00:00+00', null);
     insert into activity (kind, actor_id, detail, shared, at) values ('tha-cam-xuc', '${A1}', '{"cam": "yeu"}', true, '2026-09-30 11:00:00+00');
+    insert into chip_tin (account_id, vai, noi_dung, luc) values
+      ('${A2}', 'nguoi', 'Chíp ơi, hôm nay Linh viết gì?', '2026-09-30 12:00:00.123456+00'),
+      ('${A2}', 'chip', 'Linh vừa viết **Mưa phùn đầu ngõ** đó.' || chr(10) || 'Đọc chưa?', '2026-09-30 12:00:01+00');
+    insert into chip_trang_thai (account_id, lan_cuoi_thay, an, tu_noi, thay_ngu_luc) values
+      ('${A2}', '2026-09-30 12:00:00+00', false, false, null), ('${A1}', null, true, true, '2026-09-30 13:00:00+00');
+    insert into chip_nghi (khoa, den) values ('groq', '2026-10-01 00:00:00+00');
   `);
 }
 

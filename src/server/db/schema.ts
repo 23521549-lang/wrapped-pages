@@ -520,3 +520,43 @@ export const camXuc = pgTable("cam_xuc", {
   xemSau: check("cam_xuc_da_xem", sql`${t.daXemLuc} is null or ${t.daXemLuc} >= ${t.luc}`),
   theoNguoi: index("cam_xuc_tu_luc_idx").on(t.tuId, t.luc),
 }));
+
+/**
+ * Tin tro chuyen voi Chip (dot nam 5e): moi nguoi mot cuoc rieng, chi chinh nguoi do doc duoc (moi cau doc loc
+ * account_id = nguoi xem). vai "nguoi" la tin nguoi dung go, "chip" la tin Chip tra loi. Giu 200 tin gan nhat moi
+ * nguoi (src/server/chip/tro-chuyen.ts). 2000 trong CHECK phai khop TIN_TOI_DA cua src/lib/chip.ts.
+ */
+export const chipTin = pgTable("chip_tin", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  vai: text("vai").$type<"nguoi" | "chip">().notNull(),
+  noiDung: text("noi_dung").notNull(),
+  luc: timestamp("luc", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  vaiValue: check("chip_tin_vai", sql`${t.vai} in ('nguoi', 'chip')`),
+  noiDungDai: check("chip_tin_noi_dung", sql`char_length(${t.noiDung}) between 1 and 2000`),
+  theoNguoi: index("chip_tin_nguoi_luc_idx").on(t.accountId, t.luc),
+}));
+
+/**
+ * Trang thai Chip cua moi nguoi (5e): lan cuoi thay web (de chao khi quay lai), tat Chip, tat tu noi, va lan cuoi nguoi
+ * nay thay Chip dang ngu (de biet noi cau "Chip day roi"). Chua co dong la mac dinh: hien, tu noi, chua tung thay.
+ */
+export const chipTrangThai = pgTable("chip_trang_thai", {
+  accountId: uuid("account_id").primaryKey().references(() => accounts.id, { onDelete: "cascade" }),
+  lanCuoiThay: timestamp("lan_cuoi_thay", { withTimezone: true }),
+  an: boolean("an").notNull().default(false),
+  tuNoi: boolean("tu_noi").notNull().default(true),
+  thayNguLuc: timestamp("thay_ngu_luc", { withTimezone: true }),
+});
+
+/**
+ * Chip dang ngu toi luc nao (5e): het han muc mien phi cua dich vu AI trong ngay. Mot dong duy nhat (khoa "groq") vi hai
+ * nguoi chung mot chia khoa. den qua roi (hay khong co dong) la Chip dang thuc.
+ */
+export const chipNghi = pgTable("chip_nghi", {
+  khoa: text("khoa").primaryKey(),
+  den: timestamp("den", { withTimezone: true }).notNull(),
+}, (t) => ({
+  khoaValue: check("chip_nghi_khoa", sql`${t.khoa} = 'groq'`),
+}));
