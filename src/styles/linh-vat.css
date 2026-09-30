@@ -35,12 +35,11 @@
 
 /* ---------- Kho cam xuc: trong to tro chuyen, mo bang nut "Thả cảm xúc cho {tên}" ---------- */
 .kho-cx{ padding-top: var(--space-2xs); }
-.kho-cx__phu{ margin: 2px 0 var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-2); overflow-wrap: anywhere; }
 .kho-cx__ds{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
-.cx{ display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 100%; min-height: 80px;
+.cx{ display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 100%; min-height: 64px;
   padding: 6px 2px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; cursor: pointer;
   font: inherit; font-size: var(--text-xs); font-weight: 500; color: var(--color-ink-2); }
-.cx__hinh, .cx__hinh img{ display: block; width: 48px; height: 48px; }
+.cx__hinh, .cx__hinh img{ display: block; width: 40px; height: 40px; }
 .cx__hinh{ transition: transform var(--dur-short) var(--ease-out); }
 .cx:hover{ background: var(--color-paper-2); }
 .cx:hover .cx__hinh{ transform: translateY(-2px) scale(1.06); }
@@ -73,7 +72,7 @@
 /* Loi Chip tu chao: chu va hang nut ben trai, nut dong ben phai. */
 .loi-lv__than{ min-width: 0; }
 .loi-lv__hang{ display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-xs); margin-top: var(--space-xs); }
-.loi-lv__hang .btn{ text-decoration: none; }
+.loi-lv__hang .btn{ min-height: 44px; text-decoration: none; }
 
 /* ---------- Chip ngu: khung tinh kem "zzz" o goc tren ---------- */
 .linh-vat__ngu{ position: absolute; right: -14px; top: -16px; width: 34px; height: 34px; pointer-events: none; animation: lv-ngu 2.4s var(--ease-in-out) infinite; }
@@ -87,9 +86,9 @@
 
 /* ---------- To tro chuyen: giay mo tren dau Chip ---------- */
 .tc{ position: absolute; left: 0; bottom: calc(100% + var(--space-sm)); width: min(23rem, calc(100vw - 2 * var(--lv-le)));
-  max-height: min(34rem, calc(100vh - var(--lv-co) - 5rem)); display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: min(34rem, calc(100vh - var(--lv-co) - 5rem)); display: grid; grid-template-rows: auto minmax(44px, 1fr) auto;
   background: var(--color-giay); border: 1px solid var(--color-rule-ui); border-radius: var(--radius-card); box-shadow: var(--shadow-lift);
-  overflow: hidden; transform-origin: 28px 100%; animation: lv-kho-mo var(--dur-short) var(--ease-out); }
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; transform-origin: 28px 100%; animation: lv-kho-mo var(--dur-short) var(--ease-out); }
 @keyframes lv-kho-mo{ from{ opacity: 0; transform: translateY(6px) scale(.97); } }
 .tc__dau{ display: flex; align-items: center; gap: var(--space-xs); padding: var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-sm);
   border-bottom: 1px solid var(--color-rule-ui); }
@@ -101,8 +100,8 @@
   background: transparent; color: var(--color-ink-2); cursor: pointer; }
 .tc__nut:hover{ background: var(--color-paper-2); color: var(--color-ink-dam); }
 .tc__nut svg{ width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.tc__ds{ display: flex; flex-direction: column; gap: var(--space-xs); margin: 0; padding: var(--space-sm); list-style: none;
-  overflow-y: auto; overscroll-behavior: contain; }
+.tc__cuon{ min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.tc__ds{ display: flex; flex-direction: column; gap: var(--space-xs); margin: 0; padding: var(--space-sm); list-style: none; }
 .tc__ngay{ align-self: center; font-size: var(--text-xs); color: var(--color-ink-3); }
 .tin{ max-width: 85%; padding: var(--space-xs) var(--space-sm); border-radius: 14px; font-size: var(--text-sm); line-height: 1.5;
   white-space: pre-line; overflow-wrap: anywhere; }

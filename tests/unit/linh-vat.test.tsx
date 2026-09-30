@@ -83,7 +83,6 @@ describe("To tro chuyen va Kho cam xuc", () => {
   it("kho trong to: tam cam xuc, chua chon thi Tha tat; chon thi nut nhan, anh dong, cau xem truoc", async () => {
     render(<LinhVat tenMinh="Mạnh" tenKia="Linh" hangDau={[]} trangThai={THUC} />);
     await moKho();
-    expect(screen.getByText("Mỗi cảm xúc có một bạn nhỏ mang tới Linh.")).toBeTruthy();
     const nut = LOAI_CAM_XUC.map((l) => screen.getByRole("button", { name: CAM_XUC[l].camXuc }));
     expect(nut).toHaveLength(8);
     expect((screen.getByRole("button", { name: "Thả" }) as HTMLButtonElement).disabled).toBe(true);

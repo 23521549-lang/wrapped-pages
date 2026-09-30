@@ -45,7 +45,7 @@ export function TroChuyen({ tenMinh, tenKia, nguDen, coKhoa, doiNgu, dong, thuNh
   const [loi, setLoi] = useState("");
   const [moKho, setMoKho] = useState(false);
   const toRef = useRef<HTMLElement>(null);
-  const dsRef = useRef<HTMLOListElement>(null);
+  const cuonRef = useRef<HTMLElement>(null);
   const oRef = useRef<HTMLTextAreaElement>(null);
   const khoaNhap = nguDen !== null || !coKhoa;
   const baoNgu = useEffectEvent((den: Date | null) => doiNgu(den));
@@ -83,8 +83,8 @@ export function TroChuyen({ tenMinh, tenKia, nguDen, coKhoa, doiNgu, dong, thuNh
 
   // Tin moi thi cuon xuong cuoi.
   useEffect(() => {
-    const ds = dsRef.current;
-    if (ds) ds.scrollTop = ds.scrollHeight;
+    const cuon = cuonRef.current;
+    if (cuon) cuon.scrollTop = cuon.scrollHeight;
   }, [tin, dangHoi]);
 
   async function gui() {
@@ -129,7 +129,10 @@ export function TroChuyen({ tenMinh, tenKia, nguDen, coKhoa, doiNgu, dong, thuNh
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>
         </button>
       </div>
-      <ol className="tc__ds" ref={dsRef} aria-live="polite" aria-relevant="additions" aria-busy={tin === null}>
+      {/* Vung cuon nhan focus (nhu cot Hoat dong) de nguoi dung ban phim cuon duoc tin cu bang phim mui ten. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- vung cuon, khong co cach cuon bang phim nao khac */}
+      <section className="tc__cuon" ref={cuonRef} tabIndex={0} aria-label="Tin trò chuyện với Chíp">
+      <ol className="tc__ds" aria-live="polite" aria-relevant="additions" aria-busy={tin === null}>
         {tin !== null && tin.length === 0 && (
           <li className="tin tin--chip">{`Chào ${tenMinh}! Chíp đây. Hỏi Chíp chuyện trên web, hay kể Chíp nghe chuyện hôm nay nhé.`}</li>
         )}
@@ -154,6 +157,7 @@ export function TroChuyen({ tenMinh, tenKia, nguDen, coKhoa, doiNgu, dong, thuNh
           </li>
         )}
       </ol>
+      </section>
       <div className="tc__chan">
         <button type="button" className="btn btn--line btn--sm tc__kho" aria-expanded={moKho} aria-controls={`${id}-kho`} onClick={() => setMoKho((x) => !x)}>
           Thả cảm xúc cho {tenKia}

@@ -39,7 +39,6 @@ export function KhoCamXuc({ tenMinh, tenKia, daTha }: { tenMinh: string; tenKia:
 
   return (
     <div className="kho-cx" id={id}>
-      <p className="kho-cx__phu">Mỗi cảm xúc có một bạn nhỏ mang tới {tenKia}.</p>
       <ul className="kho-cx__ds" ref={dsRef}>
         {LOAI_CAM_XUC.map((loai) => (
           <li key={loai}>

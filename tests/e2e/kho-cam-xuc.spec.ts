@@ -24,7 +24,7 @@ const MOT_NHIP_HOI = 25_000;
 /** Mo to tro chuyen cua Chip roi mo Kho cam xuc trong to (5e: kho nam trong to tro chuyen); tra vung kho. */
 async function moKho(p: Page) {
   await p.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-  const to = p.getByRole("region", { name: "Chíp" });
+  const to = p.getByRole("region", { name: "Chíp", exact: true });
   await to.getByRole("button", { name: /^Thả cảm xúc cho / }).click();
   return to;
 }

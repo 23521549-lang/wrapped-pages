@@ -55,7 +55,7 @@ test.afterEach(async () => {
 test("hoi Chip: tra loi hien, tai lai van con, nguoi kia khong thay; ngu canh co ten minh va nguoi kia", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
   await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-  const to = a.getByRole("region", { name: "Chíp" });
+  const to = a.getByRole("region", { name: "Chíp", exact: true });
   await expect(to).toContainText("Đang thức");
   await to.getByLabel("Nói với Chíp").fill("Hôm nay Linh thế nào?");
   await to.getByLabel("Nói với Chíp").press("Enter");
@@ -67,10 +67,10 @@ test("hoi Chip: tra loi hien, tai lai van con, nguoi kia khong thay; ngu canh co
 
   await a.reload();
   await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-  await expect(a.getByRole("region", { name: "Chíp" }).locator(".tin--minh")).toHaveText(["Bạn: Hôm nay Linh thế nào?"]);
+  await expect(a.getByRole("region", { name: "Chíp", exact: true }).locator(".tin--minh")).toHaveText(["Bạn: Hôm nay Linh thế nào?"]);
 
   await b.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-  const toB = b.getByRole("region", { name: "Chíp" });
+  const toB = b.getByRole("region", { name: "Chíp", exact: true });
   await expect(toB).toContainText("Chào Linh! Chíp đây.");
   await expect(toB.locator(".tin--minh")).toHaveCount(0);
 });
@@ -78,7 +78,7 @@ test("hoi Chip: tra loi hien, tai lai van con, nguoi kia khong thay; ngu canh co
 test("het han muc ngay: Chip di ngu cho ca hai, o nhap tat, kho van mo duoc", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
   await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-  const to = a.getByRole("region", { name: "Chíp" });
+  const to = a.getByRole("region", { name: "Chíp", exact: true });
   await to.getByLabel("Nói với Chíp").fill("Chíp ngủ đi");
   await to.getByRole("button", { name: "Gửi" }).click();
   await expect(to.locator(".tin--chip").last()).toContainText("Chíp mệt rồi, đi ngủ chút nha.");
@@ -90,7 +90,7 @@ test("het han muc ngay: Chip di ngu cho ca hai, o nhap tat, kho van mo duoc", as
   await b.reload();
   await expect(b.locator(".linh-vat__ngu")).toBeVisible();
   await b.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-  const toB = b.getByRole("region", { name: "Chíp" });
+  const toB = b.getByRole("region", { name: "Chíp", exact: true });
   await expect(toB.getByLabel("Nói với Chíp")).toBeDisabled();
   await toB.getByRole("button", { name: "Thả cảm xúc cho Mạnh" }).click();
   await expect(toB.getByRole("button", { name: "Yêu" })).toBeVisible();
@@ -107,7 +107,7 @@ test("vang ba ngay quay lai: Chip mung ve va tom tat viec nguoi kia lam, kem nut
   await expect(loi.locator(".loi-lv__chu")).toHaveText("Linh về rồi! 3 ngày rồi đó. Trong lúc Linh đi, Mạnh gửi thư tháng Chín.");
   await expect(loi.getByRole("link", { name: "Xem ngay" })).toHaveAttribute("href", "/tam-trang#thu-2026-09");
   await loi.getByRole("button", { name: "Nói chuyện với Chíp" }).click();
-  await expect(b.getByRole("region", { name: "Chíp" })).toBeVisible();
+  await expect(b.getByRole("region", { name: "Chíp", exact: true })).toBeVisible();
   // Tai lai ngay: da chao roi, khong noi lai.
   await b.reload();
   await b.waitForTimeout(1500);
@@ -139,7 +139,7 @@ test("to tro chuyen va kho mo: khong tran ngang, vung bam 44px o be rong cam ung
     await a.setViewportSize({ width: w, height: 800 });
     await a.goto("/ke-sach");
     await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
-    const to = a.getByRole("region", { name: "Chíp" });
+    const to = a.getByRole("region", { name: "Chíp", exact: true });
     await to.getByRole("button", { name: /^Thả cảm xúc cho / }).click();
     await to.getByRole("button", { name: "Vui" }).click();
     expect(await tranNgang(a), `to ${w}`).toEqual([]);
