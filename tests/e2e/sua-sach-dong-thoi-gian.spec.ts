@@ -192,9 +192,10 @@ test("o 320px form va the xem truoc cua Sach moi, Sua sach, Viet tiep nam tron t
   await a.setViewportSize({ width: 320, height: 900 });
   for (const duong of ["/sach/moi", `/sach/${id}/sua`, `/sach/${id}/viet-tiep`]) {
     await a.goto(duong);
-    await expect(a.locator(".xem-truoc")).toBeVisible();
+    // aside: the xem truoc that; khung giu cho (div.xem-truoc) con trong DOM mot nhip luc trang stream thay vao.
+    await expect(a.locator("aside.xem-truoc")).toBeVisible();
     if (duong === "/sach/moi") await a.getByLabel("Tên sách").fill(TEN);
-    await expect(a.locator(".xem-truoc .book__ten")).toHaveText(TEN);
+    await expect(a.locator("aside.xem-truoc .book__ten")).toHaveText(TEN);
     // Moi phan tu trong khung (khong nam trong mot to tien tu cat phan tran cua no) phai nam tron trong mep phai khung.
     const tran = await a.evaluate(() => {
       const tao = document.querySelector<HTMLElement>(".tao");
@@ -288,7 +289,7 @@ test("anh chup sua sach, sua luot va dau thoi gian de cham giao dien", async ({ 
       await a.screenshot({ path: `${thu}/sua-luot-niem-phong-${w}${hau}.png`, fullPage: true });
 
       await a.goto(`/dau-thoi-gian/${id}`);
-      await expect(a.locator(".dtg-nhac__may iframe")).toBeAttached();
+      await expect(a.locator("aside.mph iframe")).toBeAttached();
       await a.screenshot({ path: `${thu}/dau-thoi-gian-${w}${hau}.png`, fullPage: true });
       await a.goto("/dau-thoi-gian");
       await expect(a.locator(".dtg-dong").first()).toBeVisible();

@@ -562,3 +562,26 @@ export async function ghiTamTrang(ai: string, weather: Weather, luc: Date, note:
     await sql.end();
   }
 }
+
+/**
+ * Ghi thang mot la thu thang (5b) cua nguoi co biet danh ai vao database e2e, kem dong Hoat dong gui-thu nhu guiThu, de
+ * dung canh "nguoi kia da gui" ma khong phai di qua giao dien. Cung rao mqce_e2e voi datNhac.
+ */
+export async function ghiThu(ai: string, thang: string, noiDung: string): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    await sql.begin(async (tx) => {
+      const [nguoi] = await tx<{ id: string }[]>`select id from accounts where nickname = ${ai}`;
+      if (!nguoi) throw new Error("ghiThu: khong tim thay nguoi gui");
+      await tx`insert into thu_thang (account_id, thang, noi_dung) values (${nguoi.id}, ${thang}, ${noiDung})`;
+      await tx`insert into activity (kind, actor_id, detail, shared, at) values ('gui-thu', ${nguoi.id}, ${tx.json({ thang })}, true, now())`;
+    });
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("ghiThu:"))) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}

@@ -195,7 +195,10 @@ test("nhac trong ngay: bam ngay moi phat tuan tu; doi thang khong dung nhac; nga
   await giaYoutube(a);
   await a.goto(`/dau-thoi-gian/${id}`);
   const nhac = a.getByRole("region", { name: "Nhạc trong ngày" });
-  await expect(nhac.locator(".dtg-nhac__may iframe")).toBeAttached();
+  // Trinh phat chung (5b): khung phat nam trong layout goc, dat len o giu cho cua the nhac.
+  const khung = a.locator("aside.mph iframe");
+  await expect(khung).toBeAttached();
+  await expect(a.locator("aside.mph")).toHaveClass("mph mph--lon");
   await expect(nhac.getByRole("listitem")).toHaveCount(3);
   await expect(nhac.getByRole("listitem").nth(1)).toContainText("Gỡ nhạc nền");
   // Vua mo trang: khong phat gi.
@@ -223,7 +226,7 @@ test("nhac trong ngay: bam ngay moi phat tuan tu; doi thang khong dung nhac; nga
   await expect(a.getByRole("heading", { level: 2, name: `Tháng ${THANG_TRUOC.m}, ${THANG_TRUOC.y}` })).toBeVisible();
   await expect(a).toHaveURL(new RegExp(`[?]thang=${thangKhoa(THANG_TRUOC)}$`));
   expect(await danhSachYt(a)).toEqual({ nap: [MA, MA_HAI], dung: 0 });
-  await expect(nhac.locator(".dtg-nhac__may iframe")).toBeAttached();
+  await expect(khung).toBeAttached();
 
   // Ngay khac khong co nhac (ngay tao sach): dung han, khong con trinh phat.
   await a.getByRole("button", { name: new RegExp(`^15 tháng ${THANG_TRUOC.m}[.]`) }).click();
@@ -231,6 +234,7 @@ test("nhac trong ngay: bam ngay moi phat tuan tu; doi thang khong dung nhac; nga
   await expect(a.locator(".dtg-ngay")).toContainText("Ngày này không đổi nhạc.");
   await expect(nhac).toContainText("Chọn một ngày có nốt nhạc trên lịch.");
   await expect(nhac.locator(".dtg-nhac__may")).toHaveCount(0);
+  await expect(khung).toHaveCount(0);
 
   // Tai lai: duong dan mo dung thang da chon.
   await a.reload();
@@ -240,7 +244,7 @@ test("nhac trong ngay: bam ngay moi phat tuan tu; doi thang khong dung nhac; nga
 /** Phan tu tren cung o bon goc (lui vao 12px) va o giua khung phat nhac trong ngay. */
 function diemTrenKhung(page: Page): Promise<(string | undefined)[]> {
   return page.evaluate(() => {
-    const khung = document.querySelector(".dtg-nhac__may iframe");
+    const khung = document.querySelector("aside.mph iframe");
     if (!khung) throw new Error("khong co khung phat");
     const r = khung.getBoundingClientRect();
     const diem = [[r.left + 12, r.top + 12], [r.right - 12, r.top + 12], [r.left + 12, r.bottom - 12], [r.right - 12, r.bottom - 12], [r.left + r.width / 2, r.top + r.height / 2]];
@@ -258,7 +262,7 @@ test("khung phat nhac trong ngay: toi thieu 200x200, khong gi de len, o nam be r
   for (const w of [320, 375, 414, 768, 1280]) {
     await a.setViewportSize({ width: w, height: 800 });
     await a.goto(`/dau-thoi-gian/${id}`);
-    const khung = a.locator(".dtg-nhac__may iframe");
+    const khung = a.locator("aside.mph iframe");
     await expect(khung).toBeAttached();
     await khung.evaluate((el) => el.scrollIntoView({ block: "center" }));
     const hop = await khung.boundingBox();
