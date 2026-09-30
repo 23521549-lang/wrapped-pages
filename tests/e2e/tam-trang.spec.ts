@@ -108,10 +108,23 @@ const dinhTaiLieu = (l: Locator) => l.evaluate((el) => el.getBoundingClientRect(
  */
 async function demXoDich(p: Page): Promise<void> {
   await p.evaluate(() => {
-    const w = window as unknown as { xoDich?: number };
+    const w = window as unknown as { xoDich?: number; xoDichCot?: number };
     w.xoDich = 0;
+    w.xoDichCot = 0;
+    // Dot nam: tha tam trang them mot dong vao dau cot Hoat dong; cac dong cu trong vung cuon cua cot lui xuong. Do la noi
+    // dung moi cua mot danh sach song, khong phai bo cuc xo dich, nen ban ghi ma MOI nguon deu nam trong cot Hoat dong
+    // duoc dem rieng (xoDichCot) va khong tinh. Nguon khong con trong DOM thi van tinh.
+    const trongCot = (x: { sources?: { node?: Node | null }[] }) => (x.sources ?? []).length > 0 && (x.sources ?? []).every((s) => {
+      const n = s.node;
+      const el = n ? (n.nodeType === 1 ? n as Element : n.parentElement) : null;
+      return el?.closest(".hoat-dong") != null;
+    });
     new PerformanceObserver((ds) => {
-      for (const d of ds.getEntries()) w.xoDich = (w.xoDich ?? 0) + (d as unknown as { value: number }).value;
+      for (const d of ds.getEntries()) {
+        const x = d as unknown as { value: number; sources?: { node?: Node | null }[] };
+        if (trongCot(x)) w.xoDichCot = (w.xoDichCot ?? 0) + x.value;
+        else w.xoDich = (w.xoDich ?? 0) + x.value;
+      }
     }).observe({ type: "layout-shift", buffered: false });
   });
 }
@@ -120,10 +133,15 @@ async function demXoDich(p: Page): Promise<void> {
  * Tong xo dich da dem duoc. Doi mot khung hinh roi mot vong microtask truoc khi doc: tay nghe cua PerformanceObserver
  * chay sau khi trinh duyet ve xong, doc ngay co the doc truoc mot ban ghi vua sinh ra.
  */
-const xoDich = (p: Page) => p.evaluate(async () => {
-  await new Promise((xong) => requestAnimationFrame(() => setTimeout(() => xong(null), 0)));
-  return (window as unknown as { xoDich?: number }).xoDich ?? -1;
-});
+const xoDich = async (p: Page) => {
+  const [tinh, cot] = await p.evaluate(async () => {
+    await new Promise((xong) => requestAnimationFrame(() => setTimeout(() => xong(null), 0)));
+    const w = window as unknown as { xoDich?: number; xoDichCot?: number };
+    return [w.xoDich ?? -1, w.xoDichCot ?? 0];
+  });
+  console.log(`[tam-trang] xo dich trong cot Hoat dong (khong tinh): ${cot}`);
+  return tinh;
+};
 
 /**
  * Doi vong song chinh lan duoc it nhat `mocMs` cua chinh no. Day la moc "dang giua luc song lan" do chinh trang bao,
@@ -405,21 +423,35 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
  */
 async function demCls(p: Page): Promise<void> {
   await p.evaluate(() => {
-    const w = window as unknown as { cls?: number };
+    const w = window as unknown as { cls?: number; clsCot?: number };
     w.cls = 0;
+    w.clsCot = 0;
+    // Nhu demXoDich: ban ghi ma moi nguon deu nam trong cot Hoat dong (dong tam trang moi vao dau danh sach) dem rieng.
+    const trongCot = (x: { sources?: { node?: Node | null }[] }) => (x.sources ?? []).length > 0 && (x.sources ?? []).every((s) => {
+      const n = s.node;
+      const el = n ? (n.nodeType === 1 ? n as Element : n.parentElement) : null;
+      return el?.closest(".hoat-dong") != null;
+    });
     new PerformanceObserver((ds) => {
       for (const d of ds.getEntries()) {
-        const x = d as unknown as { value: number; hadRecentInput: boolean };
-        if (!x.hadRecentInput) w.cls = (w.cls ?? 0) + x.value;
+        const x = d as unknown as { value: number; hadRecentInput: boolean; sources?: { node?: Node | null }[] };
+        if (x.hadRecentInput) continue;
+        if (trongCot(x)) w.clsCot = (w.clsCot ?? 0) + x.value;
+        else w.cls = (w.cls ?? 0) + x.value;
       }
     }).observe({ type: "layout-shift", buffered: false });
   });
 }
 
-const cls = (p: Page) => p.evaluate(async () => {
-  await new Promise((xong) => requestAnimationFrame(() => setTimeout(() => xong(null), 0)));
-  return (window as unknown as { cls?: number }).cls ?? -1;
-});
+const cls = async (p: Page) => {
+  const [tinh, cot] = await p.evaluate(async () => {
+    await new Promise((xong) => requestAnimationFrame(() => setTimeout(() => xong(null), 0)));
+    const w = window as unknown as { cls?: number; clsCot?: number };
+    return [w.cls ?? -1, w.clsCot ?? 0];
+  });
+  console.log(`[tam-trang] CLS trong cot Hoat dong (khong tinh): ${cot}`);
+  return tinh;
+};
 
 /*
  * Hop "Thả tâm trạng" nam giua dau ke va ke sach. Truoc day no chi dong SAU khi may chu tra loi, tuc thuong qua nua
