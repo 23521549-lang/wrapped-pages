@@ -321,6 +321,56 @@ Chủ dự án duyệt qua bản mô phỏng (ba lần góp ý: sổ nhạc gọ
 - **Lá thư trôi**: thư người kia chưa mở hiện ở góc trên bên phải mọi trang, ngay dưới thanh điều hướng thật (đo chiều cao, vì thanh xuống hai, ba hàng ở màn hẹp), phong bì giấy lên xuống, lắc, nghiêng theo ba nhịp lệch nhau, bóng co giãn; rê chuột hay focus thì đứng. Thư mới thì ẩn cho tới khi chim mang tới thả xuống (một lần trên mỗi trình duyệt); chạm một khung phát YouTube thì tạm ẩn. Hỏi thư mới mỗi 20 giây khi tab đang xem (`--dur-hoi-thu`).
 - **Cửa sổ đọc thư**: hộp thoại modal đè lên mọi thứ kể cả khung YouTube (ngoại lệ chủ dự án cho phép, nhạc vẫn phát), nền giấy mờ. Hoạt cảnh cố định từ lúc mở, không chờ máy chủ: phong bì bay vào, nắp mở (480ms), tờ thư trồi lên (từ 720ms); thư tới muộn thì hiện trong tờ đã trồi. Mình chưa gửi thì dưới thư có tờ giấy "Viết thư trả lời Linh" và nút "Để sau".
 
+## 17e. Đợt năm, phần 5c: Hai Ngòi Bút (01/10)
+
+Chủ dự án chốt các quyết định ngày 29/09 và bảo làm tiếp sau bản mô phỏng. Spec:
+`docs/superpowers/specs/2026-09-30-dot-nam-c-hai-ngoi-but.md`.
+
+- **Dấu hai ngòi bút** (`NgoiBut`): hai ngòi bút nét mực nghiêng vào nhau, `--blue-ink`, dấu duy nhất của sách viết cùng (kệ, lựa chọn "Viết cùng", dòng đề nghị, danh sách nhạc chung). Chỉ vẽ, chữ đi kèm nói nghĩa.
+- **Mời và xin.** "Ai đọc được" ở Sách mới và Sửa sách có lựa chọn thứ ba "Viết cùng {tên}"; chọn thì ô tên thành "Chủ đề", nút tạo thành "Tạo và mời {tên}", Sửa sách hiện ghi chú (lượt cũ tự mang "Lượt N", niêm phong cũ giữ nguyên, không rời được). Người kia đọc cuốn chia sẻ thì có "Xin viết cùng" ở đầu màn đọc, hỏi lại một lần. Đề nghị gửi tới mình là một dòng dưới "N cuốn" ở Kệ sách (cùng chỗ, cùng kiểu dòng nhắc thư, xuống dòng được ở mọi bề rộng), kèm hai nút. Rút lại thì dòng Hoạt động đã báo cũng biến mất.
+- **Kệ "Hai Ngòi Bút"** ở trên cùng, chỉ khi có cuốn viết cùng: dòng ghi "Sách hai người cùng viết. Mỗi lượt đăng có tên riêng."; thẻ có hai chữ cái đầu chồng nhau ở góc dưới bìa (người tạo trước, viền `--blue-line`), dòng phụ "N lượt, ngày", dấu "Lượt mới của {tên}". Cuốn của mình đang chờ nhận lời mang dấu nhạt "Chờ {tên} nhận lời".
+- **Màn đọc**: dòng phụ "{A} và {B} viết · N lượt · M trang"; cả hai có Viết tiếp, Sửa sách. Mỗi tờ có dòng đầu trang nhỏ (tên lượt đậm, người viết) đặt tuyệt đối trong lề trên như số trang ở lề dưới, một dòng, cắt bằng dấu ba chấm: không vào vùng chữ nên chỗ ngắt trang không đổi. Cột phải "Các lượt" thay khung Lời hồi đáp: lượt đang mở nền `--blue-1`, `aria-current`; bấm là tới trang đầu lượt; lời hồi đáp cũ (từ trước khi viết cùng) hiện dưới danh sách khi lượt đó mở. "Sửa trang N" chỉ ở lượt của mình.
+- **Hộp Đăng trang** của sách viết cùng không có Niêm phong; cột trái là ô "Tên lượt" (bắt buộc, 60 ký tự, Enter là Đăng); thiếu tên thì câu nhắc dưới ô và con trỏ về ô. Đổi tên lượt ở màn Sửa lượt (ô "Tên lượt" + "Lưu tên", không đụng nội dung). Mỗi người một bản nháp riêng trong cùng cuốn.
+- **Sửa sách của sách viết cùng**: "Chủ đề", "Ai viết, ai đọc" thành một dòng khóa nền `--color-paper-2`, mục "Xóa cuốn" cuối trang (đường kẻ trang trí tách khỏi form): "Đề nghị xóa", "Rút đề nghị", hay "Đồng ý xóa" (hỏi lại "Xóa hẳn"/"Thôi", Thôi được focus) và "Giữ lại".
+- **Sổ nhạc**: danh sách thứ ba "Hai Ngòi Bút" (có dấu) khi tháng có bài trong sách viết cùng; dòng phụ ghi "{tên} đặt".
+
+## 17f. Đợt năm, phần 5d: Kho cảm xúc và linh vật Chíp (01/10)
+
+Chủ dự án chê bản mèo đầu tiên ("linh vật xấu vậy, mỗi cảm xúc là mỗi linh vật khác chứ") và muốn xem trên web thật có dữ
+liệu. Spec: `docs/superpowers/specs/2026-10-01-dot-nam-d-kho-cam-xuc.md`.
+
+- **Bộ hình**: Fluent Emoji Animated của Microsoft (giấy phép MIT, thú 3D có hoạt ảnh thật), đổi sang WebP động 176px, tự
+  phục vụ ở `public/linh-vat/` kèm `LICENSE.txt`. Không thư viện, không mở miền CSP nào. Giảm chuyển động dùng khung đầu tĩnh
+  qua `<picture><source media="(prefers-reduced-motion: reduce)">`, không cần JS.
+- **Chíp** (gà con) là linh vật mặc định, cũng là linh vật AI của 5e: ngồi góc dưới bên trái mọi trang, 64px, bóng mực dưới
+  chân. Ngồi yên mà chạm khung YouTube thì tự ẩn như lá thư trôi.
+- **Tám bạn của Kho cảm xúc**, mỗi cảm xúc một con: Yêu là Gấu bông, Nhớ là Gấu túi, Vui là Cá heo, Buồn là Chim cánh cụt,
+  Giận là Hổ con, Bất ngờ là Cú mèo, Trêu là Khỉ con (bịt mắt hé nhìn), Biết ơn là Gấu trúc.
+- **Kho** (5e chuyển vào trong tờ trò chuyện, sau nút "Thả cảm xúc cho {tên}"): lưới 4×2, ảnh tĩnh cho nhẹ, con đang chọn mới động; câu xem trước "Gấu bông sẽ nói với
+  Linh: **Mạnh** đang cảm thấy yêu bạn", nút "Thả". Không đường kẻ trang trí.
+- **Người nhận**: Chíp hóa thành bạn của cảm xúc (to 112px, nhún co giãn), lời nói cạnh (màn hẹp: trên đầu), hiệu ứng 3,6 giây
+  trên lớp phủ cả màn, xuyên chuột, đè cả YouTube (ngoại lệ chủ dự án duyệt): bắn tim liên thanh, son và tim bay lên, lấp lánh
+  nổ, mưa, đấm vỡ màn hình (vết nứt nét mực), vòng sóng, khỉ con chạy ngang, tim lấp lánh bay. Lời nói tự đóng sau 8 giây,
+  trừ khi đang rê chuột hay focus trong đó. Vắng lâu thì chỉ xem ba cảm xúc mới nhất.
+- **Màu**: ảnh linh vật là mảng màu đậm duy nhất ngoài vòng focus, ngoại lệ có chủ đích (ghi ở CLAUDE.md mục 3.1).
+
+## 17g. Đợt năm, phần 5e: Chíp biết nói (01/10)
+
+Chủ dự án chọn Chíp làm "trạng thái mặc định của linh vật AI". Spec: `docs/superpowers/specs/2026-10-01-dot-nam-e-chip-biet-noi.md`.
+
+- **Dịch vụ AI**: Groq, `openai/gpt-oss-120b` (hết hạn mức thì `gpt-oss-20b`), gói miễn phí không cần thẻ; hợp đồng cấm dùng
+  dữ liệu để huấn luyện, mặc định không lưu, có Zero Data Retention. Gemini miễn phí bị loại vì dùng nội dung để cải thiện
+  sản phẩm. Gọi từ máy chủ nên CSP không đổi.
+- **Tờ trò chuyện** thay Kho cảm xúc khi bấm Chíp: đầu tờ (Chíp, "Đang thức" / "Đang ngủ, 7 giờ sáng mai dậy" / "Chưa được
+  đánh thức", Thu nhỏ, Đóng), tin Chíp nền `--blue-1` bên trái, tin mình nền `--color-paper-2` bên phải, nhóm theo ngày, ba
+  chấm "Chíp đang gõ"; chân tờ là nút "Thả cảm xúc cho {tên}" mở Kho (4×2 như 5d) và ô "Nói với Chíp" (Enter gửi).
+- **Tự chào bằng câu có sẵn** (0 token, không lộ gì): chào lần đầu trong ngày kèm chuyện mới nhất của người kia, "về rồi" khi
+  vắng từ 6 giờ kèm tóm tắt, "dậy rồi" sau khi ngủ; cùng bong bóng của 5d, nút "Xem ngay" và "Nói chuyện với Chíp"; mỗi
+  trình duyệt cách nhau ít nhất 10 phút.
+- **Ngủ**: khung tĩnh kèm "zzz" (Fluent 3D, MIT), ô nhập tắt, Kho vẫn dùng được. Hết hạn mức phút thì chỉ xin chờ vài giây.
+- **Thu nhỏ**: đầu gà con 44px ló ở mép trái, nghiêng; rê chuột hay focus thì ló hẳn. **Tắt** ở Cài đặt, mục "Chíp" (cả dòng
+  là vùng bấm 44px), kèm "Xóa cuộc trò chuyện" hỏi lại một lần.
+
 ## 17b. Hiệu năng (27/09, trước khi đưa lên production)
 
 Đo trên bản production ở máy, điện thoại 390px, CPU giả lập chậm 4 lần, trung vị 3 lần (máy đo nhiễu, chỉ tin các thay đổi lớn):
