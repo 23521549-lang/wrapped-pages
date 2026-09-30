@@ -3,7 +3,7 @@ import { media, mediaObjects } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { mediaStoreKey } from "@/lib/media/key";
 import { MEDIA_TOTAL_MAX_BYTES } from "@/lib/media/kinds";
-import { findOwnBook } from "@/server/library/books";
+import { findWritableBook } from "@/server/library/books";
 import { recordUpload, type UploadRecord } from "./access";
 import type { MediaStore } from "./store";
 
@@ -18,7 +18,7 @@ export type SaveResult = "saved" | "not-found" | "full";
  * ra object de xoa: kho khong bao gio giu mot object khong ai biet.
  */
 export async function saveUpload(db: AnyDb, store: MediaStore, record: UploadRecord, body: Uint8Array<ArrayBuffer>): Promise<SaveResult> {
-  if (record.bookId !== null && !(await findOwnBook(db, record.ownerId, record.bookId))) return "not-found";
+  if (record.bookId !== null && !(await findWritableBook(db, record.ownerId, record.bookId))) return "not-found";
   const [tong] = await db.select({ bytes: sql<string>`coalesce(sum(${media.bytes}), 0)` }).from(media);
   if (Number(tong.bytes) + record.bytes > MEDIA_TOTAL_MAX_BYTES) return "full";
   const key = mediaStoreKey(record.bookId, record.id, record.mime);

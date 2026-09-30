@@ -16,7 +16,8 @@ import { recordActivity } from "@/server/feed/record";
 import { bindMedia } from "@/server/media/access";
 import { attachCover, lockCover } from "@/server/media/cover";
 import { insertSeal } from "@/server/seal/seals";
-import { findWritableBook, writableBy } from "./books";
+import { findWritableBook } from "./books";
+import { writableBy } from "./quyen";
 import { lockWritableBook } from "./remove";
 import { newestCovers, type CoverNow, type NewestCover } from "./timeline";
 

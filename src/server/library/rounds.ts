@@ -23,14 +23,23 @@ export function khoangLuot(bookId?: string) {
     .as("khoang_luot");
 }
 
-/** Mot luot dang cua cuon: so thu tu tu 1 theo vi tri to, khoang to, moc dang va lan sua gan nhat. */
-export type RoundSpan = { id: string; ordinal: number; first: number; last: number; publishedAt: Date; editedAt: Date | null };
+/**
+ * Mot luot dang cua cuon: so thu tu tu 1 theo vi tri to, khoang to, moc dang, lan sua gan nhat, nguoi viet va ten luot
+ * (5c: ten chi co o sach viet cung, null hien "Lượt N").
+ */
+export type RoundSpan = {
+  id: string; ordinal: number; first: number; last: number; publishedAt: Date; editedAt: Date | null;
+  authorId: string; ten: string | null;
+};
 
 /** Moi luot cua mot cuon, theo vi tri to. */
 export async function roundsOfBook(db: AnyDb, bookId: string): Promise<RoundSpan[]> {
   const khoang = khoangLuot(bookId);
   const rows = await db
-    .select({ id: rounds.id, publishedAt: rounds.publishedAt, editedAt: rounds.editedAt, first: khoang.first, last: khoang.last })
+    .select({
+      id: rounds.id, publishedAt: rounds.publishedAt, editedAt: rounds.editedAt, first: khoang.first, last: khoang.last,
+      authorId: rounds.tacGiaId, ten: rounds.ten,
+    })
     .from(rounds)
     .innerJoin(khoang, eq(khoang.roundId, rounds.id))
     .where(eq(rounds.bookId, bookId))

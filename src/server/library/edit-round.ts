@@ -1,5 +1,5 @@
-import { and, asc, count, eq, gt, gte, lte, or, sql } from "drizzle-orm";
-import { books, pages, readingPositions, readSheets, rounds } from "@/server/db/schema";
+import { and, asc, eq, gt, gte, lte, or, sql } from "drizzle-orm";
+import { pages, readingPositions, readSheets, rounds } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { hopLeChiThem } from "@/lib/doc/chi-them";
@@ -11,21 +11,23 @@ import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
 import { mediaIdsOf } from "@/lib/media/node";
 import { roundAt } from "@/lib/round";
 import { isUuid } from "@/lib/uuid";
+import { parseTenLuot } from "@/lib/viet-cung";
 import { bindMedia } from "@/server/media/access";
 import { closedToPartner, sealsOfBook } from "@/server/seal/seals";
-import { findOwnBook } from "./books";
-import { lockOwnBook } from "./remove";
+import { findWritableBook } from "./books";
+import { lockWritableBook } from "./remove";
 import { GOP_DOI_MS, ghiHayGop } from "@/server/feed/record";
 import { roundsOfBook } from "./rounds";
 
 /**
- * Mot luot nhu man sua can. Chu sach sua duoc moi luot, ke ca luot niem phong con dong voi nguoi kia (chu du an 28/09),
- * nen noi dung luon duoc doc ra cho chu sach; niemPhong de man sua bao mot dong. Nguoi kia khong bao gio toi day
- * (findOwnBook). version la moc phien ban (lan sua gan nhat, hay luc dang) dang ISO, man sua gui lai nguyen van khi luu.
+ * Mot luot nhu man sua can. Nguoi viet LUOT (rounds.tac_gia_id, 5c) sua duoc luot cua minh, ke ca luot niem phong con
+ * dong voi nguoi kia (chu du an 28/09; luot niem phong luon cua chu cuon), nen noi dung luon duoc doc ra cho nguoi viet
+ * luot; niemPhong de man sua bao mot dong. Luot cua nguoi kia khong bao gio toi day. version la moc phien ban (lan sua gan
+ * nhat, hay luc dang) dang ISO, man sua gui lai nguyen van khi luu. ten va vietCung cho o "Tên lượt" cua sach viet cung.
  */
 export type RoundForEdit = {
   id: string; ordinal: number; first: number; sheets: DocJson[]; version: string; bookTitle: string;
-  publishedAt: Date; editedAt: Date | null; niemPhong: boolean;
+  publishedAt: Date; editedAt: Date | null; niemPhong: boolean; ten: string | null; vietCung: boolean;
 };
 
 /**
@@ -44,51 +46,58 @@ function laSoThuTu(n: number): boolean {
 }
 
 /**
- * Luot thu ordinal cua cuon, de chu sach sua. null khi bookId, ordinal sai dang, sach khong phai cua ownerId hay khong
- * co luot do: noi goi tra 404 nhu moi cho khac, khong lo su ton tai. Luot niem phong con dong van tra noi dung (chi chu
- * sach toi duoc day), kem niemPhong.
+ * Luot thu ordinal cua cuon, de nguoi viet luot do sua. null khi bookId, ordinal sai dang, writerId khong phai nguoi viet
+ * cua cuon, khong co luot do hay luot do cua nguoi kia (sach viet cung): noi goi tra 404 nhu moi cho khac, khong lo su ton
+ * tai. Luot niem phong con dong van tra noi dung (chi nguoi viet luot toi duoc day), kem niemPhong.
  */
 export async function readRoundForEdit(
-  db: AnyDb, ownerId: string, bookId: string, ordinal: number, now: Date = new Date(),
+  db: AnyDb, writerId: string, bookId: string, ordinal: number, now: Date = new Date(),
 ): Promise<RoundForEdit | null> {
   if (!isUuid(bookId) || !laSoThuTu(ordinal)) return null;
   return readSnapshot(db, async (tx) => {
-    const book = await findOwnBook(tx, ownerId, bookId);
+    const book = await findWritableBook(tx, writerId, bookId);
     if (!book) return null;
     const [luot, sealRows] = await Promise.all([roundsOfBook(tx, book.id), sealsOfBook(tx, book.id)]);
     const r = luot[ordinal - 1];
-    if (!r) return null;
+    if (!r || r.authorId !== writerId) return null;
     const rows = await tx.select({ content: pages.content }).from(pages).where(eq(pages.roundId, r.id)).orderBy(asc(pages.position));
     return {
       id: r.id, ordinal, first: r.first, sheets: rows.map((x) => x.content),
       version: (r.editedAt ?? r.publishedAt).toISOString(), bookTitle: book.title, publishedAt: r.publishedAt, editedAt: r.editedAt,
       niemPhong: closedToPartner(sealRows.find((s) => s.roundId === r.id), now),
+      ten: r.ten, vietCung: book.vietCungTu !== null,
     };
   });
 }
 
-/** Luot chua to position cua cuon cua chinh ownerId: so thu tu va to thu may cua luot. Cho duong dan cu mot to. */
+/**
+ * Luot chua to position cua mot cuon writerId la nguoi viet, khi luot do la cua chinh writerId: so thu tu va to thu may
+ * cua luot. Cho duong dan cu mot to. To cua luot nguoi kia (sach viet cung) thi null.
+ */
 export async function roundOfPosition(
-  db: AnyDb, ownerId: string, bookId: string, position: number,
+  db: AnyDb, writerId: string, bookId: string, position: number,
 ): Promise<{ ordinal: number; sheet: number } | null> {
   if (!isUuid(bookId) || !laSoThuTu(position)) return null;
   return readSnapshot(db, async (tx) => {
-    const book = await findOwnBook(tx, ownerId, bookId);
+    const book = await findWritableBook(tx, writerId, bookId);
     if (!book) return null;
     const r = roundAt(await roundsOfBook(tx, book.id), position);
-    return r ? { ordinal: r.ordinal, sheet: position - r.first + 1 } : null;
+    return r && r.authorId === writerId ? { ordinal: r.ordinal, sheet: position - r.first + 1 } : null;
   });
 }
 
-/** Cuon cua chinh ownerId co luot thu ordinal khong. Chi dem luot, khong doc noi dung: cong truoc khung giu cho cua man sua. */
-export async function ownRoundExists(db: AnyDb, ownerId: string, bookId: string, ordinal: number): Promise<boolean> {
+/**
+ * Luot thu ordinal cua cuon co that va la cua chinh writerId khong. Khong doc noi dung: cong truoc khung giu cho cua man
+ * sua. Doc danh sach luot (roundsOfBook, noi duy nhat tinh so thu tu) vi sach viet cung phai biet nguoi viet cua dung
+ * luot do chu khong chi dem.
+ */
+export async function ownRoundExists(db: AnyDb, writerId: string, bookId: string, ordinal: number): Promise<boolean> {
   if (!isUuid(bookId) || !laSoThuTu(ordinal)) return false;
-  const [row] = await db
-    .select({ n: count() })
-    .from(rounds)
-    .innerJoin(books, eq(books.id, rounds.bookId))
-    .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)));
-  return (row?.n ?? 0) >= ordinal;
+  return readSnapshot(db, async (tx) => {
+    const book = await findWritableBook(tx, writerId, bookId);
+    if (!book) return false;
+    return (await roundsOfBook(tx, book.id))[ordinal - 1]?.authorId === writerId;
+  });
 }
 
 /**
@@ -112,7 +121,7 @@ export async function ownRoundExists(db: AnyDb, ownerId: string, bookId: string,
  * Niem phong va dong Hoat dong bam round_id nen khong phai doi gi. Luu thay doi thi ghi (hay gop) mot dong sua-trang.
  */
 export async function editRound(
-  db: AnyDb, ownerId: string, bookId: string, roundId: string, sheets: readonly DocJson[], base: Date, now?: Date,
+  db: AnyDb, writerId: string, bookId: string, roundId: string, sheets: readonly DocJson[], base: Date, now?: Date,
 ): Promise<RoundEditResult> {
   if (!isUuid(bookId) || !isUuid(roundId)) return "not-found";
   // Moc khong doc duoc khong the trung moc phien ban nao, va toISOString cua no nem loi: chan ngay o day.
@@ -120,7 +129,7 @@ export async function editRound(
   const kept = normalizeSheets(trimTrailingBlank(sheets));
   if (kept.length === 0 || kept.length > MAX_SHEETS_PER_PUBLISH) return "invalid";
   return db.transaction(async (tx): Promise<RoundEditResult> => {
-    const sach = await lockOwnBook(tx, ownerId, bookId);
+    const sach = await lockWritableBook(tx, writerId, bookId);
     // Drizzle COMMIT khi ham tra ve binh thuong. Moi duong tra ve truoc "saved" deu nam TRUOC lenh ghi dau tien
     // (tx.delete(pages) o duoi) va moi thu truoc chung chi la lenh doc. Khong them lenh ghi nao vao khoang nay.
     if (!sach) return "not-found";
@@ -129,12 +138,14 @@ export async function editRound(
       .select({
         id: rounds.id,
         publishedAt: rounds.publishedAt,
+        tacGiaId: rounds.tacGiaId,
         stale: sql<boolean>`date_trunc('milliseconds', coalesce(${rounds.editedAt}, ${rounds.publishedAt})) <> ${base.toISOString()}::timestamptz`
           .mapWith(Boolean),
       })
       .from(rounds)
       .where(and(eq(rounds.id, roundId), eq(rounds.bookId, book)));
-    if (!round) return "not-found";
+    // Luot cua nguoi viet kia (sach viet cung) nhu luot khong ton tai: moi nguoi chi sua luot cua minh (5c muc B2).
+    if (!round || round.tacGiaId !== writerId) return "not-found";
     if (round.stale) return "stale";
     const cu = await tx
       .select({ position: pages.position, content: pages.content })
@@ -144,7 +155,7 @@ export async function editRound(
     if (cu.length === 0) return "not-found";
     if (!hopLeChiThem(joinSheets(cu.map((p) => p.content)), joinSheets(kept))) return "deleted";
     const keep = new Set(cu.flatMap((p) => mediaIdsOf(p.content)));
-    const bound = (await Promise.all(kept.map((sheet) => bindMedia(tx, ownerId, book, sheet, { keep })))).filter((d) => d !== null);
+    const bound = (await Promise.all(kept.map((sheet) => bindMedia(tx, writerId, book, sheet, { keep })))).filter((d) => d !== null);
     if (bound.length !== kept.length) return "invalid-media";
 
     const first = cu[0].position;
@@ -209,8 +220,43 @@ export async function editRound(
       })
       .where(eq(rounds.id, round.id));
     await ghiHayGop(tx, {
-      kind: "sua-trang", actorId: ownerId, at: now ?? new Date(), bookId: book, roundId: round.id, mode: sach.mode,
+      kind: "sua-trang", actorId: writerId, at: now ?? new Date(), bookId: book, roundId: round.id, mode: sach.mode,
     }, GOP_DOI_MS);
     return { status: "saved", first };
+  });
+}
+
+/** Ket qua doi ten mot luot. */
+export type RenameRoundResult = "saved" | "unchanged" | "not-found" | "invalid";
+
+/**
+ * Nguoi viet doi ten mot luot CUA CHINH MINH trong sach viet cung (5c muc H3). Ten qua parseTenLuot (gom khoang trang,
+ * 1 toi 60 ky tu): khong dung duoc thi "invalid" truoc khi cham database. Trong mot giao dich: khoa dong sach (cung khoa
+ * voi editRound, publishDraft), luot phai thuoc cuon va do writerId viet, cuon phai la sach viet cung (sach mot nguoi viet
+ * khong co ten luot); trung ten dang co thi "unchanged", khong ghi gi; khong thi doi ten va ghi (hay gop) doi-ten-luot.
+ * Khong cham noi dung, moc sua hay vi tri to cua luot.
+ */
+export async function renameRound(
+  db: AnyDb, writerId: string, bookId: string, roundId: string, ten: unknown, now: Date = new Date(),
+): Promise<RenameRoundResult> {
+  const moi = parseTenLuot(ten);
+  if (moi === null) return "invalid";
+  if (!isUuid(bookId) || !isUuid(roundId)) return "not-found";
+  return db.transaction(async (tx): Promise<RenameRoundResult> => {
+    const sach = await lockWritableBook(tx, writerId, bookId);
+    // Moi duong tra ve truoc lenh update deu chi moi doc.
+    if (!sach || !sach.vietCung) return "not-found";
+    const [luot] = await tx
+      .select({ ten: rounds.ten, tacGiaId: rounds.tacGiaId })
+      .from(rounds)
+      .where(and(eq(rounds.id, roundId), eq(rounds.bookId, sach.id)));
+    if (!luot || luot.tacGiaId !== writerId) return "not-found";
+    if (luot.ten === moi) return "unchanged";
+    await tx.update(rounds).set({ ten: moi }).where(eq(rounds.id, roundId));
+    await ghiHayGop(tx, {
+      kind: "doi-ten-luot", actorId: writerId, at: now, bookId: sach.id, roundId, mode: sach.mode,
+      detail: { truoc: luot.ten, sau: moi },
+    }, GOP_DOI_MS);
+    return "saved";
   });
 }

@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, sql, type SQL } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -6,6 +6,7 @@ import { GOP_DOI_MS, ghiHayGop, recordActivity } from "@/server/feed/record";
 import type { BookInput, BookSettings, CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { attachCover, lockCover } from "@/server/media/cover";
+import { writableBy } from "./quyen";
 import { newestCover, newestTrack } from "./timeline";
 
 export type Book = typeof books.$inferSelect;
@@ -26,16 +27,6 @@ export type BookUpdate = "saved" | "not-found";
  */
 export function readableBy(viewerId: string): SQL {
   return sql`(${eq(books.ownerId, viewerId)} or ${eq(books.mode, "chia-se")})`;
-}
-
-/**
- * Luat "viewer la NGUOI VIET cua cuon nay" (dot nam 5c): cuon cua chinh minh, hoac sach viet cung (viet_cung_tu khac
- * null; web chi co hai nguoi nen sach viet cung thi ca hai deu la nguoi viet). Moi duong ghi cap cuon (nhap, dang luot, o
- * bia, o nhac, doi chu de, tai media) dung luat nay; nhung duong chi chu cuon moi lam duoc (doi che do, moi viet cung, xoa
- * sach chua viet) van dung findOwnBook.
- */
-export function writableBy(viewerId: string): SQL {
-  return sql`(${eq(books.ownerId, viewerId)} or ${isNotNull(books.vietCungTu)})`;
 }
 
 /** Cuon viewer duoc doc (readableBy). Khong duoc doc thi tra null, giong het nhu cuon do khong ton tai. */
@@ -113,23 +104,26 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput, n
 }
 
 /**
- * Doi ten va che do cua mot cuon. Chi chu sach sua duoc; cuon cua nguoi khac la "not-found" nhu cuon khong ton tai.
+ * Doi ten (chu de) va che do cua mot cuon. Nguoi viet cua cuon sua duoc (chu cuon, hay ca hai o sach viet cung, 5c);
+ * nguoi khac nhan "not-found" nhu cuon khong ton tai. Sach viet cung luon chia se: che do gui len bi bo qua (Sua sach cua
+ * no khong co lua chon che do, va CHECK books_viet_cung la lop chan cuoi).
  * Bia va nhac KHONG o day: chung song o hai dong thoi gian va chi doi qua setCoverEntry / setTrackEntry, de mot gia tri
  * khong co hai duong ghi.
  */
 export async function updateBook(
-  db: AnyDb, ownerId: string, bookId: string, input: BookSettings, now: Date = new Date(),
+  db: AnyDb, writerId: string, bookId: string, input: BookSettings, now: Date = new Date(),
 ): Promise<BookUpdate> {
   if (!isUuid(bookId)) return "not-found";
   return db.transaction(async (tx): Promise<BookUpdate> => {
     // Nhu createBook: return trong giao dich la COMMIT chu khong phai ROLLBACK, nen duong return duoi day chi dung chung
-    // nao truoc no chi con lenh doc - findOwnBook la SELECT. Lenh ghi duy nhat (tx.update) nam sau no.
-    const book = await findOwnBook(tx, ownerId, bookId);
+    // nao truoc no chi con lenh doc - findWritableBook la SELECT. Lenh ghi dau tien (tx.update) nam sau no.
+    const book = await findWritableBook(tx, writerId, bookId);
     if (!book) return "not-found";
-    await tx.update(books).set({ ...input, updatedAt: now }).where(and(eq(books.id, book.id), eq(books.ownerId, ownerId)));
+    const mode = book.vietCungTu !== null ? "chia-se" : input.mode;
+    await tx.update(books).set({ title: input.title, mode, updatedAt: now }).where(eq(books.id, book.id));
     if (input.title !== book.title) {
       await ghiHayGop(tx, {
-        kind: "doi-ten-sach", actorId: ownerId, at: now, bookId: book.id, mode: input.mode,
+        kind: "doi-ten-sach", actorId: writerId, at: now, bookId: book.id, mode,
         detail: { truoc: book.title, sau: input.title },
       }, GOP_DOI_MS);
     }

@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { books, drafts, pages } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
-import { writableBy } from "./books";
+import { writableBy } from "./quyen";
 import { isUuid } from "@/lib/uuid";
 
 export type DeleteBookResult = "deleted" | "not-found" | "has-pages";

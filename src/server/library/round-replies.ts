@@ -8,8 +8,8 @@ import { isUuid } from "@/lib/uuid";
 
 /**
  * "sent": vua luu va ghi su kien. "exists": luot da co loi hoi dap (tab khac, hay hai lan bam cung luc), khong ghi gi.
- * "sealed": niem phong cua luot con dong voi nguoi gui. "not-found": luot la, ma rac, sach rieng tu hay chinh chu sach
- * (khong lo su ton tai). "invalid": chu khong qua checkReplyBody.
+ * "sealed": niem phong cua luot con dong voi nguoi gui. "not-found": luot la, ma rac, sach rieng tu, sach viet cung (5c,
+ * khong co hoi dap moi) hay chinh chu sach (khong lo su ton tai). "invalid": chu khong qua checkReplyBody.
  */
 export type RoundReplyResult = "sent" | "exists" | "sealed" | "not-found" | "invalid";
 
@@ -38,12 +38,13 @@ export async function submitRoundReply(
     // LockRows cua Postgres lay khoa dong books truoc dong rounds, khong thi nguoc chieu voi cac duong ghi kia va
     // sinh cua so deadlock (40P01) khi hai nguoi thao tac cung luc.
     const [row] = await tx
-      .select({ bookId: rounds.bookId, ownerId: books.ownerId, mode: books.mode })
+      .select({ bookId: rounds.bookId, ownerId: books.ownerId, mode: books.mode, vietCungTu: books.vietCungTu })
       .from(books)
       .innerJoin(rounds, eq(rounds.bookId, books.id))
       .where(eq(rounds.id, roundId))
       .for("update");
-    if (!row || row.ownerId === accountId || row.mode !== "chia-se") return "not-found";
+    // Sach viet cung bo khung hoi dap (chu du an 29/09): viet tiep vao cuon da la tra loi. Loi cu van giu nguyen.
+    if (!row || row.ownerId === accountId || row.mode !== "chia-se" || row.vietCungTu !== null) return "not-found";
     const [seal] = await tx
       .select({ kind: seals.kind, opensAt: seals.opensAt, openedAt: seals.openedAt })
       .from(seals)

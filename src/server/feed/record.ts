@@ -3,7 +3,7 @@ import { activity } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
 import {
-  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, giongNhau,
+  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, docChiTietTenLuot, giongNhau,
   type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietNhanViet, type ChiTietTen, type ChiTietTenLuot,
   type ChiTietThu, type ChiTietTuChoi,
 } from "@/lib/feed/detail";
@@ -63,16 +63,16 @@ export async function recordActivity(tx: AnyDb, event: ActivityEvent): Promise<v
 }
 
 /** Cac loai ghi qua ghiHayGop. */
-export type SuKienGop = Extract<ActivityEvent, { kind: "doi-ten-sach" | "doi-bia" | "doi-nhac" | "sua-trang" | "da-doc" }>;
+export type SuKienGop = Extract<ActivityEvent, { kind: "doi-ten-sach" | "doi-bia" | "doi-nhac" | "sua-trang" | "da-doc" | "doi-ten-luot" }>;
 
 /**
- * Ghi mot su kien, hay gop vao dong cung loai cua cung nguoi o cung cuon (doi bia, doi nhac, sua trang: cung o, cung
- * luot) con trong cua so cuaSoMs: dong do nhan at moi (nen lai la Moi voi nguoi kia) va gia tri sau moi, giu gia tri
+ * Ghi mot su kien, hay gop vao dong cung loai cua cung nguoi o cung cuon (doi bia, doi nhac, sua trang, doi ten luot:
+ * cung o, cung luot) con trong cua so cuaSoMs: dong do nhan at moi (nen lai la Moi voi nguoi kia) va gia tri sau moi, giu gia tri
  * truoc cua lan dau. Doi roi doi lai nhu cu thi xoa dong: khong co gi doi de bao. da-doc giu trang xa nhat va luot
  * cua trang do. Khoa dong cu (FOR UPDATE) de hai lan ghi cung luc khong gop chong nhau.
  */
 export async function ghiHayGop(tx: AnyDb, event: SuKienGop, cuaSoMs: number): Promise<void> {
-  const theoO = event.kind === "doi-bia" || event.kind === "doi-nhac" || event.kind === "sua-trang";
+  const theoO = event.kind === "doi-bia" || event.kind === "doi-nhac" || event.kind === "sua-trang" || event.kind === "doi-ten-luot";
   const [cu] = await tx
     .select({ id: activity.id, detail: activity.detail })
     .from(activity)
@@ -117,6 +117,12 @@ export async function ghiHayGop(tx: AnyDb, event: SuKienGop, cuaSoMs: number): P
     case "doi-nhac": {
       const truoc = docChiTietNhac(cu.detail)?.truoc;
       await gopDoi(tx, cu.id, event.at, truoc === undefined ? event.detail.truoc : truoc, event.detail.sau);
+      return;
+    }
+    case "doi-ten-luot": {
+      // Ten cu co the that su la null (luot chua dat ten), nen phan biet "detail hong" voi "truoc = null".
+      const cuCT = docChiTietTenLuot(cu.detail);
+      await gopDoi(tx, cu.id, event.at, cuCT === null ? event.detail.truoc : cuCT.truoc, event.detail.sau);
       return;
     }
     default: {

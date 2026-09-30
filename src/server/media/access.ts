@@ -7,7 +7,7 @@ import { mediaStoreKey } from "@/lib/media/key";
 import type { AudioMime, ImageMime, MediaKind, MediaMime } from "@/lib/media/kinds";
 import { isMediaNodeType, mediaNodeId, type MediaNode, type MediaNodeType } from "@/lib/media/node";
 import { isUuid } from "@/lib/uuid";
-import { findOwnBook, findReadableBook } from "@/server/library/books";
+import { findReadableBook, findWritableBook } from "@/server/library/books";
 import { isLockedFor, sealAt, sealsOfBook } from "@/server/seal/seals";
 
 type ImageUpload = { kind: "anh"; bookId: string; mime: ImageMime; width: number; height: number };
@@ -26,11 +26,11 @@ export type MediaFile = { id: string; kind: MediaKind; mime: MediaMime; bytes: n
 
 /**
  * Ghi dong media sau khi put object thanh cong. Key tinh lai bang mediaStoreKey, cung ham noi tai len da dung de
- * put. bookId khac null phai la sach cua chinh ownerId; khong thi khong ghi va tra false. Chay bang db hoac giao
- * dich cua noi goi, khong goi readSnapshot.
+ * put. bookId khac null phai la cuon ownerId (nguoi tai len) la nguoi viet (cua minh, hay sach viet cung, 5c); khong thi
+ * khong ghi va tra false. Chay bang db hoac giao dich cua noi goi, khong goi readSnapshot.
  */
 export async function recordUpload(tx: AnyDb, record: UploadRecord): Promise<boolean> {
-  if (record.bookId !== null && !(await findOwnBook(tx, record.ownerId, record.bookId))) return false;
+  if (record.bookId !== null && !(await findWritableBook(tx, record.ownerId, record.bookId))) return false;
   await tx.insert(media).values({ ...record, storeKey: mediaStoreKey(record.bookId, record.id, record.mime) });
   return true;
 }
@@ -111,16 +111,19 @@ export async function bindMedia<B extends { type: string }>(
 
 /**
  * Media cua mot cuon co hien voi nguoi xem theo cac to da dang chua no khong. Chua to nao chua no (chi nam trong
- * nhap, hay vua tai len chua luu): chi chu sach. Co to chua no: can it nhat mot to khong khoa voi chinh nguoi xem
- * (isLockedFor voi isOwner), nen hen gio chua toi gio khoa ca chu sach, con cau do va trao doi chi khoa
- * nguoi kia.
+ * nhap, hay vua tai len chua luu): chi NGUOI TAI LEN (laNguoiTai) - o sach viet cung, nhap cua nguoi viet kia khong bao
+ * gio lo, ke ca anh (5c muc B4); o sach mot nguoi viet nguoi tai len luon la chu sach nen y nhu truoc. Co to chua no: can
+ * it nhat mot to khong khoa voi chinh nguoi xem (isLockedFor voi isOwner la chu cuon: trang niem phong luon do chu cuon
+ * viet), nen hen gio chua toi gio khoa ca chu sach, con cau do va trao doi chi khoa nguoi kia.
  */
-async function visibleOnPages(tx: AnyDb, bookId: string, mediaId: string, isOwner: boolean, now: Date): Promise<boolean> {
+async function visibleOnPages(
+  tx: AnyDb, bookId: string, mediaId: string, laNguoiTai: boolean, isOwner: boolean, now: Date,
+): Promise<boolean> {
   const [rows, sealRows] = await Promise.all([
     tx.select({ position: pages.position }).from(pages).where(and(eq(pages.bookId, bookId), referencesAny(pages.content, [mediaId]))),
     sealsOfBook(tx, bookId),
   ]);
-  if (rows.length === 0) return isOwner;
+  if (rows.length === 0) return laNguoiTai;
   return rows.some(({ position }) => {
     const seal = sealAt(sealRows, position);
     return !seal || !isLockedFor(seal, isOwner, now);
@@ -174,7 +177,9 @@ export async function canViewMedia(db: AnyDb, viewerId: string, mediaId: string,
     const book = await findReadableBook(tx, viewerId, bookId);
     if (!book) return null;
     const laChu = book.ownerId === viewerId;
-    if (file.kind === "bia") return laChu || (await coTrongOBia(tx, book.id, file.id)) ? file : null;
-    return (await visibleOnPages(tx, book.id, file.id, laChu, now)) ? file : null;
+    // Kho anh bia la cua cuon: moi nguoi viet (ca hai o sach viet cung) luon thay de chon bia.
+    const laNguoiViet = laChu || book.vietCungTu !== null;
+    if (file.kind === "bia") return laNguoiViet || (await coTrongOBia(tx, book.id, file.id)) ? file : null;
+    return (await visibleOnPages(tx, book.id, file.id, ownerId === viewerId, laChu, now)) ? file : null;
   });
 }

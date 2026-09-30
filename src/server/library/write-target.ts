@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { books, drafts, pages } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
-import { writableBy } from "./books";
+import { writableBy } from "./quyen";
 
 /**
  * Cuon ma nut "Trang moi" mo man viet: cuon co ban nhap luu gan nhat CUA CHINH accountId; khong co ban nhap thi cuon

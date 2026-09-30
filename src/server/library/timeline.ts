@@ -7,7 +7,7 @@ import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 import { attachCover, lockCover } from "@/server/media/cover";
 import { khoangLuot, roundsOfBook } from "./rounds";
-import { lockOwnBook } from "./remove";
+import { lockWritableBook } from "./remove";
 import { GOP_DOI_MS, ghiHayGop } from "@/server/feed/record";
 import { giongNhau, type GiaTriBia } from "@/lib/feed/detail";
 
@@ -135,8 +135,8 @@ async function luotCuaSach(tx: AnyDb, bookId: string, roundId: string): Promise<
 }
 
 /**
- * Sua, dien hay don trong MOT o cua dong thoi gian bia. Chi chu sach; cuon cua nguoi khac tra "not-found" y nhu cuon
- * khong ton tai. roundId null la o mo dau. Ham nay KHONG tao duoc o ngoai cac luot da co va o mo dau, nen cau truc tu ep
+ * Sua, dien hay don trong MOT o cua dong thoi gian bia. Chi nguoi viet cua cuon (chu cuon, hay ca hai o sach viet cung,
+ * 5c); nguoi khac nhan "not-found" y nhu cuon khong ton tai. roundId null la o mo dau. Ham nay KHONG tao duoc o ngoai cac luot da co va o mo dau, nen cau truc tu ep
  * luat "so o <= so luot + 1": moi luot la mot cho trong san, chu sach chi dien vao hoac don di.
  * Don o bia cuoi cung bi tu choi ("last-cover"): moi cuon luon phai con it nhat mot o bia, khong thi ke sach se can mot
  * nhanh "bia mac dinh", tuc la mot nguon su that thu hai.
@@ -145,7 +145,7 @@ async function luotCuaSach(tx: AnyDb, bookId: string, roundId: string): Promise<
  * chi dung chi muc dich cho hai hinh dang khac nhau (unique round_id va chi muc rieng phan cua o mo dau).
  */
 export async function setCoverEntry(
-  db: AnyDb, ownerId: string, bookId: string, roundId: string | null,
+  db: AnyDb, writerId: string, bookId: string, roundId: string | null,
   value: { cover: CoverKey; coverMediaId: string | null } | null, now: Date = new Date(),
 ): Promise<TimelineResult> {
   if (!isUuid(bookId)) return "not-found";
@@ -154,7 +154,7 @@ export async function setCoverEntry(
   if (value !== null && value.coverMediaId !== null && !isUuid(value.coverMediaId)) return "invalid";
   return db.transaction(async (tx): Promise<TimelineResult> => {
     // Moi duong tra ve som nam truoc lenh ghi dau tien; truoc chung chi co lenh doc va hai lenh khoa dong.
-    const sach = await lockOwnBook(tx, ownerId, bookId);
+    const sach = await lockWritableBook(tx, writerId, bookId);
     if (!sach) return "not-found";
     const { id } = sach;
     if (roundId !== null && !(await luotCuaSach(tx, id, roundId))) return "not-found";
@@ -162,7 +162,7 @@ export async function setCoverEntry(
     const [o] = await tx.select({ cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId }).from(bookCovers).where(cuaO);
     const truoc = o === undefined ? null : { cover: o.cover, anhId: o.coverMediaId };
     const baoDoi = (sau: GiaTriBia) => ghiHayGop(tx, {
-      kind: "doi-bia", actorId: ownerId, at: now, bookId: id, roundId, mode: sach.mode, detail: { truoc, sau },
+      kind: "doi-bia", actorId: writerId, at: now, bookId: id, roundId, mode: sach.mode, detail: { truoc, sau },
     }, GOP_DOI_MS);
     if (value === null) {
       // Cho nay von da trong thi khong co gi de don. Luat chi tu choi khi CHINH o dang bi don la o bia cuoi cung, nen
@@ -174,7 +174,7 @@ export async function setCoverEntry(
       await baoDoi(null);
       return "saved";
     }
-    if (value.coverMediaId !== null && !(await lockCover(tx, ownerId, id, value.coverMediaId))) return "invalid-cover";
+    if (value.coverMediaId !== null && !(await lockCover(tx, writerId, id, value.coverMediaId))) return "invalid-cover";
     const da = await tx
       .update(bookCovers)
       .set({ cover: value.cover, coverMediaId: value.coverMediaId })
@@ -196,7 +196,7 @@ export async function setCoverEntry(
  * bat bien "luon con it nhat mot o": cuon khong o nhac nao la cuon khong co nhac nen, dung nhu hom nay.
  */
 export async function setTrackEntry(
-  db: AnyDb, ownerId: string, bookId: string, roundId: string | null,
+  db: AnyDb, writerId: string, bookId: string, roundId: string | null,
   value: { youtubeId: string | null } | null, now: Date = new Date(),
 ): Promise<TimelineResult> {
   if (!isUuid(bookId)) return "not-found";
@@ -204,7 +204,7 @@ export async function setTrackEntry(
   if (value !== null && value.youtubeId !== null && !YOUTUBE_ID.test(value.youtubeId)) return "invalid";
   return db.transaction(async (tx): Promise<TimelineResult> => {
     // Nhu setCoverEntry: hai duong tra ve som deu nam truoc lenh ghi dau tien.
-    const sach = await lockOwnBook(tx, ownerId, bookId);
+    const sach = await lockWritableBook(tx, writerId, bookId);
     if (!sach) return "not-found";
     const { id } = sach;
     if (roundId !== null && !(await luotCuaSach(tx, id, roundId))) return "not-found";
@@ -219,7 +219,7 @@ export async function setTrackEntry(
     }
     if (!giongNhau(truoc, value)) {
       await ghiHayGop(tx, {
-        kind: "doi-nhac", actorId: ownerId, at: now, bookId: id, roundId, mode: sach.mode, detail: { truoc, sau: value },
+        kind: "doi-nhac", actorId: writerId, at: now, bookId: id, roundId, mode: sach.mode, detail: { truoc, sau: value },
       }, GOP_DOI_MS);
     }
     return "saved";
