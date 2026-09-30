@@ -1,5 +1,5 @@
-import { and, count, desc, eq, inArray, max, notExists, or, sql, type SQL } from "drizzle-orm";
-import { accounts, books, pages, readSheets, seals } from "@/server/db/schema";
+import { and, count, countDistinct, desc, eq, inArray, max, notExists, or, sql, type SQL } from "drizzle-orm";
+import { accounts, books, deNghi, pages, readSheets, rounds, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode, CoverKey } from "@/lib/book";
@@ -16,10 +16,18 @@ export type ShelfBook = {
   cover: CoverKey;
   /** Bia tu tai len, null la tranh ve cover. Chi co tren cuon nguoi xem doc duoc, nen /m cho ho tai bia do. */
   coverMediaId: string | null;
+  /** Nguoi xem la chu cuon (nguoi tao). Sach viet cung dung o ke rieng, xem vietCung. */
   mine: boolean;
   ownerNickname: string;
   pageCount: number;
+  /** So to CUA NGUOI KIA nguoi xem chua thay (sach viet cung: to trong luot nguoi kia viet; to cua minh khong bao gio moi). */
   newCount: number;
+  /** Sach viet cung (5c): dung o ke Hai Ngòi Bút cua ca hai. */
+  vietCung: boolean;
+  /** So luot da dang (the sach viet cung ghi "N lượt"). */
+  roundCount: number;
+  /** Cuon cua nguoi xem dang cho nguoi kia nhan loi moi viet cung (dau "Chờ {tên} nhận lời"). */
+  choNhanLoi: boolean;
   /** So to nam trong niem phong con khoa voi nguoi xem. */
   lockedCount: number;
   /**
@@ -40,6 +48,14 @@ export type ShelfBook = {
 
 /** To co it nhat mot nut chu chua ky tu khong phai khoang trang (cung tap khoang trang voi docExcerpt). */
 export const HAS_TEXT = sql`exists (select 1 from jsonb_path_query(${pages.content}, '$.** ? (@.type == "text").text') as chu(v) where (chu.v #>> '{}') ~ ${NOT_BLANK_PATTERN})`;
+
+/**
+ * To dang xet (pages) thuoc luot do chinh nguoi xem viet (rounds.tac_gia_id, 5c): voi sach mot nguoi viet la moi to cua
+ * cuon minh, voi sach viet cung chi cac luot cua minh. To cua minh khong bao gio la "trang moi" va khong co dong da xem.
+ */
+function cuaMinhSql(viewerId: string): SQL {
+  return sql`exists (select 1 from ${rounds} where ${rounds.id} = ${pages.roundId} and ${rounds.tacGiaId} = ${viewerId})`;
+}
 
 /** Nguoi xem da tung thay to dang xet (pages) chua. Dung trong truy van co bang pages. */
 function daXemSql(viewerId: string): SQL {
@@ -123,16 +139,16 @@ function lockedSealOf(tx: AnyDb, viewerId: string, now: Date) {
 
 /**
  * Duong lui cua spec muc 7, chi dung khi luot moi nhat khong co to nao co chu. Ung vien la cac to co chu cua ca cuon,
- * khong nam trong niem phong con khoa voi nguoi xem, va voi cuon cua nguoi kia thi nguoi xem da tung thay (co dong
- * trong read_sheets): ke sach khong lo to chua doc cua cac luot cu, va bam vao khung khong bien cac to bi nhay coc
- * thanh da doc. Cuon khong co ung vien nao thi khong co dong (xem firstReadableSheets).
+ * khong nam trong niem phong con khoa voi nguoi xem, va voi to cua nguoi kia (luot nguoi kia viet) thi nguoi xem da tung
+ * thay (co dong trong read_sheets): ke sach khong lo to chua doc cua cac luot cu, va bam vao khung khong bien cac to bi
+ * nhay coc thanh da doc. Cuon khong co ung vien nao thi khong co dong (xem firstReadableSheets).
  */
 function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
   return drawOfDay(tx, and(
     inArray(pages.bookId, ids),
     HAS_TEXT,
     notExists(lockedSealOf(tx, viewerId, now)),
-    or(eq(books.ownerId, viewerId), daXemSql(viewerId)),
+    or(cuaMinhSql(viewerId), daXemSql(viewerId)),
   )!, viewerId, now);
 }
 
@@ -149,8 +165,9 @@ function pickedInRounds(tx: AnyDb, roundIds: string[], viewerId: string, now: Da
  * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem): nhanh cuoi
  * cung cua doanCua, dung khi luot moi nhat khong cho doan nao va ca hai phep bat tham deu khong co ung vien; cung la
  * vi tri mo man doc khi khung khong co doan trich. Moi to deu khoa thi khong co dong.
- * - Cuon cua chinh nguoi xem: khong bi gioi han gi, uu tien to co chu roi moi toi vi tri (nhu truoc).
- * - Cuon cua nguoi kia: uu tien cac to doc duoc MA NGUOI XEM CHUA TUNG THAY, lay to nho nhat trong so do - ke ca khi to
+ * Xet theo TUNG TO (nguoi viet luot chua to, 5c), nen sach viet cung tron hai luat:
+ * - To cua chinh nguoi xem: khong bi gioi han gi, uu tien to co chu roi moi toi vi tri (nhu truoc).
+ * - To cua nguoi kia: uu tien cac to doc duoc MA NGUOI XEM CHUA TUNG THAY, lay to nho nhat trong so do - ke ca khi to
  *   do khong co chu; khong duoc bo qua no de tim to co chu o xa hon, vi bam vao khung phai mo dung cho nguoi doc dang
  *   dung lai, khong nhay coc. Chi khi moi to doc duoc deu da thay moi lui ve to doc duoc nho nhat (cung theo vi tri nho
  *   nhat, khong phan biet co chu). listShelf chi dung noi dung to nay lam doan trich khi hasText dung; to khong chu thi
@@ -167,7 +184,7 @@ function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Da
     .orderBy(
       pages.bookId,
       sql`case
-        when ${books.ownerId} = ${viewerId} then (case when not ${HAS_TEXT} then 1 else 0 end)
+        when ${cuaMinhSql(viewerId)} then (case when not ${HAS_TEXT} then 1 else 0 end)
         else (case when ${daXemSql(viewerId)} then 1 else 0 end)
       end`,
       pages.position,
@@ -188,6 +205,10 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
       .select({
         id: books.id, title: books.title, mode: books.mode,
         ownerId: books.ownerId, createdAt: books.createdAt, ownerNickname: accounts.nickname,
+        vietCung: sql<boolean>`${books.vietCungTu} is not null`.mapWith(Boolean),
+        // Loi moi viet cung cua chinh nguoi xem dang cho nguoi kia nhan (dau "Chờ {tên} nhận lời").
+        choNhanLoi: sql<boolean>`exists (select 1 from ${deNghi} where ${deNghi.bookId} = ${books.id}
+          and ${deNghi.loai} = 'moi-viet' and ${deNghi.tuId} = ${viewerId})`.mapWith(Boolean),
       })
       .from(books)
       .innerJoin(accounts, eq(accounts.id, books.ownerId))
@@ -198,11 +219,13 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     const [stats, ranges, picked, firsts, newest, covers] = await Promise.all([
       tx
         .select({
-          bookId: pages.bookId, n: count(), last: max(pages.position), at: max(pages.publishedAt),
-          // Dem to chua co dong da xem cua nguoi nay. To niem phong cung tinh la trang moi: markRead khong ghi chung.
-          chuaXem: sql<number>`count(*) filter (where ${readSheets.position} is null)`.mapWith(Number),
+          bookId: pages.bookId, n: count(), last: max(pages.position), at: max(pages.publishedAt), luot: countDistinct(pages.roundId),
+          // Dem to CUA NGUOI KIA chua co dong da xem cua nguoi nay (to cua minh khong bao gio moi, 5c). To niem phong cung
+          // tinh la trang moi: markRead khong ghi chung.
+          chuaXem: sql<number>`count(*) filter (where ${readSheets.position} is null and ${rounds.tacGiaId} <> ${viewerId})`.mapWith(Number),
         })
         .from(pages)
+        .innerJoin(rounds, eq(rounds.id, pages.roundId))
         .leftJoin(readSheets, and(
           eq(readSheets.bookId, pages.bookId), eq(readSheets.position, pages.position), eq(readSheets.accountId, viewerId),
         ))
@@ -291,8 +314,10 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
         return [{
           id: b.id, title: b.title, mode: b.mode, cover: bia.cover, coverMediaId: bia.coverMediaId, mine, ownerNickname: b.ownerNickname,
           pageCount: s?.n ?? 0,
-          // So to moi = so to nguoi xem chua thay bao gio; to niem phong cung tinh vi markRead khong ghi chung.
-          newCount: mine ? 0 : (s?.chuaXem ?? 0),
+          // So to moi = so to cua nguoi kia nguoi xem chua thay bao gio; to niem phong cung tinh vi markRead khong ghi
+          // chung. Sach mot nguoi viet cua chinh minh vi the luon 0.
+          newCount: s?.chuaXem ?? 0,
+          vietCung: b.vietCung, roundCount: s?.luot ?? 0, choNhanLoi: b.choNhanLoi,
           lockedCount: locked.reduce((n, r) => n + r.lastPosition - r.firstPosition + 1, 0),
           excerptPosition: doan?.position ?? first?.position ?? last,
           excerptLocked: lastSeal !== undefined,

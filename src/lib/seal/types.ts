@@ -53,7 +53,11 @@ export type ReaderSheet = {
  * Mot luot dang cua cuon nhu man doc can: so thu tu, khoang to, va niem phong cua luot con dong voi nguoi kia khong
  * (chu sach chua sua duoc luot do). Voi nguoi kia, sealed chi la dieu ho da thay: luot dang khoa voi chinh ho.
  */
-export type ReaderRound = { id: string; ordinal: number; first: number; last: number; sealed: boolean };
+/**
+ * Mot luot tren man doc. ten: ten luot cua sach viet cung (5c), null hien "Lượt N". mine: nguoi xem la nguoi viet luot
+ * (sach viet cung co luot cua ca hai; sach mot nguoi viet thi moi luot la cua chu).
+ */
+export type ReaderRound = { id: string; ordinal: number; first: number; last: number; sealed: boolean; ten: string | null; mine: boolean };
 
 export type KnockEntry = { guess: string; correct: boolean; at: Date };
 

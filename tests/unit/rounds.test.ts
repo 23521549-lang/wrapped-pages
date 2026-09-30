@@ -52,8 +52,8 @@ describe("luot dang", () => {
     const cuaNguoiKia = (await readBook(db, seat2.id, chung))!;
     expect(cuaNguoiKia.sheets.map((s) => [s.roundId, s.locked, s.editedAt])).toEqual([[l1.id, false, sua], [l2.id, true, null]]);
     expect(cuaNguoiKia.rounds).toEqual([
-      { id: l1.id, ordinal: 1, first: 1, last: 1, sealed: false },
-      { id: l2.id, ordinal: 2, first: 2, last: 2, sealed: true },
+      { id: l1.id, ordinal: 1, first: 1, last: 1, sealed: false, ten: null, mine: false },
+      { id: l2.id, ordinal: 2, first: 2, last: 2, sealed: true, ten: null, mine: false },
     ]);
     const cuaChu = (await readBook(db, seat1.id, chung))!;
     expect(cuaChu.sheets.map((s) => s.editedAt)).toEqual([sua, sua]);
