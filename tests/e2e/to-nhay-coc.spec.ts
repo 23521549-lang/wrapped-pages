@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangToThang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import { dangToThang, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang, viTriDocDo } from "./kho-sach";
 
 /*
  * Mo man doc thang toi mot to xa chi tinh dung nhung to that su hien: cac to bi nhay coc van la trang moi tren ke.
@@ -16,7 +16,7 @@ test.afterEach(async () => {
 
 test("mo thang toi to 5: chi to do duoc tinh, cac to bi nhay coc van la trang moi", async ({ browser }) => {
   test.setTimeout(240_000);
-  const { a, b } = await haiNguoiDaVao(browser);
+  const { a, b, tenCuaB } = await haiNguoiDaVao(browser);
   const id = await taoSach(a, "Chuyện chưa kể", "chia-se");
   await dangToThang(id, "Tờ một", "Tờ hai", "Tờ ba", "Tờ bốn", "Tờ năm", "Tờ sáu");
 
@@ -25,14 +25,18 @@ test("mo thang toi to 5: chi to do duoc tinh, cac to bi nhay coc van la trang mo
   await b.goto(`/sach/${id}?trang=5`);
   await expect(b.locator(".doc__dem")).toHaveText("Trang 5 / 6");
   await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([5]);
+  await expect.poll(() => viTriDocDo(id, tenCuaB), { timeout: 10_000 }).toBe(5);
   expect(await tranNgang(b)).toEqual([]);
 
   await b.goto("/ke-sach");
   const the = b.locator(".cuon", { hasText: "Chuyện chưa kể" });
   await expect(the.locator(".dh--moi")).toHaveText("5 trang mới");
 
-  // Mo lai khong kem ?trang: to nho nhat chua thay la to 1, khong phai to 6.
+  // DOI HANH VI CO Y (dot nam): mo lai khong kem ?trang thi ra trang dang doc do (to 5), thang ca to dau chua doc.
   await docSach(b, id);
+  await expect(b.locator(".doc__dem")).toHaveText("Trang 5 / 6");
+  // Doc tu dau bang ?trang=1: cac to bi nhay coc van la trang moi cho toi khi that su hien.
+  await b.goto(`/sach/${id}?trang=1`);
   await expect(b.locator(".doc__dem")).toHaveText("Trang 1 / 6");
   // Doi tung khung duoc ghi xong roi moi lat tiep: Reader co y chi gui khung dung lai that su, lat lien tay qua mot to
   // thi to do khong duoc tinh.

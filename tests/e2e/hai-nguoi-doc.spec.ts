@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { resetDb } from "./db";
-import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, moSach, taoSach, toDaXemCua, vietTranTrang } from "./kho-sach";
+import { dangTrang, docSach, dongContextCu, haiNguoiDaVao, moSach, taoSach, toDaXemCua, vietTranTrang, viTriDocDo } from "./kho-sach";
 
 test.beforeEach(async () => {
   await resetDb();
@@ -17,7 +17,7 @@ const theSach = (page: Page, ten: string) => page.locator(".cuon", { hasText: te
 
 test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau; rieng tu va nhap khong lo", async ({ browser }) => {
   test.setTimeout(180_000);
-  const { a, b, tenCuaA } = await haiNguoiDaVao(browser);
+  const { a, b, tenCuaA, tenCuaB } = await haiNguoiDaVao(browser);
   let id = "";
   let soTo = 0;
 
@@ -46,18 +46,19 @@ test("A viet va dang; B thay trang moi, doc tu to chua doc, lat het thi het dau;
     // o moi duong roi man doc - roi man khong con gui ho khung con dang hen nua. Nen phai dung lai that tren khung dau
     // truoc khi quay lai. Doi DUNG DONG trong read_sheets thay vi doi gio.
     await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1, 2]);
+    // Dot nam: man doc luu trang dang dung (trang trai cua khung) khi khung dung yen du lau. Doi dung dong do.
+    await expect.poll(() => viTriDocDo(id, tenCuaB), { timeout: 10_000 }).toBe(1);
     await b.goBack();
     if (soTo > 2) await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveText(`${soTo - 2} trang mới`);
     else await expect(theSach(b, "Chuyện chưa kể").locator(".dh--moi")).toHaveCount(0);
   });
 
-  await test.step("B mo lai thi bat dau o to dau chua doc, lat toi to cuoi, quay lai ke thi het dau", async () => {
+  await test.step("B mo lai thi bat dau o trang dang doc do, lat toi to cuoi, quay lai ke thi het dau", async () => {
     await theSach(b, "Chuyện chưa kể").getByRole("link", { name: "Chuyện chưa kể" }).click();
     await moSach(b);
-    // To 3 la to dau chua doc; o che do hai trang no nam ben trai cua khung thu hai (src/lib/flip.ts).
-    // Sach chi co hai to thi da doc het o lan truoc, khung dau van la khung cuoi.
-    const moDau = soTo >= 4 ? `Trang 3-4 / ${soTo}` : soTo === 3 ? `Trang 3 / ${soTo}` : `Trang 1-2 / ${soTo}`;
-    await expect(b.locator(".doc__dem")).toHaveText(moDau);
+    // DOI HANH VI CO Y (dot nam, chu du an chot 30/09): mo sach o trang dang doc do, thang ca to dau chua doc. Lan truoc
+    // B dung o khung dau, nen lan nay van mo o khung dau.
+    await expect(b.locator(".doc__dem")).toHaveText(`Trang 1-2 / ${soTo}`);
     const sau = b.getByRole("button", { name: "Trang sau" });
     while ((await sau.getAttribute("aria-disabled")) !== "true") {
       const nhan = await b.locator(".doc__dem").innerText();

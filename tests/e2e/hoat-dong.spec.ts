@@ -6,7 +6,9 @@ import * as schema from "@/server/db/schema";
 import { publishDraft } from "@/server/library/drafts";
 import { assertE2eDatabase, resetDb } from "./db";
 import { e2eUrls } from "./env";
-import { CHO_ARGON2_MS, dangTrang, docSach, dongContextCu, haiNguoiDaVao, taoSach, tranNgang, vietTranTrang } from "./kho-sach";
+import {
+  CHO_ARGON2_MS, dangTrang, docHetCuon, docSach, dongContextCu, haiNguoiDaVao, taoSach, toDaXemCua, tranNgang, vietTranTrang,
+} from "./kho-sach";
 import { dangKemNiemPhong, khongLo } from "./niem-phong";
 import { rethrowSafely } from "./safe-error";
 
@@ -91,6 +93,9 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
 
   await dongCuaB.click();
   await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=1$`));
+  // Dot nam: khung sach lon cua chu sach hien luot cua minh ma nguoi kia chua doc het. B doc het cuon, de ben duoi khung
+  // cua A quay ve cuon co trang gan nhat nhu truoc; A co them mot dong "da doc".
+  await docHetCuon(b, id);
 
   // Sach rieng tu: chu sach thay dong cua minh; nguoi kia khong co dong nao, ke ca trong HTML va du lieu RSC.
   const rieng = await taoSach(a, "Thư gửi năm ba mươi", "rieng-tu");
@@ -100,7 +105,10 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await a.goto("/ke-sach");
   await expect(cuon(a).getByRole("link", { name: "Bạn đăng 1 trang mới trong Thư gửi năm ba mươi" }))
     .toHaveAttribute("href", `/sach/${rieng}?trang=1`);
-  await expect(cuon(a).getByRole("listitem")).toHaveCount(2);
+  // Dot nam: hai dong tao sach, hai dong dang trang, va dong B da doc (chi chu sach thay).
+  await expect(cuon(a).getByRole("listitem")).toHaveCount(5);
+  await expect(dong(a, "tạo cuốn")).toHaveCount(2);
+  await expect(dong(a, `${tenCuaB} đã đọc tới trang ${soTo} của Chuyện chưa kể`)).toHaveCount(1);
   // Cuon rieng tu cua chinh chu sach la trang gan nhat: doan trich lam mo, an voi trinh doc man hinh, nhan Rieng tu de len.
   const ganNhat = a.getByRole("article", { name: "Một trang trong sách" });
   await expect(ganNhat.locator(".vua-viet__chu--mo")).toHaveAttribute("aria-hidden", "true");
@@ -109,7 +117,9 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await expect(ganNhat.getByRole("link", { name: "Viết tiếp" })).toHaveAttribute("href", `/sach/${rieng}/viet-tiep`);
 
   await b.goto("/ke-sach");
-  await expect(cuon(b).getByRole("listitem")).toHaveCount(1);
+  // Dong tao cuon chia se va dong dang trang; khong co dong nao cua cuon rieng tu, ke ca dong tao sach.
+  await expect(cuon(b).getByRole("listitem")).toHaveCount(2);
+  await expect(dong(b, "tạo cuốn Chuyện chưa kể")).toHaveCount(1);
   await khongLo(b, "Thư gửi năm ba mươi", HOP_THOI_GIAN, rieng);
 });
 
@@ -129,10 +139,13 @@ test("cau do: chu sach thay mot dong thu sai gop 2 lan va dong mo duoc; nguoi mo
   await cauDo.getByLabel("Câu trả lời").fill("quán mây");
   await cauDo.getByRole("button", { name: "Mở trang" }).click();
   await expect(b).toHaveURL(new RegExp(`/sach/${id}[?]trang=1&mo=`));
+  // Trang vua mo duoc ghi la da doc (dot nam: chu sach co them dong "da doc"). Doi dung dong do.
+  await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1]);
 
-  // Chu sach: hai lan sai cung ngay gop mot dong co chip dem, khong bao gio kem chuoi da go.
+  // Chu sach: hai lan sai cung ngay gop mot dong co chip dem, khong bao gio kem chuoi da go. Dot nam them dong tao sach
+  // va dong da doc.
   await a.goto("/ke-sach");
-  await expect(cuon(a).getByRole("listitem")).toHaveCount(3);
+  await expect(cuon(a).getByRole("listitem")).toHaveCount(5);
   const thuSai = dong(a, "chưa đúng");
   await expect(thuSai).toHaveCount(1);
   await expect(thuSai.locator(".hoat-dong__chu")).toHaveText(`${tenCuaB} thử trang 1 trong Chuyện chưa kể, chưa đúng`);
@@ -142,9 +155,10 @@ test("cau do: chu sach thay mot dong thu sai gop 2 lan va dong mo duoc; nguoi mo
   await expect(dong(a, "mở được").locator(".chip")).toHaveText(["Câu đố"]);
   await khongLo(a, SAI_1, SAI_2);
 
-  // Nguoi mo: thay dong cua minh va dong dang trang cua chu sach, khong co dong thu sai nao.
+  // Nguoi mo: thay dong cua minh, dong tao sach va dong dang trang cua chu sach; khong co dong thu sai hay da doc nao.
   await b.goto("/ke-sach");
-  await expect(cuon(b).getByRole("listitem")).toHaveCount(2);
+  await expect(cuon(b).getByRole("listitem")).toHaveCount(3);
+  await expect(cuon(b).getByText("đã đọc tới")).toHaveCount(0);
   await expect(dong(b, "mở được").locator(".hoat-dong__chu")).toHaveText("Bạn mở được trang 1 trong Chuyện chưa kể");
   await expect(dong(b, "đăng").locator(".hoat-dong__chu")).toHaveText(`${tenCuaA} đăng 1 trang mới trong Chuyện chưa kể`);
   await expect(cuon(b).getByText("chưa đúng")).toHaveCount(0);
@@ -192,7 +206,8 @@ test("khung cuon: man rong cao dung bang cuon sach mo, man hep toi da 340px, an 
   await a.setViewportSize({ width: 1280, height: 900 });
   await a.goto("/ke-sach");
   const vung = cuon(a);
-  await expect(vung.getByRole("listitem")).toHaveCount(20);
+  // 20 dong dang trang va dong tao sach (dot nam).
+  await expect(vung.getByRole("listitem")).toHaveCount(21);
 
   /** Chieu cao cua khung Hoat dong va cua cuon sach mo, cung max-height tinh ra cua khung. */
   const doCao = () => a.evaluate(() => {

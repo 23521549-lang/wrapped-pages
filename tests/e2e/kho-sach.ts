@@ -475,6 +475,47 @@ export async function toDaXemCua(bookId: string): Promise<number[]> {
   }
 }
 
+/** Trang dang doc do (dot nam) cua mot tai khoan, theo biet danh, trong mot cuon; chua co thi null. */
+export async function viTriDocDo(bookId: string, nickname: string): Promise<number | null> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const [dong] = await sql<{ position: number }[]>`
+      select r.position from reading_positions r join accounts a on a.id = r.account_id
+      where r.book_id = ${bookId} and a.nickname = ${nickname}`;
+    return dong?.position ?? null;
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("resetDb tu choi")) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Nguoi kia doc het cuon dang mo o man doc: moi khung dung lai toi khi cac to cua no vao read_sheets (man doc chi ghi
+ * khung dung yen du lau), roi moi lat sang khung ke, toi khung cuoi.
+ */
+export async function docHetCuon(page: Page, bookId: string): Promise<void> {
+  const dem = page.locator(".doc__dem");
+  const sau = page.getByRole("button", { name: "Trang sau" });
+  for (;;) {
+    const nhan = (await dem.innerText()).trim();
+    const khop = /^Trang (\d+)(?:-(\d+))? \//.exec(nhan);
+    if (!khop) throw new Error(`docHetCuon: khong doc duoc "${nhan}"`);
+    const dau = Number(khop[1]);
+    const cuoi = Number(khop[2] ?? khop[1]);
+    await expect.poll(async () => {
+      const da = await toDaXemCua(bookId);
+      return Array.from({ length: cuoi - dau + 1 }, (_, i) => dau + i).every((p) => da.includes(p));
+    }, { timeout: 10_000 }).toBe(true);
+    if ((await sau.getAttribute("aria-disabled")) === "true") return;
+    await page.keyboard.press("ArrowRight");
+    await expect(dem).not.toHaveText(nhan);
+  }
+}
+
 /**
  * Dua moi to cua mot cuon ve cach cat cu: bo dau noiTiep tren moi nut tru muc danh sach, nhu to dang truoc khi splitDoc
  * danh dau doan, danh sach va trich dan bi cat. De kiem man sua luot voi du lieu da co tu truoc.
