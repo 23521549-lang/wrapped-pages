@@ -3,7 +3,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
-import { findReadableBook, readOwnBook } from "@/server/library/books";
+import { findReadableBook, readWritableBook } from "@/server/library/books";
 import { ownRoundExists } from "@/server/library/edit-round";
 import { SO_TRANG } from "@/lib/round";
 import { requireMe } from "./guard";
@@ -25,10 +25,10 @@ async function laTaiTrang(): Promise<boolean> {
 }
 
 /**
- * Cuon cua chinh nguoi dang vao, kem bia va nhac hien hanh. cache() de cong va trang dung chung mot lan doc trong cung
- * request.
+ * Cuon ma nguoi dang vao la nguoi viet (cua minh, hay sach viet cung, 5c), kem bia va nhac hien hanh. cache() de cong va
+ * trang dung chung mot lan doc trong cung request.
  */
-export const sachCuaToi = cache((accountId: string, bookId: string) => readOwnBook(db, accountId, bookId));
+export const sachVietDuoc = cache((accountId: string, bookId: string) => readWritableBook(db, accountId, bookId));
 
 /** Man doc: cuon cua minh hoac cuon chia se cua nguoi kia. */
 export async function congDoc(bookId: string): Promise<void> {
@@ -37,11 +37,11 @@ export async function congDoc(bookId: string): Promise<void> {
   if (!(await findReadableBook(db, me.accountId, bookId))) notFound();
 }
 
-/** Man viet, man sua sach: chi cuon cua chinh minh. */
-export async function congSachCuaToi(bookId: string): Promise<void> {
+/** Man viet, trang Viet tiep, man sua sach: cuon ma nguoi vao la nguoi viet. */
+export async function congSachVietDuoc(bookId: string): Promise<void> {
   if (!(await laTaiTrang())) return;
   const me = await requireMe();
-  if (!(await sachCuaToi(me.accountId, bookId))) notFound();
+  if (!(await sachVietDuoc(me.accountId, bookId))) notFound();
 }
 
 /** Man sua mot luot: luot co that trong cuon cua chinh minh (chi dem luot, khong doc noi dung). */

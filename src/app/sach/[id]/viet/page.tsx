@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { db } from "@/server/db";
 import { readDraft } from "@/server/library/drafts";
 import { getMediaStore } from "@/server/media/get-store";
-import { sachCuaToi } from "@/server/web/cong";
+import { sachVietDuoc } from "@/server/web/cong";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { Editor } from "@/components/editor/Editor";
@@ -12,9 +12,9 @@ import { TRANG_TRONG } from "@/lib/doc/types";
 export default async function VietSach({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const [me, { id }] = await Promise.all([requireMe(), params]);
-  // readDraft tu kiem chu sach, nen doc song song voi cuon ma khong doc duoc nhap cua ai khac.
+  // readDraft tu kiem nguoi viet va chi tra nhap cua chinh minh, nen doc song song voi cuon ma khong doc duoc nhap cua ai khac.
   const [book, draft] = await Promise.all([
-    sachCuaToi(me.accountId, id),
+    sachVietDuoc(me.accountId, id),
     readDraft(db, me.accountId, id),
   ]);
   if (!book) notFound();

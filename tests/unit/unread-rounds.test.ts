@@ -44,7 +44,7 @@ async function dangKhoa(db: TestDb, ownerId: string, bookId: string, seal: SealI
   ] };
   await saveDraft(db, ownerId, bookId, doc, 1);
   const r = await publishDraft(db, ownerId, bookId, [doc], seal);
-  if (!r || r === "invalid-cover") throw new Error("khong dang duoc");
+  if (r === null || typeof r === "string") throw new Error("khong dang duoc");
   return luotCua(db, bookId, r.firstPosition);
 }
 

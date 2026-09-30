@@ -16,13 +16,13 @@ import { DOC_LIMITS } from "@/lib/doc/validate";
  */
 
 const {
-  readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
+  readMe, updateBook, findWritableBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
   sweepMediaAfterResponse, setDraftTrim, setCoverEntry, setTrackEntry, savePosition, redirect, refresh,
 } = vi.hoisted(() => ({
   savePosition: vi.fn(async () => true),
   readMe: vi.fn(),
   updateBook: vi.fn(),
-  findOwnBook: vi.fn(),
+  findWritableBook: vi.fn(),
   publishDraft: vi.fn(),
   editRound: vi.fn(),
   deleteUnpublishedBook: vi.fn(),
@@ -39,7 +39,7 @@ const {
   }),
 }));
 vi.mock("@/server/web/guard", () => ({ readMe }));
-vi.mock("@/server/library/books", () => ({ createBook: vi.fn(), findOwnBook, updateBook }));
+vi.mock("@/server/library/books", () => ({ createBook: vi.fn(), findWritableBook, updateBook }));
 vi.mock("@/server/library/drafts", () => ({ publishDraft, saveDraft: vi.fn(), setDraftTrim }));
 vi.mock("@/server/library/timeline", () => ({ setCoverEntry, setTrackEntry }));
 vi.mock("@/server/library/edit-round", () => ({ editRound }));
@@ -80,7 +80,7 @@ function truoc(a: { mock: { invocationCallOrder: number[] } }, b: { mock: { invo
 
 afterEach(() => {
   for (const f of [
-    readMe, updateBook, findOwnBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
+    readMe, updateBook, findWritableBook, publishDraft, editRound, deleteUnpublishedBook, discardDraft,
     sweepMediaAfterResponse, redirect, refresh, savePosition,
   ]) f.mockReset();
   redirect.mockImplementation((to: string) => {
@@ -146,7 +146,7 @@ describe("actionUpdateBook", () => {
 describe("actionPublish hen don rac media", () => {
   it("dang xong: dang truoc, hen don sau, roi moi chuyen trang", async () => {
     readMe.mockResolvedValue(ME);
-    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    findWritableBook.mockResolvedValue({ id: BOOK, mode: "chia-se", vietCungTu: null });
     publishDraft.mockResolvedValue({ firstPosition: 3, count: 1 });
     expect(await goi(() => actionPublish(BOOK, [TO]))).toEqual({ di: `/sach/${BOOK}?trang=3` });
     expect(sweepMediaAfterResponse).toHaveBeenCalledTimes(1);
@@ -159,10 +159,10 @@ describe("actionPublish hen don rac media", () => {
     expect(await goi(() => actionPublish(BOOK, [TO]))).toEqual({ error: CAN_DANG_NHAP });
 
     readMe.mockResolvedValue(ME);
-    findOwnBook.mockResolvedValueOnce(null);
+    findWritableBook.mockResolvedValueOnce(null);
     expect(await goi(() => actionPublish(BOOK, [TO]))).toMatchObject({ error: expect.stringContaining("Chưa đăng được") });
 
-    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    findWritableBook.mockResolvedValue({ id: BOOK, mode: "chia-se", vietCungTu: null });
     publishDraft.mockResolvedValue(null);
     expect(await goi(() => actionPublish(BOOK, [TO]))).toMatchObject({ error: expect.stringContaining("Chưa đăng được") });
 
@@ -172,24 +172,38 @@ describe("actionPublish hen don rac media", () => {
   it("to co noi dung khong doc duoc: tu choi ca lan dang, khong cham database va khong hen don", async () => {
     readMe.mockResolvedValue(ME);
     expect(await goi(() => actionPublish(BOOK, [{ type: "doc", content: "khong phai mang" }]))).toEqual({ error: "Có trang có nội dung không đọc được." });
-    expect([findOwnBook.mock.calls.length, publishDraft.mock.calls.length, sweepMediaAfterResponse.mock.calls.length]).toEqual([0, 0, 0]);
+    expect([findWritableBook.mock.calls.length, publishDraft.mock.calls.length, sweepMediaAfterResponse.mock.calls.length]).toEqual([0, 0, 0]);
   });
 
   // Muc doi bia, ten, nhac o buoc dang da bi bo (spec 7.1): action khong con truong nao ve sach de chuyen tiep, nen
   // publishDraft nhan dung sau tham so. Van khang dinh ca danh sach de khong ai lang le noi them mot tham so nua.
-  it("publishDraft nhan dung sau tham so: db, nguoi dang nhap, sach, cac to, niem phong, moc", async () => {
+  it("publishDraft nhan dung bay tham so: db, nguoi dang nhap, sach, cac to, niem phong, moc, ten luot", async () => {
     readMe.mockResolvedValue(ME);
-    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    findWritableBook.mockResolvedValue({ id: BOOK, mode: "chia-se", vietCungTu: null });
     publishDraft.mockResolvedValue({ firstPosition: 1, count: 1 });
     await goi(() => actionPublish(BOOK, [TO]));
     expect(publishDraft).toHaveBeenLastCalledWith(
-      expect.anything(), ME.accountId, BOOK, expect.any(Array), null, expect.any(Date),
+      expect.anything(), ME.accountId, BOOK, expect.any(Array), null, expect.any(Date), null,
     );
+  });
+
+  it("sach viet cung: thieu ten luot thi nhac, khong goi publishDraft; co ten thi bo niem phong, gui ten da gom", async () => {
+    readMe.mockResolvedValue(ME);
+    findWritableBook.mockResolvedValue({ id: BOOK, mode: "chia-se", vietCungTu: new Date("2026-09-20T00:00:00Z") });
+    expect(await goi(() => actionPublish(BOOK, [TO], null, "   "))).toEqual({ error: "Đặt tên cho lượt này rồi hãy đăng nhé." });
+    expect(publishDraft).not.toHaveBeenCalled();
+    publishDraft.mockResolvedValue({ firstPosition: 4, count: 1 });
+    expect(await goi(() => actionPublish(BOOK, [TO], { kind: "hen-gio", opensAt: "2027-01-01T00:00" }, "  Mưa   phùn "))).toEqual({ di: `/sach/${BOOK}?trang=4` });
+    expect(publishDraft).toHaveBeenLastCalledWith(
+      expect.anything(), ME.accountId, BOOK, expect.any(Array), null, expect.any(Date), "Mưa phùn",
+    );
+    publishDraft.mockResolvedValue("can-ten");
+    expect(await goi(() => actionPublish(BOOK, [TO], null, "Tên"))).toEqual({ error: "Đặt tên cho lượt này rồi hãy đăng nhé." });
   });
 
   it("bia tu tai len khong dung duoc o buoc dang: bao dung cau loi bia, khong hen don rac", async () => {
     readMe.mockResolvedValue(ME);
-    findOwnBook.mockResolvedValue({ id: BOOK, mode: "chia-se" });
+    findWritableBook.mockResolvedValue({ id: BOOK, mode: "chia-se", vietCungTu: null });
     publishDraft.mockResolvedValue("invalid-cover");
     const r = await goi(() => actionPublish(BOOK, [TO]));
     expect(r).toEqual({ error: "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa." });

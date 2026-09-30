@@ -36,7 +36,7 @@ type Bo = Awaited<ReturnType<typeof haiCuon>>;
 async function dangTo(s: Bo, seal: SealInput | null, ...docs: DocJson[]) {
   await saveDraft(s.db, s.seat1.id, s.chung, docs[0], docs.length);
   const r = await publishDraft(s.db, s.seat1.id, s.chung, docs, seal);
-  if (!r || r === "invalid-cover") throw new Error("khong dang duoc");
+  if (r === null || typeof r === "string") throw new Error("khong dang duoc");
   const rows = await sealsOfBook(s.db, s.chung);
   return rows.find((x) => x.firstPosition === r.firstPosition)?.id ?? null;
 }

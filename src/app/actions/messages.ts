@@ -21,3 +21,6 @@ export const LUOT_VUA_SUA_NOI_KHAC = "Lượt này vừa được sửa ở nơi
 
 /** Tha hay thu lai tam trang khong xong vi action nem loi (mat mang): hop chon hien cau nay, giu nguyen lua chon. */
 export const CHUA_THA_DUOC = "Chưa lưu được tâm trạng. Thử lại nhé.";
+
+/** Cau nhac khi dang luot sach viet cung chua co ten (5c muc H2): action va hop Dang trang dung chung. */
+export const CAN_TEN_LUOT = "Đặt tên cho lượt này rồi hãy đăng nhé.";

@@ -1,4 +1,4 @@
-import { and, desc, eq, max, notExists, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, max, notExists, sql } from "drizzle-orm";
 import { bookCovers, books, bookTracks, drafts, pages, rounds } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -10,43 +10,41 @@ import { MAX_SHEETS_PER_PUBLISH } from "@/lib/doc/validate";
 import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 import { sealTeaser } from "@/lib/seal/teaser";
+import { parseTenLuot } from "@/lib/viet-cung";
 import type { SealInput } from "@/lib/seal/types";
 import { recordActivity } from "@/server/feed/record";
 import { bindMedia } from "@/server/media/access";
 import { attachCover, lockCover } from "@/server/media/cover";
 import { insertSeal } from "@/server/seal/seals";
-import { findOwnBook } from "./books";
-import { lockOwnBook } from "./remove";
+import { findWritableBook, writableBy } from "./books";
+import { lockWritableBook } from "./remove";
 import { newestCovers, type CoverNow, type NewestCover } from "./timeline";
 
 /**
- * Luu (hoac ghi de) ban nhap duy nhat cua mot cuon. Chi chu sach. Tai lieu qua bindMedia truoc khi ghi: khoi media
- * mang id cua nguoi kia, cua cuon khac, sai loai hay da nam trong to da dang thi khong ghi gi, ban nhap dang co giu
- * nguyen. Nhap luu thuoc tinh media lay tu bang media. Tra thoi diem luu; "not-found" khi khong phai cuon cua ownerId,
- * "invalid-media" khi co khoi media khong gan duoc.
+ * Luu (hoac ghi de) ban nhap CUA CHINH writerId trong mot cuon ho la nguoi viet (chu cuon, hay ca hai o sach viet cung):
+ * moi nguoi viet mot ban nhap rieng, khong bao gio cham nhap cua nguoi kia. Tai lieu qua bindMedia truoc khi ghi: khoi
+ * media mang id cua nguoi khac, cua cuon khac, sai loai hay da nam trong to da dang thi khong ghi gi, ban nhap dang co giu
+ * nguyen. Nhap luu thuoc tinh media lay tu bang media. Tra thoi diem luu; "not-found" khi writerId khong phai nguoi viet
+ * cua cuon, "invalid-media" khi co khoi media khong gan duoc.
  * Chay trong giao dich va khoa dong sach (FOR UPDATE) nhu editRound va publishDraft: bindMedia cua ba ham doc cac to da
  * dang va ban nhap roi moi ghi, nen phai xep hang tren cung mot khoa. Khong thi mot anh vua tai len co the cung luc lot
  * vao nhap (the nay) va vao to dang sua (the kia), va lan dang nhap sau bi tu choi mai.
  */
 export async function saveDraft(
-  db: AnyDb, ownerId: string, bookId: string, content: DocJson, sheetCount: number,
+  db: AnyDb, writerId: string, bookId: string, content: DocJson, sheetCount: number,
 ): Promise<Date | "not-found" | "invalid-media"> {
   if (!isUuid(bookId)) return "not-found";
   return db.transaction(async (tx) => {
-    const [book] = await tx
-      .select({ id: books.id })
-      .from(books)
-      .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)))
-      .for("update");
+    const book = await lockWritableBook(tx, writerId, bookId);
     // Hai duong tra ve som deu nam truoc lenh ghi duy nhat (insert o cuoi), truoc do chi co lenh doc.
     if (!book) return "not-found";
-    const bound = await bindMedia(tx, ownerId, book.id, content);
+    const bound = await bindMedia(tx, writerId, book.id, content);
     if (!bound) return "invalid-media";
     const n = Number.isInteger(sheetCount) && sheetCount >= 1 ? Math.min(sheetCount, 999) : 1;
     const now = new Date();
     await tx
       .insert(drafts)
-      .values({ bookId: book.id, accountId: ownerId, content: bound, sheetCount: n, updatedAt: now })
+      .values({ bookId: book.id, accountId: writerId, content: bound, sheetCount: n, updatedAt: now })
       .onConflictDoUpdate({ target: [drafts.bookId, drafts.accountId], set: { content: bound, sheetCount: n, updatedAt: now } });
     return now;
   });
@@ -77,7 +75,7 @@ export type DraftTrimResult = "saved" | "not-found" | "invalid" | "invalid-cover
  * cuon nay.
  */
 export async function setDraftTrim(
-  db: AnyDb, ownerId: string, bookId: string, trim: DraftTrim, now: Date = new Date(),
+  db: AnyDb, writerId: string, bookId: string, trim: DraftTrim, now: Date = new Date(),
 ): Promise<DraftTrimResult> {
   if (!isUuid(bookId)) return "not-found";
   const { cover, coverMediaId, youtubeId, dropTrack } = trim;
@@ -87,13 +85,13 @@ export async function setDraftTrim(
   if (dropTrack && youtubeId !== null) return "invalid";
   return db.transaction(async (tx): Promise<DraftTrimResult> => {
     // Hai duong tra ve som deu nam truoc lenh ghi dau tien (insert o duoi); truoc do chi co lenh doc:
-    // lockOwnBook la SELECT ... FOR UPDATE, lockCover cung vay.
-    const id = (await lockOwnBook(tx, ownerId, bookId))?.id;
+    // lockWritableBook la SELECT ... FOR UPDATE, lockCover cung vay.
+    const id = (await lockWritableBook(tx, writerId, bookId))?.id;
     if (!id) return "not-found";
-    if (coverMediaId !== null && !(await lockCover(tx, ownerId, id, coverMediaId))) return "invalid-cover";
+    if (coverMediaId !== null && !(await lockCover(tx, writerId, id, coverMediaId))) return "invalid-cover";
     await tx
       .insert(drafts)
-      .values({ bookId: id, accountId: ownerId, content: TRANG_TRONG, cover, coverMediaId, youtubeId, dropTrack, updatedAt: now })
+      .values({ bookId: id, accountId: writerId, content: TRANG_TRONG, cover, coverMediaId, youtubeId, dropTrack, updatedAt: now })
       .onConflictDoUpdate({ target: [drafts.bookId, drafts.accountId], set: { cover, coverMediaId, youtubeId, dropTrack, updatedAt: now } });
     // Gan anh vao cuon ngay: tu day no la tai san cua cuon, nen buoc don rac khong bao gio cham toi no nua.
     if (coverMediaId !== null) await attachCover(tx, id, coverMediaId);
@@ -104,10 +102,11 @@ export async function setDraftTrim(
 /**
  * Ban nhap cua mot cuon, kem hai o bia va nhac ma trang Viet tiep da chon cho luot sap dang. Doc mot dong duy nhat: hai
  * noi goi (trang Viet tiep de dien san, buoc dang de bao lai) can dung dong nay, nen khong co ham doc thu hai.
- * Voi nguoi khong phai chu, no nhu khong ton tai.
+ * Chi nhap CUA CHINH writerId: nhap cua nguoi viet kia (sach viet cung) khong bao gio tra ve, va voi nguoi khong phai
+ * nguoi viet thi nhu khong ton tai.
  */
-export async function readDraft(db: AnyDb, ownerId: string, bookId: string) {
-  const book = await findOwnBook(db, ownerId, bookId);
+export async function readDraft(db: AnyDb, writerId: string, bookId: string) {
+  const book = await findWritableBook(db, writerId, bookId);
   if (!book) return null;
   const [row] = await db
     .select({
@@ -115,7 +114,7 @@ export async function readDraft(db: AnyDb, ownerId: string, bookId: string) {
       cover: drafts.cover, coverMediaId: drafts.coverMediaId, youtubeId: drafts.youtubeId, dropTrack: drafts.dropTrack,
     })
     .from(drafts)
-    .where(eq(drafts.bookId, book.id));
+    .where(and(eq(drafts.bookId, book.id), eq(drafts.accountId, writerId)));
   if (row === undefined) return null;
   // row la vat the moi cua rieng truy van nay, khong ai khac giu tham chieu, nen gom bon cot kia thanh trim ngay tren no.
   const { cover, coverMediaId, youtubeId, dropTrack, ...phan } = row;
@@ -127,6 +126,8 @@ export type DraftItem = {
   excerpt: string;
   /** Cuon da co to dang: /ban-nhap chi cho bo ban nhap, khong cho xoa sach. */
   hasPages: boolean;
+  /** Sach viet cung: cung chi bo duoc nhap, khong xoa sach mot minh duoc (5c muc D3). */
+  vietCung: boolean;
 };
 
 /**
@@ -144,20 +145,22 @@ function ghepBia<T extends { bookId: string }>(rows: T[], covers: NewestCover[])
 }
 
 /**
- * Moi ban nhap cua rieng ownerId, moi nhat truoc. Hai cau lenh chung mot anh chup: bia va phan con lai cua the
- * khong bao gio den tu hai trang thai khac nhau.
+ * Moi ban nhap cua rieng accountId, moi nhat truoc, ke ca nhap trong sach viet cung (5c): loc theo nguoi giu nhap chu
+ * khong theo chu cuon, nen nhap cua nguoi viet kia khong bao gio lot vao. Hai cau lenh chung mot anh chup: bia va phan con
+ * lai cua the khong bao gio den tu hai trang thai khac nhau.
  */
-export async function listDrafts(db: AnyDb, ownerId: string): Promise<DraftItem[]> {
+export async function listDrafts(db: AnyDb, accountId: string): Promise<DraftItem[]> {
   return readSnapshot(db, async (tx) => {
     const rows = await tx
       .select({
         bookId: drafts.bookId, title: books.title, mode: books.mode,
         sheetCount: drafts.sheetCount, updatedAt: drafts.updatedAt, content: drafts.content,
         hasPages: sql<boolean>`exists (select 1 from ${pages} where ${pages.bookId} = ${drafts.bookId})`.mapWith(Boolean),
+        vietCung: sql<boolean>`${books.vietCungTu} is not null`.mapWith(Boolean),
       })
       .from(drafts)
       .innerJoin(books, eq(books.id, drafts.bookId))
-      .where(eq(books.ownerId, ownerId))
+      .where(and(eq(drafts.accountId, accountId), writableBy(accountId)))
       .orderBy(desc(drafts.updatedAt));
     // rest la vat the moi tao rieng cho tung dong (tu destructuring), khong ai khac giu tham chieu,
     // nen gan thang excerpt vao do re hon tao vat the sao chep lai lan nua.
@@ -170,7 +173,8 @@ export type UnwrittenBook = { bookId: string; title: string; mode: BookMode; cov
 
 /**
  * Cuon cua rieng ownerId chua co to nao va chua co ban nhap (vua tao, chua go chu nao), moi tao truoc. /ban-nhap hien
- * chung canh cac ban nhap de moi cuon chua dang deu xoa duoc tu mot noi.
+ * chung canh cac ban nhap de moi cuon chua dang deu xoa duoc tu mot noi. Sach viet cung khong nam o day: no khong xoa
+ * mot minh duoc (5c muc D3), va da dung tren ke Hai Ngòi Bút cua ca hai.
  * Hai cau lenh chung mot anh chup, cung ly do voi listDrafts.
  */
 export async function listUnwrittenBooks(db: AnyDb, ownerId: string): Promise<UnwrittenBook[]> {
@@ -180,6 +184,7 @@ export async function listUnwrittenBooks(db: AnyDb, ownerId: string): Promise<Un
       .from(books)
       .where(and(
         eq(books.ownerId, ownerId),
+        isNull(books.vietCungTu),
         notExists(tx.select({ position: pages.position }).from(pages).where(eq(pages.bookId, books.id))),
         notExists(tx.select({ bookId: drafts.bookId }).from(drafts).where(eq(drafts.bookId, books.id))),
       ))
@@ -205,40 +210,45 @@ export async function listUnwrittenBooks(db: AnyDb, ownerId: string): Promise<Un
  * chia se; che do duoc kiem lai ngay trong giao dich vi no co the bi doi sau luc action doc.
  * Su kien Hoat dong ghi cung giao dich va cung now voi cac to: trao doi thay cho dang-trang, hen gio ghi san
  * mo-hen-gio voi at = opensAt.
+ * Sach viet cung (5c): writerId la nguoi viet (chu cuon hay nguoi kia), luot mang tac_gia_id cua nguoi dang va ten luot
+ * bat buoc (ten qua parseTenLuot; khong dung duoc thi "can-ten", khong ghi gi); khong nhan niem phong (null, khong ghi gi).
+ * Nhap doc va xoa la nhap CUA CHINH nguoi dang, nhap cua nguoi viet kia giu nguyen. Sach mot nguoi viet bo qua ten.
  */
 export async function publishDraft(
-  db: AnyDb, ownerId: string, bookId: string, sheets: DocJson[], seal: SealInput | null = null, now: Date = new Date(),
-): Promise<{ firstPosition: number; count: number } | "invalid-cover" | null> {
+  db: AnyDb, writerId: string, bookId: string, sheets: DocJson[], seal: SealInput | null = null, now: Date = new Date(),
+  ten: string | null = null,
+): Promise<{ firstPosition: number; count: number } | "invalid-cover" | "can-ten" | null> {
   if (!isUuid(bookId)) return null;
   const kept = normalizeSheets(trimTrailingBlank(sheets));
   if (kept.length === 0 || kept.length > MAX_SHEETS_PER_PUBLISH) return null;
 
   return db.transaction(async (tx) => {
-    const [book] = await tx
-      .select({ id: books.id, mode: books.mode })
-      .from(books)
-      .where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)))
-      .for("update");
-    // Drizzle COMMIT giao dich khi ham tra ve binh thuong, chi ROLLBACK khi co loi nem ra. Bon duong return duoi day deu
+    const book = await lockWritableBook(tx, writerId, bookId);
+    // Drizzle COMMIT giao dich khi ham tra ve binh thuong, chi ROLLBACK khi co loi nem ra. Cac duong return duoi day deu
     // nam TRUOC lenh ghi dau tien (tx.insert(rounds)), va moi thu chay truoc chung chi la lenh doc: SELECT ... FOR UPDATE
     // o tren, cau doc dong nhap, lockCover (cung la SELECT ... FOR UPDATE) va bindMedia (chi SELECT). Khong duoc them
     // lenh ghi nao vao khoang nay - lam vay thi mot lan dang bi tu choi se commit nua phan viec da ghi.
     if (!book) return null;
-    if (seal && seal.kind !== "hen-gio" && book.mode !== "chia-se") return null;
+    if (seal && (book.vietCung || (seal.kind !== "hen-gio" && book.mode !== "chia-se"))) return null;
+    const tenLuot = book.vietCung ? parseTenLuot(ten) : null;
+    if (book.vietCung && tenLuot === null) return "can-ten";
     // Hai o cua luot nam san tren dong nhap. Doc TRUOC khi xoa nhap o cuoi giao dich, va khoa anh bia ngay day: no co
     // the da bi doi chu hay da thuoc cuon khac tu luc chon toi luc dang.
     const [nhap] = await tx
       .select({ cover: drafts.cover, coverMediaId: drafts.coverMediaId, youtubeId: drafts.youtubeId, dropTrack: drafts.dropTrack })
       .from(drafts)
-      .where(eq(drafts.bookId, book.id));
+      .where(and(eq(drafts.bookId, book.id), eq(drafts.accountId, writerId)));
     const oBia = nhap !== undefined && nhap.cover !== null ? { cover: nhap.cover, coverMediaId: nhap.coverMediaId } : null;
-    if (oBia !== null && oBia.coverMediaId !== null && !(await lockCover(tx, ownerId, book.id, oBia.coverMediaId))) return "invalid-cover";
-    const bound = (await Promise.all(kept.map((sheet) => bindMedia(tx, ownerId, book.id, sheet)))).filter((doc) => doc !== null);
+    if (oBia !== null && oBia.coverMediaId !== null && !(await lockCover(tx, writerId, book.id, oBia.coverMediaId))) return "invalid-cover";
+    const bound = (await Promise.all(kept.map((sheet) => bindMedia(tx, writerId, book.id, sheet)))).filter((doc) => doc !== null);
     if (bound.length !== kept.length) return null;
     const [{ last }] = await tx.select({ last: max(pages.position) }).from(pages).where(eq(pages.bookId, book.id));
     const first = (last ?? 0) + 1;
-    const [round] = await tx.insert(rounds).values({ bookId: book.id, publishedAt: now, tacGiaId: ownerId }).returning({ id: rounds.id });
-    const su = { actorId: ownerId, bookId: book.id, roundId: round.id, mode: book.mode, at: now };
+    const [round] = await tx
+      .insert(rounds)
+      .values({ bookId: book.id, publishedAt: now, tacGiaId: writerId, ten: tenLuot })
+      .returning({ id: rounds.id });
+    const su = { actorId: writerId, bookId: book.id, roundId: round.id, mode: book.mode, at: now };
     await tx.insert(pages).values(bound.map((content, i) => ({ bookId: book.id, roundId: round.id, position: first + i, content, publishedAt: now })));
     // Thu tu khoa giu nguyen luat thuong truc: dong books da khoa o dau giao dich, roi toi anh bia (lockCover), roi moi
     // toi rounds va hai dong thoi gian. Khong bao gio khoa rounds truoc books.
@@ -256,7 +266,7 @@ export async function publishDraft(
     } else {
       await recordActivity(tx, { ...su, kind: "dang-trang", sealId: null });
     }
-    await tx.delete(drafts).where(eq(drafts.bookId, book.id));
+    await tx.delete(drafts).where(and(eq(drafts.bookId, book.id), eq(drafts.accountId, writerId)));
     return { firstPosition: first, count: bound.length };
   });
 }

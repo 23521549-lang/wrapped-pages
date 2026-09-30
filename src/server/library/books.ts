@@ -1,4 +1,4 @@
-import { and, eq, sql, type SQL } from "drizzle-orm";
+import { and, eq, isNotNull, sql, type SQL } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -28,6 +28,16 @@ export function readableBy(viewerId: string): SQL {
   return sql`(${eq(books.ownerId, viewerId)} or ${eq(books.mode, "chia-se")})`;
 }
 
+/**
+ * Luat "viewer la NGUOI VIET cua cuon nay" (dot nam 5c): cuon cua chinh minh, hoac sach viet cung (viet_cung_tu khac
+ * null; web chi co hai nguoi nen sach viet cung thi ca hai deu la nguoi viet). Moi duong ghi cap cuon (nhap, dang luot, o
+ * bia, o nhac, doi chu de, tai media) dung luat nay; nhung duong chi chu cuon moi lam duoc (doi che do, moi viet cung, xoa
+ * sach chua viet) van dung findOwnBook.
+ */
+export function writableBy(viewerId: string): SQL {
+  return sql`(${eq(books.ownerId, viewerId)} or ${isNotNull(books.vietCungTu)})`;
+}
+
 /** Cuon viewer duoc doc (readableBy). Khong duoc doc thi tra null, giong het nhu cuon do khong ton tai. */
 export async function findReadableBook(db: AnyDb, viewerId: string, bookId: string): Promise<Book | null> {
   if (!isUuid(bookId)) return null;
@@ -35,10 +45,17 @@ export async function findReadableBook(db: AnyDb, viewerId: string, bookId: stri
   return row ?? null;
 }
 
-/** Cuon cua chinh ownerId. Moi thao tac ghi di qua day. */
+/** Cuon cua chinh ownerId (nguoi tao). Chi cac thao tac cua rieng chu cuon di qua day: doi che do, moi viet cung. */
 export async function findOwnBook(db: AnyDb, ownerId: string, bookId: string): Promise<Book | null> {
   if (!isUuid(bookId)) return null;
   const [row] = await db.select().from(books).where(and(eq(books.id, bookId), eq(books.ownerId, ownerId)));
+  return row ?? null;
+}
+
+/** Cuon viewer la nguoi viet (writableBy). Khong phai thi null, nhu cuon khong ton tai. */
+export async function findWritableBook(db: AnyDb, viewerId: string, bookId: string): Promise<Book | null> {
+  if (!isUuid(bookId)) return null;
+  const [row] = await db.select().from(books).where(and(eq(books.id, bookId), writableBy(viewerId)));
   return row ?? null;
 }
 
@@ -49,8 +66,18 @@ export async function findOwnBook(db: AnyDb, ownerId: string, bookId: string): P
  * nen truong hop nay khong bao gio xay ra that, va lang le ve mot bia mac dinh thi la dung mot nguon su that thu hai.
  */
 export async function readOwnBook(db: AnyDb, ownerId: string, bookId: string): Promise<BookView | null> {
+  return docKemBiaNhac(db, (tx) => findOwnBook(tx, ownerId, bookId));
+}
+
+/** Nhu readOwnBook, cho nguoi viet cua cuon (writableBy): man viet, trang Viet tiep, Sua sach. */
+export async function readWritableBook(db: AnyDb, viewerId: string, bookId: string): Promise<BookView | null> {
+  return docKemBiaNhac(db, (tx) => findWritableBook(tx, viewerId, bookId));
+}
+
+/** Doc dong books bang ham tim roi ghep bia va nhac hien hanh, trong mot anh chup. */
+function docKemBiaNhac(db: AnyDb, tim: (tx: AnyDb) => Promise<Book | null>): Promise<BookView | null> {
   return readSnapshot(db, async (tx) => {
-    const book = await findOwnBook(tx, ownerId, bookId);
+    const book = await tim(tx);
     if (!book) return null;
     const [bia, nhac] = await Promise.all([newestCover(tx, book.id), newestTrack(tx, book.id)]);
     return bia === null ? null : { ...book, ...bia, youtubeId: nhac };

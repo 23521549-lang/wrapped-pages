@@ -5,7 +5,7 @@ import { coverSlots, trackSlots } from "@/server/library/timeline";
 import { khoBia } from "@/server/media/cover";
 import { getMediaStore } from "@/server/media/get-store";
 import { tenCacBai } from "@/server/media/ten-youtube";
-import { sachCuaToi } from "@/server/web/cong";
+import { sachVietDuoc } from "@/server/web/cong";
 import { requireMe } from "@/server/web/guard";
 import { AppNav } from "@/components/AppNav";
 import { BookForm } from "@/components/book/BookForm";
@@ -22,8 +22,8 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
   await connection();
   const [me, { id }] = await Promise.all([requireMe(), params]);
   const now = new Date();
-  // Dot mot: hai phep doc tu kiem chu sach, chay song song.
-  const [book, kho] = await Promise.all([sachCuaToi(me.accountId, id), khoBia(db, me.accountId, id)]);
+  // Dot mot: hai phep doc tu kiem nguoi viet, chay song song.
+  const [book, kho] = await Promise.all([sachVietDuoc(me.accountId, id), khoBia(db, me.accountId, id)]);
   if (!book) notFound();
   // Dot hai: hai dong thoi gian chi doc theo ma cuon, khong tu kiem quyen, nen chi goi sau khi da biet day la cuon cua
   // minh. Ten bai lay tu YouTube o may chu (co bo nho dem); lay khong duoc thi dong nhac ghi cau thay.

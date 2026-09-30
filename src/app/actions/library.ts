@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { db } from "@/server/db";
-import { createBook, findOwnBook, updateBook } from "@/server/library/books";
+import { createBook, findWritableBook, updateBook } from "@/server/library/books";
 import { publishDraft, saveDraft, setDraftTrim } from "@/server/library/drafts";
 import { editRound, type RoundEditResult } from "@/server/library/edit-round";
 import { markRead } from "@/server/library/pages";
@@ -18,8 +18,9 @@ import {
   checkDraftInput, checkPublishInput, checkRoundInput, DOC_LIMITS, MAX_SHEETS_PER_PUBLISH, PUBLISH_TOTAL_MAX_CHARS,
 } from "@/lib/doc/validate";
 import { parseSealInput } from "@/lib/seal/input";
+import { parseTenLuot } from "@/lib/viet-cung";
 import { isUuid } from "@/lib/uuid";
-import { CAN_DANG_NHAP, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "./messages";
+import { CAN_DANG_NHAP, CAN_TEN_LUOT, KHONG_THAY_SACH, LUOT_VUA_SUA_NOI_KHAC } from "./messages";
 
 const NHAP_KHONG_DOC_DUOC = "Bản nháp có nội dung không đọc được.";
 const BIA_KHONG_DUNG_DUOC = "Ảnh bìa không dùng được nữa. Chọn lại ảnh bìa.";
@@ -141,7 +142,7 @@ export async function actionSaveDraft(bookId: string, doc: unknown, sheetCount: 
  * Che do sach doc o day de kiem niem phong som va bao loi ro; publishDraft kiem lai trong giao dich, cung voi
  * moi khoi media cua tung to (bindMedia). Dang xong hen don rac media sau phan hoi.
  */
-export async function actionPublish(bookId: string, sheets: unknown, seal: unknown = null) {
+export async function actionPublish(bookId: string, sheets: unknown, seal: unknown = null, ten: unknown = null) {
   const me = await readMe();
   if (!me) return { error: CAN_DANG_NHAP };
   if (!Array.isArray(sheets) || sheets.length === 0 || sheets.length > MAX_SHEETS_PER_PUBLISH) {
@@ -154,12 +155,17 @@ export async function actionPublish(bookId: string, sheets: unknown, seal: unkno
     }
     return { error: "Có trang có nội dung không đọc được." };
   }
-  const book = await findOwnBook(db, me.accountId, bookId);
+  const book = await findWritableBook(db, me.accountId, bookId);
   if (!book) return { error: "Chưa đăng được. Trang còn trống hoặc cuốn sách không còn." };
-  const parsed = parseSealInput(seal, book.mode, new Date());
+  // Sach viet cung (5c): khong niem phong, ten luot bat buoc; bao som bang cau cua hop Dang trang, may chu kiem lai.
+  const vietCung = book.vietCungTu !== null;
+  const tenLuot = vietCung ? parseTenLuot(ten) : null;
+  if (vietCung && tenLuot === null) return { error: CAN_TEN_LUOT };
+  const parsed = vietCung ? { ok: true as const, seal: null } : parseSealInput(seal, book.mode, new Date());
   if (!parsed.ok) return { error: parsed.error };
-  const r = await publishDraft(db, me.accountId, bookId, checked.sheets, parsed.seal, new Date());
+  const r = await publishDraft(db, me.accountId, bookId, checked.sheets, parsed.seal, new Date(), tenLuot);
   if (r === "invalid-cover") return { error: BIA_KHONG_DUNG_DUOC };
+  if (r === "can-ten") return { error: CAN_TEN_LUOT };
   if (!r) return { error: "Chưa đăng được. Trang còn trống hoặc cuốn sách không còn." };
   sweepMediaAfterResponse();
   redirect(`/sach/${bookId}?trang=${r.firstPosition}`);
