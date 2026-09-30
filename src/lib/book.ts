@@ -36,10 +36,17 @@ export const TITLE_MAX = 60;
  * youtubeId bat buoc co mat (null la khong co nhac): bo sot truong nay khi sua sach se lang le giu nhac cu.
  * coverMediaId bat buoc vi cung ly do: null la khong co bia tu tai len, sach dung tranh ve san cover.
  */
-export type BookInput = { title: string; mode: BookMode; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null };
+export type BookInput = {
+  title: string; mode: BookMode; cover: CoverKey; youtubeId: string | null; coverMediaId: string | null;
+  /** Chon "Viết cùng {tên}" (5c): tao xong thi moi nguoi kia viet cung; cuon luon chia se. */
+  moi?: boolean;
+};
 
-/** Hai truong con doi duoc o man Sua sach. Bia va nhac da roi xuong hai muc dong thoi gian (phan quyet B2). */
-export type BookSettings = { title: string; mode: BookMode };
+/**
+ * Hai truong con doi duoc o man Sua sach. Bia va nhac da roi xuong hai muc dong thoi gian (phan quyet B2). moi (5c): chu
+ * cuon chon "Viết cùng {tên}" (gui loi moi, hay dong y loi xin dang cho); bo chon thi rut loi moi cua minh.
+ */
+export type BookSettings = { title: string; mode: BookMode; moi?: boolean };
 
 const TEN_SAI = `Tên sách phải từ 1 tới ${TITLE_MAX} ký tự.`;
 const BIA_SAI = "Chọn một bìa cho cuốn sách.";

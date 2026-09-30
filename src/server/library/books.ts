@@ -1,4 +1,4 @@
-import { and, eq, sql, type SQL } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { bookCovers, books, bookTracks } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -6,7 +6,8 @@ import { GOP_DOI_MS, ghiHayGop, recordActivity } from "@/server/feed/record";
 import type { BookInput, BookSettings, CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { attachCover, lockCover } from "@/server/media/cover";
-import { writableBy } from "./quyen";
+import { deNghiDangCho, ghiMoiViet, rutDeNghi } from "@/server/viet-cung/de-nghi";
+import { readableBy, writableBy } from "./quyen";
 import { newestCover, newestTrack } from "./timeline";
 
 export type Book = typeof books.$inferSelect;
@@ -20,14 +21,7 @@ export type BookView = Book & { cover: CoverKey; coverMediaId: string | null; yo
 /** Ket qua sua sach. Bia va nhac khong di qua day nua, nen khong con nhanh "invalid-cover". */
 export type BookUpdate = "saved" | "not-found";
 
-/**
- * Luat "viewer duoc doc cuon nay" viet bang SQL tren bang books: cua chinh minh, hoac cuon o che do chia se (web chi
- * co hai nguoi, nen cuon chia se khong phai cua minh thi la cua nguoi kia). Moi truy van can luat nay dung chung ham
- * nay de luat chi nam mot cho.
- */
-export function readableBy(viewerId: string): SQL {
-  return sql`(${eq(books.ownerId, viewerId)} or ${eq(books.mode, "chia-se")})`;
-}
+export { readableBy } from "./quyen";
 
 /** Cuon viewer duoc doc (readableBy). Khong duoc doc thi tra null, giong het nhu cuon do khong ton tai. */
 export async function findReadableBook(db: AnyDb, viewerId: string, bookId: string): Promise<Book | null> {
@@ -99,6 +93,8 @@ export async function createBook(db: AnyDb, ownerId: string, input: BookInput, n
       await tx.insert(bookTracks).values({ bookId: row.id, roundId: null, youtubeId: input.youtubeId });
     }
     await recordActivity(tx, { kind: "tao-sach", actorId: ownerId, at: now, bookId: row.id, mode: input.mode });
+    // Chon "Viết cùng" (5c muc C1): cuon chia se, gui loi moi ngay. Chua co nguoi kia thi cuon van tao, khong co loi moi.
+    if (input.moi && input.mode === "chia-se") await ghiMoiViet(tx, { id: row.id, ownerId, mode: "chia-se", vietCungTu: null }, now);
     return row.id;
   });
 }
@@ -116,11 +112,21 @@ export async function updateBook(
   if (!isUuid(bookId)) return "not-found";
   return db.transaction(async (tx): Promise<BookUpdate> => {
     // Nhu createBook: return trong giao dich la COMMIT chu khong phai ROLLBACK, nen duong return duoi day chi dung chung
-    // nao truoc no chi con lenh doc - findWritableBook la SELECT. Lenh ghi dau tien (tx.update) nam sau no.
-    const book = await findWritableBook(tx, writerId, bookId);
+    // nao truoc no chi con lenh doc. Khoa dong sach (FOR UPDATE) nhu moi duong ghi khac cua cuon: de nghi viet cung doc
+    // va ghi o duoi phai xep hang voi xin, nhan loi, rut.
+    const [book] = await tx.select().from(books).where(and(eq(books.id, bookId), writableBy(writerId))).for("update");
     if (!book) return "not-found";
-    const mode = book.vietCungTu !== null ? "chia-se" : input.mode;
+    const vietCung = book.vietCungTu !== null;
+    // Chon "Viết cùng" thi cuon phai chia se de nguoi kia doc duoc loi moi.
+    const mode = vietCung || input.moi ? "chia-se" : input.mode;
     await tx.update(books).set({ title: input.title, mode, updatedAt: now }).where(eq(books.id, book.id));
+    if (!vietCung) {
+      // Chi chu cuon toi day (sach mot nguoi viet: nguoi viet la chu). 5c muc C1, C5, C6: chon "Viết cùng" thi moi (hay
+      // dong y loi xin dang cho); bo chon thi rut loi moi cua minh; chuyen rieng tu thi rut ca loi xin cua nguoi kia.
+      const cho = await deNghiDangCho(tx, book.id);
+      if (input.moi) await ghiMoiViet(tx, { ...book, mode }, now);
+      else if (cho !== null && (cho.loai === "moi-viet" || mode === "rieng-tu")) await rutDeNghi(tx, cho);
+    }
     if (input.title !== book.title) {
       await ghiHayGop(tx, {
         kind: "doi-ten-sach", actorId: writerId, at: now, bookId: book.id, mode,
