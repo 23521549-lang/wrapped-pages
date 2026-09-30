@@ -1,9 +1,10 @@
 import { COVERS, type CoverKey } from "@/lib/book";
+import { docThang } from "@/lib/thu";
 import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 
 /*
- * Cot detail (jsonb) cua bang activity, theo loai. Database chi bat no la mot object va chi co o bon loai
+ * Cot detail (jsonb) cua bang activity, theo loai. Database chi bat no la mot object va chi co o nam loai
  * (CHECK activity_detail); hinh dang ben trong do cac ham doc duoi day kiem. Sai hinh (du lieu la, ban cu) thi tra null:
  * dong Hoat dong bo nhan cua no chu khong vo.
  */
@@ -20,6 +21,8 @@ export type ChiTietTen = { truoc: string; sau: string };
 export type ChiTietBia = { truoc: GiaTriBia; sau: GiaTriBia };
 export type ChiTietNhac = { truoc: GiaTriNhac; sau: GiaTriNhac };
 export type ChiTietDaDoc = { den: number };
+/** Thu cua thang nao (YYYY-MM): chi thang, noi dung thu khong bao gio nam o dong Hoat dong. */
+export type ChiTietThu = { thang: string };
 
 const laObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const tenHopLe = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -54,6 +57,10 @@ export const docChiTietNhac = (v: unknown): ChiTietNhac | null => docDoi(v, docN
 
 export function docChiTietDaDoc(v: unknown): ChiTietDaDoc | null {
   return laObject(v) && Number.isInteger(v.den) && (v.den as number) >= 1 ? { den: v.den as number } : null;
+}
+
+export function docChiTietThu(v: unknown): ChiTietThu | null {
+  return laObject(v) && docThang(v.thang) !== null ? { thang: v.thang as string } : null;
 }
 
 /**

@@ -4,7 +4,7 @@ import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
 import {
   docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, giongNhau,
-  type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietTen,
+  type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietTen, type ChiTietThu,
 } from "@/lib/feed/detail";
 import type { LoaiNiemPhong } from "@/lib/feed/types";
 
@@ -22,7 +22,7 @@ type SachEvent = { actorId: string; at: Date; bookId: string; mode: BookMode };
  * Mot su kien cua dong Hoat dong. Kieu buoc moi loai co dung cac cot cua no, giong cac CHECK cua bang activity:
  * loai gan niem phong phai co sealId; dang-trang co sealId khi lan dang kem cau do hay hen gio; hoi-dap bam luot, khong
  * bao gio gan niem phong; doi-mat-khau chi co nguoi doi va nguoi bi doi; tha-tam-trang chi co nguoi tha va tam trang;
- * bon loai co detail mang dung hinh cua src/lib/feed/detail.ts.
+ * gui-thu chi co nguoi gui va thang; nam loai co detail mang dung hinh cua src/lib/feed/detail.ts.
  */
 export type ActivityEvent =
   | (BookEvent & { kind: "dang-trang"; sealId: string | null })
@@ -35,6 +35,7 @@ export type ActivityEvent =
   | (SachEvent & { kind: "doi-bia"; roundId: string | null; detail: ChiTietBia })
   | (SachEvent & { kind: "doi-nhac"; roundId: string | null; detail: ChiTietNhac })
   | { kind: "tha-tam-trang"; actorId: string; at: Date; moodId: string }
+  | { kind: "gui-thu"; actorId: string; at: Date; detail: ChiTietThu }
   | { kind: "doi-mat-khau"; actorId: string; subjectId: string; at: Date };
 
 /**
@@ -46,8 +47,8 @@ export async function recordActivity(tx: AnyDb, event: ActivityEvent): Promise<v
     await tx.insert(activity).values({ ...event, shared: false });
     return;
   }
-  // Tam trang von hien voi nguoi kia (dai troi), nen dong cua no luon chia se.
-  if (event.kind === "tha-tam-trang") {
+  // Tam trang von hien voi nguoi kia (dai troi), thu thi gui cho nguoi kia: dong cua hai loai nay luon chia se.
+  if (event.kind === "tha-tam-trang" || event.kind === "gui-thu") {
     await tx.insert(activity).values({ ...event, shared: true });
     return;
   }

@@ -287,6 +287,14 @@ describe("listActivity: bay loai cua dot nam va dau Moi", () => {
     expect(await listActivity(db, seat2.id, NOW)).toEqual([]);
   });
 
+  it("gui thu (5b): ca hai thay, kem chi tiet thang, khong gan sach", async () => {
+    const { db, seat1, seat2 } = await ke();
+    await recordActivity(db, { kind: "gui-thu", actorId: seat2.id, at: phut(-4), detail: { thang: "2026-08" } });
+    const dong = (ds: Awaited<ReturnType<typeof listActivity>>) => ds.map((i) => [i.kind, i.by, i.detail, i.bookId]);
+    expect(dong(await listActivity(db, seat1.id, NOW))).toEqual([["gui-thu", "partner", { thang: "2026-08" }, null]]);
+    expect(dong(await listActivity(db, seat2.id, NOW))).toEqual([["gui-thu", "me", { thang: "2026-08" }, null]]);
+  });
+
   it("da doc: chi chu sach thay; nguoi doc khong thay dong ve chinh viec minh doc", async () => {
     const { db, seat1, seat2, chung, tren } = await ke();
     await recordActivity(db, { ...tren(seat2.id, chung, "chia-se", phut(-2), 3), kind: "da-doc", detail: { den: 3 } });

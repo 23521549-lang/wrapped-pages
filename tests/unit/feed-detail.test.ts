@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, giongNhau } from "@/lib/feed/detail";
+import { docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, docChiTietThu, giongNhau } from "@/lib/feed/detail";
 
 const ANH = "33333333-3333-4333-8333-333333333333";
 
@@ -38,6 +38,11 @@ describe("doc chi tiet su kien", () => {
     expect(docChiTietDaDoc({ den: 0 })).toBeNull();
     expect(docChiTietDaDoc({ den: 2.5 })).toBeNull();
     expect(docChiTietDaDoc({ den: "6" })).toBeNull();
+  });
+
+  it("gui-thu: thang YYYY-MM dung dang", () => {
+    expect(docChiTietThu({ thang: "2026-09" })).toEqual({ thang: "2026-09" });
+    for (const hong of [{ thang: "2026-13" }, { thang: "2026-9" }, { thang: 202609 }, {}, null, "2026-09"]) expect(docChiTietThu(hong)).toBeNull();
   });
 
   it("giongNhau so sanh hai gia tri truoc va sau theo noi dung", () => {

@@ -52,6 +52,7 @@ function moiLoai(s: CoNiemPhong): { [K in FeedKind]: ActivityEvent & { kind: K }
     "doi-nhac": { ...cuaSach, kind: "doi-nhac", roundId: s.roundId, detail: { truoc: null, sau: { youtubeId: null } } },
     "sua-trang": { ...cuaChu, kind: "sua-trang" },
     "da-doc": { ...cuaChu, actorId: s.seat2.id, kind: "da-doc", detail: { den: 3 } },
+    "gui-thu": { kind: "gui-thu", actorId: s.seat2.id, at: NOW, detail: { thang: "2026-08" } },
   };
 }
 
@@ -94,7 +95,7 @@ describe("bang activity", () => {
     const rows = await s.db.select().from(activity).orderBy(asc(activity.kind), asc(activity.shared));
     expect(rows.map((r) => [r.kind, r.shared])).toEqual([
       ["da-doc", true], ["dang-trang", false], ["dang-trang", true], ["doi-bia", true], ["doi-mat-khau", false],
-      ["doi-nhac", true], ["doi-ten-sach", true], ["hoi-dap", true], ["mo-hen-gio", true], ["mo-trang", true],
+      ["doi-nhac", true], ["doi-ten-sach", true], ["gui-thu", true], ["hoi-dap", true], ["mo-hen-gio", true], ["mo-trang", true],
       ["moi-trao-doi", true], ["sua-trang", true], ["tang-khoa", true], ["tao-sach", true], ["tha-tam-trang", true],
       ["thu-sai", true],
     ]);
@@ -109,6 +110,27 @@ describe("bang activity", () => {
     });
     expect(rows.find((r) => r.kind === "tao-sach")).toMatchObject({ roundId: null, detail: null, sealId: null });
     expect(rows.find((r) => r.kind === "da-doc")).toMatchObject({ roundId: s.roundId, detail: { den: 3 } });
+    expect(rows.find((r) => r.kind === "gui-thu")).toEqual({
+      id: expect.any(String), kind: "gui-thu", actorId: s.seat2.id, subjectId: null, bookId: null, sealId: null,
+      roundId: null, moodId: null, detail: { thang: "2026-08" }, shared: true, at: NOW,
+    });
+  });
+
+  const hangThu = (s: CoNiemPhong): ActivityInsert => ({
+    kind: "gui-thu", actorId: s.seat2.id, detail: { thang: "2026-08" }, shared: true, at: NOW,
+  });
+
+  it.each<[string, Sua, string]>([
+    ["thieu chi tiet", () => ({ detail: null }), "activity_detail"],
+    ["gan sach", (s) => ({ bookId: s.chung }), "activity_thu"],
+    ["gan luot", (s) => ({ roundId: s.roundId }), "activity_thu"],
+    ["gan nguoi bi doi", (s) => ({ subjectId: s.seat1.id }), "activity_thu"],
+    ["gan niem phong", (s) => ({ sealId: s.sealId }), "activity_niem_phong"],
+    ["gan tam trang", (s) => ({ moodId: s.moodId }), "activity_tam_trang"],
+    ["khong chia se", () => ({ shared: false }), "activity_thu"],
+  ])("tu choi gui-thu sai hinh: %s", async (_ten, sua, rangBuoc) => {
+    const s = await coNiemPhong();
+    await viPham(s.db.insert(activity).values({ ...hangThu(s), ...sua(s) } as ActivityInsert), rangBuoc);
   });
 
   /** Moi ca chi lam hang dung hinh sai dung mot luat. */
@@ -188,11 +210,13 @@ describe("bang activity", () => {
     await s.db.delete(seals).where(eq(seals.id, s.sealId));
     await s.db.delete(moods).where(eq(moods.id, s.moodId));
     expect((await s.db.select().from(activity)).map((r) => r.kind).sort()).toEqual([
-      "da-doc", "dang-trang", "doi-bia", "doi-mat-khau", "doi-nhac", "doi-ten-sach", "hoi-dap", "sua-trang", "tao-sach",
+      "da-doc", "dang-trang", "doi-bia", "doi-mat-khau", "doi-nhac", "doi-ten-sach", "gui-thu", "hoi-dap", "sua-trang", "tao-sach",
     ]);
     await s.db.delete(books).where(eq(books.id, s.chung));
-    expect((await s.db.select().from(activity)).map((r) => r.kind)).toEqual(["doi-mat-khau"]);
+    expect((await s.db.select().from(activity)).map((r) => r.kind)).toEqual(["doi-mat-khau", "gui-thu"]);
     await s.db.delete(accounts).where(eq(accounts.id, s.seat1.id));
+    expect((await s.db.select().from(activity)).map((r) => r.kind)).toEqual(["gui-thu"]);
+    await s.db.delete(accounts).where(eq(accounts.id, s.seat2.id));
     expect(await s.db.select().from(activity)).toEqual([]);
   });
 });

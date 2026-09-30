@@ -12,7 +12,7 @@ let dem = 0;
 const NIEM_PHONG: Record<FeedKind, SealKind | null> = {
   "dang-trang": null, "moi-trao-doi": "trao-doi", "mo-hen-gio": "hen-gio", "mo-trang": "cau-do", "thu-sai": "cau-do",
   "tang-khoa": "cau-do", "doi-mat-khau": null, "hoi-dap": null, "tha-tam-trang": null, "tao-sach": null,
-  "doi-ten-sach": null, "doi-bia": null, "doi-nhac": null, "sua-trang": null, "da-doc": null,
+  "doi-ten-sach": null, "doi-bia": null, "doi-nhac": null, "sua-trang": null, "da-doc": null, "gui-thu": null,
 };
 
 /** Chi tiet dung hinh mac dinh cua bon loai co detail. */
@@ -21,12 +21,13 @@ const CHI_TIET: Partial<Record<FeedKind, unknown>> = {
   "doi-bia": { truoc: null, sau: { cover: "hoa-dao", anhId: null } },
   "doi-nhac": { truoc: null, sau: { youtubeId: "dQw4w9WgXcQ" } },
   "da-doc": { den: 6 },
+  "gui-thu": { thang: "2026-09" },
 };
 
 /** Mot dong mau dung hinh cho moi loai: gan sach tru doi-mat-khau va tha-tam-trang, kieu niem phong theo loai. */
 function su(kind: FeedKind, by: FeedActor, sua: Partial<FeedItem> = {}): FeedItem {
   dem += 1;
-  const coSach = kind !== "doi-mat-khau" && kind !== "tha-tam-trang";
+  const coSach = kind !== "doi-mat-khau" && kind !== "tha-tam-trang" && kind !== "gui-thu";
   const coLuot = coSach && kind !== "tao-sach" && kind !== "doi-ten-sach";
   return {
     ...DONG_MAC_DINH,
@@ -177,7 +178,7 @@ describe("feedLine: bat bien cua moi dong", () => {
     for (const item of moiDong) {
       const line = feedLine(item, TEN);
       const ids = JSON.stringify(line).match(MOT_UUID) ?? [];
-      const khongSach = item.kind === "doi-mat-khau" || item.kind === "tha-tam-trang";
+      const khongSach = item.kind === "doi-mat-khau" || item.kind === "tha-tam-trang" || item.kind === "gui-thu";
       expect(ids, `${item.kind} ${item.by}`).toEqual(khongSach ? [] : [SACH]);
       expect(JSON.stringify(line)).not.toContain(item.id);
     }
@@ -186,5 +187,18 @@ describe("feedLine: bat bien cua moi dong", () => {
   it("su kien gan sach ma thieu sach thi nem loi, khong ve mot cau thieu", () => {
     expect(() => feedLine(su("dang-trang", "me", { bookTitle: null }), TEN)).toThrow("thieu sach");
     expect(() => feedLine(su("sua-trang", "me", { firstPosition: null }), TEN)).toThrow("thieu sach");
+  });
+});
+
+describe("feedLine: thu thang (dot nam, 5b)", () => {
+  it("nguoi kia gui: cau dam ten thang, dan toi Lich hoa dung thang; minh gui: cau cua minh", () => {
+    expect(feedLine(su("gui-thu", "partner"), TEN)).toMatchObject({ href: "/tam-trang#thu-2026-09", chips: [], extra: null, avatar: "partner" });
+    expect(cau(feedLine(su("gui-thu", "partner"), TEN))).toBe("Linh đã viết **thư tháng Chín** cho bạn");
+    expect(cau(feedLine(su("gui-thu", "me"), TEN))).toBe("Bạn đã gửi **thư tháng Chín** cho Linh");
+  });
+
+  it("chi tiet hong thi van co cau, dan toi Lich hoa", () => {
+    const line = feedLine(su("gui-thu", "partner", { detail: { thang: "13-2026" } }), TEN);
+    expect([cau(line), line.href]).toEqual(["Linh đã viết **thư tháng** cho bạn", "/tam-trang"]);
   });
 });

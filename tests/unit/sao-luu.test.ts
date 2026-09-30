@@ -120,6 +120,9 @@ async function gieo(c: PGlite) {
       ('da-doc', '${A2}', '${B1}', '${R1}', '{"den": 1}', true, now());
     insert into activity_seen (account_id, activity_id, seen_at) select '${A2}', id, at from activity where kind = 'dang-trang';
     insert into reading_positions (account_id, book_id, position) values ('${A2}', '${B1}', 2);
+    insert into thu_thang (account_id, thang, noi_dung, gui_luc, mo_luc) values
+      ('${A1}', '2026-08', 'Tháng Tám mình chạy được 60 cây số.' || chr(10) || 'Cảm ơn em.', '2026-09-01 12:00:00.123456+00', '2026-09-01 13:00:00+00');
+    insert into activity (kind, actor_id, detail, shared, at) values ('gui-thu', '${A1}', '{"thang": "2026-08"}', true, '2026-09-01 12:00:00+00');
   `);
 }
 

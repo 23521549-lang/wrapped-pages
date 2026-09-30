@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
-  pgTable, uuid, integer, text, timestamp, check, index, jsonb, primaryKey, uniqueIndex, boolean,
+  pgTable, uuid, integer, text, timestamp, check, index, jsonb, primaryKey, unique, uniqueIndex, boolean,
 } from "drizzle-orm/pg-core";
 // Chi import KIEU: drizzle-kit nap file nay bang bo nap rieng, khong hieu duong dan "@/";
 // `import type` bi xoa hoan toan luc bien dich nen khong sao.
@@ -215,7 +215,8 @@ export const roundReplies = pgTable("round_replies", {
  * - gan luot (dang-trang, nam loai niem phong, hoi-dap, sua-trang, da-doc): co sach va luot.
  * - doi-bia, doi-nhac: co sach; luot null la o mo dau luc tao sach. tao-sach, doi-ten-sach: co sach, khong luot.
  * - doi-mat-khau: chi nguoi doi va nguoi bi doi. tha-tam-trang: chi nguoi tha va mood_id, luon chia se.
- * - detail: chi doi-ten-sach, doi-bia, doi-nhac, da-doc, luon la mot object (hinh dang ben trong: src/lib/feed/detail.ts).
+ * - gui-thu (5b): chi nguoi gui va detail { thang }, luon chia se; noi dung thu nam o thu_thang, khong bao gio o day.
+ * - detail: chi doi-ten-sach, doi-bia, doi-nhac, da-doc, gui-thu, luon la mot object (hinh dang: src/lib/feed/detail.ts).
  * - seal_id: bat buoc voi nam loai niem phong; dang-trang, hoi-dap duoc co (nhu cu); bay loai moi khong bao gio co.
  * Danh sach trong activity_kind phai khop FEED_KINDS cua src/lib/feed/types.ts, cung thu tu (co test).
  */
@@ -236,11 +237,11 @@ export const activity = pgTable("activity", {
 }, (t) => ({
   kindValue: check(
     "activity_kind",
-    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap', 'tha-tam-trang', 'tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'sua-trang', 'da-doc')`,
+    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap', 'tha-tam-trang', 'tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'sua-trang', 'da-doc', 'gui-thu')`,
   ),
   sach: check(
     "activity_sach",
-    sql`${t.kind} in ('doi-mat-khau', 'tha-tam-trang') or (${t.bookId} is not null and ${t.subjectId} is null and (${t.roundId} is not null or ${t.kind} in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac')) and (${t.roundId} is null or ${t.kind} not in ('tao-sach', 'doi-ten-sach')))`,
+    sql`${t.kind} in ('doi-mat-khau', 'tha-tam-trang', 'gui-thu') or (${t.bookId} is not null and ${t.subjectId} is null and (${t.roundId} is not null or ${t.kind} in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac')) and (${t.roundId} is null or ${t.kind} not in ('tao-sach', 'doi-ten-sach')))`,
   ),
   niemPhong: check(
     "activity_niem_phong",
@@ -256,7 +257,11 @@ export const activity = pgTable("activity", {
   ),
   chiTiet: check(
     "activity_detail",
-    sql`(${t.detail} is not null) = (${t.kind} in ('doi-ten-sach', 'doi-bia', 'doi-nhac', 'da-doc')) and (${t.detail} is null or jsonb_typeof(${t.detail}) = 'object')`,
+    sql`(${t.detail} is not null) = (${t.kind} in ('doi-ten-sach', 'doi-bia', 'doi-nhac', 'da-doc', 'gui-thu')) and (${t.detail} is null or jsonb_typeof(${t.detail}) = 'object')`,
+  ),
+  thu: check(
+    "activity_thu",
+    sql`${t.kind} <> 'gui-thu' or (${t.subjectId} is null and ${t.bookId} is null and ${t.roundId} is null and ${t.sealId} is null and ${t.moodId} is null and ${t.shared})`,
   ),
   byAt: index("activity_at_idx").on(t.at),
   /** Tim dong de gop (ghiHayGop): cung nguoi, cung loai, cung cuon, moi nhat. */
@@ -440,4 +445,24 @@ export const moods = pgTable("moods", {
   noteLength: check("moods_note", sql`${t.note} is null or char_length(${t.note}) between 1 and 80`),
   endsAt: check("moods_ends_at", sql`${t.endsAt} >= ${t.setAt} and ${t.endsAt} <= ${t.setAt} + interval '24 hours'`),
   byAccountSet: index("moods_account_set_idx").on(t.accountId, t.setAt),
+}));
+
+/**
+ * Thu thang (dot nam 5b): moi nguoi mot la cho nguoi kia moi thang. Nguoi nhan luon la tai khoan con lai (web chi co hai
+ * tai khoan). Thu khong sua, khong xoa, va KHONG BAO GIO tra ve cho chinh nguoi viet: chi nguoi nhan doc duoc. thang la
+ * thang duoc viet ve (YYYY-MM, gio Viet Nam); mo_luc la luc nguoi nhan mo lan dau, null la chua mo. noi_dung da chuan
+ * hoa (src/lib/thu.ts); 1000 trong CHECK phai khop THU_TOI_DA va dem theo ky tu (char_length), khong theo byte.
+ */
+export const thuThang = pgTable("thu_thang", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  thang: text("thang").notNull(),
+  noiDung: text("noi_dung").notNull(),
+  guiLuc: timestamp("gui_luc", { withTimezone: true }).notNull().defaultNow(),
+  moLuc: timestamp("mo_luc", { withTimezone: true }),
+}, (t) => ({
+  moiThang: unique("thu_thang_moi_thang").on(t.accountId, t.thang),
+  thangDang: check("thu_thang_thang", sql`${t.thang} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+  noiDungDai: check("thu_thang_noi_dung", sql`char_length(${t.noiDung}) between 1 and 1000`),
+  moSau: check("thu_thang_mo_luc", sql`${t.moLuc} is null or ${t.moLuc} >= ${t.guiLuc}`),
 }));

@@ -2,7 +2,10 @@ import { COVER_NAME } from "@/lib/book";
 import { pageRange, pageRangeTitle } from "@/lib/seal/reader";
 import type { SealKind } from "@/lib/seal/types";
 import { TROI } from "@/lib/tam-trang/troi";
-import { docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, type GiaTriBia, type GiaTriNhac } from "./detail";
+import { tenThang } from "@/lib/thu";
+import {
+  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, docChiTietThu, type GiaTriBia, type GiaTriNhac,
+} from "./detail";
 import type { FeedItem } from "./types";
 
 /** Mot doan cua cau: chu thuong hay chu dam (ten sach, ten moi, ca cau bao mat khau bi doi). */
@@ -38,7 +41,7 @@ const THAY_TEN_BAI = "Bản nhạc trên YouTube";
 const thuong = (chu: string): DoanCau => ({ chu, dam: false });
 const dam = (chu: string): DoanCau => ({ chu, dam: true });
 
-/** Phan gan sach cua mot su kien. Moi loai tru doi-mat-khau va tha-tam-trang deu co cuon (CHECK activity_sach). */
+/** Phan gan sach cua mot su kien. Moi loai tru doi-mat-khau, tha-tam-trang va gui-thu deu co cuon (CHECK activity_sach). */
 function sachCua(item: FeedItem) {
   const { bookId, bookTitle } = item;
   if (bookId === null || bookTitle === null) throw new Error(`su kien ${item.kind} thieu sach`);
@@ -96,6 +99,19 @@ export function feedLine(item: FeedItem, names: FeedNames): FeedLine {
       chips: [],
       extra: item.note === null ? null : { kind: "loi-nhan", text: item.note },
       href: "/tam-trang",
+      avatar,
+    };
+  }
+
+  // Thu thang: dan toi Lich hoa, o dung thang (tam-trang/page mo o do va cuon toi cho thu).
+  if (item.kind === "gui-thu") {
+    const thu = docChiTietThu(item.detail);
+    const ten = thu === null ? "thư tháng" : `thư ${tenThang(thu.thang)}`;
+    return {
+      sentence: mine ? [thuong("Bạn đã gửi "), dam(ten), thuong(` cho ${names.partner}`)] : [thuong(`${ai} đã viết `), dam(ten), thuong(" cho bạn")],
+      chips: [],
+      extra: null,
+      href: thu === null ? "/tam-trang" : `/tam-trang#thu-${thu.thang}`,
       avatar,
     };
   }
