@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { books, media } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { isUuid } from "@/lib/uuid";
@@ -34,8 +34,8 @@ export async function attachCover(tx: AnyDb, bookId: string, mediaId: string): P
   await tx.update(media).set({ bookId }).where(and(eq(media.id, mediaId), isNull(media.bookId)));
 }
 
-/** Mot anh trong kho bia cua mot cuon. */
-export type CoverPhoto = { id: string; createdAt: Date };
+/** Mot anh trong kho bia cua mot cuon. cuaToi: nguoi xem tai len (sach viet cung co anh cua ca hai, 5c). */
+export type CoverPhoto = { id: string; createdAt: Date; cuaToi: boolean };
 
 /**
  * Kho anh bia cua mot cuon: moi dong media loai bia dang thuoc cuon do, moi nhat truoc. Quyen xet theo NGUOI VIET cua
@@ -47,7 +47,7 @@ export type CoverPhoto = { id: string; createdAt: Date };
 export async function khoBia(db: AnyDb, viewerId: string, bookId: string): Promise<CoverPhoto[]> {
   if (!isUuid(bookId)) return [];
   return db
-    .select({ id: media.id, createdAt: media.createdAt })
+    .select({ id: media.id, createdAt: media.createdAt, cuaToi: sql<boolean>`${media.ownerId} = ${viewerId}`.mapWith(Boolean) })
     .from(media)
     .innerJoin(books, eq(books.id, media.bookId))
     .where(and(eq(media.bookId, bookId), eq(media.kind, "bia"), writableBy(viewerId)))

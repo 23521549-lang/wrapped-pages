@@ -306,6 +306,14 @@ const MIEN_TRU: MienTru[] = [
       // Hop xac nhan gui loi hoi dap trong khung Loi hoi dap (RoundReplyPanel.tsx): cung vai tro voi .nhap__hoi,
       // duong ke tach hang cau hoi khoi o chu ben tren trong cung mot the, khong phai vien cua dieu khien nao.
       ".hoi-dap .dang-hoi",
+      // Sach viet cung (5c): hop hoi lai noi tuyen (XacNhan.tsx, "Đồng ý xóa") cung vai tro voi .nhap__hoi; muc Xoa cuon cuoi
+      // Sua sach (XoaCuon.tsx): duong ke tach muc khoi form ben tren. Ca hai khong phai vien cua dieu khien nao; cac nut
+      // ben trong co vien va vong focus rieng.
+      ".hoi-lai",
+      ".xoa-chung",
+      // Muc luc "Các lượt" (CacLuot.tsx) o cot phai man doc sach viet cung: vach chia giua cac dong luot trong cung mot the,
+      // cung vai tro voi .pl__bai > li + li; moi dong la lien ket khong vien, nhan ra bang chu va vong focus.
+      ".cac-luot__ds li + li",
       // Cung mot vai tro nhung vien la mot vong box-shadow 0/0/0 (vd inset 0 0 0 1px), khong phai border.
       ".to-giay", // to giay: khung trang giay trong sach/man viet (PagedSurface.tsx, SealPanel.tsx, Flipbook.tsx)
       ".khoi-ghi-am", // khoi ghi am nhung trong bai (figure, mediaNodes.tsx): khung chua, khong phai nut ben trong

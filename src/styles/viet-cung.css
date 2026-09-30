@@ -1,0 +1,95 @@
+/* ===== Sach viet cung "Hai Ngòi Bút" (dot nam 5c). Chi dung token; nhan bang chu dam tren nen nhat. ===== */
+
+/* ---------- Dau hai ngoi but: dau duy nhat cua phan nay ---------- */
+.ngoi{ display: inline-block; flex: none; width: 1.05rem; height: 1.05rem; color: var(--blue-ink); vertical-align: -.18rem; }
+.ngoi path, .ngoi circle{ vector-effect: non-scaling-stroke; }
+
+/* ---------- Hop hoi lai noi tuyen (Dong y xoa, Xin viet cung): cung nhip hop xac nhan cua Ban nhap ---------- */
+.hoi-lai{ flex-basis: 100%; display: grid; gap: var(--space-xs); margin-top: var(--space-xs); padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-rule); max-width: 36rem; }
+.hoi-lai__chu{ font-size: var(--text-sm); color: var(--color-ink-2); line-height: 1.55; overflow-wrap: anywhere; }
+.hoi-lai__chu b{ color: var(--color-ink); font-weight: 600; }
+.hoi-lai__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+
+/* ---------- Sach moi, Sua sach: lua chon thu ba, ghi chu, dong khoa ---------- */
+.chon__ds--ba{ grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); }
+.the-chon__t .ngoi{ margin-right: .3rem; }
+.ghi-chung{ margin-top: var(--space-sm); font-size: var(--text-sm); line-height: 1.55; color: var(--color-ink-2); max-width: 44rem; overflow-wrap: anywhere; }
+.ghi-chung b{ color: var(--color-ink); font-weight: 600; }
+.khoa-chung{ display: flex; gap: var(--space-sm); align-items: flex-start; padding: var(--space-md); border-radius: var(--radius-sm);
+  background: var(--color-paper-2); font-size: var(--text-sm); line-height: 1.55; color: var(--color-ink-2); }
+.khoa-chung b{ color: var(--color-ink); font-weight: 600; }
+.khoa-chung .ngoi{ margin-top: .15rem; }
+
+/* ---------- Sua sach: muc Xoa cuon ---------- */
+.xoa-chung{ margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-rule); display: grid;
+  gap: var(--space-sm); max-width: 44rem; }
+.xoa-chung h2{ font-size: var(--text-base); line-height: 1.3; }
+.xoa-chung p{ font-size: var(--text-sm); line-height: 1.55; color: var(--color-ink-2); overflow-wrap: anywhere; }
+.xoa-chung p b{ color: var(--color-ink); font-weight: 600; }
+.xoa-chung__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
+
+/* ---------- Ke sach: dong de nghi duoi dong dem sach, cung cho va cung kieu dong nhac thu ---------- */
+/* Chu dong (biet danh toi 20 ky tu, ten sach toi 60) luon xuong dong duoc: khong nowrap, khong inline-flex (bai hoc CI 30/09). */
+.loi-moi-ds{ display: grid; gap: var(--space-xs); margin: .1rem 0 0; padding: 0; list-style: none; }
+.loi-moi{ display: flex; flex-wrap: wrap; align-items: center; gap: .25rem var(--space-sm); font-size: var(--text-sm); }
+.loi-moi__chu{ display: flex; align-items: center; gap: .4rem; min-width: 0; max-width: 100%; min-height: 44px; margin: 0;
+  color: var(--blue-ink); font-weight: 600; overflow-wrap: anywhere; }
+.loi-moi__chu b{ font-weight: 700; }
+.loi-moi__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
+.loi-moi .form__loi{ flex-basis: 100%; }
+
+/* ---------- Ke Hai Ngoi But va the sach viet cung ---------- */
+.ngan__dau h2 .ngoi{ width: 1.25rem; height: 1.25rem; margin-right: .45rem; vertical-align: -.2rem; }
+.ngan__ghi{ margin: calc(var(--space-lg) * -1 + var(--space-xs)) 0 var(--space-md); font-size: var(--text-sm); color: var(--color-ink-2); }
+/* hai chu cai dau cua hai nguoi viet, chong nhau o goc bia (nguoi tao truoc) */
+.cuon__doi{ position: absolute; left: .55rem; bottom: .5rem; z-index: 1; display: flex; }
+.cuon__doi span{ display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-pill); background: var(--color-paper);
+  color: var(--blue-ink); font-size: var(--text-xs); font-weight: 700; line-height: 1; box-shadow: 0 0 0 1.5px var(--blue-line); }
+.cuon__doi span + span{ margin-left: -6px; }
+/* dau "Lượt mới của {tên}", "Chờ {tên} nhận lời": chu dong nen xuong dong duoc, khac .dh von nowrap */
+.dh--dong{ white-space: normal; overflow-wrap: anywhere; }
+.dh--cho{ color: var(--color-ink-2); }
+.dh--cho .ngoi{ width: 12px; height: 12px; vertical-align: 0; }
+
+/* ---------- Man doc sach viet cung ---------- */
+/* Dong dau trang: ten luot va nguoi viet trong LE TREN cua moi to (--giay-pt), dat tuyet doi nhu so trang o le duoi, nen
+   khong vao vung chu va khong doi cho ngat trang. Mot dong, ten dai cat bang dau ba cham. */
+.dau-trang{ position: absolute; top: 12px; left: var(--giay-pl); right: var(--giay-pr); display: flex; gap: .35rem; align-items: baseline;
+  min-width: 0; font-size: var(--text-xs); line-height: 1.3; color: var(--color-ink-3); white-space: nowrap; overflow: hidden; pointer-events: none; }
+.dau-trang b{ min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--color-ink-2); }
+.dau-trang span{ flex: none; }
+/* Cot phai: muc luc theo luot thay cho khung Loi hoi dap */
+.cac-luot__ds{ display: grid; margin: var(--space-sm) 0 0; padding: 0; list-style: none; }
+.cac-luot__ds li + li{ border-top: 1px solid var(--color-rule); }
+.luot{ display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: var(--space-xs); min-height: 44px; padding: .5rem;
+  border-radius: var(--radius-nut); color: inherit; transition: background-color var(--dur-micro) var(--ease-out); }
+.luot:hover{ background: var(--color-paper-2); }
+.luot__so{ font-size: var(--text-sm); color: var(--color-ink-3); font-variant-numeric: tabular-nums; line-height: 1.45; }
+.luot__chu{ display: grid; min-width: 0; line-height: 1.4; }
+.luot__ten{ font-weight: 600; overflow-wrap: anywhere; }
+.luot__phu{ font-size: var(--text-sm); color: var(--color-ink-3); overflow-wrap: anywhere; }
+.luot--dang, .luot--dang:hover{ background: var(--blue-1); }
+.luot--dang .luot__ten{ color: var(--blue-ink); }
+.cac-luot__hoi{ display: grid; gap: var(--space-2xs); margin-top: var(--space-md); }
+.cac-luot__nhan{ font-size: var(--text-sm); color: var(--color-ink-2); font-weight: 600; }
+/* Dau man doc sach cua nguoi kia: xin viet cung, da xin, duoc moi */
+.xin-viet{ display: grid; gap: var(--space-xs); min-width: 0; }
+.xin-viet__chu{ display: flex; align-items: center; gap: .4rem; min-width: 0; min-height: 44px; margin: 0; font-size: var(--text-sm);
+  color: var(--blue-ink); font-weight: 600; overflow-wrap: anywhere; }
+.xin-viet__chu b{ font-weight: 700; }
+.xin-viet__nut{ display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.doc-head__nut .btn .ngoi{ margin-right: .35rem; }
+
+/* ---------- Hop Dang trang va man Sua luot: o ten luot ---------- */
+.ten-luot{ display: grid; gap: var(--space-xs); min-width: 0; }
+.ten-luot__t{ font-family: var(--font-display); font-weight: var(--dwght); font-size: var(--text-md); line-height: 1.25; }
+.ten-luot__ghi{ font-size: var(--text-sm); color: var(--color-ink-2); line-height: 1.55; }
+.ten-luot__hang{ display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
+.ten-luot__hang .input{ flex: 1 1 14rem; min-width: 0; }
+.ten-luot__xong{ font-size: var(--text-sm); color: var(--color-ink-2); min-height: 1.5em; }
+.ten-luot--sua{ max-width: 44rem; margin-block: var(--space-lg) var(--space-md); }
+
+@media (prefers-reduced-motion: reduce){
+  .luot{ transition: none; }
+}

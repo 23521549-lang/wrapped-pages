@@ -7,6 +7,19 @@ import type { CoverValue } from "./CoverPicker";
 
 const TEN_TRONG = "Sách cần có tên. Viết vài chữ, đổi lại sau cũng được.";
 const GOI_Y = "Tên hiện trên kệ. Đổi lại được sau.";
+
+/**
+ * Chu cua o ten, doi theo loai cuon: sach mot nguoi viet goi la "Tên sách"; sach viet cung (hay dang chon "Viết cùng",
+ * 5c) goi la "Chủ đề", vi moi luot dang con co ten rieng.
+ */
+export const CHU_O_TEN = {
+  sach: { nhan: "Tên sách", goiY: GOI_Y, trong: TEN_TRONG },
+  chuDe: {
+    nhan: "Chủ đề",
+    goiY: "Tên chung của cuốn, hiện trên kệ. Mỗi lượt đăng sẽ có tên riêng.",
+    trong: "Cuốn cần có chủ đề. Viết vài chữ, đổi lại sau cũng được.",
+  },
+} as const;
 const NHAC_GOI_Y = "Không bắt buộc. Dán link YouTube, nhạc phát khi mở bìa sách.";
 const NHAC_DA_NHAN = "Nhạc phát khi mở bìa sách.";
 
@@ -90,7 +103,9 @@ export function useBookEdit(book: BookNow) {
  * O ten sach. Tach rieng vi man Sua sach chi con o nay, con bang bia va o nhac chi hien o form tao (phan quyet B2).
  * O mang thuoc tinh name nhu cu, nen form van gui duoc bang FormData ma khong doi gi.
  */
-export function TitleField({ state, disabled }: { state: BookEditState; disabled: boolean }) {
+export function TitleField({ state, disabled, chu = CHU_O_TEN.sach }: {
+  state: BookEditState; disabled: boolean; chu?: { nhan: string; goiY: string; trong: string };
+}) {
   const id = useId();
   // Rut cac truong ra bien cuc bo mot lan roi JSX doc bien: doc thang state.x trong JSX bi cong lint react/refs coi
   // la doc ref luc render, vi state mang ca hai ref o duoi.
@@ -98,7 +113,7 @@ export function TitleField({ state, disabled }: { state: BookEditState; disabled
   const titleError = touched && title.trim() === "";
   return (
     <div className="field">
-      <label className="field__label" htmlFor={`${id}-ten`}>Tên sách</label>
+      <label className="field__label" htmlFor={`${id}-ten`}>{chu.nhan}</label>
       <div className="field__o">
         <input
           ref={titleRef}
@@ -118,7 +133,7 @@ export function TitleField({ state, disabled }: { state: BookEditState; disabled
         {titleError && <span className="field__dau dau-loi" aria-hidden="true">!</span>}
       </div>
       <p className={titleError ? "field__help field__help--loi" : "field__help"} id={`${id}-ten-help`}>
-        {titleError ? TEN_TRONG : GOI_Y}
+        {titleError ? chu.trong : chu.goiY}
       </p>
     </div>
   );

@@ -27,7 +27,7 @@ export default async function VietTiep({ params }: { params: Promise<{ id: strin
   if (!book) notFound();
   // Nhan dung san o may chu: trinh duyet khong dinh dang ngay, nen lan ve o may chu va lan ve lai o trinh duyet
   // khong bao gio lech nhau.
-  const photos = kho.map((p) => ({ id: p.id, nhan: `Ảnh của bạn, tải ${dateLabel(p.createdAt, now)}` }));
+  const photos = kho.map((p) => ({ id: p.id, nhan: `Ảnh của ${p.cuaToi ? "bạn" : me.partnerNickname}, tải ${dateLabel(p.createdAt, now)}` }));
   const trim = draft?.trim ?? { cover: null, coverMediaId: null, youtubeId: null, dropTrack: false };
   return (
     <>
