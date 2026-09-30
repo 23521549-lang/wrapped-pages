@@ -20,7 +20,7 @@ export default async function VietSach({ params }: { params: Promise<{ id: strin
   if (!book) notFound();
   return (
     <>
-      <AppNav me={me} current="ke-sach" subpage sticky={false} />
+      <AppNav me={me} current="ke-sach" subpage sticky={false} linhVat={false} />
       <Editor
         bookId={book.id}
         bookTitle={book.title}

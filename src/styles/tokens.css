@@ -100,6 +100,17 @@
   --dur-tu-cap-nhat: 15000ms;
   /* La thu troi (5b): tab dang duoc xem thi cu chung nay hoi co thu moi cua nguoi kia khong (LaThuBay). */
   --dur-hoi-thu: 20000ms;
+  /* Kho cam xuc va linh vat (5d): Chip ngoi goc duoi ben trai, to ra khi mang cam xuc toi; lop hieu ung tren moi thu
+     (ngoai le chu du an duyet, xuyen chuot); hoi hang cho moi 15 giay. */
+  --lv-co: 64px;
+  --lv-co-mang: 112px;
+  --lv-le: 16px;
+  --z-linh-vat: calc(var(--z-sticky) + 15);
+  --z-hieu-ung: 2147483000;
+  --dur-hieu-ung: 3600ms;
+  --dur-hoi-cam-xuc: 15000ms;
+  --mua-man: oklch(80% 0.03 240 / .22);
+  --lv-bong: oklch(24% 0.012 250 / .18);
 
   /* Nut: mot ban kinh cho ca ba cap nut (nen, vien, chu). */
   --radius-nut: 8px;

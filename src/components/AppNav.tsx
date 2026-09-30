@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { db } from "@/server/db";
+import { camXucChoToi } from "@/server/cam-xuc/cam-xuc";
 import { thuChuaMo } from "@/server/thu/thu";
 import type { Me } from "@/server/web/guard";
+import { LinhVat } from "./linh-vat/LinhVat";
 import { LaThuBay } from "./thu/LaThuBay";
 import { Logo } from "./Logo";
 import { LINKS, type NavSection } from "./nav-links";
@@ -14,15 +16,19 @@ export type { NavSection };
  * (tao, sua, doc sach): lien ket mang aria-current="true" thay vi "page".
  * sticky = false cho man co thanh dinh rieng ben duoi (man viet), de hai thanh khong chong nhau, va cho man doc
  * sach co nhac, de nav khong bao gio de len trinh phat YouTube.
- * Kem la thu troi (5b): thu nguoi kia gui ma nguoi dang vao chua mo, doc san o may chu de doi trang khong chop.
+ * Kem la thu troi (5b): thu nguoi kia gui ma nguoi dang vao chua mo, doc san o may chu de doi trang khong chop. Kem Chip va
+ * Kho cam xuc (5d): hang cam xuc nguoi kia tha ma nguoi dang vao chua thay, cung doc san o may chu. linhVat = false cho
+ * man lam viec phu kin man hinh (doc sach, viet, sua luot): goc duoi ben trai o do la chu dang doc hay nut Dang, Chip
+ * ngoi len se che; cam xuc toi luc ay cho o hang, dien khi sang trang khac.
  */
-export async function AppNav({ me, current, subpage = false, sticky = true }: {
+export async function AppNav({ me, current, subpage = false, sticky = true, linhVat = true }: {
   me: Me;
   current: NavSection | null;
   subpage?: boolean;
   sticky?: boolean;
+  linhVat?: boolean;
 }) {
-  const thu = await thuChuaMo(db, me.accountId);
+  const [thu, hangCamXuc] = await Promise.all([thuChuaMo(db, me.accountId), linhVat ? camXucChoToi(db, me.accountId) : []]);
   return (
     <>
       <nav className={sticky ? "nav" : "nav nav--tinh"} aria-label="Điều hướng chính">
@@ -51,6 +57,7 @@ export async function AppNav({ me, current, subpage = false, sticky = true }: {
         </div>
       </nav>
       <LaThuBay tenKia={me.partnerNickname} tenMinh={me.nickname} dau={thu} />
+      {linhVat && <LinhVat tenKia={me.partnerNickname} tenMinh={me.nickname} hangDau={hangCamXuc} />}
     </>
   );
 }

@@ -1,0 +1,151 @@
+/*
+ * Kho cam xuc va linh vat (dot nam 5d, spec C, D, F). Chip (ga con) ngoi goc duoi ben trai moi trang da dang nhap; goc
+ * duoi ben phai la cua so nhac nho, goc tren ben phai la la thu troi. Anh linh vat la mau cua chinh no (ngoai le co chu
+ * dich cua luat "khong mang mau dam": chu du an muon linh vat 3D de thuong); moi chu, nen, nut van theo token.
+ * Moi hoat anh chi tren transform va opacity, co nhanh prefers-reduced-motion o cuoi tep.
+ */
+
+/* ---------- Chip ngoi goc ---------- */
+/* Kho va bong bong la con tuyet doi cua .linh-vat (khung co dinh, rong dung bang nut), nen tinh vi tri theo nut. */
+.linh-vat{ position: fixed; left: var(--lv-le); bottom: var(--lv-le); z-index: var(--z-linh-vat); display: flex; align-items: flex-end; }
+.linh-vat--tranh{ visibility: hidden; }
+.linh-vat__nut{ position: relative; display: block; width: var(--lv-co); height: var(--lv-co); padding: 0; border: 0; border-radius: 50%;
+  background: transparent; cursor: pointer; transition: width var(--dur-short) var(--ease-out), height var(--dur-short) var(--ease-out); }
+/* Bong muc duoi chan */
+.linh-vat__nut::after{ content: ""; position: absolute; left: 14%; right: 14%; bottom: -3px; height: 10px; border-radius: 50%;
+  background: radial-gradient(closest-side, var(--lv-bong), transparent); z-index: -1; }
+.linh-vat__hinh{ display: block; width: 100%; height: 100%; transform-origin: 50% 90%; transition: transform var(--dur-short) var(--ease-out); }
+.linh-vat__hinh img{ display: block; width: 100%; height: 100%; }
+.linh-vat__nut:hover .linh-vat__hinh, .linh-vat__nut[aria-expanded="true"] .linh-vat__hinh{ transform: rotate(-6deg) translateY(-2px); }
+
+/* Mang cam xuc toi: to ra, hoa hinh (nhay len, co gian) */
+.linh-vat--mang .linh-vat__nut{ width: var(--lv-co-mang); height: var(--lv-co-mang); }
+.linh-vat--mang .linh-vat__hinh{ animation: lv-hoa-hinh 560ms var(--ease-out); }
+@keyframes lv-hoa-hinh{
+  0%{ transform: scale(.2) rotate(-12deg); opacity: 0; }
+  35%{ transform: translateY(-18px) scale(.92, 1.1); opacity: 1; }
+  60%{ transform: scale(1.1, .9); }
+  80%{ transform: scale(.97, 1.03); }
+  100%{ transform: none; }
+}
+/* Khi con chay ngang man, ho con lao toi dam: linh vat o goc vang mat dung chung ay (lop hieu ung dang ve ban chay). */
+.linh-vat--vang-treu .linh-vat__hinh{ animation: lv-vang 3000ms steps(1, end); }
+.linh-vat--vang-gian .linh-vat__hinh{ animation: lv-vang 560ms steps(1, end); }
+@keyframes lv-vang{ 0%{ opacity: 0; } 100%{ opacity: 1; } }
+
+/* ---------- Kho cam xuc: to giay mo tren dau Chip ---------- */
+.kho-cx{ position: absolute; left: 0; bottom: calc(100% + var(--space-sm)); width: min(22rem, calc(100vw - 2 * var(--lv-le)));
+  padding: var(--space-md); background: var(--color-giay); border: 1px solid var(--color-rule-ui); border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lift); transform-origin: 28px 100%; animation: lv-kho-mo var(--dur-short) var(--ease-out); }
+@keyframes lv-kho-mo{ from{ opacity: 0; transform: translateY(6px) scale(.97); } }
+.kho-cx__t{ margin: 0; font-size: var(--text-md); line-height: 1.3; }
+.kho-cx__phu{ margin: 2px 0 var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-2); overflow-wrap: anywhere; }
+.kho-cx__ds{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cx{ display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 100%; min-height: 80px;
+  padding: 6px 2px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; cursor: pointer;
+  font: inherit; font-size: var(--text-xs); font-weight: 500; color: var(--color-ink-2); }
+.cx__hinh, .cx__hinh img{ display: block; width: 48px; height: 48px; }
+.cx__hinh{ transition: transform var(--dur-short) var(--ease-out); }
+.cx:hover{ background: var(--color-paper-2); }
+.cx:hover .cx__hinh{ transform: translateY(-2px) scale(1.06); }
+.cx[aria-pressed="true"]{ background: var(--blue-1); border-color: var(--blue-line); color: var(--color-ink-dam); font-weight: 700; }
+.cx__ten{ line-height: 1.25; text-align: center; }
+.kho-cx .form__loi{ margin: var(--space-xs) 0 0; }
+.kho-cx__chan{ display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-sm); align-items: center; justify-content: space-between;
+  margin-top: var(--space-sm); }
+.kho-cx__cau{ flex: 1 1 10rem; min-width: 0; margin: 0; font-size: var(--text-sm); color: var(--color-ink-2); overflow-wrap: anywhere; }
+.kho-cx__cau b{ color: var(--color-ink-dam); font-weight: 700; }
+
+/* ---------- Loi linh vat: bong bong canh linh vat (man hep: tren dau) ---------- */
+.loi-lv{ position: absolute; left: calc(100% + 10px); bottom: 10px; display: flex; gap: 2px; align-items: flex-start;
+  width: max-content; max-width: min(19rem, calc(100vw - var(--lv-co-mang) - 3 * var(--lv-le)));
+  padding: 10px 4px 10px 14px; background: var(--color-giay); border: 1px solid var(--color-rule-ui);
+  border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) 4px; box-shadow: var(--shadow-lift); transform-origin: 0 100%;
+  animation: lv-noi 320ms var(--ease-out); }
+@keyframes lv-noi{ from{ opacity: 0; transform: translateX(-6px) scale(.94); } }
+.loi-lv__chu{ margin: 2px 0 0; font-size: var(--text-sm); line-height: 1.45; color: var(--color-ink); overflow-wrap: anywhere; }
+.loi-lv__chu b{ font-weight: 700; color: var(--color-ink-dam); }
+.loi-lv__chu small{ display: block; margin-top: 2px; font-size: var(--text-xs); color: var(--color-ink-3); }
+.loi-lv__dong{ flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -8px 0; padding: 0; border: 0;
+  border-radius: var(--radius-nut); background: transparent; color: var(--color-ink-2); cursor: pointer; }
+.loi-lv__dong:hover{ background: var(--color-paper-2); color: var(--color-ink-dam); }
+.loi-lv__dong svg{ width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+@media (max-width: 480px){
+  .loi-lv{ left: 0; bottom: calc(100% + var(--space-xs)); max-width: calc(100vw - 2 * var(--lv-le)); }
+}
+
+/* ---------- Lop hieu ung: tren moi thu (ca YouTube), xuyen chuot ---------- */
+.hieu-ung{ position: fixed; inset: 0; z-index: var(--z-hieu-ung); pointer-events: none; overflow: hidden; }
+.hieu-ung--rung{ animation: hv-rung 420ms linear 380ms; }
+@keyframes hv-rung{ 0%, 100%{ transform: none; } 15%{ transform: translate(-9px, 4px); } 30%{ transform: translate(8px, -5px); }
+  45%{ transform: translate(-6px, -3px); } 60%{ transform: translate(5px, 4px); } 75%{ transform: translate(-3px, 2px); } }
+.hv{ position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+.hv img{ display: block; width: 100%; height: 100%; }
+.hv__trong{ width: 100%; height: 100%; }
+
+/* Yeu: tim bay vong cung (lop ngoai di ngang, lop trong len roi roi) */
+.hv-tim{ width: var(--co); height: var(--co); animation: hv-tim-x var(--t) linear forwards; }
+.hv-tim .hv__trong{ animation: hv-tim-y var(--t) cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes hv-tim-x{ from{ transform: translateX(var(--x0)); } to{ transform: translateX(var(--x1)); } }
+@keyframes hv-tim-y{ 0%{ transform: translateY(var(--y0)) scale(.4) rotate(var(--r0)); opacity: 0; } 12%{ opacity: 1; }
+  55%{ transform: translateY(var(--yd)) scale(1) rotate(0deg); } 85%{ opacity: 1; }
+  100%{ transform: translateY(var(--y1)) scale(.9) rotate(var(--r1)); opacity: 0; } }
+
+/* Nho, Biet on: bay len nhu den troi, dung dua */
+.hv-bay{ width: var(--co); height: var(--co); animation: hv-bay var(--t) cubic-bezier(.3, .6, .5, 1) forwards; }
+.hv-bay .hv__trong{ animation: hv-dua 1400ms ease-in-out infinite alternate; }
+@keyframes hv-bay{ 0%{ transform: translate(var(--x0), var(--y0)) scale(.5); opacity: 0; } 15%{ opacity: 1; } 80%{ opacity: .9; }
+  100%{ transform: translate(var(--x0), var(--y1)) scale(1); opacity: 0; } }
+@keyframes hv-dua{ from{ transform: translateX(-14px) rotate(-8deg); } to{ transform: translateX(14px) rotate(8deg); } }
+
+/* Vui, Bat ngo, Gian: no ra roi tat */
+.hv-no{ width: var(--co); height: var(--co); animation: hv-no var(--t) var(--ease-out) forwards; }
+@keyframes hv-no{ 0%{ transform: translate(var(--x0), var(--y0)) scale(0) rotate(-40deg); opacity: 0; } 30%{ opacity: 1; }
+  60%{ transform: translate(var(--x1), var(--y1)) scale(1.1) rotate(10deg); opacity: 1; }
+  100%{ transform: translate(var(--x1), var(--y1)) scale(.2) rotate(30deg); opacity: 0; } }
+
+/* Buon: man mo xanh nhat, giot nuoc roi */
+.hv-man-mua{ position: absolute; inset: 0; background: var(--mua-man); animation: hv-man-mua var(--dur-hieu-ung) ease forwards; }
+@keyframes hv-man-mua{ 0%{ opacity: 0; } 15%{ opacity: 1; } 80%{ opacity: 1; } 100%{ opacity: 0; } }
+.hv-giot{ width: var(--co); height: calc(var(--co) * 1.25); animation: hv-roi var(--t) cubic-bezier(.5, 0, 1, 1) forwards; }
+@keyframes hv-roi{ 0%{ transform: translate(var(--x0), -60px); opacity: 0; } 10%{ opacity: .95; } 100%{ transform: translate(var(--x0), var(--y1)); opacity: .9; } }
+
+/* Gian: ho con lao toi, va cham, vet nut kinh */
+.hv-lao{ width: 120px; height: 120px; margin: -60px 0 0 -60px; animation: hv-lao 520ms cubic-bezier(.6, 0, .9, .4) both; }
+@keyframes hv-lao{ 0%{ transform: translate(var(--xa), var(--ya)) scale(.6); opacity: 1; } 90%{ opacity: 1; }
+  100%{ transform: translate(var(--x0), var(--y0)) scale(1.5); opacity: 0; } }
+.hv-va-cham{ width: 150px; height: 150px; margin: -75px 0 0 -75px; animation: hv-va-cham 900ms var(--ease-out) 380ms both; }
+@keyframes hv-va-cham{ 0%{ transform: translate(var(--x0), var(--y0)) scale(0) rotate(-20deg); opacity: 0; }
+  25%{ transform: translate(var(--x0), var(--y0)) scale(1.25) rotate(8deg); opacity: 1; }
+  100%{ transform: translate(var(--x0), var(--y0)) scale(.9) rotate(0deg); opacity: 0; } }
+.hv-nut{ position: absolute; width: min(90vw, 620px); aspect-ratio: 1; opacity: 0; transform: translate(-50%, -50%) scale(.3);
+  animation: hv-nut var(--dur-hieu-ung) var(--ease-out) 380ms forwards; }
+.hv-nut svg{ display: block; width: 100%; height: 100%; overflow: visible; }
+.hv-nut__sang{ fill: none; stroke: var(--color-giay); stroke-width: 1.1; stroke-linejoin: round; stroke-linecap: round; opacity: .85; }
+.hv-nut__muc{ fill: none; stroke: var(--blue-ink); stroke-width: .42; stroke-linejoin: round; stroke-linecap: round; opacity: .8; }
+.hv-nut__tam{ fill: var(--color-giay); opacity: .9; }
+@keyframes hv-nut{ 0%{ opacity: 0; transform: translate(-50%, -50%) scale(.3); } 6%{ opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  12%{ transform: translate(-50%, -50%) scale(1); } 80%{ opacity: 1; } 100%{ opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+
+/* Bat ngo: vong song toa tu linh vat */
+.hv-vong{ width: 80px; height: 80px; margin: -40px 0 0 -40px; border: 3px solid var(--blue-line); border-radius: 50%;
+  animation: hv-vong 1100ms var(--ease-out) forwards; }
+@keyframes hv-vong{ 0%{ transform: translate(var(--x0), var(--y0)) scale(.2); opacity: .9; } 100%{ transform: translate(var(--x0), var(--y0)) scale(9); opacity: 0; } }
+
+/* Treu: khi con chay ngang day man, quay dau chay ve */
+.hv-chay{ width: 96px; height: 96px; animation: hv-chay 3000ms ease-in-out forwards; }
+.hv-chay .hv__trong{ animation: hv-nhun 300ms ease-in-out infinite alternate; }
+@keyframes hv-chay{ 0%{ transform: translate(-110px, var(--y0)) scaleX(1); } 45%{ transform: translate(var(--x1), var(--y0)) scaleX(1); }
+  50%{ transform: translate(var(--x1), var(--y0)) scaleX(-1); } 100%{ transform: translate(-110px, var(--y0)) scaleX(-1); } }
+@keyframes hv-nhun{ from{ transform: translateY(0) rotate(-4deg); } to{ transform: translateY(-16px) rotate(4deg); } }
+
+/* ---------- Giam chuyen dong: khong lop hieu ung, khong nhay; doi hinh va hien bong bong bang mo chong 150ms ---------- */
+@media (prefers-reduced-motion: reduce){
+  .hieu-ung{ display: none; }
+  .linh-vat__nut{ transition: none; }
+  .linh-vat__hinh, .cx__hinh{ transition: none; }
+  .linh-vat__nut:hover .linh-vat__hinh, .linh-vat__nut[aria-expanded="true"] .linh-vat__hinh, .cx:hover .cx__hinh{ transform: none; }
+  .linh-vat--mang .linh-vat__hinh, .kho-cx, .loi-lv{ animation: lv-mo 150ms ease; }
+  .linh-vat--vang-treu .linh-vat__hinh, .linh-vat--vang-gian .linh-vat__hinh{ animation: none; }
+}
+@keyframes lv-mo{ from{ opacity: 0; } }

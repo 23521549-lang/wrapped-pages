@@ -140,7 +140,7 @@ export default async function DocSach({ params, searchParams }: {
   return (
     <>
       {/* Sach co nhac: nav khong dinh, de khong gi (ke ca nav) de len trinh phat YouTube o moi be rong. */}
-      <AppNav me={me} current="ke-sach" subpage sticky={book.youtubeId === null} />
+      <AppNav me={me} current="ke-sach" subpage sticky={book.youtubeId === null} linhVat={false} />
       <main className="shell man">
         {/*
          * Mot provider cho ca cot sach lan cot phai, luon co mat: dat theo dieu kien thi doi che do chia se hay dang to

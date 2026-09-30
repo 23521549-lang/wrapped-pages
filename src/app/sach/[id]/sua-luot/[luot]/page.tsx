@@ -25,7 +25,7 @@ export default async function SuaLuot({ params, searchParams }: {
   if (!round) notFound();
   return (
     <>
-      <AppNav me={me} current="ke-sach" subpage sticky={false} />
+      <AppNav me={me} current="ke-sach" subpage sticky={false} linhVat={false} />
       {/* key theo moc phien ban: "Tai lai" (router.refresh) dung lai trinh soan thao tu ban moi nhat. */}
       <RoundEditor
         key={round.version}
