@@ -1,5 +1,5 @@
-import { and, count, desc, eq, inArray, lte, notInArray, or, sql } from "drizzle-orm";
-import { activity, activitySeen, bookCovers, books, bookTracks, moods, pages, seals } from "@/server/db/schema";
+import { and, count, desc, eq, inArray, isNotNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
+import { activity, activitySeen, bookCovers, books, bookTracks, moods, pages, rounds, seals } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import type { FeedActor, FeedItem } from "@/lib/feed/types";
@@ -18,8 +18,10 @@ const NGAY_VIET_NAM = sql`((${activity.at} at time zone 'UTC') + interval '7 hou
 /**
  * Luat xem cua mot dong Hoat dong voi viewerId (dung chung cho listActivity, markSeen va phienBanKe; can join books
  * theo activity.book_id va moods theo activity.mood_id):
- * - su kien gan sach: chu sach luon thay; nguoi kia chi thay khi cuon chia se ngay luc ghi va bay gio van chia se,
- *   tru thu-sai va da-doc chi chu sach thay;
+ * - su kien gan sach: chu sach luon thay (tru dong da-doc cua chinh ho, chi co o sach viet cung); nguoi kia chi thay khi
+ *   cuon chia se ngay luc ghi va bay gio van chia se, tru thu-sai va da-doc chi chu sach thay;
+ * - da-doc o sach viet cung (5c): nguoi viet kia thay dong doc cua nguoi nay (chia se luc ghi), khong ai thay dong doc
+ *   cua chinh minh;
  * - doi-mat-khau: nguoi doi va nguoi bi doi deu thay;
  * - tha-tam-trang: ca hai deu thay, tru tam trang da thu lai;
  * - gui-thu: ca hai deu thay (dong chi mang thang, noi dung thu khong bao gio nam o day);
@@ -29,8 +31,9 @@ export function thayDuoc(viewerId: string, now: Date) {
   return and(
     lte(activity.at, now),
     or(
-      eq(books.ownerId, viewerId),
+      and(eq(books.ownerId, viewerId), or(ne(activity.kind, "da-doc"), ne(activity.actorId, viewerId))),
       and(notInArray(activity.kind, ["thu-sai", "da-doc"]), eq(activity.shared, true), eq(books.mode, "chia-se")),
+      and(eq(activity.kind, "da-doc"), eq(activity.shared, true), isNotNull(books.vietCungTu), ne(activity.actorId, viewerId)),
       and(eq(activity.kind, "doi-mat-khau"), or(eq(activity.actorId, viewerId), eq(activity.subjectId, viewerId))),
       and(eq(activity.kind, "tha-tam-trang"), eq(moods.withdrawn, false)),
       eq(activity.kind, "gui-thu"),
@@ -58,9 +61,11 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
     // Lan dang mang o bia, o nhac rieng cua luot do (dong "Bìa mới", "Nhạc mới").
     const coBia = sql<boolean>`${activity.kind} = 'dang-trang' and exists (select 1 from ${bookCovers} where ${bookCovers.roundId} = ${activity.roundId})`;
     const coNhac = sql<boolean>`${activity.kind} = 'dang-trang' and exists (select 1 from ${bookTracks} where ${bookTracks.roundId} = ${activity.roundId})`;
-    // So thu tu luot cua o bia, o nhac: dem so luot co to dung truoc hay tai to dau cua luot (dung cach roundsOfBook
-    // danh so theo vi tri to). O mo dau (khong luot) la null.
-    const thuTu = sql<number | null>`case when ${activity.kind} in ('doi-bia', 'doi-nhac') and ${activity.roundId} is not null then (select count(distinct p.round_id)::int from ${pages} p where p.book_id = ${activity.bookId} and p.position <= ${khoang.first}) end`;
+    // So thu tu luot cua o bia, o nhac va luot vua doi ten: dem so luot co to dung truoc hay tai to dau cua luot (dung
+    // cach roundsOfBook danh so theo vi tri to). O mo dau (khong luot) la null.
+    const thuTu = sql<number | null>`case when ${activity.kind} in ('doi-bia', 'doi-nhac', 'doi-ten-luot') and ${activity.roundId} is not null then (select count(distinct p.round_id)::int from ${pages} p where p.book_id = ${activity.bookId} and p.position <= ${khoang.first}) end`;
+    // Ten luot vua dang (sach viet cung, 5c): chi dong dang-trang can; luot khong ten thi null va cau giu nhu cu.
+    const tenLuot = sql<string | null>`case when ${activity.kind} = 'dang-trang' then ${rounds.ten} end`;
     // Hai cau doc doc lap tren cung anh chup: chay song song trong giao dich, khong doi du lieu doc ra.
     const [khac, sai] = await Promise.all([
       tx
@@ -70,11 +75,12 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
           firstPosition: khoang.first, lastPosition: khoang.last,
           sealKind: seals.kind, giftNote: seals.giftNote,
           detail: activity.detail, weather: moods.weather, moodNote: moods.note,
-          biaMoi: coBia, nhacMoi: coNhac, ordinal: thuTu,
+          biaMoi: coBia, nhacMoi: coNhac, ordinal: thuTu, tenLuot,
         })
         .from(activity)
         .leftJoin(books, eq(books.id, activity.bookId))
         .leftJoin(moods, eq(moods.id, activity.moodId))
+        .leftJoin(rounds, eq(rounds.id, activity.roundId))
         .leftJoin(khoang, eq(khoang.roundId, activity.roundId))
         .leftJoin(seals, and(eq(seals.id, activity.sealId), eq(seals.bookId, activity.bookId)))
         .where(and(thay, notInArray(activity.kind, ["thu-sai"])))
@@ -107,7 +113,8 @@ export async function listActivity(db: AnyDb, viewerId: string, now: Date): Prom
         bookId: r.bookId, bookTitle: r.bookTitle, firstPosition: r.firstPosition, lastPosition: r.lastPosition,
         sealKind: r.sealKind, count: 1,
         note: r.kind === "tang-khoa" ? r.giftNote : r.kind === "tha-tam-trang" ? r.moodNote : null,
-        isNew: false, detail: r.detail, weather: r.weather, biaMoi: r.biaMoi, nhacMoi: r.nhacMoi, ordinal: r.ordinal, tenLuot: null,
+        isNew: false, detail: r.detail, weather: r.weather, biaMoi: r.biaMoi, nhacMoi: r.nhacMoi, ordinal: r.ordinal,
+        tenLuot: r.tenLuot,
       })),
       ...sai.map((r): FeedItem => ({
         id: r.id, kind: "thu-sai", by: by(r.actorId), at: r.at,
