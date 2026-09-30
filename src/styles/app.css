@@ -108,6 +108,17 @@
 @media (prefers-reduced-motion: reduce){
   .sach-mo__to--trai > div:first-child, .sach-mo__to--phai, .sach-mo__to--trai .tranh-dan{ transition: none; }
 }
+/* Khung luot chua doc tren man rong: trang trai co them nhan, dong dem (va khi giam chuyen dong, nut tam dung), nen
+   tranh dan dat giua trang se de len chu. O day tranh dan nam trong dong giua cua luoi va co lai vua cho con trong. Khung
+   giu dung ti le 4:3 (min-height 0: kich thuoc tu nhien cua tranh khong keo khung cao them), nen doi luot khong bao gio
+   lam khung doi chieu cao. Man hep von da xep tranh dan theo dong chay. */
+@media (min-width: 641px){
+  .sach-mo--luot{ min-height: 0; }
+  /* Cot va dong co dinh: max-width 100% cua tranh tinh theo be rong trang chu khong theo chinh tranh (cot auto se no ra). */
+  .sach-mo--luot .sach-mo__to--trai{ grid-template-columns: minmax(0, 1fr); }
+  .sach-mo--luot .sach-mo__to--trai .tranh-dan{ position: relative; left: auto; right: auto; top: auto; transform: none; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; }
+  .sach-mo--luot .tranh-dan__lien{ height: 100%; max-width: 100%; aspect-ratio: 8 / 5; display: grid; align-content: center; }
+}
 /*
  * Tranh dan: bia that cua cuon nay in tren mot to giay khac mau (--color-paper) co le hep, dan hoi lech o chinh
  * giua trang trai (cach deu mep tren va mep duoi cua trang, khong phai giua khoang trong con lai). Re chuot hay

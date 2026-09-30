@@ -93,7 +93,8 @@ export function OpenBook({
 }: OpenBookProps) {
   return (
     <article ref={khungRef} className="vua-viet" aria-label="Một trang trong sách">
-      <div className={dangDoi ? "sach-mo dang-doi" : "sach-mo"}>
+      {/* sach-mo--luot: khung luot chua doc, trang trai co them nhan va dong dem (bo cuc rieng trong app.css). */}
+      <div className={["sach-mo", nhan ? "sach-mo--luot" : "", dangDoi ? "dang-doi" : ""].filter(Boolean).join(" ")}>
         <Link className="sach-mo__lien" href={readHref}>
           <span className="sr-only">{`Đọc ${title} ${locked ? "từ" : "tại"} trang ${position}`}</span>
         </Link>

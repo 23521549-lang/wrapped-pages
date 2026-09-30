@@ -88,6 +88,9 @@ describe("OpenBook", () => {
     expect(rong).toContain('<p class="dau-hieu vua-viet__nhan"><span class="dh"><span class="cham cham--rong" aria-hidden="true"></span>Linh chưa đọc</span></p>');
     expect(rong).not.toContain("vua-viet__dem");
     expect(mo()).not.toContain("vua-viet__nhan");
+    // Co nhan thi khung doi sang bo cuc luot chua doc (tranh dan co lai vua cho con trong); khong co thi nhu cu.
+    expect(rong).toContain('<div class="sach-mo sach-mo--luot">');
+    expect(mo()).toContain('<div class="sach-mo">');
   });
 
   it("khung luan phien: chu trang phai thay duoc (dang go), lop dang-doi, va nut tam dung theo kieu", () => {

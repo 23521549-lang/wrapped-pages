@@ -154,6 +154,19 @@ describe("KhungLuanPhien: CSS", () => {
     for (const d of ["--dur-luan-phien: 15000ms;", "--dur-doi-luot: 240ms;"]) expect(TOKENS).toContain(d);
   });
 
+  it("khung luot chua doc (man rong): tranh dan nam trong dong giua cua luoi va co lai vua cho con trong, khung giu 4:3", () => {
+    const rong = CSS.slice(CSS.indexOf("@media (min-width: 641px){\n  .sach-mo--luot"));
+    expect(rong.length).toBeGreaterThan(0);
+    const khoi = rong.slice(0, rong.indexOf("\n}"));
+    // Cot va dong co dinh (minmax(0, 1fr)): max-width 100% cua tranh moi tinh theo be rong trang, khong theo chinh tranh.
+    expect(khoi).toContain(".sach-mo--luot .sach-mo__to--trai{ grid-template-columns: minmax(0, 1fr); }");
+    expect(khoi).toContain(".sach-mo--luot .sach-mo__to--trai .tranh-dan{ position: relative; left: auto; right: auto; top: auto; transform: none; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; }");
+    expect(khoi).toContain(".sach-mo--luot .tranh-dan__lien{ height: 100%; max-width: 100%; aspect-ratio: 8 / 5; display: grid; align-content: center; }");
+    // Khung dung 4:3: kich thuoc tu nhien cua tranh khong duoc keo khung cao them (luot ten dai, luot ten ngan cung cao).
+    expect(khoi).toContain(".sach-mo--luot{ min-height: 0; }");
+    expect(CSS).not.toMatch(/\.sach-mo--luot\{[^}]*aspect-ratio/);
+  });
+
   it("cham rong nam SAU luat .cham chung: cung do dam, luat sau thang, khong thi cham rong bi to dac", () => {
     const chung = CSS.indexOf(".cham{");
     const rong = CSS.indexOf(".cham--rong{ background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-mark); }");
