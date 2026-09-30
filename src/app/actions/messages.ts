@@ -24,3 +24,9 @@ export const CHUA_THA_DUOC = "Chưa lưu được tâm trạng. Thử lại nhé
 
 /** Cau nhac khi dang luot sach viet cung chua co ten (5c muc H2): action va hop Dang trang dung chung. */
 export const CAN_TEN_LUOT = "Đặt tên cho lượt này rồi hãy đăng nhé.";
+
+/** Kho cam xuc (5d): chua chon cam xuc nao, hay tha lai trong 10 giay; component va action dung chung. */
+export const CHON_CAM_XUC = "Chọn một cảm xúc trong kho nhé.";
+export const CHO_THA_TIEP = "Chíp vừa chạy đi, vài giây nữa thả tiếp nhé.";
+/** Action tha cam xuc nem loi (mat mang): kho hien cau nay, giu nguyen lua chon. */
+export const CHUA_THA_CAM_XUC = "Chưa gửi được cảm xúc. Thử lại nhé.";
