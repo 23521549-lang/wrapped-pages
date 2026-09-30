@@ -310,6 +310,12 @@ describe("thu.css", () => {
     expect(CSS).toMatch(/\.ke-thu\{[^}]*min-height: 44px/);
   });
 
+  it("dong nhac thu o Ke sach xuong dong duoc, khong giu nowrap cua .dh (font Linux rong hon, tran o 320px)", () => {
+    expect(CSS).toMatch(/\.ke-thu\{[^}]*white-space: normal/);
+    expect(CSS).toMatch(/\.ke-thu\{[^}]*max-width: 100%/);
+    expect(CSS).toMatch(/\.ke-thu\{[^}]*overflow-wrap: anywhere/);
+  });
+
   it("mau va lop xep chong di qua token, khong ma mau viet tay", () => {
     expect(CSS).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(CSS).not.toMatch(/oklch\(/);

@@ -79,7 +79,10 @@
 }
 
 /* ---------- Ke sach: dong nhac thu nho duoi tieu de, cung kieu dau "Trang mới" ---------- */
-.ke-thu{ display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; margin-top: .1rem; border-radius: var(--radius-nut); font-size: var(--text-sm); }
+/* .dh giu chu tren mot dong (nowrap); cau nhac thu dai hon dau "Trang mới" nen phai xuong dong duoc: font tren Linux rong
+   hon Windows, o 320px cau "Tháng Tám đã khép, viết thư cho ..." vuot khoi man hinh va keo ca khoi tieu de tran theo. */
+.ke-thu{ display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; min-height: 44px; margin-top: .1rem; white-space: normal; overflow-wrap: anywhere;
+  border-radius: var(--radius-nut); font-size: var(--text-sm); }
 .ke-thu svg{ width: 15px; height: 11px; flex: none; }
 
 /* ---------- La thu troi o goc tren ben phai (duoi thanh dieu huong) ---------- */
