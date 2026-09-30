@@ -44,6 +44,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   try {
@@ -196,6 +197,27 @@ describe("LaThuBay", () => {
     expect(document.querySelector("[aria-live]")?.textContent).toBe("");
   });
 
+  it("la thu nam duoi thanh dieu huong that: do chieu cao thanh (hai, ba hang o man hep) thay vi doan", async () => {
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(private readonly goi: () => void) {}
+      observe() {
+        this.goi();
+      }
+      disconnect() {}
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "NAV" ? 141 : 0;
+    });
+    render(
+      <>
+        <nav className="nav" aria-label="Điều hướng chính" />
+        <LaThuBay tenKia="Linh" tenMinh="Mạnh" dau={{ id: "t1", thang: "2026-09" }} />
+      </>,
+    );
+    await doi();
+    expect((document.querySelector(".thu-bay") as HTMLElement).style.getPropertyValue("--nav-that")).toBe("141px");
+  });
+
   it("hoi lai moi 20 giay khi tab dang duoc xem; tab an thi khong hoi; thu vua mo o noi khac thi an ngay", async () => {
     vi.useFakeTimers();
     actionThuChuaMo.mockResolvedValue({ id: "t2", thang: "2026-08" });
@@ -226,6 +248,8 @@ describe("LaThuBay", () => {
     } as unknown as HTMLElement["animate"];
     SVGElement.prototype.animate = HTMLElement.prototype.animate as unknown as SVGElement["animate"];
     vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q }));
+    // La nay da toi tren trinh duyet nay: khong co chim bay (hoat canh cua chim khong phai viec cua bai nay).
+    localStorage.setItem("mqce-thu-da-toi", JSON.stringify(["t1"]));
     try {
       actionMoThu.mockReturnValue(new Promise(() => {}));
       render(<LaThuBay tenKia="Linh" tenMinh="Mạnh" dau={{ id: "t1", thang: "2026-09" }} />);
@@ -256,6 +280,16 @@ describe("LaThuBay", () => {
     expect(screen.queryByRole("button", { name: /Bấm để đọc/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Để sau" }));
     expect(document.querySelector("dialog.thu-hop")).toBeNull();
+  });
+
+  it("dong cua so thu khi la thu troi da di (thu da doc): focus ve vung noi dung chinh, khong roi ve body", async () => {
+    actionMoThu.mockResolvedValue({ thu: { thang: "2026-09", noiDung: "Chào", gio: "hôm nay, 22:40", minhGui: true } });
+    render(<main><LaThuBay tenKia="Linh" tenMinh="Mạnh" dau={{ id: "t1", thang: "2026-09" }} /></main>);
+    fireEvent.click(screen.getByRole("button", { name: /Bấm để đọc/ }));
+    await doi();
+    expect(screen.queryByRole("button", { name: /Bấm để đọc/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(document.activeElement?.tagName).toBe("MAIN");
   });
 });
 

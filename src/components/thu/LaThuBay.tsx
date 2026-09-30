@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { actionThuChuaMo } from "@/app/actions/thu";
+import { focusVeTrang } from "@/components/focus-ve-trang";
 import { msTuCss } from "@/components/reader/Flipbook";
 import { phanThang, tenThang } from "@/lib/tam-trang/lich";
 import { chimMangToi, PHONG_SVG } from "./chim";
@@ -106,6 +107,17 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
     return () => cancelAnimationFrame(k);
   }, [id, thangThu]);
 
+  // La thu nam ngay duoi thanh dieu huong, bao nhieu hang cung vay: thanh xuong hai, ba hang o man hep (hay khi phong to
+  // chu), nen do chieu cao that thay vi doan. Chua do duoc thi CSS dung token --nav-cao / --nav-cao-hep.
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>("nav.nav");
+    const nut = nutRef.current;
+    if (id === null || !nav || !nut || typeof ResizeObserver === "undefined") return;
+    const theoDoi = new ResizeObserver(() => nut.style.setProperty("--nav-that", `${nav.offsetHeight}px`));
+    theoDoi.observe(nav);
+    return () => theoDoi.disconnect();
+  }, [id]);
+
   // Khong de len khung YouTube: dang giao voi mot iframe hay khung phat chung thi tam an.
   useEffect(() => {
     if (id === null) return;
@@ -170,7 +182,9 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
           tenMinh={tenMinh}
           dong={() => {
             setMo(null);
-            nutRef.current?.focus();
+            // Thu da doc thi la thu troi da di: focus ve vung noi dung chinh thay vi roi ve body.
+            if (nutRef.current) nutRef.current.focus();
+            else focusVeTrang();
           }}
         />
       )}

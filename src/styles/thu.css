@@ -86,7 +86,7 @@
 /* Khong khung the: mot phong bi giay that, len xuong, lac va nghieng nhe theo ba nhip lech nhau (3,8s, 5,3s, 4,7s) nen
    khong bao gio lap y het; bong duoi co lai khi phong bi len cao. Re chuot hay focus thi dung de de bam. Dang giao voi
    mot khung YouTube thi tam an (LaThuBay), khong de len video. */
-.thu-bay{ position: fixed; top: calc(var(--nav-cao) + var(--space-sm)); right: var(--space-md); z-index: calc(var(--z-sticky) + 20);
+.thu-bay{ position: fixed; top: calc(var(--nav-that, var(--nav-cao)) + var(--space-sm)); right: var(--space-md); z-index: calc(var(--z-sticky) + 20);
   display: grid; justify-items: center; width: 6.5rem; min-height: 44px; padding: var(--space-xs) 0 0; border: 0; border-radius: var(--radius-sm); background: none;
   color: var(--blue-ink); font: inherit; cursor: pointer; }
 .thu-bay--cho, .thu-bay--tranh{ visibility: hidden; }
@@ -102,7 +102,7 @@
 .thu-bay:focus-visible .thu-bay__troi, .thu-bay:focus-visible .thu-bay__lac, .thu-bay:focus-visible .thu-bay__lat, .thu-bay:focus-visible .thu-bay__bong{ animation-play-state: paused; }
 /* Man hep: thanh dieu huong hai hang, la thu nam duoi ca hai hang (khong de len muc nao) va nho lai mot chut. */
 @media (max-width: 700px){
-  .thu-bay{ top: calc(var(--nav-cao-hep) + var(--space-xs)); right: var(--space-sm); width: 5.25rem; }
+  .thu-bay{ top: calc(var(--nav-that, var(--nav-cao-hep)) + var(--space-xs)); right: var(--space-sm); width: 5.25rem; }
   .thu-bay .phong{ width: 3.6rem; }
 }
 @keyframes thu-len-xuong{ 0%, 100%{ transform: translateY(0); } 50%{ transform: translateY(-9px); } }
