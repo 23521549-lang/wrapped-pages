@@ -48,3 +48,12 @@ export function e2eUrlsTuNoiDung(raw: string): { appUrl: string; e2eUrl: string 
   const e2eUrl = url.toString();
   return { appUrl, e2eUrl };
 }
+
+/**
+ * Chip biet noi (5e) trong e2e: tien trinh webServer (next start) ke thua process.env cua Playwright, va tep nay duoc
+ * playwright.config.ts nap truoc khi dung webServer, nen dat o day dia chi may chu Groq gia (bai kiem tu dung o cong nay)
+ * va mot chia khoa gia. e2e khong bao gio goi Groq that, ke ca khi .env.local co chia khoa (Next khong ghi de bien da co).
+ */
+export const GROQ_GIA_CONG = 3199;
+process.env.GROQ_BASE_URL = `http://127.0.0.1:${GROQ_GIA_CONG}/openai/v1`;
+process.env.GROQ_API_KEY = "e2e-khoa-gia";

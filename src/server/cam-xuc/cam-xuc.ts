@@ -71,7 +71,8 @@ export async function daXemCamXuc(db: AnyDb, viewerId: string, id: string, now: 
       .where(and(
         ne(camXuc.tuId, viewerId),
         isNull(camXuc.daXemLuc),
-        sql`(${camXuc.luc}, ${camXuc.id}) <= (${cx.luc}, ${id}::uuid)`,
+        // Moc truyen dang chuoi ISO: driver postgres-js khong nhan Date lam tham so trong sql`` thuan (PGlite thi nhan).
+        sql`(${camXuc.luc}, ${camXuc.id}) <= (${cx.luc.toISOString()}::timestamptz, ${id}::uuid)`,
       ));
     return true;
   });

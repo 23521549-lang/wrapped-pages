@@ -587,3 +587,51 @@ export async function ghiThu(ai: string, thang: string, noiDung: string): Promis
     await sql.end();
   }
 }
+
+/**
+ * Ghi thang cac cam xuc (5d) nguoi co biet danh ai da tha, lui ve qua khu (giay truoc bay gio), kem dong Hoat dong
+ * tha-cam-xuc nhu thaCamXuc, de dung canh "nguoi kia vang lau, quay lai" ma khong phai cho moc 10 giay giua hai lan tha.
+ * Cung rao mqce_e2e voi datNhac.
+ */
+export async function ghiCamXuc(ai: string, ...cac: { loai: string; giayTruoc: number }[]): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    await sql.begin(async (tx) => {
+      const [nguoi] = await tx<{ id: string }[]>`select id from accounts where nickname = ${ai}`;
+      if (!nguoi) throw new Error("ghiCamXuc: khong tim thay nguoi tha");
+      for (const { loai, giayTruoc } of cac) {
+        const luc = new Date(Date.now() - giayTruoc * 1000);
+        await tx`insert into cam_xuc (tu_id, loai, luc) values (${nguoi.id}, ${loai}, ${luc})`;
+        await tx`insert into activity (kind, actor_id, detail, shared, at) values ('tha-cam-xuc', ${nguoi.id}, ${tx.json({ cam: loai })}, true, ${luc})`;
+      }
+    });
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("ghiCamXuc:"))) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Doi moc "lan cuoi thay web" cua Chip (5e) cho nguoi co biet danh ai, de dung canh vang lau hay qua ngay ma khong phai
+ * cho that. Cung rao mqce_e2e voi datNhac.
+ */
+export async function datLanCuoiThay(ai: string, luc: Date): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const [nguoi] = await sql<{ id: string }[]>`select id from accounts where nickname = ${ai}`;
+    if (!nguoi) throw new Error("datLanCuoiThay: khong tim thay nguoi");
+    await sql`insert into chip_trang_thai (account_id, lan_cuoi_thay) values (${nguoi.id}, ${luc})
+      on conflict (account_id) do update set lan_cuoi_thay = ${luc}`;
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("datLanCuoiThay:"))) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}

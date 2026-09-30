@@ -11,6 +11,9 @@ import { XacNhan } from "@/components/viet-cung/XacNhan";
 export function CaiDatChip({ an, tuNoi, tenKia }: { an: boolean; tuNoi: boolean; tenKia: string }) {
   const [pending, batDau] = useTransition();
   const [daXoa, setDaXoa] = useState(false);
+  // O danh dau doi ngay khi bam (khong cho trang lam moi); may chu luu trong nen.
+  const [hien, setHien] = useState(!an);
+  const [noi, setNoi] = useState(tuNoi);
   return (
     <section className="muc" aria-labelledby="cai-dat-chip">
       <h2 className="d muc__t" id="cai-dat-chip">Chíp</h2>
@@ -21,18 +24,26 @@ export function CaiDatChip({ an, tuNoi, tenKia }: { an: boolean; tuNoi: boolean;
       <label className="chon-chip">
         <input
           type="checkbox"
-          checked={!an}
+          checked={hien}
           disabled={pending}
-          onChange={(e) => batDau(() => actionCaiDatChip({ an: !e.target.checked }))}
+          onChange={(e) => {
+            const bat = e.target.checked;
+            setHien(bat);
+            batDau(() => actionCaiDatChip({ an: !bat }));
+          }}
         />
         Hiện Chíp ở các trang
       </label>
       <label className="chon-chip">
         <input
           type="checkbox"
-          checked={tuNoi}
+          checked={noi}
           disabled={pending}
-          onChange={(e) => batDau(() => actionCaiDatChip({ tuNoi: e.target.checked }))}
+          onChange={(e) => {
+            const bat = e.target.checked;
+            setNoi(bat);
+            batDau(() => actionCaiDatChip({ tuNoi: bat }));
+          }}
         />
         Chíp tự chào và báo chuyện mới
       </label>
