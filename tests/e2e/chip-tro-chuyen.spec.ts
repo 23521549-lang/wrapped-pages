@@ -146,5 +146,5 @@ test("to tro chuyen va kho mo: khong tran ngang, vung bam 44px o be rong cam ung
     expect(await vungBamNho(a), `to ${w}`).toEqual([]);
   }
   await a.goto("/cai-dat");
-  expect(await vungBamNho(a, [{ phanTu: ".chon-chip input", vungBam: "label.chon-chip" }]), "cai dat").toEqual([]);
+  expect(await vungBamNho(a), "cai dat").toEqual([]);
 });
