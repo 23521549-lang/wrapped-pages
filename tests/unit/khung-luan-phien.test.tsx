@@ -154,6 +154,13 @@ describe("KhungLuanPhien: CSS", () => {
     for (const d of ["--dur-luan-phien: 15000ms;", "--dur-doi-luot: 240ms;"]) expect(TOKENS).toContain(d);
   });
 
+  it("cham rong nam SAU luat .cham chung: cung do dam, luat sau thang, khong thi cham rong bi to dac", () => {
+    const chung = CSS.indexOf(".cham{");
+    const rong = CSS.indexOf(".cham--rong{ background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-mark); }");
+    expect(chung).toBeGreaterThan(-1);
+    expect(rong).toBeGreaterThan(chung);
+  });
+
   it("nut tam dung cua khung: giam an khi co chuyen dong; ca hai hien khi giam chuyen dong, sau luat giau .bia-dung", () => {
     expect(CSS).toContain(".bia-dung--giam{ display: none; }");
     const giau = CSS.indexOf("@media (prefers-reduced-motion: reduce){ .bia-dung{ display: none; } }");

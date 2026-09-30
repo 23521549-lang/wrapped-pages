@@ -99,11 +99,9 @@
 .vua-viet__ai b{ color: var(--color-ink); font-weight: 600; }
 .vua-viet__ten{ font-size: var(--text-md); line-height: 1.2; margin-top: var(--space-xs); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .vua-viet__phu{ font-size: var(--text-sm); color: var(--color-ink-3); margin-top: .2rem; }
-/* Khung luan phien (dot nam): nhan trang thai cua luot va dong dem. Cham rong: luot cua minh nguoi kia chua doc, chi la
-   thong tin, khong phai viec cua minh, nen khong to dac nhu "Bạn chưa đọc". */
+/* Khung luan phien (dot nam): nhan trang thai cua luot va dong dem (cham rong o ngay sau luat .cham chung). */
 .vua-viet__nhan{ margin-top: var(--space-xs); }
 .vua-viet__dem{ font-size: var(--text-xs); color: var(--color-ink-3); margin-top: .35rem; font-variant-numeric: tabular-nums; }
-.cham--rong{ background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-mark); }
 /* Lan doi luot: chu trang trai, tranh dan va trang phai mo di roi hien lai, chi opacity; nut chinh dung yen. */
 .sach-mo__to--trai > div:first-child, .sach-mo__to--phai, .sach-mo__to--trai .tranh-dan{ transition: opacity var(--dur-doi-luot) var(--ease-out); }
 .dang-doi .sach-mo__to--trai > div:first-child, .dang-doi .sach-mo__to--phai, .dang-doi .sach-mo__to--trai .tranh-dan{ opacity: 0; }
@@ -284,6 +282,9 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .dh svg{ width: 12px; height: 12px; flex: none; }
 .dh--moi{ color: var(--blue-ink); font-weight: 600; }
 .cham{ width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--blue-mark); flex: none; }
+/* Cham rong (khung luan phien, dot nam): luot cua minh nguoi kia chua doc, chi la thong tin, khong phai viec cua minh, nen
+   khong to dac nhu "Bạn chưa đọc". Phai nam SAU .cham: cung do dam, luat sau thang. */
+.cham--rong{ background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-mark); }
 
 /* ke trong: loi moi tao cuon dau tien, dung tren mot mep ke */
 .ke-trong{ display: grid; justify-items: start; align-content: start; gap: var(--space-sm); min-width: 0; }
