@@ -1,4 +1,5 @@
-import type { NgayLich } from "./lich";
+import { thangVuaKhep } from "@/lib/thu";
+import { phanThang, thangKhoa, type NgayLich } from "./lich";
 import { TROI, WEATHERS, type Weather } from "./troi";
 
 /*
@@ -121,4 +122,16 @@ export function tongKetThang(lich: Readonly<Record<number, NgayLich>>, tenKia: s
     noiBat: { kia: kia.hoa[0]?.weather ?? null, minh: minh.hoa[0]?.weather ?? null },
     danhGia, phu,
   };
+}
+
+/**
+ * Cac thang co o tong ket tren Lich hoa: thang da khep co tam trang hay thu (khoa YYYY-MM), cong thang vua khep (dong nhac
+ * o Ke sach dan toi o cua no de viet thu). Moi nhat truoc, khong trung; khoa sai dang hay thang chua khep thi bo.
+ */
+export function thangCoTongKet(khoa: Iterable<string>, now: Date): string[] {
+  const vuaKhep = thangKhoa(thangVuaKhep(now));
+  const ra = new Set([vuaKhep]);
+  for (const k of khoa) if (phanThang(k) !== null && k <= vuaKhep) ra.add(k);
+  // oxlint-disable-next-line unicorn/no-array-sort -- mang vua tao; toSorted can lib ES2023, du an dang o ES2022.
+  return [...ra].sort((x, y) => (x < y ? 1 : x > y ? -1 : 0));
 }

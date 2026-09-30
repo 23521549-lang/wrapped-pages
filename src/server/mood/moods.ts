@@ -2,7 +2,7 @@ import { and, desc, eq, gt, gte, lt, sql } from "drizzle-orm";
 import { accounts, moods } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { recordActivity } from "@/server/feed/record";
-import { khoangThang, MOOD_TTL_MS, type DongLich, type Thang } from "@/lib/tam-trang/lich";
+import { khoangThang, MOOD_TTL_MS, thangCua, type DongLich, type Thang } from "@/lib/tam-trang/lich";
 import type { Weather } from "@/lib/tam-trang/troi";
 
 /*
@@ -100,11 +100,31 @@ export async function currentMoods(db: AnyDb, now: Date = new Date()): Promise<M
  */
 export async function moodCalendar(db: AnyDb, t: Thang): Promise<DongLich[]> {
   const { from, to } = khoangThang(t);
+  return lichTrong(db, from, to);
+}
+
+/** Cac dong lich (cung luat moodCalendar) co set_at trong [from, to); from null la tu dau. */
+function lichTrong(db: AnyDb, from: Date | null, to: Date): Promise<DongLich[]> {
   return db
     .selectDistinctOn([moods.accountId, NGAY_VN], {
       id: moods.id, accountId: moods.accountId, weather: moods.weather, note: moods.note, setAt: moods.setAt, ngay: NGAY_VN,
     })
     .from(moods)
-    .where(and(gte(moods.setAt, from), lt(moods.setAt, to), eq(moods.withdrawn, false)))
+    .where(and(from === null ? undefined : gte(moods.setAt, from), lt(moods.setAt, to), eq(moods.withdrawn, false)))
     .orderBy(moods.accountId, NGAY_VN, desc(moods.setAt), desc(moods.id));
+}
+
+/**
+ * Lich hoa cua moi thang da khep (truoc thang cua now, gio Viet Nam), gom theo khoa thang YYYY-MM, cho tong ket cac thang
+ * (5b). Mot truy van: hai nguoi, moi ngay toi da mot dong moi nguoi, nen mot nam chua toi 800 dong.
+ */
+export async function lichCacThang(db: AnyDb, now: Date): Promise<Map<string, DongLich[]>> {
+  const ra = new Map<string, DongLich[]>();
+  for (const r of await lichTrong(db, null, khoangThang(thangCua(now)).from)) {
+    const k = r.ngay.slice(0, 7);
+    const ds = ra.get(k);
+    if (ds) ds.push(r);
+    else ra.set(k, [r]);
+  }
+  return ra;
 }

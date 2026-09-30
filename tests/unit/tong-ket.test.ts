@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { NHOM_TROI, tongKetThang } from "@/lib/tam-trang/tong-ket";
+import { NHOM_TROI, thangCoTongKet, tongKetThang } from "@/lib/tam-trang/tong-ket";
 import type { NgayLich } from "@/lib/tam-trang/lich";
 import { WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 
@@ -30,6 +30,15 @@ function deu(tu: number, den: number, w: Weather): Troi {
 describe("nhom troi", () => {
   it("nang: nang am, troi trong, cau vong, gio thoang; diu: may nhe, suong mu; mua: mua phun, mua rao, giong", () => {
     expect(WEATHERS.map((w) => NHOM_TROI[w])).toEqual(["nang", "nang", "diu", "nang", "mua", "mua", "mua", "diu", "nang"]);
+  });
+});
+
+describe("thangCoTongKet", () => {
+  it("thang da khep co tam trang hay thu, cong thang vua khep; moi nhat truoc, khong trung, bo thang chua khep", () => {
+    const now = new Date("2026-10-02T02:00:00.000Z");
+    expect(thangCoTongKet(["2026-07", "2026-09", "2026-07", "2026-10"], now)).toEqual(["2026-09", "2026-07"]);
+    expect(thangCoTongKet([], now)).toEqual(["2026-09"]);
+    expect(thangCoTongKet(["2025-12", "khong-phai"], new Date("2026-01-05T02:00:00.000Z"))).toEqual(["2025-12"]);
   });
 });
 

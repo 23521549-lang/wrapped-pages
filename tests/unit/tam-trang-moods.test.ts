@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { moods } from "@/server/db/schema";
-import { currentMoods, moodCalendar, setMood, withdrawMood } from "@/server/mood/moods";
+import { currentMoods, lichCacThang, moodCalendar, setMood, withdrawMood } from "@/server/mood/moods";
 import { chiaTamTrang, MOOD_TTL_MS } from "@/lib/tam-trang/lich";
 import { seedHai } from "../helpers/seed";
 
@@ -171,6 +171,20 @@ describe("lich hoa", () => {
     expect((await moodCalendar(db, { y: 2026, m: 9 })).map((d) => d.ngay).sort()).toEqual(["2026-09-01", "2026-09-30"]);
     expect((await moodCalendar(db, { y: 2026, m: 8 })).map((d) => d.ngay)).toEqual(["2026-08-31"]);
     expect((await moodCalendar(db, { y: 2026, m: 10 })).map((d) => d.ngay)).toEqual(["2026-10-01"]);
+  });
+
+  it("lichCacThang (5b): moi thang da khep theo gio Viet Nam, cung luat voi moodCalendar; thang nay chua co", async () => {
+    const { db, seat1, seat2 } = await seedHai();
+    await setMood(db, seat1.id, "giong", null, new Date("2026-08-31T16:30:00.000Z"));
+    await setMood(db, seat2.id, "nang-am", null, new Date("2026-09-12T02:00:00.000Z"));
+    await setMood(db, seat1.id, "may-nhe", null, new Date("2026-09-30T16:59:00.000Z"));
+    await setMood(db, seat1.id, "suong-mu", null, new Date("2026-09-30T17:05:00.000Z"));
+    await withdrawMood(db, seat1.id, new Date("2026-09-30T17:10:00.000Z"));
+    await setMood(db, seat1.id, "mua-rao", null, new Date("2026-10-01T02:00:00.000Z"));
+    const lich = await lichCacThang(db, new Date("2026-10-02T02:00:00.000Z"));
+    expect([...lich.keys()].sort()).toEqual(["2026-08", "2026-09"]);
+    expect(lich.get("2026-09")).toEqual(await moodCalendar(db, { y: 2026, m: 9 }));
+    expect(lich.get("2026-08")?.map((d) => [d.ngay, d.weather])).toEqual([["2026-08-31", "giong"]]);
   });
 
   it("thang khong ai tha thi rong", async () => {
