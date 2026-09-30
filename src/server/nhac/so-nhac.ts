@@ -63,10 +63,8 @@ export async function baiCuaThang(db: AnyDb, viewerId: string, t: Thang): Promis
   const { from, to } = khoangThang(t);
   return readSnapshot(db, async (tx) => {
     const tho = await baiTrong(tx, viewerId, from, to);
-    const thuTu = new Map<string, number>();
-    for (const bookId of new Set(tho.map((b) => b.bookId))) {
-      for (const r of await roundsOfBook(tx, bookId)) thuTu.set(r.id, r.ordinal);
-    }
+    const cacLuot = await Promise.all([...new Set(tho.map((b) => b.bookId))].map((bookId) => roundsOfBook(tx, bookId)));
+    const thuTu = new Map(cacLuot.flat().map((r) => [r.id, r.ordinal]));
     const ra = (ds: Tho[]) => boTrung(ds).map((b): BaiSo => ({
       youtubeId: b.youtubeId, at: b.at, bookId: b.bookId, bookTitle: b.title,
       ordinal: b.roundId === null ? null : (thuTu.get(b.roundId) ?? null), rieng: b.mode === "rieng-tu",
