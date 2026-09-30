@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   createContext, use, useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type ReactNode,
 } from "react";
+import { focusVeTrang } from "@/components/focus-ve-trang";
 import { GIAM_CHUYEN_DONG, msTuCss } from "@/components/reader/Flipbook";
 import { baiKeTiep, type ViTri } from "@/lib/so-nhac";
 import { useMayPhatDanhSach, type TrangThaiMay } from "./useMayPhatDanhSach";
@@ -99,6 +100,14 @@ function BaiKe() {
 function DauX() {
   return <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
 }
+
+/** Nut cua cua so nho lam cua so bien mat (Tat, hay Bai ke tiep khi da het): focus ve vung noi dung chinh, khong roi ve body. */
+const giuFocus = (lam: () => void) => () => {
+  lam();
+  requestAnimationFrame(() => {
+    if (document.activeElement === document.body) focusVeTrang();
+  });
+};
 
 /** Hai khung chu nhat (toa do khung nhin) co giao nhau voi khung nhin khong: bay tu ngoai man hinh vao thi bo. */
 const trongKhungNhin = (r: DOMRect) => r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
@@ -299,8 +308,8 @@ export function MayPhatChung({ children }: { children: ReactNode }) {
                 <button type="button" className="mph__i" aria-label={chay ? "Tạm dừng" : "Phát"} onClick={chay ? may.tam : may.choi}>
                   {chay ? <HaiVach /> : <TamGiac />}
                 </button>
-                <button type="button" className="mph__i" aria-label="Bài kế tiếp" onClick={sangBaiKe}><BaiKe /></button>
-                <button type="button" className="mph__i" aria-label="Tắt nhạc" onClick={tatHan}><DauX /></button>
+                <button type="button" className="mph__i" aria-label="Bài kế tiếp" onClick={giuFocus(sangBaiKe)}><BaiKe /></button>
+                <button type="button" className="mph__i" aria-label="Tắt nhạc" onClick={giuFocus(tatHan)}><DauX /></button>
               </div>
             </div>
           )}

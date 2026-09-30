@@ -160,20 +160,28 @@ describe("trinh phat chung", () => {
     expect(document.body.classList.contains("co-mph")).toBe(false);
   });
 
-  it("cua so nho: het hang doi hay bam Tat thi go han trinh phat va an khung", async () => {
-    const { rerender } = render(<MayPhatChung><Trang chu="so-2026-09" /></MayPhatChung>);
+  it("cua so nho: het hang doi hay bam Tat thi go han trinh phat va an khung; focus ve vung noi dung chinh", async () => {
+    const { rerender } = render(<MayPhatChung><main><Trang chu="so-2026-09" /></main></MayPhatChung>);
     fireEvent.click(screen.getByRole("button", { name: "Phát sổ" }));
     await doi();
     await san();
     await bao(YT_STATE.PLAYING);
-    rerender(<MayPhatChung><Trang chu={null} /></MayPhatChung>);
+    rerender(<MayPhatChung><main><Trang chu={null} /></main></MayPhatChung>);
     await doi();
-    fireEvent.click(screen.getByRole("button", { name: "Tắt nhạc" }));
+    const tat = screen.getByRole("button", { name: "Tắt nhạc" });
+    tat.focus();
+    fireEvent.click(tat);
     await doi();
     expect(may().stopVideo).toHaveBeenCalled();
     expect(may().destroy).toHaveBeenCalled();
     expect(khung().hidden).toBe(true);
     expect(document.body.classList.contains("co-mph")).toBe(false);
+    await act(async () => {
+      await new Promise<void>((xong) => {
+        requestAnimationFrame(() => xong());
+      });
+    });
+    expect(document.activeElement?.tagName).toBe("MAIN");
   });
 
   it("chi nap san (chua phat) ma roi trang: go trinh phat, khong de trinh phat an", async () => {
