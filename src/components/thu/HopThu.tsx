@@ -47,7 +47,10 @@ export function HopThu({ thang, tenKia, tenMinh, dong }: { thang: string; tenKia
     }, () => {
       if (!huy) setLoi(MAT_MANG);
     });
+    // Mot hoat canh co dinh tu luc mo, khong phu thuoc may chu tra loi nhanh hay cham: phong bi bay vao, nap mo, to thu
+    // troi len (an cho toi luc do). Noi dung toi muon thi hien trong chinh to thu da troi len.
     const phong = phongRef.current;
+    const to = toRef.current;
     if (phong && typeof phong.animate === "function" && !giamChuyenDong()) {
       phong.animate([{ opacity: 0, transform: "translateY(-60px) rotate(-8deg) scale(.7)" }, { opacity: 1, transform: "rotate(0) scale(1)" }], {
         duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)",
@@ -56,6 +59,10 @@ export function HopThu({ thang, tenKia, tenMinh, dong }: { thang: string; tenKia
         duration: 300, delay: 480, fill: "forwards", easing: "ease-in-out",
       });
       phong.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, delay: 820, fill: "forwards" });
+      to?.animate([
+        { opacity: 0, transform: "translateY(90px) scale(.55)", clipPath: "inset(0 0 70% 0)" },
+        { opacity: 1, transform: "translateY(0) scale(1)", clipPath: "inset(0 0 0 0)" },
+      ], { duration: 620, delay: 720, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" });
     } else if (phong) {
       phong.hidden = true;
     }
@@ -64,16 +71,6 @@ export function HopThu({ thang, tenKia, tenMinh, dong }: { thang: string; tenKia
       hop.removeEventListener("click", bamNen);
     };
   }, [thang]);
-
-  // To thu troi len tu phong bi khi noi dung vua toi (sau phong bi mo nap).
-  useEffect(() => {
-    const to = toRef.current;
-    if (!thu || !to || typeof to.animate !== "function" || giamChuyenDong()) return;
-    to.animate([
-      { opacity: 0, transform: "translateY(90px) scale(.55)", clipPath: "inset(0 0 70% 0)" },
-      { opacity: 1, transform: "translateY(0) scale(1)", clipPath: "inset(0 0 0 0)" },
-    ], { duration: 620, delay: 720, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" });
-  }, [thu]);
 
   const dongHop = () => {
     hopRef.current?.close();

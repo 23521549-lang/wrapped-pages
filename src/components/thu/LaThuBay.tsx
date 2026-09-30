@@ -40,7 +40,8 @@ const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right &&
  */
 export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: string; dau: { id: string; thang: string } | null }) {
   const [thu, setThu] = useState(dau);
-  const [cho, setCho] = useState(false);
+  /** La dang hien: la moi (chua toi tren trinh duyet nay) an cho toi khi chim tha xuong, ke ca o lan ve dau tu may chu. */
+  const [daHien, setDaHien] = useState<string | null>(null);
   const [bao, setBao] = useState("");
   const [mo, setMo] = useState<string | null>(null);
   const [tranh, setTranh] = useState(false);
@@ -81,13 +82,15 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
   const toi = useEffectEvent(async (id: string, thang: string) => {
     const t = phanThang(thang);
     const loi = `${tenKia} vừa gửi thư ${t === null ? "tháng" : tenThang(t)} cho bạn.`;
-    if (daToi(id)) return;
+    if (daToi(id)) {
+      setDaHien(id);
+      return;
+    }
     ghiDaToi(id);
-    setCho(true);
     try {
       if (troiRef.current) await chimMangToi(troiRef.current);
     } finally {
-      setCho(false);
+      setDaHien(id);
       setBao(loi);
       troiRef.current?.animate?.([{ transform: "translateY(-18px)", opacity: 0.6 }, { transform: "none", opacity: 1 }], {
         duration: 700, easing: "cubic-bezier(0.16, 1, 0.3, 1)",
@@ -132,7 +135,7 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
   }, [id]);
 
   const t = thangThu === null ? null : phanThang(thangThu);
-  const lop = ["thu-bay", cho ? "thu-bay--cho" : "", tranh ? "thu-bay--tranh" : ""].filter(Boolean).join(" ");
+  const lop = ["thu-bay", daHien === id ? "" : "thu-bay--cho", tranh ? "thu-bay--tranh" : ""].filter(Boolean).join(" ");
   return (
     <>
       {/* Gradient giay cua moi phong bi (la thu troi, chim dua thu, cua so doc thu): khai mot lan o day. */}

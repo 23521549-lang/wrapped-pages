@@ -176,6 +176,26 @@ describe("LaThuBay", () => {
     expect(screen.getByRole("button", { name: "Linh gửi bạn thư tháng Chín. Bấm để đọc" })).toBeTruthy();
   });
 
+  it("la moi an tu lan ve dau (ke ca tu may chu) toi khi chim tha xuong, bao mot lan; la da toi thi hien ngay, khong bao lai", async () => {
+    const khungHinh = () => act(async () => {
+      await new Promise<void>((xong) => {
+        requestAnimationFrame(() => xong());
+      });
+    });
+    const { unmount } = render(<LaThuBay tenKia="Linh" tenMinh="Mạnh" dau={{ id: "t1", thang: "2026-09" }} />);
+    const nut = () => document.querySelector(".thu-bay") as HTMLElement;
+    expect(nut().className).toBe("thu-bay thu-bay--cho");
+    await khungHinh();
+    expect(nut().className).toBe("thu-bay");
+    expect(document.querySelector("[aria-live]")?.textContent).toBe("Linh vừa gửi thư tháng Chín cho bạn.");
+    unmount();
+    render(<LaThuBay tenKia="Linh" tenMinh="Mạnh" dau={{ id: "t1", thang: "2026-09" }} />);
+    expect(nut().className).toBe("thu-bay thu-bay--cho");
+    await khungHinh();
+    expect(nut().className).toBe("thu-bay");
+    expect(document.querySelector("[aria-live]")?.textContent).toBe("");
+  });
+
   it("hoi lai moi 20 giay khi tab dang duoc xem; tab an thi khong hoi; thu vua mo o noi khac thi an ngay", async () => {
     vi.useFakeTimers();
     actionThuChuaMo.mockResolvedValue({ id: "t2", thang: "2026-08" });
@@ -195,6 +215,30 @@ describe("LaThuBay", () => {
       dispatchEvent(new CustomEvent(SU_KIEN_THU_DA_MO, { detail: "2026-08" }));
     });
     expect(screen.queryByRole("button", { name: /thư tháng Tám/ })).toBeNull();
+  });
+
+  it("mo cua so: hoat canh chay tu luc mo, khong cho may chu: phong bi bay vao, nap mo, to thu an toi 720ms roi troi len", async () => {
+    const goc = HTMLElement.prototype.animate;
+    const goi: { lop: string; tuyChon: KeyframeAnimationOptions }[] = [];
+    HTMLElement.prototype.animate = function (this: HTMLElement, _k: Keyframe[], t: KeyframeAnimationOptions) {
+      goi.push({ lop: this.getAttribute("class") ?? "", tuyChon: t });
+      return { finished: Promise.resolve() } as unknown as Animation;
+    } as unknown as HTMLElement["animate"];
+    SVGElement.prototype.animate = HTMLElement.prototype.animate as unknown as SVGElement["animate"];
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q }));
+    try {
+      actionMoThu.mockReturnValue(new Promise(() => {}));
+      render(<LaThuBay tenKia="Linh" tenMinh="Mạnh" dau={{ id: "t1", thang: "2026-09" }} />);
+      fireEvent.click(screen.getByRole("button", { name: /Bấm để đọc/ }));
+      await doi();
+      expect(document.querySelector(".thu-hop__cho")?.textContent).toBe("Đang mở thư");
+      expect(goi.filter((g) => g.lop === "thu-hop__phong")).toHaveLength(2);
+      expect(goi.filter((g) => g.lop === "phong__nap").map((g) => g.tuyChon.delay)).toEqual([480]);
+      expect(goi.filter((g) => g.lop === "thu-hop__to").map((g) => [g.tuyChon.delay, g.tuyChon.fill])).toEqual([[720, "backwards"]]);
+    } finally {
+      HTMLElement.prototype.animate = goc;
+      delete (SVGElement.prototype as { animate?: unknown }).animate;
+    }
   });
 
   it("bam: cua so doc thu mo, ghi da mo va hien thu; minh chua gui thi co to giay tra loi va nut De sau", async () => {
