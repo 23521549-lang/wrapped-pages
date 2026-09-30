@@ -30,6 +30,12 @@ export const COVER_LABEL = Object.fromEntries(COVERS.map((c) => [c, `Bìa ${COVE
 export const MODES = ["chia-se", "rieng-tu"] as const;
 export type BookMode = (typeof MODES)[number];
 
+/**
+ * Lua chon thu ba cua "Ai đọc được" o Sach moi va Sua sach (5c): "Viết cùng {tên}". Khong phai mot che do cua bang books:
+ * cuon van la "chia-se", kem loi moi nguoi kia viet cung (moi: true).
+ */
+export const VIET_CUNG = "viet-cung";
+
 export const TITLE_MAX = 60;
 
 /**
@@ -76,20 +82,29 @@ function parseFields(title: string, cover: unknown, coverMedia: string, music: s
   return { title: ten, cover, youtubeId: nhac.id, coverMediaId: coverMedia === "" ? null : coverMedia };
 }
 
+/**
+ * Lua chon "Ai đọc được" cua form: mot che do, hay "Viết cùng" (cuon chia se kem loi moi, moi: true; hai che do cu khong
+ * mang truong moi). null la khong hop le.
+ */
+function parseCheDo(raw: unknown): { mode: BookMode; moi?: true } | null {
+  if (raw === VIET_CUNG) return { mode: "chia-se", moi: true };
+  return isOneOf(MODES, raw) ? { mode: raw } : null;
+}
+
 /** Kiem form tao sach. Thong diep loi hien thang cho nguoi dung. */
 export function parseBookInput(fd: FormData): BookInput | { error: string } {
-  const mode = fd.get("mode");
-  if (!isOneOf(MODES, mode)) return { error: CHE_DO_SAI };
+  const cheDo = parseCheDo(fd.get("mode"));
+  if (cheDo === null) return { error: CHE_DO_SAI };
   const chung = parseFields(String(fd.get("title") ?? ""), fd.get("cover"), String(fd.get("coverMedia") ?? ""), String(fd.get("music") ?? ""));
-  return "error" in chung ? chung : { ...chung, mode };
+  return "error" in chung ? chung : { ...chung, ...cheDo };
 }
 
 /** Kiem form Sua sach: form nay khong gui bia hay nhac nua, va moi truong thua deu bi bo qua. */
 export function parseBookSettings(fd: FormData): BookSettings | { error: string } {
-  const mode = fd.get("mode");
-  if (!isOneOf(MODES, mode)) return { error: CHE_DO_SAI };
+  const cheDo = parseCheDo(fd.get("mode"));
+  if (cheDo === null) return { error: CHE_DO_SAI };
   const ten = parseTitle(String(fd.get("title") ?? ""));
-  return ten === null ? { error: TEN_SAI } : { title: ten, mode };
+  return ten === null ? { error: TEN_SAI } : { title: ten, ...cheDo };
 }
 
 /** Hai o ma nguoi viet chon cho luot sap dang. cover null la luot nay khong them o bia nao. */

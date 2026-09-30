@@ -25,6 +25,11 @@ describe("parseBookInput", () => {
       .toEqual({ error: "Tên sách phải từ 1 tới 60 ký tự." });
   });
 
+  it("lua chon Viet cung (5c): cuon chia se kem loi moi", () => {
+    expect(parseBookInput(form({ title: "Những bữa sáng", mode: "viet-cung", cover: "nui-xa" })))
+      .toEqual({ title: "Những bữa sáng", mode: "chia-se", moi: true, cover: "nui-xa", youtubeId: null, coverMediaId: null });
+  });
+
   it("che do va bia ngoai danh sach thi bao loi", () => {
     expect(parseBookInput(form({ title: "A", mode: "cong-khai", cover: "nui-xa" }))).toEqual({ error: "Chọn một chế độ cho cuốn sách." });
     expect(parseBookInput(form({ title: "A", mode: "chia-se", cover: "anh" }))).toEqual({ error: "Chọn một bìa cho cuốn sách." });
@@ -80,6 +85,10 @@ describe("parseBookSettings", () => {
   it("chi lay ten va che do, bo qua moi truong thua con sot lai tren form", () => {
     expect(parseBookSettings(form({ title: "  Chuyện   chưa kể ", mode: "chia-se", cover: "hoa-dao", coverMedia: "x", music: "sai" })))
       .toEqual({ title: "Chuyện chưa kể", mode: "chia-se" });
+  });
+
+  it("lua chon Viet cung (5c): chia se kem loi moi", () => {
+    expect(parseBookSettings(form({ title: "A", mode: "viet-cung" }))).toEqual({ title: "A", mode: "chia-se", moi: true });
   });
 
   it("che do ngoai danh sach hoac thieu thi bao loi, va bao truoc ten sai", () => {
