@@ -5,7 +5,7 @@ import type { BookMode } from "@/lib/book";
 import {
   docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietTen, docChiTietTenLuot, giongNhau,
   type ChiTietBia, type ChiTietDaDoc, type ChiTietNhac, type ChiTietNhanViet, type ChiTietTen, type ChiTietTenLuot,
-  type ChiTietThu, type ChiTietTuChoi,
+  type ChiTietCamXuc, type ChiTietThu, type ChiTietTuChoi,
 } from "@/lib/feed/detail";
 import type { LoaiNiemPhong } from "@/lib/feed/types";
 
@@ -23,7 +23,7 @@ type SachEvent = { actorId: string; at: Date; bookId: string; mode: BookMode };
  * Mot su kien cua dong Hoat dong. Kieu buoc moi loai co dung cac cot cua no, giong cac CHECK cua bang activity:
  * loai gan niem phong phai co sealId; dang-trang co sealId khi lan dang kem cau do hay hen gio; hoi-dap bam luot, khong
  * bao gio gan niem phong; doi-mat-khau chi co nguoi doi va nguoi bi doi; tha-tam-trang chi co nguoi tha va tam trang;
- * gui-thu chi co nguoi gui va thang; cac loai co detail mang dung hinh cua src/lib/feed/detail.ts. Sau loai cua sach viet
+ * gui-thu chi co nguoi gui va thang; tha-cam-xuc chi co nguoi tha va loai cam xuc; cac loai co detail mang dung hinh cua src/lib/feed/detail.ts. Sau loai cua sach viet
  * cung (5c): bon loai de nghi va tra loi gan ca cuon, doi-ten-luot gan luot.
  */
 export type ActivityEvent =
@@ -42,6 +42,7 @@ export type ActivityEvent =
   | (BookEvent & { kind: "doi-ten-luot"; detail: ChiTietTenLuot })
   | { kind: "tha-tam-trang"; actorId: string; at: Date; moodId: string }
   | { kind: "gui-thu"; actorId: string; at: Date; detail: ChiTietThu }
+  | { kind: "tha-cam-xuc"; actorId: string; at: Date; detail: ChiTietCamXuc }
   | { kind: "doi-mat-khau"; actorId: string; subjectId: string; at: Date };
 
 /**
@@ -53,8 +54,8 @@ export async function recordActivity(tx: AnyDb, event: ActivityEvent): Promise<v
     await tx.insert(activity).values({ ...event, shared: false });
     return;
   }
-  // Tam trang von hien voi nguoi kia (dai troi), thu thi gui cho nguoi kia: dong cua hai loai nay luon chia se.
-  if (event.kind === "tha-tam-trang" || event.kind === "gui-thu") {
+  // Tam trang von hien voi nguoi kia (dai troi), thu va cam xuc thi gui cho nguoi kia: dong cua ba loai nay luon chia se.
+  if (event.kind === "tha-tam-trang" || event.kind === "gui-thu" || event.kind === "tha-cam-xuc") {
     await tx.insert(activity).values({ ...event, shared: true });
     return;
   }

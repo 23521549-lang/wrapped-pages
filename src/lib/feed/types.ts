@@ -10,7 +10,7 @@ import type { Weather } from "@/lib/tam-trang/troi";
 export const FEED_KINDS = [
   "dang-trang", "moi-trao-doi", "mo-hen-gio", "mo-trang", "thu-sai", "tang-khoa", "doi-mat-khau", "hoi-dap",
   "tha-tam-trang", "tao-sach", "doi-ten-sach", "doi-bia", "doi-nhac", "sua-trang", "da-doc", "gui-thu",
-  "moi-viet", "xin-viet", "nhan-viet", "tu-choi", "de-nghi-xoa", "doi-ten-luot",
+  "moi-viet", "xin-viet", "nhan-viet", "tu-choi", "de-nghi-xoa", "doi-ten-luot", "tha-cam-xuc",
 ] as const;
 export type FeedKind = (typeof FEED_KINDS)[number];
 
@@ -20,7 +20,7 @@ export type LoaiNiemPhong = (typeof LOAI_NIEM_PHONG)[number];
 
 /** Loai co cot detail (CHECK activity_detail); doc bang cac ham cua src/lib/feed/detail.ts. */
 export const LOAI_CO_CHI_TIET = [
-  "doi-ten-sach", "doi-bia", "doi-nhac", "da-doc", "gui-thu", "nhan-viet", "tu-choi", "doi-ten-luot",
+  "doi-ten-sach", "doi-bia", "doi-nhac", "da-doc", "gui-thu", "nhan-viet", "tu-choi", "doi-ten-luot", "tha-cam-xuc",
 ] as const satisfies readonly FeedKind[];
 
 /** Ai lam: chinh nguoi xem hay nguoi kia. Dong Hoat dong khong bao gio mang id tai khoan. */

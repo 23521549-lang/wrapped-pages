@@ -25,6 +25,7 @@ const NGAY_VIET_NAM = sql`((${activity.at} at time zone 'UTC') + interval '7 hou
  * - doi-mat-khau: nguoi doi va nguoi bi doi deu thay;
  * - tha-tam-trang: ca hai deu thay, tru tam trang da thu lai;
  * - gui-thu: ca hai deu thay (dong chi mang thang, noi dung thu khong bao gio nam o day);
+ * - tha-cam-xuc (5d): ca hai deu thay;
  * - at lon hon now thi chua hien: mo-hen-gio duoc ghi san voi at = opensAt.
  */
 export function thayDuoc(viewerId: string, now: Date) {
@@ -37,6 +38,7 @@ export function thayDuoc(viewerId: string, now: Date) {
       and(eq(activity.kind, "doi-mat-khau"), or(eq(activity.actorId, viewerId), eq(activity.subjectId, viewerId))),
       and(eq(activity.kind, "tha-tam-trang"), eq(moods.withdrawn, false)),
       eq(activity.kind, "gui-thu"),
+      eq(activity.kind, "tha-cam-xuc"),
     ),
   );
 }

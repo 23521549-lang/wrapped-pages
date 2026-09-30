@@ -13,7 +13,7 @@ const NIEM_PHONG: Record<FeedKind, SealKind | null> = {
   "dang-trang": null, "moi-trao-doi": "trao-doi", "mo-hen-gio": "hen-gio", "mo-trang": "cau-do", "thu-sai": "cau-do",
   "tang-khoa": "cau-do", "doi-mat-khau": null, "hoi-dap": null, "tha-tam-trang": null, "tao-sach": null,
   "doi-ten-sach": null, "doi-bia": null, "doi-nhac": null, "sua-trang": null, "da-doc": null, "gui-thu": null,
-  "moi-viet": null, "xin-viet": null, "nhan-viet": null, "tu-choi": null, "de-nghi-xoa": null, "doi-ten-luot": null,
+  "moi-viet": null, "xin-viet": null, "nhan-viet": null, "tu-choi": null, "de-nghi-xoa": null, "doi-ten-luot": null, "tha-cam-xuc": null,
 };
 
 /** Chi tiet dung hinh mac dinh cua bon loai co detail. */
@@ -26,6 +26,7 @@ const CHI_TIET: Partial<Record<FeedKind, unknown>> = {
   "nhan-viet": { tu: "moi-viet" },
   "tu-choi": { viec: "moi-viet" },
   "doi-ten-luot": { truoc: null, sau: "Phở cuốn ngày mưa" },
+  "tha-cam-xuc": { cam: "yeu" },
 };
 
 /** Loai gan sach nhung khong gan luot (CHECK activity_sach). */
@@ -34,7 +35,7 @@ const KHONG_LUOT: ReadonlySet<FeedKind> = new Set(["tao-sach", "doi-ten-sach", "
 /** Mot dong mau dung hinh cho moi loai: gan sach tru doi-mat-khau va tha-tam-trang, kieu niem phong theo loai. */
 function su(kind: FeedKind, by: FeedActor, sua: Partial<FeedItem> = {}): FeedItem {
   dem += 1;
-  const coSach = kind !== "doi-mat-khau" && kind !== "tha-tam-trang" && kind !== "gui-thu";
+  const coSach = kind !== "doi-mat-khau" && kind !== "tha-tam-trang" && kind !== "gui-thu" && kind !== "tha-cam-xuc";
   const coLuot = coSach && !KHONG_LUOT.has(kind);
   return {
     ...DONG_MAC_DINH,
@@ -185,7 +186,7 @@ describe("feedLine: bat bien cua moi dong", () => {
     for (const item of moiDong) {
       const line = feedLine(item, TEN);
       const ids = JSON.stringify(line).match(MOT_UUID) ?? [];
-      const khongSach = item.kind === "doi-mat-khau" || item.kind === "tha-tam-trang" || item.kind === "gui-thu";
+      const khongSach = item.kind === "doi-mat-khau" || item.kind === "tha-tam-trang" || item.kind === "gui-thu" || item.kind === "tha-cam-xuc";
       expect(ids, `${item.kind} ${item.by}`).toEqual(khongSach ? [] : [SACH]);
       expect(JSON.stringify(line)).not.toContain(item.id);
     }
@@ -207,6 +208,19 @@ describe("feedLine: thu thang (dot nam, 5b)", () => {
   it("chi tiet hong thi van co cau, dan toi Lich hoa", () => {
     const line = feedLine(su("gui-thu", "partner", { detail: { thang: "13-2026" } }), TEN);
     expect([cau(line), line.href]).toEqual(["Linh đã viết **thư tháng** cho bạn", "/tam-trang"]);
+  });
+});
+
+describe("feedLine: tha cam xuc (dot nam, 5d)", () => {
+  it("ten cam xuc dam, khong lien ket, ca hai phia", () => {
+    expect(feedLine(su("tha-cam-xuc", "partner"), TEN)).toMatchObject({ href: null, chips: [], extra: null, avatar: "partner" });
+    expect(cau(feedLine(su("tha-cam-xuc", "partner"), TEN))).toBe("Linh thả cảm xúc **Yêu**");
+    expect(cau(feedLine(su("tha-cam-xuc", "me", { detail: { cam: "bat-ngo" } }), TEN))).toBe("Bạn thả cảm xúc **Bất ngờ**");
+  });
+
+  it("chi tiet hong thi van co cau, khong vo", () => {
+    expect(cau(feedLine(su("tha-cam-xuc", "partner", { detail: { cam: "ghet" } }), TEN))).toBe("Linh thả một cảm xúc");
+    expect(cau(feedLine(su("tha-cam-xuc", "me", { detail: null }), TEN))).toBe("Bạn thả một cảm xúc");
   });
 });
 

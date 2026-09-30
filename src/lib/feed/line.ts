@@ -1,10 +1,11 @@
 import { COVER_NAME } from "@/lib/book";
+import { CAM_XUC } from "@/lib/cam-xuc";
 import { pageRange, pageRangeTitle } from "@/lib/seal/reader";
 import type { SealKind } from "@/lib/seal/types";
 import { phanThang, tenThang, thangKhoa } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
 import {
-  docChiTietBia, docChiTietDaDoc, docChiTietNhac, docChiTietNhanViet, docChiTietTen, docChiTietTenLuot, docChiTietThu,
+  docChiTietBia, docChiTietCamXuc, docChiTietDaDoc, docChiTietNhac, docChiTietNhanViet, docChiTietTen, docChiTietTenLuot, docChiTietThu,
   docChiTietTuChoi, type GiaTriBia, type GiaTriNhac,
 } from "./detail";
 import type { FeedItem } from "./types";
@@ -42,7 +43,7 @@ const THAY_TEN_BAI = "Bản nhạc trên YouTube";
 const thuong = (chu: string): DoanCau => ({ chu, dam: false });
 const dam = (chu: string): DoanCau => ({ chu, dam: true });
 
-/** Phan gan sach cua mot su kien. Moi loai tru doi-mat-khau, tha-tam-trang va gui-thu deu co cuon (CHECK activity_sach). */
+/** Phan gan sach cua mot su kien. Moi loai tru doi-mat-khau, tha-tam-trang, gui-thu va tha-cam-xuc deu co cuon (CHECK activity_sach). */
 function sachCua(item: FeedItem) {
   const { bookId, bookTitle } = item;
   if (bookId === null || bookTitle === null) throw new Error(`su kien ${item.kind} thieu sach`);
@@ -113,6 +114,18 @@ export function feedLine(item: FeedItem, names: FeedNames): FeedLine {
       chips: [],
       extra: null,
       href: t === null ? "/tam-trang" : `/tam-trang#thu-${thangKhoa(t)}`,
+      avatar,
+    };
+  }
+
+  // Cam xuc (5d): khong co trang nao de toi; detail hong thi bo ten cam xuc.
+  if (item.kind === "tha-cam-xuc") {
+    const cam = docChiTietCamXuc(item.detail)?.cam;
+    return {
+      sentence: cam === undefined ? [thuong(`${ai} thả một cảm xúc`)] : [thuong(`${ai} thả cảm xúc `), dam(CAM_XUC[cam].camXuc)],
+      chips: [],
+      extra: null,
+      href: null,
       avatar,
     };
   }

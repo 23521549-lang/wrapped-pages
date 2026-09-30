@@ -124,6 +124,10 @@ async function gieo(c: PGlite) {
     insert into thu_thang (account_id, thang, noi_dung, gui_luc, mo_luc) values
       ('${A1}', '2026-08', 'Tháng Tám mình chạy được 60 cây số.' || chr(10) || 'Cảm ơn em.', '2026-09-01 12:00:00.123456+00', '2026-09-01 13:00:00+00');
     insert into activity (kind, actor_id, detail, shared, at) values ('gui-thu', '${A1}', '{"thang": "2026-08"}', true, '2026-09-01 12:00:00+00');
+    insert into cam_xuc (tu_id, loai, luc, da_xem_luc) values
+      ('${A2}', 'bat-ngo', '2026-09-30 10:00:00.654321+00', '2026-09-30 10:01:00+00'),
+      ('${A1}', 'yeu', '2026-09-30 11:00:00+00', null);
+    insert into activity (kind, actor_id, detail, shared, at) values ('tha-cam-xuc', '${A1}', '{"cam": "yeu"}', true, '2026-09-30 11:00:00+00');
   `);
 }
 

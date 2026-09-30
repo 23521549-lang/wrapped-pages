@@ -6,6 +6,7 @@ import {
 // `import type` bi xoa hoan toan luc bien dich nen khong sao.
 import type { BookMode, CoverKey } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
+import type { LoaiCamXuc } from "@/lib/cam-xuc";
 import type { FeedKind } from "@/lib/feed/types";
 import type { MediaKind, MediaMime } from "@/lib/media/kinds";
 import type { SealKind } from "@/lib/seal/types";
@@ -228,7 +229,8 @@ export const roundReplies = pgTable("round_replies", {
  * - doi-mat-khau: chi nguoi doi va nguoi bi doi. tha-tam-trang: chi nguoi tha va mood_id, luon chia se.
  * - gui-thu (5b): chi nguoi gui va detail { thang }, luon chia se; noi dung thu nam o thu_thang, khong bao gio o day.
  * - 5c: moi-viet, xin-viet, nhan-viet, tu-choi, de-nghi-xoa gan sach, khong luot; doi-ten-luot gan sach va luot.
- * - detail: chi doi-ten-sach, doi-bia, doi-nhac, da-doc, gui-thu, nhan-viet, tu-choi, doi-ten-luot, luon la mot object
+ * - tha-cam-xuc (5d): chi nguoi tha va detail { cam }, luon chia se; dong cam_xuc nam o bang cam_xuc.
+ * - detail: chi doi-ten-sach, doi-bia, doi-nhac, da-doc, gui-thu, nhan-viet, tu-choi, doi-ten-luot, tha-cam-xuc, luon la mot object
  *   (hinh dang: src/lib/feed/detail.ts).
  * - seal_id: bat buoc voi nam loai niem phong; dang-trang, hoi-dap duoc co (nhu cu); bay loai moi khong bao gio co.
  * Danh sach trong activity_kind phai khop FEED_KINDS cua src/lib/feed/types.ts, cung thu tu (co test).
@@ -250,11 +252,11 @@ export const activity = pgTable("activity", {
 }, (t) => ({
   kindValue: check(
     "activity_kind",
-    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap', 'tha-tam-trang', 'tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'sua-trang', 'da-doc', 'gui-thu', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa', 'doi-ten-luot')`,
+    sql`${t.kind} in ('dang-trang', 'moi-trao-doi', 'mo-hen-gio', 'mo-trang', 'thu-sai', 'tang-khoa', 'doi-mat-khau', 'hoi-dap', 'tha-tam-trang', 'tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'sua-trang', 'da-doc', 'gui-thu', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa', 'doi-ten-luot', 'tha-cam-xuc')`,
   ),
   sach: check(
     "activity_sach",
-    sql`${t.kind} in ('doi-mat-khau', 'tha-tam-trang', 'gui-thu') or (${t.bookId} is not null and ${t.subjectId} is null and (${t.roundId} is not null or ${t.kind} in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa')) and (${t.roundId} is null or ${t.kind} not in ('tao-sach', 'doi-ten-sach', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa')))`,
+    sql`${t.kind} in ('doi-mat-khau', 'tha-tam-trang', 'gui-thu', 'tha-cam-xuc') or (${t.bookId} is not null and ${t.subjectId} is null and (${t.roundId} is not null or ${t.kind} in ('tao-sach', 'doi-ten-sach', 'doi-bia', 'doi-nhac', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa')) and (${t.roundId} is null or ${t.kind} not in ('tao-sach', 'doi-ten-sach', 'moi-viet', 'xin-viet', 'nhan-viet', 'tu-choi', 'de-nghi-xoa')))`,
   ),
   niemPhong: check(
     "activity_niem_phong",
@@ -270,11 +272,15 @@ export const activity = pgTable("activity", {
   ),
   chiTiet: check(
     "activity_detail",
-    sql`(${t.detail} is not null) = (${t.kind} in ('doi-ten-sach', 'doi-bia', 'doi-nhac', 'da-doc', 'gui-thu', 'nhan-viet', 'tu-choi', 'doi-ten-luot')) and (${t.detail} is null or jsonb_typeof(${t.detail}) = 'object')`,
+    sql`(${t.detail} is not null) = (${t.kind} in ('doi-ten-sach', 'doi-bia', 'doi-nhac', 'da-doc', 'gui-thu', 'nhan-viet', 'tu-choi', 'doi-ten-luot', 'tha-cam-xuc')) and (${t.detail} is null or jsonb_typeof(${t.detail}) = 'object')`,
   ),
   thu: check(
     "activity_thu",
     sql`${t.kind} <> 'gui-thu' or (${t.subjectId} is null and ${t.bookId} is null and ${t.roundId} is null and ${t.sealId} is null and ${t.moodId} is null and ${t.shared})`,
+  ),
+  camXuc: check(
+    "activity_cam_xuc",
+    sql`${t.kind} <> 'tha-cam-xuc' or (${t.subjectId} is null and ${t.bookId} is null and ${t.roundId} is null and ${t.sealId} is null and ${t.moodId} is null and ${t.shared})`,
   ),
   byAt: index("activity_at_idx").on(t.at),
   /** Tim dong de gop (ghiHayGop): cung nguoi, cung loai, cung cuon, moi nhat. */
@@ -496,4 +502,21 @@ export const deNghi = pgTable("de_nghi", {
   luc: timestamp("luc", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   loaiValue: check("de_nghi_loai", sql`${t.loai} in ('moi-viet', 'xin-viet', 'xoa-sach')`),
+}));
+
+/**
+ * Cam xuc da tha (dot nam 5d): moi dong mot lan tha cua tu_id cho nguoi kia (web chi co hai tai khoan, nguoi nhan la tai
+ * khoan con lai). da_xem_luc la luc linh vat cua nguoi nhan bat dau dien cam xuc do; null la chua thay. Danh sach trong
+ * cam_xuc_loai phai khop LOAI_CAM_XUC cua src/lib/cam-xuc.ts, cung thu tu (co test). Luat o src/server/cam-xuc/cam-xuc.ts.
+ */
+export const camXuc = pgTable("cam_xuc", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tuId: uuid("tu_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  loai: text("loai").$type<LoaiCamXuc>().notNull(),
+  luc: timestamp("luc", { withTimezone: true }).notNull().defaultNow(),
+  daXemLuc: timestamp("da_xem_luc", { withTimezone: true }),
+}, (t) => ({
+  loaiValue: check("cam_xuc_loai", sql`${t.loai} in ('yeu', 'nho', 'vui', 'buon', 'gian', 'bat-ngo', 'treu', 'biet-on')`),
+  xemSau: check("cam_xuc_da_xem", sql`${t.daXemLuc} is null or ${t.daXemLuc} >= ${t.luc}`),
+  theoNguoi: index("cam_xuc_tu_luc_idx").on(t.tuId, t.luc),
 }));

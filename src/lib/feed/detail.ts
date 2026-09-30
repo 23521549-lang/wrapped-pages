@@ -1,4 +1,5 @@
 import { COVERS, type CoverKey } from "@/lib/book";
+import { laLoaiCamXuc, type LoaiCamXuc } from "@/lib/cam-xuc";
 import { phanThang } from "@/lib/tam-trang/lich";
 import { isUuid } from "@/lib/uuid";
 import { LOAI_DE_NGHI, type LoaiDeNghi } from "@/lib/viet-cung";
@@ -30,6 +31,8 @@ export type ChiTietNhanViet = { tu: "moi-viet" | "xin-viet" };
 export type ChiTietTuChoi = { viec: LoaiDeNghi };
 /** Doi ten luot (5c): ten cu (null la luot chua dat ten, hien "Lượt N") va ten moi. */
 export type ChiTietTenLuot = { truoc: string | null; sau: string };
+/** Tha cam xuc (5d): loai cam xuc. */
+export type ChiTietCamXuc = { cam: LoaiCamXuc };
 
 const laObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const tenHopLe = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -68,6 +71,10 @@ export function docChiTietDaDoc(v: unknown): ChiTietDaDoc | null {
 
 export function docChiTietThu(v: unknown): ChiTietThu | null {
   return laObject(v) && phanThang(v.thang) !== null ? { thang: v.thang as string } : null;
+}
+
+export function docChiTietCamXuc(v: unknown): ChiTietCamXuc | null {
+  return laObject(v) && laLoaiCamXuc(v.cam) ? { cam: v.cam } : null;
 }
 
 export function docChiTietNhanViet(v: unknown): ChiTietNhanViet | null {
