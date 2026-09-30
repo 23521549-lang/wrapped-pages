@@ -1,7 +1,9 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { normalizeReplyBody } from "@/lib/round-reply";
 import { resetDb } from "./db";
-import { dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taiLaiSach, taoSach, toDaXemCua, tranNgang } from "./kho-sach";
+import {
+  dangToThang, datNhac, docSach, dongContextCu, haiNguoiDaVao, taiLaiSach, taoSach, toDaXemCua, tranNgang, viTriDocDo,
+} from "./kho-sach";
 import { dangKemNiemPhong } from "./niem-phong";
 import { BE_RONG, BE_RONG_CHAM } from "./vung-bam";
 import { giaYoutube } from "./youtube-gia";
@@ -89,8 +91,13 @@ test("nguoi doc gui loi hoi dap sau khi hoi lai; bam doi chi gui mot loi; nguoi 
   // CI la 565ms tu luc mo man doc toi luc tai lai), nen khong doi thi lan tai lai duoi day van mo o to 1.
   await expect.poll(() => toDaXemCua(id), { timeout: 10_000 }).toEqual([1, 2]);
 
-  // Tai lai khong kem ?trang: man doc mo o to nho nhat chua thay (to 3, luot hai), nen khung la o chu con trong cua luot do.
+  // DOI HANH VI CO Y (dot nam): tai lai khong kem ?trang thi man doc mo o trang dang doc do (khung 1-2 vua dung), thang
+  // ca to dau chua doc. Doi dung dong reading_positions roi moi tai lai.
+  await expect.poll(() => viTriDocDo(id, tenCuaB), { timeout: 10_000 }).toBe(1);
   await taiLaiSach(b);
+  await expect(b.locator(".doc__dem")).toHaveText("Trang 1-2 / 3");
+  // Luot hai (to 3) mo bang ?trang: khung la o chu con trong cua luot do.
+  await b.goto(`/sach/${id}?trang=3`);
   await expect(khung(b).getByText("Dành cho trang 3")).toBeVisible();
   await expect(khung(b).getByLabel("Viết lời hồi đáp")).toHaveValue("");
   // Quay lai luot da hoi dap: van la loi da gui, khong co o chu nao (bat bien, mot luot mot loi).
