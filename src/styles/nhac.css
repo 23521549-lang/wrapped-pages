@@ -12,7 +12,7 @@
 .mph--lon{ position: absolute; right: auto; bottom: auto; z-index: var(--z-raised); box-shadow: none; }
 .mph--lon .mph__may{ height: 100%; min-height: 200px; }
 .mph__thanh{ display: flex; align-items: center; gap: var(--space-2xs); min-height: 48px; padding: 2px 2px 2px var(--space-sm); }
-.mph__ten{ display: grid; flex: 1; min-width: 0; line-height: 1.3; border-radius: 4px; }
+.mph__ten{ display: grid; align-content: center; flex: 1; min-width: 0; min-height: 44px; line-height: 1.3; border-radius: 4px; }
 .mph__ten b, .mph__ten span{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mph__ten b{ font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
 .mph__ten span{ font-size: var(--text-xs); color: var(--color-ink-3); }
