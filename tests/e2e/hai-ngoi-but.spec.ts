@@ -33,13 +33,19 @@ async function taoVaMoi(a: Page): Promise<string> {
   return new URL(a.url()).pathname.split("/")[2];
 }
 
-/** b nhan loi moi o Ke sach; cuon sang ke Hai Ngòi Bút. */
+/**
+ * b nhan loi moi ngay tren the cuon o ke Hai Ngòi Bút (chu du an 02/10): cuon co loi moi dung o ke chung cua ca hai tu
+ * luc gui, nen loi moi khong con dong rieng o dau Ke sach. Nhan loi xong, the moi mang hai chu cai dau.
+ */
 async function nhanLoi(b: Page): Promise<void> {
   await b.goto("/ke-sach");
-  await expect(b.locator(".loi-moi__chu")).toHaveText("Mạnh mời bạn viết cùng Những bữa sáng");
-  await b.getByRole("button", { name: "Nhận lời" }).click();
-  await expect(b.getByRole("region", { name: "Hai Ngòi Bút" })).toBeVisible();
+  const ke = b.getByRole("region", { name: "Hai Ngòi Bút" });
+  await expect(ke).toBeVisible();
+  await expect(ke.locator(".cuon__moi-chu")).toHaveText("Mạnh mời bạn viết cùng");
   await expect(b.locator(".loi-moi")).toHaveCount(0);
+  await b.getByRole("button", { name: "Nhận lời viết cùng Những bữa sáng" }).click();
+  await expect(ke.locator(".cuon__moi")).toHaveCount(0);
+  await expect(ke.locator(".cuon__doi")).toBeVisible();
 }
 
 /** Go mot doan o man viet dang mo va cho tu luu xong. */
@@ -67,9 +73,12 @@ test("moi, nhan loi, ca hai viet voi nhap rieng, dang bat buoc ten luot, man doc
   const { a, b } = await haiNguoiDaVao(browser);
   const id = await taoVaMoi(a);
 
-  // Loi moi cho: the cuon cua a mang dau "Chờ Linh nhận lời".
+  // Loi moi cho: cuon dung ngay o ke Hai Ngòi Bút cua CA HAI (chu du an 02/10), ben a mang dau "Chờ Linh nhận lời".
   await a.goto("/ke-sach");
-  await expect(a.locator(".dh--cho")).toHaveText("Chờ Linh nhận lời");
+  const keA = a.getByRole("region", { name: "Hai Ngòi Bút" });
+  await expect(keA.locator(".dh--cho")).toHaveText("Chờ Linh nhận lời");
+  // Chua ai nhan loi nen chua phai sach viet cung: the chua mang hai chu cai dau.
+  await expect(keA.locator(".cuon__doi")).toHaveCount(0);
   await nhanLoi(b);
 
   // Hai nhap rieng: nhap cua a khong bao gio hien o man viet cua b.
@@ -153,8 +162,14 @@ test("xin viet cung, tu choi, xin lai, dong y; doi ten luot o Sua luot", async (
   await b.getByRole("group", { name: "Gửi lời xin tới Mạnh?" }).getByRole("button", { name: "Gửi lời xin" }).click();
   await expect(b.getByText("Đã xin, chờ Mạnh")).toBeVisible();
 
-  // a tu choi o Ke sach: dong bien mat, cuon giu nguyen.
+  // Loi XIN dang cho KHONG dua cuon len ke Hai Ngòi Bút: cuon van dung o ke cua a (chu du an 02/10).
+  await b.goto("/ke-sach");
+  await expect(b.getByRole("region", { name: "Hai Ngòi Bút" })).toHaveCount(0);
+  await expect(b.getByRole("region", { name: "Kệ của Mạnh" })).toContainText("Chạy bộ mùa thu");
+
+  // a tu choi o Ke sach: dong bien mat, cuon giu nguyen. Loi xin van la mot dong rieng, khac loi moi.
   await a.goto("/ke-sach");
+  await expect(a.getByRole("region", { name: "Hai Ngòi Bút" })).toHaveCount(0);
   await expect(a.locator(".loi-moi__chu")).toHaveText("Linh xin viết cùng Chạy bộ mùa thu");
   await a.getByRole("button", { name: "Từ chối" }).click();
   await expect(a.locator(".loi-moi")).toHaveCount(0);
@@ -194,24 +209,28 @@ test("rut loi moi o Sua sach; de nghi xoa, giu lai, roi dong y xoa han", async (
   await expect(a.locator(".ghi-chung")).toContainText("Bấm Lưu là gửi lời mời.");
   await luuForm(a).click();
   await a.waitForURL(new RegExp(`/sach/${id}$`));
+  // Loi moi gui tu Sua sach cung dua cuon len ke Hai Ngòi Bút cua ca hai (chu du an 02/10).
   await b.goto("/ke-sach");
-  await expect(b.locator(".loi-moi__chu")).toHaveText("Mạnh mời bạn viết cùng Góc riêng");
+  await expect(b.getByRole("region", { name: "Hai Ngòi Bút" }).locator(".cuon__moi-chu")).toHaveText("Mạnh mời bạn viết cùng");
   await a.goto(`/sach/${id}/sua`);
   await expect(a.getByRole("radio", { name: "Viết cùng Linh" })).toBeChecked();
   await a.getByRole("radio", { name: "Chia sẻ", exact: true }).check();
   await luuForm(a).click();
   await a.waitForURL(new RegExp(`/sach/${id}$`));
+  // Rut loi moi thi cuon roi khoi ke Hai Ngòi Bút cua ca hai.
   await b.goto("/ke-sach");
-  await expect(b.locator(".loi-moi")).toHaveCount(0);
+  await expect(b.getByRole("region", { name: "Hai Ngòi Bút" })).toHaveCount(0);
+  await a.goto("/ke-sach");
+  await expect(a.getByRole("region", { name: "Hai Ngòi Bút" })).toHaveCount(0);
 
-  // Moi lai va b nhan loi.
+  // Moi lai va b nhan loi ngay tren the.
   await a.goto(`/sach/${id}/sua`);
   await a.getByRole("radio", { name: "Viết cùng Linh" }).check();
   await luuForm(a).click();
   await a.waitForURL(new RegExp(`/sach/${id}$`));
   await b.goto("/ke-sach");
-  await b.getByRole("button", { name: "Nhận lời" }).click();
-  await expect(b.getByRole("region", { name: "Hai Ngòi Bút" })).toBeVisible();
+  await b.getByRole("button", { name: "Nhận lời viết cùng Góc riêng" }).click();
+  await expect(b.getByRole("region", { name: "Hai Ngòi Bút" }).locator(".cuon__doi")).toBeVisible();
 
   // Sua sach cua sach viet cung: Chu de, dong khoa, muc Xoa cuon.
   await a.goto(`/sach/${id}/sua`);
@@ -246,11 +265,11 @@ test("man moi cua sach viet cung khong tran ngang o bon be rong; vung bam 44px o
   await a.goto(`/sach/${id}/viet`);
   await goVaLuu(a, "Sáng nay anh ăn bánh cuốn Thanh Trì, ngồi ở cái ghế nhựa đỏ cạnh gốc bàng.");
   await dangLuot(a, "Một cái tên lượt rất dài để thử xem dòng đầu trang có cắt gọn không");
-  // Mot loi moi khac con cho: ke cua b co dong de nghi.
+  // Mot loi moi khac con cho: ke Hai Ngòi Bút cua b co mot cuon mang khoi tra loi (chu du an 02/10).
   await taoVaMoi(a);
 
   const man: { ten: string; trang: Page; duong: string; cho: (p: Page) => Promise<void> }[] = [
-    { ten: "ke sach co de nghi", trang: b, duong: "/ke-sach", cho: async (p) => expect(p.locator(".loi-moi")).toHaveCount(1) },
+    { ten: "ke sach co loi moi tren the", trang: b, duong: "/ke-sach", cho: async (p) => expect(p.locator(".cuon__moi")).toHaveCount(1) },
     { ten: "sach moi chon viet cung", trang: a, duong: "/sach/moi", cho: async (p) => {
       await p.getByRole("radio", { name: "Viết cùng Linh" }).check();
       await expect(p.getByLabel("Chủ đề")).toBeVisible();

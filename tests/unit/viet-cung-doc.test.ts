@@ -82,17 +82,24 @@ describe("listShelf sach viet cung", () => {
     const s = await baLuot();
     const cuaManh = (await listShelf(s.db, s.seat2.id, T)).find((b) => b.id === s.sach);
     const cuaLinh = (await listShelf(s.db, s.seat1.id, T)).find((b) => b.id === s.sach);
-    expect(cuaManh).toMatchObject({ vietCung: true, newCount: 2, roundCount: 3, pageCount: 3, choNhanLoi: false });
+    expect(cuaManh).toMatchObject({ vietCung: true, newCount: 2, roundCount: 3, pageCount: 3, moiCho: null });
     expect(cuaLinh).toMatchObject({ vietCung: true, newCount: 1, roundCount: 3 });
     await markRead(s.db, s.seat2.id, s.sach, [1], T);
     expect((await listShelf(s.db, s.seat2.id, T)).find((b) => b.id === s.sach)?.newCount).toBe(1);
   });
 
-  it("cuon cua minh dang cho nguoi kia nhan loi moi: choNhanLoi; nguoi kia thi khong", async () => {
+  it("loi moi dang cho: ca hai ben deu thay, moi ben mot phia; cuon van chua la sach viet cung", async () => {
     const { db, seat1, seat2, chung } = await haiCuon();
     await updateBook(db, seat1.id, chung, { title: "Chuyện chưa kể", mode: "chia-se", moi: true }, T);
-    expect((await listShelf(db, seat1.id, T)).find((b) => b.id === chung)).toMatchObject({ choNhanLoi: true, vietCung: false });
-    expect((await listShelf(db, seat2.id, T)).find((b) => b.id === chung)).toMatchObject({ choNhanLoi: false, vietCung: false });
+    expect((await listShelf(db, seat1.id, T)).find((b) => b.id === chung)).toMatchObject({ moiCho: "toi-moi", vietCung: false });
+    expect((await listShelf(db, seat2.id, T)).find((b) => b.id === chung)).toMatchObject({ moiCho: "moi-toi", vietCung: false });
+  });
+
+  it("loi XIN dang cho khong lam cuon doi ngan: moiCho null ca hai ben", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    expect(await xinViet(db, seat2.id, chung, T)).toBe("sent");
+    expect((await listShelf(db, seat1.id, T)).find((b) => b.id === chung)).toMatchObject({ moiCho: null, vietCung: false });
+    expect((await listShelf(db, seat2.id, T)).find((b) => b.id === chung)).toMatchObject({ moiCho: null, vietCung: false });
   });
 
   it("sach mot nguoi viet giu nguyen: cuon cua minh khong co trang moi, cuon nguoi kia dem nhu cu", async () => {

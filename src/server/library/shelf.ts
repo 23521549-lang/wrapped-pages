@@ -22,12 +22,19 @@ export type ShelfBook = {
   pageCount: number;
   /** So to CUA NGUOI KIA nguoi xem chua thay (sach viet cung: to trong luot nguoi kia viet; to cua minh khong bao gio moi). */
   newCount: number;
-  /** Sach viet cung (5c): dung o ke Hai Ngòi Bút cua ca hai. */
+  /**
+   * Da la sach viet cung: ca hai VIET DUOC. Chi co co nay moi noi len quyen; ke Hai Ngòi Bút con nhan ca cuon dang cho
+   * nhan loi (moiCho), ma o do nguoi duoc moi chua viet duoc gi.
+   */
   vietCung: boolean;
   /** So luot da dang (the sach viet cung ghi "N lượt"). */
   roundCount: number;
-  /** Cuon cua nguoi xem dang cho nguoi kia nhan loi moi viet cung (dau "Chờ {tên} nhận lời"). */
-  choNhanLoi: boolean;
+  /**
+   * Loi MOI viet cung dang cho tra loi tren cuon nay, nhin tu nguoi xem: ho moi ("toi-moi") hay ho duoc moi ("moi-toi");
+   * null la khong co. Cuon co loi moi dung o ke Hai Ngòi Bút cua CA HAI ngay tu luc gui (chu du an 02/10). Loi XIN khong
+   * tinh o day: cuon van dung o ke chu cuon toi khi duoc dong y.
+   */
+  moiCho: "toi-moi" | "moi-toi" | null;
   /** So to nam trong niem phong con khoa voi nguoi xem. */
   lockedCount: number;
   /**
@@ -206,9 +213,10 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
         id: books.id, title: books.title, mode: books.mode,
         ownerId: books.ownerId, createdAt: books.createdAt, ownerNickname: accounts.nickname,
         vietCung: sql<boolean>`${books.vietCungTu} is not null`.mapWith(Boolean),
-        // Loi moi viet cung cua chinh nguoi xem dang cho nguoi kia nhan (dau "Chờ {tên} nhận lời").
-        choNhanLoi: sql<boolean>`exists (select 1 from ${deNghi} where ${deNghi.bookId} = ${books.id}
-          and ${deNghi.loai} = 'moi-viet' and ${deNghi.tuId} = ${viewerId})`.mapWith(Boolean),
+        // Loi MOI dang cho tren cuon, nhin tu nguoi xem. de_nghi lay book_id lam khoa chinh nen nhieu nhat mot dong,
+        // cau con tra ve dung mot gia tri hay khong gi (null). Loai 'xin-viet' va 'xoa-sach' khong tinh.
+        moiCho: sql<"toi-moi" | "moi-toi" | null>`(select case when ${deNghi.tuId} = ${viewerId} then 'toi-moi' else 'moi-toi' end
+          from ${deNghi} where ${deNghi.bookId} = ${books.id} and ${deNghi.loai} = 'moi-viet')`,
       })
       .from(books)
       .innerJoin(accounts, eq(accounts.id, books.ownerId))
@@ -317,7 +325,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
           // So to moi = so to cua nguoi kia nguoi xem chua thay bao gio; to niem phong cung tinh vi markRead khong ghi
           // chung. Sach mot nguoi viet cua chinh minh vi the luon 0.
           newCount: s?.chuaXem ?? 0,
-          vietCung: b.vietCung, roundCount: s?.luot ?? 0, choNhanLoi: b.choNhanLoi,
+          vietCung: b.vietCung, roundCount: s?.luot ?? 0, moiCho: b.moiCho,
           lockedCount: locked.reduce((n, r) => n + r.lastPosition - r.firstPosition + 1, 0),
           excerptPosition: doan?.position ?? first?.position ?? last,
           excerptLocked: lastSeal !== undefined,

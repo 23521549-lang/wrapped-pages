@@ -33,6 +33,8 @@ export type SachTrenKe = {
   vietCung?: { doi: readonly [string, string]; luot: number; nguoiKia: string };
   /** Cuon cua minh dang cho nguoi kia nhan loi moi: biet danh nguoi kia. */
   choNhanLoi?: string;
+  /** Khoi tra loi loi moi viet cung duoi cuon, trang dung san: xem ShelfBookProps.moiToi. */
+  moiToi?: ReactNode;
 };
 
 export type NganProps = {
@@ -124,6 +126,7 @@ export function Ngan({ ten, books, trong, dau, ghi }: NganProps) {
                   isPrivate={b.isPrivate}
                   vietCung={b.vietCung}
                   choNhanLoi={b.choNhanLoi}
+                  moiToi={b.moiToi}
                 />
               ))}
             </ul>
