@@ -44,9 +44,13 @@ export default async function SuaLuot({ params, searchParams }: {
         mediaEnabled={getMediaStore() !== null}
         niemPhong={round.niemPhong}
         partnerNickname={me.partnerNickname}
-        tenLuot={round.vietCung
-          ? <TenLuotForm key={round.ten ?? ""} bookId={id} roundId={round.id} ordinal={round.ordinal} ten={round.ten} />
-          : undefined}
+        tenLuot={
+          // Khong dat key theo round.ten: doi ten xong action goi refresh(), ten moi ve lam key doi nen React thao o nay
+          // di roi dung lai, cuon theo ca dong "Đã lưu tên." vua bat. Giu nguyen o: chu trong o chinh la ten vua luu.
+          round.vietCung
+            ? <TenLuotForm bookId={id} roundId={round.id} ordinal={round.ordinal} ten={round.ten} />
+            : undefined
+        }
       />
     </>
   );
