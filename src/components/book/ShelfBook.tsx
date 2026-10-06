@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { CoverKey } from "@/lib/book";
 import { NgoiBut } from "@/components/viet-cung/NgoiBut";
@@ -45,6 +46,13 @@ export type ShelfBookProps = {
   vietCung?: { doi: readonly [string, string]; luot: number; nguoiKia: string };
   /** Cuon cua minh dang cho nguoi kia nhan loi moi viet cung: biet danh nguoi kia, cho dau "Chờ {tên} nhận lời". */
   choNhanLoi?: string;
+  /**
+   * Khoi tra loi loi moi viet cung, ve ngay duoi cuon (chu du an 02/10): trang Ke sach dung san <NhanLoiThe> roi truyen
+   * xuong, chu the sach KHONG tu nhap no - nhap thang se keo ca mo-dun server action vao moi noi dung the sach, va moi
+   * bai kiem cham toi the sach lai phai gia lap action. Cuon dang cho tra loi van CHUA phai sach viet cung nen khong di
+   * kem `vietCung`: no giu nguyen dang the thuong (so trang, thoi diem).
+   */
+  moiToi?: ReactNode;
 };
 
 /**
@@ -53,7 +61,7 @@ export type ShelfBookProps = {
  * Vi tuong tac duy nhat: re chuot hay focus thi cuon sach nhich ra khoi ke (chi transform, co nhanh giam chuyen dong).
  */
 export function ShelfBook({
-  title, href, cover, coverMediaId, pageCount, when, newCount, lockedCount, isPrivate, vietCung, choNhanLoi,
+  title, href, cover, coverMediaId, pageCount, when, newCount, lockedCount, isPrivate, vietCung, choNhanLoi, moiToi,
 }: ShelfBookProps) {
   const coDauHieu = newCount > 0 || lockedCount > 0 || isPrivate || choNhanLoi !== undefined;
   const phu = vietCung ? `${vietCung.luot} lượt, ${when}` : pageCount > 0 ? `${pageCount} trang, ${when}` : `Chưa có trang, ${when}`;
@@ -84,6 +92,7 @@ export function ShelfBook({
           )}
         </span>
       </Link>
+      {moiToi}
     </li>
   );
 }

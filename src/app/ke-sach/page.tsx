@@ -24,12 +24,23 @@ import { TroiTam } from "@/components/tam-trang/troi-tam";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
 import { LoiMoi } from "@/components/viet-cung/LoiMoi";
+import { NhanLoiThe } from "@/components/viet-cung/NhanLoiThe";
 import { NgoiBut } from "@/components/viet-cung/NgoiBut";
 import { docChiTietNhac } from "@/lib/feed/detail";
 import { chiaTamTrang, conLai, thangKhoa, troiHien } from "@/lib/tam-trang/lich";
 import { loiNhacThu } from "@/lib/thu";
 import { chuCaiDau } from "@/lib/viet-cung";
 import { timeAgo } from "@/lib/when";
+
+/**
+ * Cuon nay dung o ngan Hai Ngòi Bút khong. Ngan do nhan hai thu (chu du an 02/10): sach DA viet cung, va cuon dang cho
+ * tra loi mot loi MOI - chu cuon da ngo loi nen cuon coi nhu sap chung, ca hai deu thay no o day. Loi XIN khong tinh:
+ * cuon van dung o ke chu cuon cho toi khi ho dong y. Cuon dang cho van chua phai sach viet cung (`vietCung` sai), nen
+ * nguoi duoc moi chua viet duoc gi va the cua no khong muon truoc dang sach viet cung.
+ */
+function chungKe(b: Sach): boolean {
+  return b.vietCung || b.moiCho !== null;
+}
 
 export default async function KeSach() {
   await connection();
@@ -85,12 +96,20 @@ export default async function KeSach() {
         luot: b.roundCount, nguoiKia: me.partnerNickname,
       }
       : undefined,
-    choNhanLoi: b.choNhanLoi ? me.partnerNickname : undefined,
+    choNhanLoi: b.moiCho === "toi-moi" ? me.partnerNickname : undefined,
+    // Trang dung san khoi tra loi roi truyen xuong, de the sach khong phai nhap mo-dun server action (xem ShelfBookProps).
+    moiToi: b.moiCho === "moi-toi"
+      ? <NhanLoiThe bookId={b.id} ten={me.partnerNickname} title={b.title} />
+      : undefined,
   });
-  // Ba ngan (5c muc E1): Hai Ngòi Bút (sach viet cung, cua ca hai) o dau, roi ke cua minh va ke cua nguoi kia.
-  const viet = shelf.filter((b) => b.vietCung).map(theKe);
-  const cuaBan = shelf.filter((b) => b.mine && !b.vietCung).map(theKe);
-  const cuaKia = shelf.filter((b) => !b.mine && !b.vietCung).map(theKe);
+  // Ba ngan (5c muc E1): Hai Ngòi Bút o dau, roi ke cua minh va ke cua nguoi kia.
+  // Cuon dang cho tra loi len dau ngan Hai Ngòi Bút: ngan dai thi tu thu gon con ba hang, ma khoi hai nut tra loi khong
+  // duoc nam khuat sau nut "Xem thêm". Mang nay vua duoc filter dung ra nen sap xep tai cho khong dung vao cua ai; sort
+  // cua JS on dinh nen phan con lai giu nguyen thu tu listShelf.
+  // oxlint-disable-next-line unicorn/no-array-sort -- toSorted can lib ES2023, du an dang o ES2022.
+  const viet = shelf.filter(chungKe).sort((x, y) => Number(y.moiCho !== null) - Number(x.moiCho !== null)).map(theKe);
+  const cuaBan = shelf.filter((b) => b.mine && !chungKe(b)).map(theKe);
+  const cuaKia = shelf.filter((b) => !b.mine && !chungKe(b)).map(theKe);
   const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} an={me.anHoatDong} />;
   // Mot luot chua doc thanh prop cua khung sach lon (spec 5a muc E): luot cua nguoi kia "Đọc tiếp" mo cuon qua tam bia
   // toi trang dang doc do; luot cua minh "Viết tiếp". Ca khung mo dung trang cua doan dang hien.
@@ -165,8 +184,13 @@ export default async function KeSach() {
                       {loiNhacThu(nhac.tt, nhac.thang, me.partnerNickname)}
                     </Link>
                   )}
-                  {/* De nghi viet cung gui toi minh (5c muc E4): cung cho, cung kieu dong nhac thu. */}
-                  <LoiMoi dong={deNghi.map((d) => ({ bookId: d.bookId, title: d.title, loai: d.loai }))} partnerNickname={me.partnerNickname} />
+                  {/* De nghi viet cung gui toi minh (5c muc E4): cung cho, cung kieu dong nhac thu. Rieng loi MOI khong
+                      co dong o day nua (chu du an 02/10): cuon dang cho dung ngay o ke Hai Ngòi Bút va mang hai nut tra
+                      loi, nen mot viec khong co hai nut o hai cho tren cung mot man. */}
+                  <LoiMoi
+                    dong={deNghi.flatMap((d) => (d.loai === "moi-viet" ? [] : [{ bookId: d.bookId, title: d.title, loai: d.loai }]))}
+                    partnerNickname={me.partnerNickname}
+                  />
                 </div>
               )}
               nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}

@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import type { AnchorHTMLAttributes } from "react";
 import { ShelfBook } from "@/components/book/ShelfBook";
 import { LoiMoi } from "@/components/viet-cung/LoiMoi";
+import { NhanLoiThe } from "@/components/viet-cung/NhanLoiThe";
 
 /* Ke sach cua sach viet cung (5c muc E): dong de nghi gui toi minh, the sach viet cung, dau cho nhan loi. */
 
@@ -98,5 +99,45 @@ describe("ShelfBook sach viet cung", () => {
     render(<ul><ShelfBook {...coBan} newCount={0} /></ul>);
     expect(document.querySelector(".dh--cho")).toBeNull();
     expect(document.querySelector(".cuon__doi")).toBeNull();
+  });
+
+  it("nguoi kia dang moi minh: cau moi va hai nut, the giu nguyen dang the thuong", () => {
+    render(<ul><ShelfBook {...coBan} newCount={0} moiToi={<NhanLoiThe bookId={A} ten="Linh" title="Những bữa sáng" />} /></ul>);
+    expect(document.querySelector(".cuon__moi-chu")?.textContent).toBe("Linh mời bạn viết cùng");
+    // Chua phai sach viet cung: khong muon truoc hai chu cai dau hay "N lượt".
+    expect(document.querySelector(".cuon__doi")).toBeNull();
+    expect(document.querySelector(".cuon__phu")?.textContent).toBe("4 trang, 21.08");
+    // Ten tro nang mang ten cuon, vi mot ngan co nhieu cuon va "Nhận lời" khong noi len cuon nao.
+    expect(screen.getByRole("button", { name: "Nhận lời viết cùng Những bữa sáng" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Từ chối viết cùng Những bữa sáng" })).toBeTruthy();
+  });
+
+  it("hai nut tra loi nam NGOAI the neo cua cuon", () => {
+    render(<ul><ShelfBook {...coBan} newCount={0} moiToi={<NhanLoiThe bookId={A} ten="Linh" title="Những bữa sáng" />} /></ul>);
+    const neo = document.querySelector("a.cuon__lien");
+    expect(neo).toBeTruthy();
+    expect(neo?.querySelector("button")).toBeNull();
+    expect(document.querySelectorAll(".cuon__moi-nut button")).toHaveLength(2);
+  });
+
+  it("bam Nhan loi hay Tu choi goi dung action voi ma cuon", async () => {
+    render(<ul><ShelfBook {...coBan} newCount={0} moiToi={<NhanLoiThe bookId={A} ten="Linh" title="Những bữa sáng" />} /></ul>);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Nhận lời viết cùng Những bữa sáng" }));
+    });
+    expect(actionTraLoi).toHaveBeenLastCalledWith(A, true);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Từ chối viết cùng Những bữa sáng" }));
+    });
+    expect(actionTraLoi).toHaveBeenLastCalledWith(A, false);
+  });
+
+  it("loi cua action hien ngay duoi cuon", async () => {
+    actionTraLoi.mockResolvedValueOnce({ error: "Đề nghị này không còn nữa." });
+    render(<ul><ShelfBook {...coBan} newCount={0} moiToi={<NhanLoiThe bookId={A} ten="Linh" title="Những bữa sáng" />} /></ul>);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Nhận lời viết cùng Những bữa sáng" }));
+    });
+    expect(screen.getByRole("alert").textContent).toBe("Đề nghị này không còn nữa.");
   });
 });
