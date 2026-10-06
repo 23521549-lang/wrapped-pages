@@ -44,7 +44,10 @@ test("bia nhan PNG, JPEG xoay theo EXIF, GIF, AVIF, HEIC; TIFF bao dung cau; HEI
   await oBia(a).setInputFiles({ name: "scan.tif", mimeType: "image/tiff", buffer: anhTiff() });
   await expect(a.locator(".tai-anh__chu--loi")).toHaveText("!Chưa đọc được loại ảnh này.");
   await expect(a.locator(".tai-anh__phu")).toHaveText("Hãy chọn ảnh JPG, PNG, HEIC hoặc WebP.");
-  await a.getByRole("button", { name: "Đóng" }).click();
+  // exact: true la bat buoc. Playwright khop `name` theo CHUOI CON, ma linh vat Chip co nut "Đóng lời Chíp" o goc
+  // trang (5e); Chip chao moi ngay mot lan theo trinh duyet, nen khi no tinh co cat tieng thi bo chon nay bat hai
+  // phan tu va bai do voi "strict mode violation". Da thay dung loi do tren CI.
+  await a.getByRole("button", { name: "Đóng", exact: true }).click();
 
   await oBia(a).setInputFiles(tepMau("plain.heic"));
   await expect(san(a).locator("svg").first()).toHaveAttribute("viewBox", "0 0 120 80", { timeout: CHO_ANH_MS });
