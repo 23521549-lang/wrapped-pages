@@ -263,6 +263,9 @@ export async function publishDraft(
     if (seal) {
       const sealId = await insertSeal(tx, book.id, round.id, seal, sealTeaser(bound[0]));
       await recordActivity(tx, { ...su, kind: seal.kind === "trao-doi" ? "moi-trao-doi" : "dang-trang", sealId });
+      // Dong nay ghi NGAY BAY GIO nhung mang at la luc niem phong tu mo (tuong lai). Dau `an` cua no (an hoat dong,
+      // 06/10) dong theo co luc DANG, khong theo co luc no noi len, vi dau phai theo y dinh o thoi diem nguoi ta lam
+      // viec. Dung "sua" thanh doc lai co luc hien.
       if (seal.kind === "hen-gio") await recordActivity(tx, { ...su, kind: "mo-hen-gio", sealId, at: seal.opensAt });
     } else {
       await recordActivity(tx, { ...su, kind: "dang-trang", sealId: null });

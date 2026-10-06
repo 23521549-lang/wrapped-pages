@@ -11,7 +11,9 @@ import { chaoChip, datCaiDatChip, docTroChuyen, hoiChip, trangThaiChip, xoaTroCh
 import {
   bayGioSangMai, CAU_CHUA_DANH_THUC, CAU_NGHE_CHUA_RO, GIU_TIN, kiemTinChip, lamSachTraLoi, lucDay, NHAP_TOI_DA, tachDam,
 } from "@/lib/chip";
+import { recordActivity } from "@/server/feed/record";
 import { dang, haiCuon, to } from "../helpers/library";
+import { luotChu } from "../helpers/round";
 import { CAU_DO, dangNiemPhong } from "../helpers/seal";
 import { seedHai } from "../helpers/seed";
 
@@ -210,7 +212,14 @@ describe("hoiChip", () => {
 describe("chaoChip va cai dat", () => {
   it("lan dau: chao kem viec moi nhat cua nguoi kia chua xem; cung ngay lan nua: im", async () => {
     const s = await haiCuon();
-    await dang(s.db, s.seat1.id, s.chung, "Trang một");
+    // Moc cho san thay vi dang(): dang() goi publishDraft voi `new Date()`, tuc DONG HO THAT cua may, trong khi bai nay
+    // chay tren dong ho gia NOW = 01/10/2026. Tu ngay 02/10 tro di, dong Hoat dong do roi vao TUONG LAI so voi NOW va bi
+    // `lte(activity.at, now)` cua thayDuoc loc mat, nen Chip khong con chuyen gi de ke va ca nay tu do.
+    const motGioTruoc = new Date(NOW.getTime() - 3_600_000);
+    const luot = await luotChu(s.db, s.chung, 1, 1, motGioTruoc);
+    await recordActivity(s.db, {
+      kind: "dang-trang", actorId: s.seat1.id, at: motGioTruoc, bookId: s.chung, roundId: luot, mode: "chia-se", sealId: null,
+    });
     const loi = await chaoChip(s.db, s.seat2.id, "Mạnh", "Linh", SAU(60));
     expect(loi?.loai).toBe("chao");
     expect(loi?.cau).toMatch(/^Chào \*\*Mạnh\*\*! Linh .*\*\*Chuyện chưa kể\*\*.* đó\.$/);

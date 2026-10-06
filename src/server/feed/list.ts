@@ -30,6 +30,10 @@ const NGAY_VIET_NAM = sql`((${activity.at} at time zone 'UTC') + interval '7 hou
  */
 export function thayDuoc(viewerId: string, now: Date) {
   return and(
+    // An hoat dong (06/10): dong mang dau `an` khong hien voi AI CA, ke ca chinh nguoi lam. Dat o day vi thayDuoc la cua
+    // chung cua ca ba duong doc (listActivity, markSeen, phienBanKe), nen mot dieu kien o day la bit kin ca ba. Dau dong
+    // mot lan luc ghi (recordActivity), nen dong ghi truoc luc bat khong bi an theo.
+    eq(activity.an, false),
     lte(activity.at, now),
     or(
       and(eq(books.ownerId, viewerId), or(ne(activity.kind, "da-doc"), ne(activity.actorId, viewerId))),

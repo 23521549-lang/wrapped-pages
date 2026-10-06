@@ -14,6 +14,11 @@ export type ActivityPanelProps = {
   partnerName: string;
   /** Ten bai va kenh cua cac bai trong dong doi nhac, lay tu YouTube o may chu (tenCacBai). */
   baiHat?: TenBaiHat;
+  /**
+   * Nguoi xem dang an hoat dong cua minh (06/10). An voi CA HAI nguoi, nen khung nay vang dan di: khong noi gi thi
+   * nguoi ta nhin khung trong va tuong web hong.
+   */
+  an: boolean;
 };
 
 /**
@@ -81,11 +86,13 @@ function Dong({ item, names }: { item: FeedItem; names: FeedNames }) {
  * Co dong thi co vung cuon an thanh cuon (TheoDoiXem: nhan focus de cuon bang phim, va bao cac dong Moi da xem), moi
  * ngay mot nhom co tieu de dinh mep tren. Chua co dong nao thi chi co o trong, khong vung cuon, khong vet mo.
  */
-export function ActivityPanel({ items, now, partnerName, baiHat }: ActivityPanelProps) {
+export function ActivityPanel({ items, now, partnerName, baiHat, an }: ActivityPanelProps) {
   const names: FeedNames = { partner: partnerName, baiHat };
   return (
     <section className="hoat-dong">
       <div className="hoat-dong__dau"><h2>Hoạt động</h2></div>
+      {/* Khong aria-live: dong nay tinh tu luc tai trang, khong phai thong bao xuat hien giua phien. */}
+      {an ? <p className="hoat-dong__an">Hoạt động của bạn đang ẩn.</p> : null}
       {items.length === 0 ? (
         <div className="hoat-dong__trong">
           <b>Chưa có gì mới</b>

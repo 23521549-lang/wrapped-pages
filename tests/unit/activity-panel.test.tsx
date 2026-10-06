@@ -23,7 +23,7 @@ function su(sua: Partial<FeedItem> = {}): FeedItem {
   };
 }
 
-const ve = (items: FeedItem[]) => render(<ActivityPanel items={items} now={NOW} partnerName="Linh" />);
+const ve = (items: FeedItem[], an = false) => render(<ActivityPanel items={items} now={NOW} partnerName="Linh" an={an} />);
 
 afterEach(() => {
   cleanup();
@@ -131,5 +131,35 @@ describe("ActivityPanel: co su kien", () => {
     expect([khongMoi.hasAttribute("data-moi"), khongMoi.hasAttribute("data-id")]).toEqual([false, false]);
     expect(khongMoi.querySelector(".hoat-dong__moi, .sr-only")).toBeNull();
     expect(khongMoi.querySelector(".hoat-dong__le > time.hoat-dong__gio")).not.toBeNull();
+  });
+});
+
+/*
+ * An hoat dong (06/10): an voi CA HAI nguoi, nen khung nay vang dan di voi chinh nguoi bat. Khong noi gi thi ho nhin
+ * khung trong va tuong web hong, nen dau khung co mot dong chu nhat. Dong tinh tu luc tai trang, khong phai thong bao
+ * xuat hien giua phien, nen khong aria-live.
+ */
+describe("dong nhac khi dang an hoat dong", () => {
+  const NHAC = "Hoạt động của bạn đang ẩn.";
+
+  it("an bat: co dong nhac o khung", () => {
+    ve([], true);
+    expect(screen.getByText(NHAC)).toBeDefined();
+  });
+
+  it("an tat: khong co dong nhac", () => {
+    ve([]);
+    expect(screen.queryByText(NHAC)).toBeNull();
+  });
+
+  it("dong nhac khong phai vung aria-live", () => {
+    const { container } = ve([], true);
+    expect(container.querySelector("[aria-live]")).toBeNull();
+  });
+
+  it("co dong de hien thi khung van hien du dong, kem dong nhac", () => {
+    const { container } = ve([su()], true);
+    expect(screen.getByText(NHAC)).toBeDefined();
+    expect(container.querySelectorAll(".hoat-dong__ds li")).toHaveLength(1);
   });
 });

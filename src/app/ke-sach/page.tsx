@@ -5,7 +5,7 @@ import { db } from "@/server/db";
 import { listActivity } from "@/server/feed/list";
 import { phienBanKe } from "@/server/feed/version";
 import { listShelf, type ShelfBook as Sach } from "@/server/library/shelf";
-import { coverSlots } from "@/server/library/timeline";
+import { coverSlotsNhieu } from "@/server/library/timeline";
 import { unreadRounds, type LuotChuaDoc } from "@/server/library/unread-rounds";
 import { tenCacBai } from "@/server/media/ten-youtube";
 import { currentMoods } from "@/server/mood/moods";
@@ -55,14 +55,16 @@ export default async function KeSach() {
   // chi khung sach lon moi tu doi bia, the tren ke luon giu bia moi nhat. Ten bai cua cac dong doi nhac lay tu YouTube o
   // may chu (tenCacBai), song song voi bia; lay khong duoc thi dong ghi "Bản nhạc trên YouTube".
   const sachKhung = [...new Set(chuaDoc.length > 0 ? chuaDoc.map((l) => l.bookId) : recent ? [recent.id] : [])];
+  // Doc dong thoi gian bia cua CA NHOM cuon trong mot lan: doc tung cuon mot la N+1 (sau cuon thanh 24 cau lenh, gan
+  // nua toan bo viec hoi database cua man nay). tests/unit/ngan-sach-ke-sach.test.ts khoa lai cho khoi tai dien.
   const [oBia, baiHat] = await Promise.all([
-    Promise.all(sachKhung.map(async (id) => [id, await coverSlots(db, id)] as const)),
+    coverSlotsNhieu(db, sachKhung),
     tenCacBai(feed.flatMap((i) => {
       const id = i.kind === "doi-nhac" ? docChiTietNhac(i.detail)?.sau?.youtubeId : null;
       return id ? [id] : [];
     })),
   ]);
-  const biaCua = new Map(oBia.map(([id, o]) => [id, o.flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]))]));
+  const biaCua = new Map([...oBia].map(([id, o]) => [id, o.flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]))]));
   // Khong ai giu tam trang thi dai troi khong hien, tuc khong con nut tam dung nao tren trang: khung bia tu dat mot nut.
   const coDaiTroi = minh !== null || kia !== null;
   const fresh = shelf.reduce((n, b) => n + b.newCount, 0);
@@ -89,7 +91,7 @@ export default async function KeSach() {
   const viet = shelf.filter((b) => b.vietCung).map(theKe);
   const cuaBan = shelf.filter((b) => b.mine && !b.vietCung).map(theKe);
   const cuaKia = shelf.filter((b) => !b.mine && !b.vietCung).map(theKe);
-  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} />;
+  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} an={me.anHoatDong} />;
   // Mot luot chua doc thanh prop cua khung sach lon (spec 5a muc E): luot cua nguoi kia "Đọc tiếp" mo cuon qua tam bia
   // toi trang dang doc do; luot cua minh "Viết tiếp". Ca khung mo dung trang cua doan dang hien.
   const theLuot = (l: LuotChuaDoc): LuotKhung => ({

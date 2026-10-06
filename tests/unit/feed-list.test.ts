@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { activity, activitySeen, bookCovers, books, bookTracks, moods, sealAttempts, seals } from "@/server/db/schema";
 import { FEED_LIMIT, listActivity } from "@/server/feed/list";
+import { setAnHoatDong } from "@/server/identity/prefs";
 import { recordActivity } from "@/server/feed/record";
 import type { BookMode } from "@/lib/book";
 import { dayKey } from "@/lib/when";
@@ -344,5 +345,42 @@ describe("listActivity: bay loai cua dot nam va dau Moi", () => {
     expect(await moi()).toEqual([["partner", true], ["me", false]]);
     // Lan xem cua nguoi nay khong anh huong nguoi kia.
     expect((await listActivity(db, seat2.id, NOW)).map((i) => [i.by, i.isNew])).toEqual([["me", false], ["partner", true]]);
+  });
+});
+
+/*
+ * An hoat dong (06/10): dong mang dau `an` khong ra o khung Hoat dong cua AI CA, ke ca chinh nguoi lam. Luat nam o
+ * thayDuoc nen cung mot dieu kien phuc vu ca listActivity, markSeen va phienBanKe.
+ */
+describe("an hoat dong: dong an khong ra o khung Hoat dong", () => {
+  const hai = async () => {
+    const s = await haiCuon();
+    // Cac dong tao-sach cua buoc dung khong thuoc cac ca nay.
+    await s.db.delete(activity);
+    return s;
+  };
+
+  it("ca nguoi lam lan nguoi kia deu khong thay dong an", async () => {
+    const s = await hai();
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: phut(-5), detail: { cam: "yeu" } });
+    expect(await listActivity(s.db, s.seat1.id, NOW)).toEqual([]);
+    expect(await listActivity(s.db, s.seat2.id, NOW)).toEqual([]);
+  });
+
+  it("dong ghi TRUOC luc bat van ra binh thuong voi ca hai", async () => {
+    const s = await hai();
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: phut(-10), detail: { cam: "yeu" } });
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: phut(-5), detail: { cam: "nho" } });
+    expect(await listActivity(s.db, s.seat2.id, NOW)).toHaveLength(1);
+    expect(await listActivity(s.db, s.seat1.id, NOW)).toHaveLength(1);
+  });
+
+  it("co cua nguoi nay khong an dong cua nguoi kia", async () => {
+    const s = await hai();
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat2.id, at: phut(-5), detail: { cam: "vui" } });
+    expect(await listActivity(s.db, s.seat1.id, NOW)).toHaveLength(1);
   });
 });

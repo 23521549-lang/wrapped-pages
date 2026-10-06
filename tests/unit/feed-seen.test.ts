@@ -4,6 +4,7 @@ import { activity, activitySeen, seals } from "@/server/db/schema";
 import { listActivity } from "@/server/feed/list";
 import { recordActivity } from "@/server/feed/record";
 import { markSeen, SEEN_TOI_DA } from "@/server/feed/seen";
+import { setAnHoatDong } from "@/server/identity/prefs";
 import { setMood } from "@/server/mood/moods";
 import type { TestDb } from "../helpers/db";
 import { haiCuon } from "../helpers/library";
@@ -104,5 +105,43 @@ describe("markSeen", () => {
     expect(await moi()).toEqual([[2, false], [1, true]]);
     await thu(phut(-5));
     expect(await moi()).toEqual([[3, true], [1, true]]);
+  });
+});
+
+/*
+ * An hoat dong (06/10): markSeen di qua thayDuoc nen khong cham dong an. Rieng truy van con tinh moc cua nhom thu sai
+ * doc THANG bang activity, khong qua thayDuoc, nen no phai tu loc: khong loc thi moc bi day toi gio cua mot lan thu
+ * sai da an, va mot nhom dang hien bi coi la da xem oan.
+ */
+describe("an hoat dong: markSeen va nhom thu sai", () => {
+  it("khong ghi moc da xem cho dong an", async () => {
+    const s = await bo();
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: NOW, detail: { cam: "yeu" } });
+    const id = await idLuc(s.db, NOW);
+    await markSeen(s.db, s.seat2.id, [id], NOW);
+    expect(await daXem(s.db, s.seat2.id)).toEqual([]);
+  });
+
+  it("moc cua nhom thu sai dang hien khong lay gio cua lan thu da an", async () => {
+    const { db, seat1, seat2, chung, luotChung } = await bo();
+    const [cauDo] = await db
+      .insert(seals)
+      .values({ bookId: chung, roundId: luotChung, kind: "cau-do", question: "Ở đâu?", answers: ["ben xe"], teaser: "" })
+      .returning({ id: seals.id });
+    const thu = (at: Date) => recordActivity(db, {
+      kind: "thu-sai", actorId: seat2.id, at, bookId: chung, roundId: luotChung, mode: "chia-se", sealId: cauDo.id,
+    });
+    // Hai lan thu luc chua an (nhom dang hien), roi bat an va thu lan nua cung ngay gio Viet Nam.
+    await thu(phut(-40));
+    await thu(phut(-35));
+    await setAnHoatDong(db, seat2.id, true);
+    await thu(phut(-5));
+
+    const [nhom] = await listActivity(db, seat1.id, NOW);
+    expect(nhom.count).toBe(2);
+    await markSeen(db, seat1.id, [nhom.id], NOW);
+    // Moc phai la phut(-35), lan thu moi nhat DANG HIEN, chu khong phai phut(-5) cua lan da an.
+    expect((await daXem(db, seat1.id)).map((r) => r[1])).toEqual([phut(-35)]);
   });
 });

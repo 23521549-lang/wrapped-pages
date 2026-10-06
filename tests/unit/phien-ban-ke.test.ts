@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { activity, readSheets } from "@/server/db/schema";
+import { setAnHoatDong } from "@/server/identity/prefs";
 import { recordActivity } from "@/server/feed/record";
 import { markSeen } from "@/server/feed/seen";
 import { phienBanKe } from "@/server/feed/version";
@@ -76,5 +77,22 @@ describe("phienBanKe", () => {
     await recordActivity(db, { kind: "tao-sach", actorId: seat1.id, at: phut(30), bookId: chung, mode: "chia-se" });
     expect(await phienBanKe(db, seat2.id, NOW)).toBe(v1);
     expect(await phienBanKe(db, seat2.id, phut(31))).not.toBe(v1);
+  });
+});
+
+/*
+ * An hoat dong (06/10): dong an khong lam doi chuoi phien ban, nen ke cua nguoi kia khong tu lam moi khi nguoi dang an
+ * vua lam gi. Day la he qua co y (spec muc D5): tat hoat dong ma van day thong bao song la tu mau thuan.
+ */
+describe("an hoat dong: phien ban ke", () => {
+  it("dong an khong lam doi chuoi phien ban; dong hien thi doi", async () => {
+    const { db, seat1, seat2, chung, luot } = await bo();
+    const v0 = await phienBanKe(db, seat2.id, NOW);
+    await setAnHoatDong(db, seat1.id, true);
+    await recordActivity(db, { kind: "sua-trang", actorId: seat1.id, at: phut(-5), bookId: chung, roundId: luot, mode: "chia-se" });
+    expect(await phienBanKe(db, seat2.id, NOW)).toBe(v0);
+    await setAnHoatDong(db, seat1.id, false);
+    await recordActivity(db, { kind: "sua-trang", actorId: seat1.id, at: phut(-4), bookId: chung, roundId: luot, mode: "chia-se" });
+    expect(await phienBanKe(db, seat2.id, NOW)).not.toBe(v0);
   });
 });

@@ -20,9 +20,11 @@ export async function markSeen(db: AnyDb, viewerId: string, ids: readonly string
   const can = [...new Set(ids.filter(isUuid))].slice(0, SEEN_TOI_DA);
   if (can.length === 0) return;
   // Nhom cua dong gom thu sai: cung nguoi, niem phong, luot, ngay Viet Nam (dung khoa gom cua listActivity).
+  // Truy van con nay doc THANG bang activity, khong qua thayDuoc, nen phai tu loc dong an (an hoat dong, 06/10): khong
+  // loc thi moc da xem lay gio cua mot lan thu sai da an va bi day qua xa, lam mot nhom dang hien bi coi la da xem oan.
   const nhomThuSai = sql`(
     select max(g.at) from ${activity} g
-    where g.kind = 'thu-sai' and g.actor_id = ${activity.actorId} and g.seal_id = ${activity.sealId}
+    where g.kind = 'thu-sai' and g.an = false and g.actor_id = ${activity.actorId} and g.seal_id = ${activity.sealId}
       and g.book_id = ${activity.bookId} and g.round_id = ${activity.roundId} and g.at <= ${now.toISOString()}::timestamptz
       and ${ngayVietNam(sql`g.at`)} = ${ngayVietNam(sql`${activity.at}`)}
   )`;

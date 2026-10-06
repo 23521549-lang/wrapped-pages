@@ -6,6 +6,7 @@ import { readSettingsView } from "@/server/web/settings";
 import { actionReveal } from "@/app/actions/identity";
 import { AppNav } from "@/components/AppNav";
 import { Button } from "@/components/Button";
+import { CaiDatHoatDong } from "@/components/feed/CaiDatHoatDong";
 import { CaiDatChip } from "@/components/linh-vat/CaiDatChip";
 import { RenameForm } from "./RenameForm";
 
@@ -41,6 +42,8 @@ export default async function CaiDat() {
             </section>
 
             <CaiDatChip an={chip.an} tuNoi={chip.tuNoi} tenKia={me.partnerNickname} />
+
+            <CaiDatHoatDong an={me.anHoatDong} tenKia={me.partnerNickname} />
           </div>
 
           <div className="cai-dat__cot">

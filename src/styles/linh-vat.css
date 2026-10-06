@@ -201,16 +201,5 @@
 }
 @keyframes lv-mo{ from{ opacity: 0; } }
 
-/* ---------- Cai dat, muc "Chíp": ca dong la vung bam 44px, o danh dau mau muc ---------- */
-.chon-chip{ display: flex; align-items: center; gap: var(--space-sm); min-height: 44px; font-weight: 500; cursor: pointer; }
-/* O danh dau tu ve (nhu radio cua .the-chon): chinh o cao 44px de vung bam dat ca khi do rieng; ::before la hop 20px vien
-   manh, ::after la o vuong dac mau muc hien khi da danh dau. */
-.chon-chip input{ appearance: none; -webkit-appearance: none; flex: none; display: grid; place-items: center; width: 44px; height: 44px;
-  margin: 0 calc(-1 * var(--space-xs)) 0 calc(-1 * var(--space-sm)); border: 0; border-radius: var(--radius-nut); background: transparent; cursor: pointer; }
-.chon-chip input::before, .chon-chip input::after{ content: ""; grid-area: 1 / 1; }
-.chon-chip input::before{ width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid var(--color-rule-ui); background: var(--color-paper); }
-.chon-chip input::after{ width: 10px; height: 10px; border-radius: 2px; background: var(--blue-ink); transform: scale(0); transition: transform var(--dur-micro) var(--ease-out); }
-.chon-chip input:checked::before{ border-color: var(--blue-ink); }
-.chon-chip input:checked::after{ transform: scale(1); }
-.chon-chip input:disabled{ cursor: progress; }
-.chon-chip__xoa{ margin-top: var(--space-sm); display: grid; gap: var(--space-xs); justify-items: start; }
+/* ---------- Cai dat, muc "Chíp": vung nut "Xóa cuộc trò chuyện" ---------- */
+.chip-xoa{ margin-top: var(--space-sm); display: grid; gap: var(--space-xs); justify-items: start; }

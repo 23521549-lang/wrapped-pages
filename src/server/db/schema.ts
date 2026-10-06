@@ -24,6 +24,12 @@ export const accounts = pgTable("accounts", {
   createdByDevice: text("created_by_device").notNull(),
   /** Nguoi nay da tat nhac nen. Doc o man doc sach co nhac, ghi bang actionSetMusicMuted. */
   musicMuted: boolean("music_muted").notNull().default(false),
+  /**
+   * Nguoi nay da an hoat dong cua minh (dot an hoat dong, 06/10). Tu luc bat, moi dong Hoat dong ho sinh ra mang
+   * an = true nen khong hien o khung Hoat dong cua ca hai nguoi. Doc o Cai dat va trong recordActivity; ghi bang
+   * actionAnHoatDong. Dong ghi TRUOC luc bat khong bi sua, nen bat tat khong doi lai qua khu.
+   */
+  hoatDongAn: boolean("hoat_dong_an").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -248,6 +254,12 @@ export const activity = pgTable("activity", {
   moodId: uuid("mood_id").references(() => moods.id, { onDelete: "cascade" }),
   detail: jsonb("detail").$type<unknown>(),
   shared: boolean("shared").notNull(),
+  /**
+   * Dong bi an khoi khung Hoat dong cua CA HAI nguoi. Dau nay dong MOT LAN luc ghi, theo accounts.hoat_dong_an cua
+   * nguoi lam, nen no la su that cua thoi diem do chu khong phai mot co doc lai luc hien. thayDuoc loc bang dung cot
+   * nay; so-nhac.ts CO Y khong loc, vi dong doi-nhac la nguon su that duy nhat cua So nhac thang.
+   */
+  an: boolean("an").notNull().default(false),
   at: timestamp("at", { withTimezone: true }).notNull(),
 }, (t) => ({
   kindValue: check(

@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { activity } from "@/server/db/schema";
+import { accounts, activity } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import type { BookMode } from "@/lib/book";
 import {
@@ -50,17 +50,37 @@ export type ActivityEvent =
  * tx la giao dich dang chay: khong bao gio goi readSnapshot hay mot ham doc qua no tu day.
  */
 export async function recordActivity(tx: AnyDb, event: ActivityEvent): Promise<void> {
+  await chen(tx, event, await anCua(tx, event.actorId));
+}
+
+/**
+ * Nguoi nay dang an hoat dong cua minh khong (accounts.hoat_dong_an). Mot truy van khoa chinh, khong join, chay trong
+ * CHINH giao dich cua hanh dong: hanh dong rollback thi khong con dau vet gi.
+ */
+async function anCua(tx: AnyDb, actorId: string): Promise<boolean> {
+  const [row] = await tx.select({ an: accounts.hoatDongAn }).from(accounts).where(eq(accounts.id, actorId));
+  return row?.an ?? false;
+}
+
+/**
+ * Chen mot dong voi dau `an` cho san. Toan bo luat `shared` theo loai nam gon o day chu khong o cho goi, nen hai duong
+ * ghi (recordActivity va duong khong gop cua ghiHayGop) khong the lech nhau.
+ *
+ * Ham rieng tu, co y: mot tham so tuy chon kieu recordActivity(tx, event, an?) se lam chu ky noi doi (truyen vao thi
+ * tin, khong truyen thi tu doc) va mo duong cho mot cho goi tuong lai truyen sai gia tri.
+ */
+async function chen(tx: AnyDb, event: ActivityEvent, an: boolean): Promise<void> {
   if (event.kind === "doi-mat-khau") {
-    await tx.insert(activity).values({ ...event, shared: false });
+    await tx.insert(activity).values({ ...event, shared: false, an });
     return;
   }
   // Tam trang von hien voi nguoi kia (dai troi), thu va cam xuc thi gui cho nguoi kia: dong cua ba loai nay luon chia se.
   if (event.kind === "tha-tam-trang" || event.kind === "gui-thu" || event.kind === "tha-cam-xuc") {
-    await tx.insert(activity).values({ ...event, shared: true });
+    await tx.insert(activity).values({ ...event, shared: true, an });
     return;
   }
   const { mode, ...rest } = event;
-  await tx.insert(activity).values({ ...rest, shared: mode === "chia-se" });
+  await tx.insert(activity).values({ ...rest, shared: mode === "chia-se", an });
 }
 
 /** Cac loai ghi qua ghiHayGop. */
@@ -73,6 +93,7 @@ export type SuKienGop = Extract<ActivityEvent, { kind: "doi-ten-sach" | "doi-bia
  * cua trang do. Khoa dong cu (FOR UPDATE) de hai lan ghi cung luc khong gop chong nhau.
  */
 export async function ghiHayGop(tx: AnyDb, event: SuKienGop, cuaSoMs: number): Promise<void> {
+  const an = await anCua(tx, event.actorId);
   const theoO = event.kind === "doi-bia" || event.kind === "doi-nhac" || event.kind === "sua-trang" || event.kind === "doi-ten-luot";
   const [cu] = await tx
     .select({ id: activity.id, detail: activity.detail })
@@ -81,6 +102,10 @@ export async function ghiHayGop(tx: AnyDb, event: SuKienGop, cuaSoMs: number): P
       eq(activity.actorId, event.actorId),
       eq(activity.kind, event.kind),
       eq(activity.bookId, event.bookId),
+      // Chi gop voi dong CUNG TRANG THAI DAU. Thieu dieu kien nay thi: doi bia luc chua an (dong hien), bat an hoat dong,
+      // doi bia lan nua trong cua so gop - lan gop day `at` cua dong dang hien len, nen mot viec dang le an lai lam dong
+      // hien nhay len thanh Moi voi nguoi kia. Bat tat giua cua so thi mo dong moi, do la hanh vi dung.
+      eq(activity.an, an),
       theoO ? (event.roundId === null ? isNull(activity.roundId) : eq(activity.roundId, event.roundId)) : undefined,
       gt(activity.at, new Date(event.at.getTime() - cuaSoMs)),
     ))
@@ -88,7 +113,8 @@ export async function ghiHayGop(tx: AnyDb, event: SuKienGop, cuaSoMs: number): P
     .limit(1)
     .for("update");
   if (!cu) {
-    await recordActivity(tx, event);
+    // Goi chen thang chu khong goi lai recordActivity: co da doc o dau ham, khong doc hai lan trong mot giao dich.
+    await chen(tx, event, an);
     return;
   }
   const cuaDong = eq(activity.id, cu.id);

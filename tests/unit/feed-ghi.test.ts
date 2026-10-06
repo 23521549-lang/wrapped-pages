@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { activity } from "@/server/db/schema";
-import { GOP_DOC_MS, GOP_DOI_MS } from "@/server/feed/record";
+import { GOP_DOC_MS, GOP_DOI_MS, recordActivity } from "@/server/feed/record";
 import { createBook, updateBook } from "@/server/library/books";
 import { editRound, readRoundForEdit } from "@/server/library/edit-round";
 import { markRead } from "@/server/library/pages";
 import { setCoverEntry, setTrackEntry } from "@/server/library/timeline";
+import { setAnHoatDong } from "@/server/identity/prefs";
 import { setMood, withdrawMood } from "@/server/mood/moods";
 import type { FeedKind } from "@/lib/feed/types";
 import type { TestDb } from "../helpers/db";
@@ -139,5 +140,60 @@ describe("ghi su kien dot nam", () => {
     expect(await dong(s.db, "da-doc")).toHaveLength(1);
     await markRead(s.db, s.seat1.id, s.chung, [1], T);
     expect(await dong(s.db, "da-doc")).toHaveLength(1);
+  });
+});
+
+/*
+ * An hoat dong (06/10): moi dong mang dau `an` dong MOT LAN luc ghi theo accounts.hoat_dong_an cua NGUOI LAM. Hai ca
+ * dau kiem dung dau do; hai ca sau kiem bay gop - ghiHayGop chi duoc gop voi dong cung trang thai dau, khong thi mot
+ * viec dang le an se keo mot dong dang hien len thanh Moi voi nguoi kia.
+ */
+describe("an hoat dong: dau an dong luc ghi", () => {
+  it("dong mang dau theo co cua NGUOI LAM, khong theo co cua nguoi kia", async () => {
+    const s = await bo();
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: T, detail: { cam: "yeu" } });
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat2.id, at: T, detail: { cam: "vui" } });
+    const rows = await s.db.select({ ai: activity.actorId, an: activity.an }).from(activity);
+    expect(rows).toEqual(expect.arrayContaining([
+      { ai: s.seat1.id, an: true },
+      { ai: s.seat2.id, an: false },
+    ]));
+    expect(rows).toHaveLength(2);
+  });
+
+  it("bat roi tat: dong sau mang dau moi, dong truoc giu dau cu", async () => {
+    const s = await bo();
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: T, detail: { cam: "yeu" } });
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: sau(PHUT), detail: { cam: "nho" } });
+    await setAnHoatDong(s.db, s.seat1.id, false);
+    await recordActivity(s.db, { kind: "tha-cam-xuc", actorId: s.seat1.id, at: sau(2 * PHUT), detail: { cam: "vui" } });
+    const rows = await s.db.select({ an: activity.an }).from(activity).orderBy(asc(activity.at));
+    expect(rows.map((r) => r.an)).toEqual([false, true, false]);
+  });
+
+  it("ghiHayGop khong gop qua hai trang thai dau: dong dang hien khong bi viec da an keo len", async () => {
+    const s = await bo();
+    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "hoa-dao", coverMediaId: null }, T)).toBe("saved");
+    const truoc = await dong(s.db, "doi-bia");
+    expect(truoc.map((r) => [r.an, r.at])).toEqual([[false, T]]);
+
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    expect(await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "cau-go", coverMediaId: null }, sau(PHUT))).toBe("saved");
+
+    // Dong cu KHONG bi doi at (khong bi gop vao), va dong moi la mot dong rieng mang dau an.
+    expect((await dong(s.db, "doi-bia")).map((r) => [r.an, r.at])).toEqual([[false, T], [true, sau(PHUT)]]);
+  });
+
+  it("hai lan cung trang thai dau thi van gop nhu cu", async () => {
+    const s = await bo();
+    await setAnHoatDong(s.db, s.seat1.id, true);
+    await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "hoa-dao", coverMediaId: null }, T);
+    await setCoverEntry(s.db, s.seat1.id, s.chung, null, { cover: "cau-go", coverMediaId: null }, sau(PHUT));
+    const rows = await dong(s.db, "doi-bia");
+    expect(rows.map((r) => [r.an, r.at, r.detail])).toEqual([
+      [true, sau(PHUT), { truoc: { cover: "nui-xa", anhId: null }, sau: { cover: "cau-go", anhId: null } }],
+    ]);
   });
 });

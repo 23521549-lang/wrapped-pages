@@ -186,6 +186,8 @@
 }
 .hoat-dong__dau{ display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); padding: var(--space-sm) 0 var(--space-2xs); }
 .hoat-dong__dau h2{ font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; letter-spacing: normal; line-height: 1.4; }
+/* Dong nhac khi nguoi xem dang an hoat dong cua minh (06/10): chu nhat, khong nen, khong vien, khong phai nut. */
+.hoat-dong__an{ font-size: var(--text-xs); color: var(--color-ink-3); padding-block: var(--space-2xs); }
 /* vung cuon: an thanh cuon, bu lai bang vet mo o day (::after dinh o mep duoi, khong can JS) */
 .hoat-dong__cuon{
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
@@ -402,6 +404,20 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .the-chon input:checked::after{ transform: scale(1); }
 .the-chon input:focus-visible{ outline: 2.5px solid var(--color-focus); outline-offset: 3px; }
 .the-chon:has(input:checked){ background: var(--blue-1); border-color: var(--blue-line); }
+
+/* O danh dau dung chung cua cac muc o Cai dat (Chip, Hoat dong): ca dong la vung bam 44px, o danh dau mau muc. Dat
+   canh .the-chon vi cung ho: the input that tu ve, khong dung o mac dinh cua trinh duyet. */
+.o-chon{ display: flex; align-items: center; gap: var(--space-sm); min-height: 44px; font-weight: 500; cursor: pointer; }
+/* O danh dau tu ve (nhu radio cua .the-chon): chinh o cao 44px de vung bam dat ca khi do rieng; ::before la hop 20px vien
+   manh, ::after la o vuong dac mau muc hien khi da danh dau. */
+.o-chon input{ appearance: none; -webkit-appearance: none; flex: none; display: grid; place-items: center; width: 44px; height: 44px;
+  margin: 0 calc(-1 * var(--space-xs)) 0 calc(-1 * var(--space-sm)); border: 0; border-radius: var(--radius-nut); background: transparent; cursor: pointer; }
+.o-chon input::before, .o-chon input::after{ content: ""; grid-area: 1 / 1; }
+.o-chon input::before{ width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid var(--color-rule-ui); background: var(--color-paper); }
+.o-chon input::after{ width: 10px; height: 10px; border-radius: 2px; background: var(--blue-ink); transform: scale(0); transition: transform var(--dur-micro) var(--ease-out); }
+.o-chon input:checked::before{ border-color: var(--blue-ink); }
+.o-chon input:checked::after{ transform: scale(1); }
+.o-chon input:disabled{ cursor: progress; }
 .the-chon:has(input:disabled){ opacity: .55; cursor: not-allowed; }
 .the-chon__t{ font-weight: 600; line-height: 1.4; }
 .the-chon:has(input:checked) .the-chon__t{ color: var(--blue-ink); }

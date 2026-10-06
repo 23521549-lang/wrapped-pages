@@ -85,10 +85,10 @@ describe("bang activity", () => {
     expect(def.match(/'[a-z-]+'/g)).toEqual(FEED_KINDS.map((k) => `'${k}'`));
   });
 
-  it("cot moi la mood_id va detail (jsonb); cot text duy nhat van la kind", () => {
+  it("cot moi la mood_id, detail (jsonb) va an; cot text duy nhat van la kind", () => {
     const cols = getTableConfig(activity).columns;
     expect(cols.map((c) => c.name).sort()).toEqual(
-      ["actor_id", "at", "book_id", "detail", "id", "kind", "mood_id", "round_id", "seal_id", "shared", "subject_id"],
+      ["actor_id", "an", "at", "book_id", "detail", "id", "kind", "mood_id", "round_id", "seal_id", "shared", "subject_id"],
     );
     expect(cols.filter((c) => c.getSQLType() === "text").map((c) => c.name)).toEqual(["kind"]);
     expect(cols.find((c) => c.name === "detail")?.getSQLType()).toBe("jsonb");
@@ -111,22 +111,22 @@ describe("bang activity", () => {
     expect(rows.find((r) => r.kind === "doi-ten-luot")).toMatchObject({ roundId: s.roundId, detail: { truoc: null, sau: "Mưa phùn đầu ngõ" } });
     expect(rows.find((r) => r.kind === "tha-tam-trang")).toEqual({
       id: expect.any(String), kind: "tha-tam-trang", actorId: s.seat2.id, subjectId: null, bookId: null, sealId: null,
-      roundId: null, moodId: s.moodId, detail: null, shared: true, at: NOW,
+      roundId: null, moodId: s.moodId, detail: null, shared: true, an: false, at: NOW,
     });
     expect(rows.find((r) => r.kind === "doi-bia")).toEqual({
       id: expect.any(String), kind: "doi-bia", actorId: s.seat1.id, subjectId: null, bookId: s.chung, sealId: null,
-      roundId: null, moodId: null, shared: true, at: NOW,
+      roundId: null, moodId: null, shared: true, an: false, at: NOW,
       detail: { truoc: { cover: "nui-xa", anhId: null }, sau: { cover: "hoa-dao", anhId: null } },
     });
     expect(rows.find((r) => r.kind === "tao-sach")).toMatchObject({ roundId: null, detail: null, sealId: null });
     expect(rows.find((r) => r.kind === "da-doc")).toMatchObject({ roundId: s.roundId, detail: { den: 3 } });
     expect(rows.find((r) => r.kind === "gui-thu")).toEqual({
       id: expect.any(String), kind: "gui-thu", actorId: s.seat2.id, subjectId: null, bookId: null, sealId: null,
-      roundId: null, moodId: null, detail: { thang: "2026-08" }, shared: true, at: NOW,
+      roundId: null, moodId: null, detail: { thang: "2026-08" }, shared: true, an: false, at: NOW,
     });
     expect(rows.find((r) => r.kind === "tha-cam-xuc")).toEqual({
       id: expect.any(String), kind: "tha-cam-xuc", actorId: s.seat2.id, subjectId: null, bookId: null, sealId: null,
-      roundId: null, moodId: null, detail: { cam: "yeu" }, shared: true, at: NOW,
+      roundId: null, moodId: null, detail: { cam: "yeu" }, shared: true, an: false, at: NOW,
     });
   });
 

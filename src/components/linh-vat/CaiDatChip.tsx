@@ -21,7 +21,7 @@ export function CaiDatChip({ an, tuNoi, tenKia }: { an: boolean; tuNoi: boolean;
         Chíp là bạn gà con ngồi góc dưới bên trái. Chíp chỉ nhắc tới những gì bạn vốn thấy trên web, và không kể chuyện bạn nói
         với Chíp cho {tenKia}.
       </p>
-      <label className="chon-chip">
+      <label className="o-chon">
         <input
           type="checkbox"
           checked={hien}
@@ -34,7 +34,7 @@ export function CaiDatChip({ an, tuNoi, tenKia }: { an: boolean; tuNoi: boolean;
         />
         Hiện Chíp ở các trang
       </label>
-      <label className="chon-chip">
+      <label className="o-chon">
         <input
           type="checkbox"
           checked={noi}
@@ -47,7 +47,7 @@ export function CaiDatChip({ an, tuNoi, tenKia }: { an: boolean; tuNoi: boolean;
         />
         Chíp tự chào và báo chuyện mới
       </label>
-      <div className="chon-chip__xoa">
+      <div className="chip-xoa">
         {daXoa ? (
           <output className="muc__x">Đã xóa cuộc trò chuyện với Chíp.</output>
         ) : (
