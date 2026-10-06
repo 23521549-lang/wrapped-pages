@@ -6,7 +6,7 @@ import { COVERS, type CoverKey } from "@/lib/book";
 import { isUuid } from "@/lib/uuid";
 import { YOUTUBE_ID } from "@/lib/youtube";
 import { attachCover, lockCover } from "@/server/media/cover";
-import { khoangLuot, roundsOfBook } from "./rounds";
+import { khoangLuot, roundsOfBooks } from "./rounds";
 import { lockWritableBook } from "./remove";
 import { GOP_DOI_MS, ghiHayGop } from "@/server/feed/record";
 import { giongNhau, type GiaTriBia } from "@/lib/feed/detail";
@@ -71,17 +71,26 @@ export type TrackSlot = Slot & { o: { id: string; youtubeId: string | null } | n
  * Khung cho cua ca hai dong thoi gian: o mo dau roi tung luot theo dung thu tu cua roundsOfBook. Thu tu luot chi duoc
  * tinh o MOT cho trong ca du an (roundsOfBook), nen ke sach va man Sua sach khong the xep khac nhau.
  */
-async function khungCho(db: AnyDb, bookId: string): Promise<Slot[]> {
-  if (!isUuid(bookId)) return [];
+async function khungChoNhieu(db: AnyDb, bookIds: readonly string[]): Promise<Map<string, Slot[]>> {
+  const theo = new Map<string, Slot[]>();
+  const hopLe = [...new Set(bookIds.filter(isUuid))];
+  if (hopLe.length === 0) return theo;
   const [cuon, luot] = await Promise.all([
-    db.select({ createdAt: books.createdAt }).from(books).where(eq(books.id, bookId)),
-    roundsOfBook(db, bookId),
+    db.select({ id: books.id, createdAt: books.createdAt }).from(books).where(inArray(books.id, hopLe)),
+    roundsOfBooks(db, hopLe),
   ]);
-  if (cuon.length === 0) return [];
-  return [
-    { roundId: null, ordinal: null, first: null, last: null, at: cuon[0].createdAt },
-    ...luot.map((r) => ({ roundId: r.id, ordinal: r.ordinal, first: r.first, last: r.last, at: r.publishedAt })),
-  ];
+  for (const c of cuon) {
+    theo.set(c.id, [
+      { roundId: null, ordinal: null, first: null, last: null, at: c.createdAt },
+      ...(luot.get(c.id) ?? []).map((r) => ({ roundId: r.id, ordinal: r.ordinal, first: r.first, last: r.last, at: r.publishedAt })),
+    ]);
+  }
+  return theo;
+}
+
+/** Khung cho cua mot cuon. Goi lai ban nhieu cuon, de thu tu o chi duoc dinh nghia o mot cho. */
+async function khungCho(db: AnyDb, bookId: string): Promise<Slot[]> {
+  return (await khungChoNhieu(db, [bookId])).get(bookId) ?? [];
 }
 
 /** Ghep cac o da co vao khung cho, khop theo luot. Khoa cua o mo dau la chuoi rong vi Map khong nhan null lan string. */
@@ -97,16 +106,40 @@ function ghepO<T extends { roundId: string | null }, S>(cho: Slot[], os: T[], la
  * Ca dong thoi gian bia cua mot cuon, gom ca o trong. Doc trong MOT anh chup de khung cho va cac o luon den tu cung mot
  * trang thai: mot lan Dang chen vao giua khong the them mot luot ma o cua no chua kip hien.
  */
-export async function coverSlots(db: AnyDb, bookId: string): Promise<CoverSlot[]> {
+export async function coverSlotsNhieu(db: AnyDb, bookIds: readonly string[]): Promise<Map<string, CoverSlot[]>> {
+  const rong = new Map<string, CoverSlot[]>();
+  const hopLe = [...new Set(bookIds.filter(isUuid))];
+  if (hopLe.length === 0) return rong;
   return readSnapshot(db, async (tx) => {
-    const cho = await khungCho(tx, bookId);
-    if (cho.length === 0) return [];
+    const cho = await khungChoNhieu(tx, hopLe);
+    if (cho.size === 0) return rong;
     const os = await tx
-      .select({ id: bookCovers.id, roundId: bookCovers.roundId, cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId })
+      .select({
+        bookId: bookCovers.bookId, id: bookCovers.id, roundId: bookCovers.roundId,
+        cover: bookCovers.cover, coverMediaId: bookCovers.coverMediaId,
+      })
       .from(bookCovers)
-      .where(eq(bookCovers.bookId, bookId));
-    return ghepO(cho, os, (o) => ({ id: o.id, cover: o.cover, coverMediaId: o.coverMediaId }));
+      .where(inArray(bookCovers.bookId, [...cho.keys()]));
+    const theoCuon = new Map<string, typeof os>();
+    for (const o of os) {
+      const cua = theoCuon.get(o.bookId) ?? [];
+      cua.push(o);
+      theoCuon.set(o.bookId, cua);
+    }
+    const ket = new Map<string, CoverSlot[]>();
+    for (const [id, khung] of cho) {
+      ket.set(id, ghepO(khung, theoCuon.get(id) ?? [], (o) => ({ id: o.id, cover: o.cover, coverMediaId: o.coverMediaId })));
+    }
+    return ket;
   });
+}
+
+/**
+ * Ca dong thoi gian bia cua MOT cuon. Goi lai ban nhieu cuon: mot luat ghep o duy nhat, va hai duong doc khong the
+ * xep khac nhau.
+ */
+export async function coverSlots(db: AnyDb, bookId: string): Promise<CoverSlot[]> {
+  return (await coverSlotsNhieu(db, [bookId])).get(bookId) ?? [];
 }
 
 /** Ca dong thoi gian nhac cua mot cuon, cung khung cho voi coverSlots. Giu ca o go nhac. */

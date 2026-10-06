@@ -2,7 +2,7 @@ import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { activity, books, bookTracks, rounds } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
-import { roundsOfBook } from "@/server/library/rounds";
+import { roundsOfBooks } from "@/server/library/rounds";
 import type { BookMode } from "@/lib/book";
 import { docChiTietNhac } from "@/lib/feed/detail";
 import { boTrung } from "@/lib/so-nhac";
@@ -75,7 +75,8 @@ async function baiTrong(tx: AnyDb, viewerId: string, from: Date | null, to: Date
 
 /**
  * Bai dat trong thang t: cua nguoi xem (minh), cua nguoi kia (kia) va cua sach viet cung (chung, 5c), moi danh sach theo
- * luc dat, da bo trung. So thu tu luot lay tu roundsOfBook (noi duy nhat tinh thu tu luot), tren cung anh chup.
+ * luc dat, da bo trung. So thu tu luot lay tu roundsOfBooks (noi duy nhat tinh thu tu luot), tren cung anh chup: doc
+ * ca nhom cuon trong MOT cau lenh, khong phai mot cau moi cuon.
  */
 export async function baiCuaThang(
   db: AnyDb, viewerId: string, t: Thang,
@@ -83,8 +84,8 @@ export async function baiCuaThang(
   const { from, to } = khoangThang(t);
   return readSnapshot(db, async (tx) => {
     const tho = await baiTrong(tx, viewerId, from, to);
-    const cacLuot = await Promise.all([...new Set(tho.map((b) => b.bookId))].map((bookId) => roundsOfBook(tx, bookId)));
-    const thuTu = new Map(cacLuot.flat().map((r) => [r.id, r.ordinal]));
+    const cacLuot = await roundsOfBooks(tx, [...new Set(tho.map((b) => b.bookId))]);
+    const thuTu = new Map([...cacLuot.values()].flat().map((r) => [r.id, r.ordinal]));
     const ra = (ds: Tho[]) => boTrung(ds).map((b): BaiSo => ({
       youtubeId: b.youtubeId, at: b.at, bookId: b.bookId, bookTitle: b.title,
       ordinal: b.roundId === null ? null : (thuTu.get(b.roundId) ?? null), rieng: b.mode === "rieng-tu",

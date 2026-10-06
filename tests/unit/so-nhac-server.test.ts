@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { books, bookTracks } from "@/server/db/schema";
 import { createBook } from "@/server/library/books";
+import { demCauLenh } from "../helpers/db";
+import { setAnHoatDong } from "@/server/identity/prefs";
 import { recordActivity } from "@/server/feed/record";
 import { baiCuaThang, thangCoNhac } from "@/server/nhac/so-nhac";
 import type { TestDb } from "../helpers/db";
@@ -115,5 +117,41 @@ describe("thangCoNhac", () => {
       { thang: "2026-09", soBai: 5, soDanhSach: 2 },
     ]);
     expect(await thangCoNhac(db, seat1.id, new Date("2026-09-20T02:00:00.000Z"))).toEqual([]);
+  });
+});
+
+/*
+ * An hoat dong (06/10) KHONG duoc lam mat bai nao khoi So nhac thang. Day la ly do ca thiet ke chon "van ghi, an luc
+ * doc": bang book_tracks chi giu bai HIEN TAI, nen lich su doi nhac o Sua sach khong co o dau khac ngoai dong doi-nhac.
+ * so-nhac.ts loc theo quyen doc CUON (owner_id hay che do chia se), co y khong qua thayDuoc, nen dong bi an van nuoi so.
+ * Ca nay do la: nghia la mot ngay nao do So nhac bi doi sang loc qua thayDuoc, va bai cua nguoi dang an bien mat vinh vien.
+ */
+describe("an hoat dong khong lam mat bai trong So nhac thang", () => {
+  it("bai doi o Sua sach trong luc dang an van nam trong so", async () => {
+    const { db, seat1, chung } = await haiCuon();
+    await taoLuc(db, chung, ngay(9, 2));
+    await setAnHoatDong(db, seat1.id, true);
+    await recordActivity(db, {
+      kind: "doi-nhac", actorId: seat1.id, bookId: chung, roundId: null, mode: "chia-se",
+      at: ngay(9, 21), detail: { truoc: null, sau: { youtubeId: E } },
+    });
+    const t9 = await baiCuaThang(db, seat1.id, { y: 2026, m: 9 });
+    expect(gon(t9.minh)).toEqual(["e Chuyện chưa kể tao"]);
+    expect(t9.minh.map((b) => b.at)).toEqual([ngay(9, 21)]);
+  });
+});
+
+/*
+ * NGAN SACH TRUY VAN cua So nhac thang. Truoc day ham nay doc thu tu luot bang mot cau lenh cho MOI cuon
+ * (`map(bookId => roundsOfBook(tx, bookId))`), tuc N+1 giong het khung sach lon cua ke sach. Bai nay khoa lai: so cau
+ * lenh khong duoc tang theo so cuon co bai trong thang.
+ */
+describe("ngan sach truy van cua So nhac thang", () => {
+  it("so cau lenh khong tang theo so cuon co bai trong thang", async () => {
+    const { db, seat1 } = await dung();
+    const motThang = await demCauLenh(() => baiCuaThang(db, seat1.id, { y: 2026, m: 10 }));
+    const nhieuThang = await demCauLenh(() => baiCuaThang(db, seat1.id, { y: 2026, m: 9 }));
+    // Thang 9 co bai cua nhieu cuon hon han thang 10, nhung so cau lenh phai y nhau.
+    expect(nhieuThang).toBe(motThang);
   });
 });

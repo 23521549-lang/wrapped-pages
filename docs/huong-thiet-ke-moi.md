@@ -371,6 +371,28 @@ Chủ dự án chọn Chíp làm "trạng thái mặc định của linh vật A
 - **Thu nhỏ**: đầu gà con 44px ló ở mép trái, nghiêng; rê chuột hay focus thì ló hẳn. **Tắt** ở Cài đặt, mục "Chíp" (cả dòng
   là vùng bấm 44px), kèm "Xóa cuộc trò chuyện" hỏi lại một lần.
 
+## 17h. Ẩn hoạt động (06/10)
+
+Chủ dự án đặt việc: một công tắc ở Cài đặt để việc mình làm không còn sinh dòng nào ở khung Hoạt động. Spec:
+`docs/superpowers/specs/2026-10-06-tat-hoat-dong.md`, kế hoạch: `docs/superpowers/plans/2026-10-06-tat-hoat-dong.md`.
+
+- **Mục "Hoạt động" ở Cài đặt**, cột trái, dưới mục "Chíp". Một ô đánh dấu "Ẩn hoạt động của tôi", kèm câu giải thích nói
+  đúng những gì xảy ra: máy chủ **vẫn ghi** dòng, chỉ không hiện nó. Câu chữ cố ý không hứa "không lưu gì về bạn".
+- **Lưu thất bại thì hoàn nguyên ô đánh dấu và nói ra lỗi**, khác mục "Chíp" ngay trên (action của Chíp trả `void` nên nó
+  bỏ qua kết quả). Đây là công tắc riêng tư: để người dùng tưởng mình đã ẩn trong khi chưa ẩn được là cái giá đắt nhất màn
+  này có thể trả.
+- **Lớp `.o-chon`** (`app.css`) là ô đánh dấu dùng chung của các mục ở Cài đặt, đặt cạnh `.the-chon`. Trước đây khối này
+  tên `.chon-chip` và nằm trong `linh-vat.css`; dùng lại tên đó cho mục Hoạt động thì tên thành sai nghĩa, mà chép đôi quy
+  tắc thì thành nợ. Phần riêng của Chíp (vùng nút "Xóa cuộc trò chuyện") ở lại `linh-vat.css` dưới tên `.chip-xoa`. Không
+  đổi một giá trị nào, nên không đổi một điểm ảnh nào trên màn hình.
+- **Vùng bấm 44px** giữ đúng cách vẽ cũ: thẻ `input` tự nó cao rộng 44px với `appearance: none`, hộp 20px nhìn thấy được
+  vẽ bằng `::before`, dấu đặc bằng `::after`. Nhờ vậy ô đạt 44px khi đo riêng lẻ và **không cần miễn trừ** trong
+  `MIEN_TRU_VUNG_BAM` của `tests/e2e/vung-bam.spec.ts`. Màn Cài đặt đã nằm trong `doMoiManChinh` nên mục mới vào cổng sẵn có.
+- **Dòng nhắc ở khung Hoạt động.** Vì ẩn với cả hai người, khung của chính người bật sẽ vắng dần đi, nên đầu khung có một
+  dòng `--text-xs` màu `--color-ink-3`: "Hoạt động của bạn đang ẩn." Không nền, không viền, không phải nút, không `aria-live`
+  (dòng tĩnh từ lúc tải trang, không phải thông báo xuất hiện giữa phiên).
+- Không token mới, không màu mới, không hoạt ảnh mới, nên cổng tương phản và luật chuyển động không bị động tới.
+
 ## 17b. Hiệu năng (27/09, trước khi đưa lên production)
 
 Đo trên bản production ở máy, điện thoại 390px, CPU giả lập chậm 4 lần, trung vị 3 lần (máy đo nhiễu, chỉ tin các thay đổi lớn):
@@ -378,6 +400,61 @@ Chủ dự án chọn Chíp làm "trạng thái mặc định của linh vật A
 - **Hình vẽ bìa khai một lần.** Mười hình vẽ bìa nằm trong `InkDefs` (layout gốc) cùng bộ lọc mực; mỗi bìa trên trang là `<svg><use href="#bia-ve-…"/></svg>`. Trang chọn cuốn của Dấu thời gian (51 bìa): 846 xuống 536 phần tử DOM, LCP 2,65 xuống 1,99 giây, TBT 666 xuống 420ms. Kệ sách: TBT 1133 xuống 631ms. Đổi lại mỗi trang thêm khoảng 110 phần tử trong `<defs>` (không được vẽ). Nội dung trong `<use>` kế thừa `color`, nên `currentColor` và bộ lọc mực y như cũ.
 - **Dải trời khuất thì đứng.** `BauTroi` đặt lớp `troi-khuat` qua IntersectionObserver khi dải trời khuất hẳn khỏi màn hình, CSS dừng mọi nét vẽ `.m`; cuộn về thì chạy tiếp. Đo trên Chrome: 82 hoạt ảnh ở đầu trang, 0 khi đọc kệ phía dưới, 82 khi cuộn về. Lớp riêng, không đụng tới lựa chọn "Tạm dừng hiệu ứng".
 - **Không làm, có lý do:** chuỗi khoảng 12 lượt hỏi database của Kệ sách (giao dịch ảnh chụp đọc) tốn 2,1 giây ở máy này vì mỗi lượt 54ms, nhưng production chạy ở `sin1` cùng vùng database nên chỉ cỡ vài chục mili giây; gộp lại dễ mất tính nhất quán mà gần như không được gì. Hạt mưa lặp vô hạn vẫn báo luồng chính mỗi vòng (cách trình duyệt chạy hoạt ảnh CSS, không do `var()`: đã thử bỏ `var()` khỏi keyframes, không đổi gì nên hoàn tác).
+
+## 17i. Hiệu năng, đợt hai (07/10, đo lại sau đợt năm)
+
+Mục 17b đo ngày 27/09, tức **trước cả đợt năm**. Khung sách lớn luân phiên (5a), thư tháng (5b), Hai Ngòi Bút (5c), Kho
+cảm xúc (5d) và Chíp (5e) đều thêm lượt đọc vào màn Kệ sách mà chưa lần nào được đếm. Đợt này đo lại.
+
+**Phép đo dùng ở đây là đếm số câu lệnh SQL thật** (`demCauLenh` trong `tests/helpers/db.ts`), không phải LCP hay TBT đo
+bằng trình duyệt. Lý do: nó không phụ thuộc máy, không phụ thuộc độ trễ mạng, và không phụ thuộc cửa sổ trình duyệt có
+đang hiện hay không. Một lần thử đo hoạt ảnh qua khung trình duyệt đang ẩn cho ra "0 hoạt ảnh đang chạy", con số đó vô
+giá trị vì trình duyệt tạm dừng hoạt ảnh ở trang bị ẩn; đã vứt bỏ.
+
+### N+1 ở khung sách lớn
+
+`ke-sach/page.tsx` gọi `coverSlots` một lần cho **mỗi** cuốn trong khung sách lớn (tối đa sáu lượt chưa đọc), mà mỗi
+`coverSlots` lại tự mở một giao dịch ảnh chụp riêng. Đo được **24 câu lệnh cho sáu cuốn**, tức 4 câu mỗi cuốn, chiếm
+**44% toàn bộ việc hỏi database của cả màn** (cả màn là 54 câu).
+
+Chữa bằng `coverSlotsNhieu(db, bookIds)`: một ảnh chụp, một câu đọc `books`, một câu đọc `rounds` (qua `roundsOfBooks`),
+một câu đọc `book_covers`, rồi gom theo cuốn ở bộ nhớ. `khoangLuot` nhận thêm cả mảng mã cuốn nên vẫn dùng được chỉ mục
+`book_id` chứ không gom nhóm cả bảng `pages`.
+
+| | Trước | Sau |
+|---|---|---|
+| Đọc bìa cho khung (6 cuốn) | 24 câu | **4 câu** |
+| Tổng cả màn Kệ sách | 54 câu | **34 câu** |
+
+Giảm 20 câu, tức **37%**. Quan trọng hơn con số: phần đọc bìa giờ **không tăng theo số cuốn** nữa.
+
+`roundsOfBook` và `coverSlots` (một cuốn) được viết lại thành vỏ mỏng gọi đúng bản nhiều cuốn. Cố ý: thứ tự lượt và
+cách đánh số thứ tự chỉ được định nghĩa ở **một** chỗ trong cả dự án, nên hai đường đọc không thể xếp khác nhau.
+
+**Cổng giữ**: `tests/unit/ngan-sach-ke-sach.test.ts` khẳng định đọc bìa cho cả khung tốn **đúng bằng** đọc cho một cuốn.
+Ai quay lại vòng `map(id => coverSlots(db, id))` là bài này đỏ ngay.
+
+### N+1 thứ hai: Sổ nhạc tháng
+
+Cùng một kiểu, ở `baiCuaThang` (`src/server/nhac/so-nhac.ts`): nó đọc thứ tự lượt bằng **một câu lệnh cho mỗi cuốn** có
+bài trong tháng. Giờ gọi thẳng `roundsOfBooks` cho cả nhóm.
+
+Đo trên bộ dựng sẵn của `so-nhac-server.test.ts`: tháng 9 (nhiều cuốn) tốn **6 câu**, tháng 10 (một cuốn) tốn **4 câu**.
+Sau khi sửa, cả hai đều **4 câu**. Số câu không còn tăng theo số cuốn.
+
+**Cổng giữ**: `tests/unit/so-nhac-server.test.ts`, ca "so cau lenh khong tang theo so cuon". Cổng này đã được thử ngược:
+trả lại vòng cũ thì nó đỏ ngay với thông điệp `expected 6 to be 4`, nên nó không phải cổng luôn xanh.
+
+### Việc ẩn hoạt động không thêm lượt đọc nào
+
+Cờ `hoat_dong_an` đi kèm `loadMe`, vốn đã đọc bảng `accounts` và được bọc `cache()` theo request, nên lấy cờ **không tốn
+vòng mạng nào**. Không có hàm `readAnHoatDong` riêng, cố ý: thêm nó là thêm một lượt đọc cho đúng một boolean.
+
+### Chưa đo
+
+LCP, TBT, CLS và số hoạt ảnh của ba màn nặng (Kệ sách, màn đọc, tờ trò chuyện Chíp) **chưa đo lại** sau đợt năm. Muốn đo
+cần bản production chạy ở máy với cửa sổ trình duyệt hiện thật, theo đúng cách mục 17b đã làm: 390px, CPU giả lập chậm
+4 lần, trung vị 3 lần.
 
 ## 18. Việc còn lại
 
