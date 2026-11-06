@@ -203,8 +203,16 @@ export function Reader({
 
   const renderSheet = useCallback(
     (i: number): ReactNode => {
-      if (dangGo && i === moIndex) return <TypeReveal doc={sheets[i]} author={ownerName} onDone={stopReveal} />;
+      // To an trong Khoang Lang: chi dong bao, khong chay nghi thuc mo, khong ve noi dung that.
       const look = looks[i];
+      if (look?.kind === "an") {
+        return (
+          <div className="giay-noi-dung">
+            <p>Đã ẩn trong Khoảng Lặng</p>
+          </div>
+        );
+      }
+      if (dangGo && i === moIndex) return <TypeReveal doc={sheets[i]} author={ownerName} onDone={stopReveal} />;
       if (look?.kind === "khoa") return <LockedSheet teaser={look.teaser} index={i} />;
       if (look?.kind === "dau") {
         return (

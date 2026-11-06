@@ -47,6 +47,11 @@ export type ReaderSheet = {
   roundId: string;
   /** Lan sua gan nhat cua luot chua to nay; luon null voi to dang khoa voi nguoi xem. */
   editedAt: Date | null;
+  /**
+   * To bi an trong Khoang Lang (luot do doi phuong viet): content chi la dong "Đã ẩn trong Khoảng Lặng", khong phai
+   * noi dung that. Vi tri, niem phong, so to giu nguyen.
+   */
+  an?: boolean;
 };
 
 /**

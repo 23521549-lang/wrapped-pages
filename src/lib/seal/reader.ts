@@ -4,7 +4,7 @@ import type { ReaderSeal, ReaderSheet } from "./types";
  * Cach ve mot to trong sach lat. "khoa": to nam trong niem phong con khoa voi nguoi xem, chi co dong he lo.
  * "dau": to cua chinh nguoi xem, doc duoc, nhung nguoi kia chua mo.
  */
-export type SheetLook = { kind: "thuong" } | { kind: "khoa"; teaser: string | null } | { kind: "dau"; label: string };
+export type SheetLook = { kind: "thuong" } | { kind: "khoa"; teaser: string | null } | { kind: "dau"; label: string } | { kind: "an" };
 
 const NHAN_DAU = {
   "cau-do": "Đang niêm phong bằng câu đố",
@@ -13,11 +13,13 @@ const NHAN_DAU = {
 
 /** Cach ve tung to, theo dung thu tu cua sheets. Chi dung du lieu da duoc may chu loc cho nguoi xem. */
 export function sheetLooks(
-  sheets: readonly Pick<ReaderSheet, "locked" | "sealId" | "teaser">[],
+  sheets: readonly Pick<ReaderSheet, "locked" | "sealId" | "teaser" | "an">[],
   seals: readonly ReaderSeal[],
 ): SheetLook[] {
   const byId = new Map(seals.map((s) => [s.id, s]));
   return sheets.map((sheet): SheetLook => {
+    // To an trong Khoang Lang ve truoc ca to khoa: dong he lo cua to khoa cung la chu doi phuong viet.
+    if (sheet.an) return { kind: "an" };
     if (sheet.locked) return { kind: "khoa", teaser: sheet.teaser };
     const s = sheet.sealId === null ? undefined : byId.get(sheet.sealId);
     if (s && s.mine && s.kind !== "hen-gio" && s.openedAt === null) return { kind: "dau", label: NHAN_DAU[s.kind] };

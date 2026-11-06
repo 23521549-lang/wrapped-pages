@@ -35,11 +35,13 @@ export default async function DocSach({ params, searchParams }: {
   // Lua chon tat nhac la cua chinh nguoi xem, khong phu thuoc cuon sach, nen doc song song; chi dung khi sach co nhac.
   // De nghi viet cung cua cuon (5c): nut Xin viet cung o cuon chia se cua nguoi kia doi theo no.
   const [view, tatNhac, deNghi] = await Promise.all([
-    readBook(db, me.accountId, id, now), readMusicMuted(db, me.accountId), deNghiCuaSach(db, me.accountId, id),
+    readBook(db, me.accountId, id, now, me.khoangLang), readMusicMuted(db, me.accountId), deNghiCuaSach(db, me.accountId, id),
   ]);
   if (!view) notFound();
   const { book, mine, sheets, seals, rounds, replies, seen, firstUnread, lastPosition, vietCung } = view;
   const count = sheets.length;
+  // Khoang Lang (Q2a): ten doi phuong khong xuat hien o bat cu cau chu nao tren trang nay.
+  const tenKia = me.khoangLang ? "người đọc" : me.partnerNickname;
   // Nguoi viet cua cuon: chu sach, hay ca hai o sach viet cung (5c).
   const laNguoiViet = mine || vietCung;
   // Nut "Sua trang N" chi o to cua luot do nguoi xem viet, ke ca to niem phong: tro toi man sua luot chua to do.
@@ -47,12 +49,12 @@ export default async function DocSach({ params, searchParams }: {
   // Sach viet cung mo o trang chua doc dau tien cua nguoi kia (firstUnread da bo trang cua minh).
   const start = startSheet(query.trang, count, lastPosition, firstUnread, mine && !vietCung);
   // Nguoi doc la nguoi khong phai chu sach: cung la nguoi hoi dap.
-  const nguoiDoc = mine ? me.partnerNickname : me.nickname;
+  const nguoiDoc = mine ? tenKia : me.nickname;
   // Doc duoc thi hoac la sach cua minh, hoac la sach chia se cua nguoi kia.
-  const owner = mine ? me.nickname : me.partnerNickname;
-  const tenNguoiViet = (laCuaMinh: boolean) => (laCuaMinh ? me.nickname : me.partnerNickname);
+  const owner = mine ? me.nickname : tenKia;
+  const tenNguoiViet = (laCuaMinh: boolean) => (laCuaMinh ? me.nickname : tenKia);
   // Cot phai: sach viet cung co muc luc "Các lượt" (5c muc G3, thay khung hoi dap); sach chia se co khung Loi hoi dap;
-  // sach rieng tu khong co (readBook cung khong doc loi).
+  // sach rieng tu khong co (readBook cung khong doc loi). Khoang Lang: khung Loi hoi dap khong hien (loi da bi an).
   const cotPhai = count === 0 ? null : vietCung ? (
     <CacLuot
       bookId={book.id}
@@ -61,21 +63,25 @@ export default async function DocSach({ params, searchParams }: {
         hoiDap: replies.find((x) => x.roundId === r.id)?.body ?? null,
       }))}
     />
-  ) : book.mode === "chia-se" ? (
+  ) : book.mode === "chia-se" && !me.khoangLang ? (
     <RoundReplyPanel rounds={replyRounds(rounds, replies)} mine={mine} replierName={nguoiDoc} now={now} />
   ) : null;
-  // Dong dau trang cua tung to (5c muc G2): ten luot va nguoi viet, chi o sach viet cung.
+  // Dong dau trang cua tung to (5c muc G2): ten luot va nguoi viet, chi o sach viet cung. To an thi bo trong.
   const luotCua = new Map(rounds.map((r) => [r.id, r]));
   const dauTrang = vietCung
     ? sheets.map((s) => {
+      if (s.an) return { ten: "", ai: "" };
       const r = luotCua.get(s.roundId);
       return r ? { ten: tenHienLuot(r.ten, r.ordinal), ai: tenNguoiViet(r.mine) } : { ten: "", ai: "" };
     })
     : undefined;
   const locked = sheets.filter((s) => s.locked).length;
-  const tacGia = vietCung ? `${owner} và ${mine ? me.partnerNickname : me.nickname}` : owner;
+  const tacGia = vietCung ? `${owner} và ${mine ? tenKia : me.nickname}` : owner;
   const phu = vietCung ? [`${tacGia} viết`, `${rounds.length} lượt`, `${count} trang`] : [`${owner} viết`, `${count} trang`];
-  if (mine && !vietCung) phu.push(book.mode === "chia-se" ? `${me.partnerNickname} đọc được` : "Chỉ mình bạn đọc");
+  // Khoang Lang: khong noi ai doc duoc cuon cua minh.
+  if (mine && !vietCung && !(book.mode === "chia-se" && me.khoangLang)) {
+    phu.push(book.mode === "chia-se" ? `${tenKia} đọc được` : "Chỉ mình bạn đọc");
+  }
   if (locked > 0) phu.push(`${locked} trang đang khóa`);
   const muted = book.youtubeId !== null && tatNhac;
   // Moi cuon deu mo qua tam bia, co nhac hay khong (chu du an chot 26/09); chi loi vao ?trang hay ?mo mo thang sach.
@@ -96,7 +102,7 @@ export default async function DocSach({ params, searchParams }: {
             <Link className="btn" href={`/sach/${book.id}/viet-tiep`}>Viết tiếp</Link>
             <Link className="btn btn--line" href={`/sach/${book.id}/sua`}>Sửa sách</Link>
           </div>
-        ) : book.mode === "chia-se" && (
+        ) : book.mode === "chia-se" && !me.khoangLang && (
           <div className="doc-head__nut">
             <XinViet bookId={book.id} chu={owner} trangThai={xin} />
           </div>

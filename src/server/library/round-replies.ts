@@ -67,7 +67,9 @@ export async function submitRoundReply(
  * Moi loi hoi dap cua mot cuon, khong thu tu (nguoi goi dung theo roundId qua replyRounds, moi luot toi da mot dong
  * nen thu tu tra ve khong quan sat duoc). Chi goi sau khi da kiem nguoi xem doc duoc cuon (readBook).
  */
-export async function repliesOfBook(db: AnyDb, bookId: string): Promise<ReaderReply[]> {
+export async function repliesOfBook(db: AnyDb, bookId: string, khoangLang = false): Promise<ReaderReply[]> {
+  // Khoang Lang: loi hoi dap (do doi phuong gui) khong doc nua.
+  if (khoangLang) return [];
   return db
     .select({ roundId: roundReplies.roundId, body: roundReplies.body, createdAt: roundReplies.createdAt })
     .from(roundReplies)

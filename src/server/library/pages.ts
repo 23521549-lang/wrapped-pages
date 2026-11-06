@@ -45,9 +45,10 @@ function teaserDoc(teaser: string | null): DocJson {
  * noi dung that duoc doc len may chu nhung khong bao gio duoc dat vao doi tuong tra ve. Moi cau lenh doc chung mot anh
  * chup, nen mot publishDraft hay editRound commit giua chung khong the de lo to vua dang ma thieu niem phong cua no.
  * replies: loi hoi dap cua cac luot, chi voi sach dang chia se (sach rieng tu khong co khung hoi dap, nen khong doc bang
- * round_replies).
+ * round_replies). Khoang Lang (Q1a): to do doi phuong viet bi an - content chi la dong "Đã ẩn trong Khoảng Lặng",
+ * khong moc sua; vi tri, so to, niem phong giu nguyen.
  */
-export async function readBook(db: AnyDb, viewerId: string, bookId: string, now: Date = new Date()): Promise<ReaderView | null> {
+export async function readBook(db: AnyDb, viewerId: string, bookId: string, now: Date = new Date(), khoangLang = false): Promise<ReaderView | null> {
   return readSnapshot(db, async (tx) => {
     const book = await findReadableBook(tx, viewerId, bookId);
     if (!book) return null;
@@ -66,7 +67,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
         .orderBy(asc(readSheets.position)),
       sealsOfBook(tx, book.id),
       roundsOfBook(tx, book.id),
-      book.mode === "chia-se" ? repliesOfBook(tx, book.id) : Promise.resolve<ReaderReply[]>([]),
+      book.mode === "chia-se" ? repliesOfBook(tx, book.id, khoangLang) : Promise.resolve<ReaderReply[]>([]),
       newestCover(tx, book.id),
       newestTrack(tx, book.id),
       tx
@@ -82,8 +83,17 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const lockedIds = new Set(seals.filter((s) => s.locked).map((s) => s.id));
     const niemCua = new Map(sealRows.map((s) => [s.roundId, s]));
     const suaLuc = new Map(luot.map((r) => [r.id, r.editedAt]));
+    // Khoang Lang (Q1a): to thuoc luot do doi phuong viet thi an - chi de lai dong bao, khong moc sua.
+    const tacGia = new Map(luot.map((r) => [r.id, r.authorId]));
     const sheets = rows.map((r): ReaderSheet => {
       const s = niemCua.get(r.roundId);
+      if (khoangLang && tacGia.get(r.roundId) !== viewerId) {
+        return {
+          position: r.position, publishedAt: r.publishedAt, content: teaserDoc("Đã ẩn trong Khoảng Lặng"),
+          locked: s !== undefined && lockedIds.has(s.id), sealId: s?.id ?? null, teaser: null, roundId: r.roundId,
+          editedAt: null, an: true,
+        };
+      }
       if (!s || !lockedIds.has(s.id)) {
         return {
           position: r.position, publishedAt: r.publishedAt, content: r.content, locked: false, sealId: s?.id ?? null, teaser: null,

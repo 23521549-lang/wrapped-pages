@@ -9,6 +9,8 @@ import { ReplyEditor } from "@/components/editor/ReplyEditor";
 export default async function VietTraLoi({ params }: { params: Promise<{ id: string; sealId: string }> }) {
   await connection();
   const [me, { id, sealId }] = await Promise.all([requireMe(), params]);
+  // Khoang Lang: toan bo trang nay la de tra loi doi phuong nen 404.
+  if (me.khoangLang) notFound();
   const view = await readBook(db, me.accountId, id);
   const seal = view?.seals.find((s) => s.id === sealId);
   // Sach khong doc duoc, ma rac, khong phai trao doi, cua chinh minh, hay da mo: tat ca 404 nhu nhau.
