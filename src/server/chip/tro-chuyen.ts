@@ -232,6 +232,17 @@ export async function chaoChip(db: AnyDb, viewerId: string, tenMinh: string, ten
     .onConflictDoUpdate({ target: chipTrangThai.accountId, set: { lanCuoiThay: now, thayNguLuc: den !== null ? (thayNgu ?? now) : null } });
   if (tt?.an === true || tt?.tuNoi === false || den !== null) return null;
 
+  // Quyet dinh truoc xem co chao khong, tu du lieu da co (tt, den, cu, thayNgu): chi khi chac chan se chao moi
+  // doc Hoat dong de lay cau "moi" va tom tat. Lan mo trang thu hai tro di trong ngay tra null ma khong can biet
+  // viec moi nhat la gi, nen khong ton 6 cau lenh cua listActivity nua. Dieu kien nay phai giu y nhu chuoi if
+  // duoi day (ca nao doi mot ben thi bai ngan-sach-chao-chip do ngay).
+  const seChao =
+    thayNgu !== null ||
+    (cu !== null && now.getTime() - cu.getTime() >= VANG_LAU_MS) ||
+    cu === null ||
+    dayKey(cu) !== dayKey(now);
+  if (!seChao) return null;
+
   const items = await listActivity(db, viewerId, now, khoangLang);
   // Khoang Lang: listActivity da loc nen chuyenMoi tu null (khong con viec moi nao cua doi phuong de ke).
   const moi = chuyenMoi(items, tenKia);
