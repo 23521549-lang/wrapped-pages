@@ -50,19 +50,22 @@ export async function dungNguCanh(
   trang: string,
   viec: string[],
   now: Date,
+  khoangLang = false,
 ): Promise<string> {
   const [tamTrang, hoatDong, ke, thu] = await Promise.all([
     currentMoods(db, now),
-    listActivity(db, viewerId, now),
-    listShelf(db, viewerId, now),
-    thuCacThang(db, viewerId),
+    listActivity(db, viewerId, now, khoangLang),
+    listShelf(db, viewerId, now, khoangLang),
+    thuCacThang(db, viewerId, khoangLang),
   ]);
   const dong: string[] = [];
   dong.push(`Bây giờ: ${dayLabel(now, now)}, ${timeLabel(now)} (giờ Việt Nam).`);
   if (trang !== "") dong.push(`${tenMinh} đang mở trang: ${trang}.`);
   if (viec.length > 0) dong.push(`Vừa làm trên web: ${viec.join("; ")}.`);
 
-  const tt = tamTrang.map((m) => {
+  // Khoang Lang: tam trang chi con cua minh (doi phuong da loc o listActivity/listShelf/thuCacThang).
+  const ttTamTrang = khoangLang ? tamTrang.filter((m) => m.accountId === viewerId) : tamTrang;
+  const tt = ttTamTrang.map((m) => {
     const ai = m.accountId === viewerId ? tenMinh : tenKia;
     return `${ai}: ${TROI[m.weather].ten}${m.note === null ? "" : `, nhắn "${cat(m.note, 120)}"`} (thả lúc ${timeLabel(m.setAt)})`;
   });
@@ -77,7 +80,11 @@ export async function dungNguCanh(
   dong.push(hd.length > 0 ? `Hoạt động gần đây:\n${hd.join("\n")}` : "Chưa có hoạt động nào.");
 
   const sach = ke.slice(0, 30).map((b) => {
-    const cua = b.vietCung ? `${b.ownerNickname} và ${b.mine ? tenKia : tenMinh} cùng viết` : b.mine ? `của ${tenMinh}` : `của ${tenKia}`;
+    // Khoang Lang: ke da loc chi con cuon cua minh va phan cua minh o sach viet cung; ten chu cuon (co the la doi
+    // phuong) khong duoc dua vao ngu canh nua.
+    const cua = khoangLang
+      ? (b.vietCung ? "cùng viết" : `của ${tenMinh}`)
+      : (b.vietCung ? `${b.ownerNickname} và ${b.mine ? tenKia : tenMinh} cùng viết` : b.mine ? `của ${tenMinh}` : `của ${tenKia}`);
     const moi = b.newCount > 0 ? `, ${b.newCount} trang mới ${tenMinh} chưa đọc` : "";
     const khoa = b.lockedCount > 0 ? `, ${b.lockedCount} trang còn khóa` : "";
     const trich = b.excerpt === null || b.excerptLocked ? "" : `, đoạn trích: "${cat(b.excerpt, 140)}"`;
@@ -88,7 +95,10 @@ export async function dungNguCanh(
   const th = thu.slice(0, 6).map((t) => {
     const k = phanThang(t.thang);
     const ten = k === null ? t.thang : tenThang(k);
-    return `${ten}: ${tenMinh} ${t.minhGui ? "đã gửi" : "chưa gửi"}, ${tenKia} ${t.kiaGui ? "đã gửi" : "chưa gửi"}`;
+    // Khoang Lang: thu thang chi con trang thai cua minh, bo dong cua doi phuong.
+    return khoangLang
+      ? `${ten}: ${tenMinh} ${t.minhGui ? "đã gửi" : "chưa gửi"}`
+      : `${ten}: ${tenMinh} ${t.minhGui ? "đã gửi" : "chưa gửi"}, ${tenKia} ${t.kiaGui ? "đã gửi" : "chưa gửi"}`;
   });
   if (th.length > 0) dong.push(`Thư tháng (chỉ trạng thái): ${th.join("; ")}.`);
   return dong.join("\n");

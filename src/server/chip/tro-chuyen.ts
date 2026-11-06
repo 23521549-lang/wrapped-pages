@@ -1,5 +1,5 @@
-import { and, desc, eq, gt, sql } from "drizzle-orm";
-import { accounts, chipNghi, chipTin, chipTrangThai } from "@/server/db/schema";
+import { and, desc, eq, gt, ne, sql } from "drizzle-orm";
+import { accounts, chipNghi, chipTin, chipTrangThai, secretHistory } from "@/server/db/schema";
 import type { AnyDb } from "@/server/db/types";
 import { listActivity } from "@/server/feed/list";
 import {
@@ -46,11 +46,25 @@ async function tiaTin(db: AnyDb, accountId: string): Promise<void> {
   await db.delete(chipTin).where(and(eq(chipTin.accountId, accountId), sql`${chipTin.id} not in (${giu})`));
 }
 
-/** Tin gan nhat cua mot nguoi (cu toi moi), toi da gioiHan. */
-export async function docTroChuyen(db: AnyDb, viewerId: string, gioiHan = 60): Promise<TinChip[]> {
+/**
+ * Biet danh cu cua doi phuong trong lich su loi nhan (Q4b): cot nickname luu dang chu thuong nen doc thang, khong can
+ * giai ma loi nhan.
+ */
+async function tenCuCuaDoiPhuong(db: AnyDb, viewerId: string): Promise<string[]> {
+  const [doi] = await db.select({ id: accounts.id }).from(accounts).where(ne(accounts.id, viewerId)).limit(1);
+  if (!doi) return [];
+  const rows = await db.select({ nickname: secretHistory.nickname }).from(secretHistory).where(eq(secretHistory.accountId, doi.id));
+  return [...new Set(rows.map((r) => r.nickname))];
+}
+
+/** Tin gan nhat cua mot nguoi (cu toi moi), toi da gioiHan. Khoang Lang (Q4b): tin co nhac ten doi phuong (biet danh hien tai hay cu) thi an khi hien, khong xoa du lieu. */
+export async function docTroChuyen(db: AnyDb, viewerId: string, gioiHan = 60, khoangLang = false, tenKia: string | null = null): Promise<TinChip[]> {
   const rows = await db.select(COT_TIN).from(chipTin).where(eq(chipTin.accountId, viewerId)).orderBy(desc(chipTin.luc), desc(chipTin.id)).limit(gioiHan);
   // oxlint-disable-next-line unicorn/no-array-reverse -- mang vua doc ra; toReversed can lib ES2023, du an dang o ES2022.
-  return rows.reverse();
+  const tin = rows.reverse();
+  if (!khoangLang || tenKia === null) return tin;
+  const ten = [...new Set([tenKia, ...(await tenCuCuaDoiPhuong(db, viewerId))])].filter((x) => x !== "");
+  return tin.filter((t) => !ten.some((x) => t.noiDung.includes(x)));
 }
 
 /** Xoa het tin cua chinh nguoi xem (Cai dat, "Xóa cuộc trò chuyện"). */
@@ -82,6 +96,7 @@ export async function hoiChip(
   viecRaw: unknown,
   now: Date = new Date(),
   mt: MoiTruongGoi = moiTruongThat(),
+  khoangLang = false,
 ): Promise<HoiKetQua> {
   const kiem = kiemTinChip(raw);
   if (!kiem.ok) return { kieu: "invalid" };
@@ -104,11 +119,12 @@ export async function hoiChip(
   }
 
   const [nguCanh, lichSu] = await Promise.all([
-    dungNguCanh(db, viewerId, tenMinh, tenKia, lamSachTrang(trangRaw), lamSachViec(viecRaw), now),
-    docTroChuyen(db, viewerId, NGU_CANH_TIN),
+    dungNguCanh(db, viewerId, tenMinh, tenKia, lamSachTrang(trangRaw), lamSachViec(viecRaw), now, khoangLang),
+    // Khoang Lang: lich su cu co nhac ten doi phuong cung an khoi ngu canh gui AI, de Chip khong nhac lai ten do.
+    docTroChuyen(db, viewerId, NGU_CANH_TIN, khoangLang, tenKia),
   ]);
   const kq = await goiGroq([
-    { role: "system", content: loiDanChip(tenMinh, tenKia, nguCanh) },
+    { role: "system", content: loiDanChip(tenMinh, tenKia, nguCanh, khoangLang) },
     ...lichSu.map((t) => ({ role: t.vai === "nguoi" ? ("user" as const) : ("assistant" as const), content: t.noiDung })),
   ], mt);
   const luc = new Date(now.getTime() + 1);
@@ -203,7 +219,7 @@ function khoangVang(ms: number): string {
  * Chip chao khi nguoi xem mo mot trang (spec C2): tinh cau tu noi (quay lai, chao trong ngay, day roi) tu du lieu nguoi xem
  * von thay, roi ghi lan cuoi thay web. Khong goi AI. Tat tu noi (hay dang tat Chip) thi van ghi moc nhung khong noi.
  */
-export async function chaoChip(db: AnyDb, viewerId: string, tenMinh: string, tenKia: string, now: Date = new Date()): Promise<LoiChao | null> {
+export async function chaoChip(db: AnyDb, viewerId: string, tenMinh: string, tenKia: string, now: Date = new Date(), khoangLang = false): Promise<LoiChao | null> {
   const [[tt], den] = await Promise.all([
     db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, viewerId)),
     nguDen(db, now),
@@ -216,14 +232,16 @@ export async function chaoChip(db: AnyDb, viewerId: string, tenMinh: string, ten
     .onConflictDoUpdate({ target: chipTrangThai.accountId, set: { lanCuoiThay: now, thayNguLuc: den !== null ? (thayNgu ?? now) : null } });
   if (tt?.an === true || tt?.tuNoi === false || den !== null) return null;
 
-  const items = await listActivity(db, viewerId, now);
+  const items = await listActivity(db, viewerId, now, khoangLang);
+  // Khoang Lang: listActivity da loc nen chuyenMoi tu null (khong con viec moi nao cua doi phuong de ke).
   const moi = chuyenMoi(items, tenKia);
   const nutMoi = moi?.href ? { nhan: "Xem ngay", href: moi.href } : null;
   if (thayNgu !== null) {
     return { loai: "thuc-day", cau: `Chíp dậy rồi! Chào ${buoi(now)} **${tenMinh}**.${moi ? ` ${moi.cau}.` : ""}`, nut: nutMoi };
   }
   if (cu !== null && now.getTime() - cu.getTime() >= VANG_LAU_MS) {
-    const tom = tomTat(items, cu);
+    // Khoang Lang: khong tom tat viec doi phuong lam trong luc minh vang (tomTat chi ke viec cua doi phuong).
+    const tom = khoangLang ? [] : tomTat(items, cu);
     const them = tom.length > 0 ? ` Trong lúc ${tenMinh} đi, ${tenKia} ${noiVoi(tom)}.` : "";
     return { loai: "quay-lai", cau: `**${tenMinh}** về rồi! ${khoangVang(now.getTime() - cu.getTime())}.${them}`, nut: nutMoi };
   }

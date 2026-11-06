@@ -15,7 +15,7 @@ import { CAN_DANG_NHAP, CHO_CHIP_TRA_LOI, TIN_CHIP_HONG } from "./messages";
 export async function actionHoiChip(noiDung: unknown, trang: unknown, viec: unknown): Promise<{ tin: TinChip[]; nguDen: Date | null } | { error: string }> {
   const me = await readMe();
   if (!me) return { error: CAN_DANG_NHAP };
-  const r = await hoiChip(db, me.accountId, me.nickname, me.partnerNickname, noiDung, trang, viec);
+  const r = await hoiChip(db, me.accountId, me.nickname, me.partnerNickname, noiDung, trang, viec, new Date(), undefined, me.khoangLang);
   if (r.kieu === "invalid") return { error: TIN_CHIP_HONG };
   if (r.kieu === "som") return { error: CHO_CHIP_TRA_LOI };
   return { tin: r.tin, nguDen: r.nguDen };
@@ -25,7 +25,7 @@ export async function actionHoiChip(noiDung: unknown, trang: unknown, viec: unkn
 export async function actionDocChip(): Promise<{ tin: TinChip[]; trangThai: TrangThaiChip } | null> {
   const me = await readMe();
   if (!me) return null;
-  const [tin, trangThai] = await Promise.all([docTroChuyen(db, me.accountId), trangThaiChip(db, me.accountId)]);
+  const [tin, trangThai] = await Promise.all([docTroChuyen(db, me.accountId, 60, me.khoangLang, me.partnerNickname), trangThaiChip(db, me.accountId)]);
   return { tin, trangThai };
 }
 
@@ -33,7 +33,7 @@ export async function actionDocChip(): Promise<{ tin: TinChip[]; trangThai: Tran
 export async function actionChaoChip(): Promise<LoiChao | null> {
   const me = await readMe();
   if (!me) return null;
-  return chaoChip(db, me.accountId, me.nickname, me.partnerNickname);
+  return chaoChip(db, me.accountId, me.nickname, me.partnerNickname, new Date(), me.khoangLang);
 }
 
 /** Cai dat Chip cua nguoi dang nhap (hien Chip, tu noi); lam moi trang de moi cho thay ngay. */
