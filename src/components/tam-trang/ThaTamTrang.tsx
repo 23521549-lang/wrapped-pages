@@ -34,13 +34,15 @@ export type DangGiu = { weather: Weather; conLai: string };
  * toi no bang aria-describedby) va nut "Tha" bi tat chung nao con vuot. parseMoodInput trong tha() la lop chan cuoi
  * cung (dung luat voi may chu: chua chon troi, loi nhan qua dai, ca nguong 320 ky tu truoc khi chuan hoa).
  */
-export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia }: {
+export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = false }: {
   dau: ReactNode;
   nutPhu: ReactNode;
   dangGiu: DangGiu | null;
   /** Bau troi cua nguoi xem ma may chu dang ve (cung gia tri dai troi nhan): de biet lan tha nay co loang khong. */
   minh: TroiHien | null;
   tenKia: string;
+  /** Khoang Lang (Q2): cau goi y duoi o nhan khong neu ten doi phuong. */
+  khoangLang?: boolean;
 }) {
   const [mo, setMo] = useState(false);
   const [chon, setChon] = useState<Weather | null>(null);
@@ -319,7 +321,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia }: {
               aria-describedby={qua ? `${HOP}-dem ${HOP}-qua ${HOP}-goi` : `${HOP}-dem ${HOP}-goi`}
             />
             {qua && <p className="nhan__qua" id={`${HOP}-qua`}>{NHAN_DAI}</p>}
-            <p className="nhan__goi" id={`${HOP}-goi`}>{`Không bắt buộc. ${tenKia} sẽ thấy dưới bầu trời.`}</p>
+            <p className="nhan__goi" id={`${HOP}-goi`}>{khoangLang ? "Không bắt buộc. Người đọc sẽ thấy dưới bầu trời." : `Không bắt buộc. ${tenKia} sẽ thấy dưới bầu trời.`}</p>
             <div className="tha__cuoi">
               <button
                 ref={nutThaRef}

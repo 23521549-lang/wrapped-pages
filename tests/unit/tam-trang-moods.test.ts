@@ -124,7 +124,7 @@ describe("lich hoa", () => {
     const cuoi = await setMood(db, seat1.id, "cau-vong", "Nhẹ cả người.", new Date("2026-09-22T09:00:00.000Z"));
     const kia = await setMood(db, seat2.id, "mua-phun", null, new Date("2026-09-22T14:40:00.000Z"));
 
-    const lich = await moodCalendar(db, { y: 2026, m: 9 });
+    const lich = await moodCalendar(db, { y: 2026, m: 9 }, seat1.id);
     const gon = lich.map((d) => [d.accountId === seat1.id ? "a" : "b", d.ngay, d.weather, d.id]).sort();
     expect(gon).toEqual([
       ["a", "2026-09-21", "suong-mu", dem?.id],
@@ -139,7 +139,7 @@ describe("lich hoa", () => {
     const sang = await setMood(db, seat1.id, "nang-am", null, new Date("2026-09-22T01:00:00.000Z"));
     await setMood(db, seat1.id, "cau-vong", "Nhẹ cả người.", new Date("2026-09-22T09:00:00.000Z"));
     expect(await withdrawMood(db, seat1.id, new Date("2026-09-22T09:30:00.000Z"))).toBe(true);
-    const lich = await moodCalendar(db, { y: 2026, m: 9 });
+    const lich = await moodCalendar(db, { y: 2026, m: 9 }, seat1.id);
     expect(lich.map((d) => [d.ngay, d.weather, d.id])).toEqual([["2026-09-22", "nang-am", sang?.id]]);
   });
 
@@ -148,7 +148,7 @@ describe("lich hoa", () => {
     await setMood(db, seat1.id, "suong-mu", null, new Date("2026-09-10T03:00:00.000Z"));
     await withdrawMood(db, seat1.id, new Date("2026-09-10T03:10:00.000Z"));
     const kia = await setMood(db, seat2.id, "may-nhe", null, new Date("2026-09-10T04:00:00.000Z"));
-    const lich = await moodCalendar(db, { y: 2026, m: 9 });
+    const lich = await moodCalendar(db, { y: 2026, m: 9 }, seat1.id);
     expect(lich.map((d) => [d.accountId, d.ngay, d.id])).toEqual([[seat2.id, "2026-09-10", kia?.id]]);
   });
 
@@ -158,7 +158,7 @@ describe("lich hoa", () => {
     const moi = await setMood(db, seat1.id, "giong", null, new Date("2026-09-15T02:00:00.000Z"));
     // Mot ngay sau ca hai deu da het: thu lai luc nay khong cham dong nao.
     expect(await withdrawMood(db, seat1.id, new Date("2026-09-16T03:00:00.000Z"))).toBe(false);
-    const lich = await moodCalendar(db, { y: 2026, m: 9 });
+    const lich = await moodCalendar(db, { y: 2026, m: 9 }, seat1.id);
     expect(lich.map((d) => [d.ngay, d.weather, d.id])).toEqual([["2026-09-15", "giong", moi?.id]]);
   });
 
@@ -168,9 +168,9 @@ describe("lich hoa", () => {
     await setMood(db, seat1.id, "nang-am", null, new Date("2026-08-31T17:30:00.000Z"));
     await setMood(db, seat1.id, "may-nhe", null, new Date("2026-09-30T16:59:00.000Z"));
     await setMood(db, seat1.id, "mua-rao", null, new Date("2026-09-30T17:00:00.000Z"));
-    expect((await moodCalendar(db, { y: 2026, m: 9 })).map((d) => d.ngay).sort()).toEqual(["2026-09-01", "2026-09-30"]);
-    expect((await moodCalendar(db, { y: 2026, m: 8 })).map((d) => d.ngay)).toEqual(["2026-08-31"]);
-    expect((await moodCalendar(db, { y: 2026, m: 10 })).map((d) => d.ngay)).toEqual(["2026-10-01"]);
+    expect((await moodCalendar(db, { y: 2026, m: 9 }, seat1.id)).map((d) => d.ngay).sort()).toEqual(["2026-09-01", "2026-09-30"]);
+    expect((await moodCalendar(db, { y: 2026, m: 8 }, seat1.id)).map((d) => d.ngay)).toEqual(["2026-08-31"]);
+    expect((await moodCalendar(db, { y: 2026, m: 10 }, seat1.id)).map((d) => d.ngay)).toEqual(["2026-10-01"]);
   });
 
   it("lichCacThang (5b): moi thang da khep theo gio Viet Nam, cung luat voi moodCalendar; thang nay chua co", async () => {
@@ -181,14 +181,14 @@ describe("lich hoa", () => {
     await setMood(db, seat1.id, "suong-mu", null, new Date("2026-09-30T17:05:00.000Z"));
     await withdrawMood(db, seat1.id, new Date("2026-09-30T17:10:00.000Z"));
     await setMood(db, seat1.id, "mua-rao", null, new Date("2026-10-01T02:00:00.000Z"));
-    const lich = await lichCacThang(db, new Date("2026-10-02T02:00:00.000Z"));
+    const lich = await lichCacThang(db, new Date("2026-10-02T02:00:00.000Z"), seat1.id);
     expect([...lich.keys()].sort()).toEqual(["2026-08", "2026-09"]);
-    expect(lich.get("2026-09")).toEqual(await moodCalendar(db, { y: 2026, m: 9 }));
+    expect(lich.get("2026-09")).toEqual(await moodCalendar(db, { y: 2026, m: 9 }, seat1.id));
     expect(lich.get("2026-08")?.map((d) => [d.ngay, d.weather])).toEqual([["2026-08-31", "giong"]]);
   });
 
   it("thang khong ai tha thi rong", async () => {
-    const { db } = await seedHai();
-    expect(await moodCalendar(db, { y: 2026, m: 7 })).toEqual([]);
+    const { db, seat1 } = await seedHai();
+    expect(await moodCalendar(db, { y: 2026, m: 7 }, seat1.id)).toEqual([]);
   });
 });

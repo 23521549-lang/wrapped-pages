@@ -43,7 +43,7 @@ function DongChiTiet({ ten, hoa }: { ten: string; hoa: HoaNgay | null }) {
  * cua tam trang cuoi cung tha trong ngay. Bam mot ngay de xem chi tiet ben phai (duoi, tren man hep). Chuyen thang la
  * lien ket that (?thang=YYYY-MM); thang nay thi "Thang sau" tat. Ngay tuong lai chi co so, khong bam duoc.
  */
-export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMinh, truocHref, sauHref }: {
+export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMinh, truocHref, sauHref, khoangLang = false }: {
   thang: Thang;
   tuan: TuanLich[];
   ngay: Record<number, NgayLich>;
@@ -55,6 +55,8 @@ export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMi
   tenMinh: string;
   truocHref: string;
   sauHref: string | null;
+  /** Khoang Lang: chi mot hang cua minh, khong ten doi phuong o bat ky cho nao (tieu de, nhan ngay, chi tiet). */
+  khoangLang?: boolean;
 }) {
   const [chon, setChon] = useState(chonDau);
   const cacNgay = Object.values(ngay);
@@ -74,9 +76,9 @@ export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMi
           ) : (
             <Link className="btn btn--quiet btn--icon" href={sauHref} aria-label="Tháng sau"><MuiTen huong="phai" /></Link>
           )}
-          <p className="thang__tong">{tenKia} ép <b>{demKia}</b> bông, {tenMinh} ép <b>{demMinh}</b> bông</p>
+          <p className="thang__tong">{khoangLang ? <>{tenMinh} ép <b>{demMinh}</b> bông</> : <>{tenKia} ép <b>{demKia}</b> bông, {tenMinh} ép <b>{demMinh}</b> bông</>}</p>
         </div>
-        <p className="lich__chu">Hàng trên là <b>{tenKia}</b>, hàng dưới là <b>{tenMinh}</b>.</p>
+        <p className="lich__chu">{khoangLang ? "Mỗi ngày một bông hoa ép." : <>Hàng trên là <b>{tenKia}</b>, hàng dưới là <b>{tenMinh}</b>.</>}</p>
         <fieldset className="lich">
           <legend className="sr-only">{`Lịch tháng ${thang.m}`}</legend>
           <div className="lich__thu" aria-hidden="true">
@@ -85,19 +87,21 @@ export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMi
           </div>
           {tuan.map((t) => (
             <div key={t.key} className={t.xa ? "tuan tuan--xa" : "tuan"}>
-              <div className="tuan__nhan" aria-hidden="true"><span /><span>{tenKia}</span><span>{tenMinh}</span></div>
+              <div className="tuan__nhan" aria-hidden="true"><span />{khoangLang ? <span>{tenMinh}</span> : <><span>{tenKia}</span><span>{tenMinh}</span></>}</div>
               {t.o.map((o) => {
                 const so = o.ngay;
                 if (so === null) return <span key={o.key} aria-hidden="true" />;
                 if (o.tuongLai) {
                   return (
                     <span key={o.key} className="ngay ngay--xa" aria-hidden="true">
-                      <span className="ngay__so">{so}</span><span /><span />
+                      <span className="ngay__so">{so}</span>{khoangLang ? <span /> : <><span /><span /></>}
                     </span>
                   );
                 }
                 const d = ngay[so] ?? TRONG;
-                const nhan = `${so} tháng ${thang.m}. ${tenKia}: ${d.kia ? TROI[d.kia.weather].ten : "chưa thả"}. ${tenMinh}: ${d.minh ? TROI[d.minh.weather].ten : "chưa thả"}${o.homNay ? ". Hôm nay" : ""}`;
+                const nhan = khoangLang
+                  ? `${so} tháng ${thang.m}. ${tenMinh}: ${d.minh ? TROI[d.minh.weather].ten : "chưa thả"}${o.homNay ? ". Hôm nay" : ""}`
+                  : `${so} tháng ${thang.m}. ${tenKia}: ${d.kia ? TROI[d.kia.weather].ten : "chưa thả"}. ${tenMinh}: ${d.minh ? TROI[d.minh.weather].ten : "chưa thả"}${o.homNay ? ". Hôm nay" : ""}`;
                 return (
                   <button
                     key={o.key}
@@ -108,7 +112,7 @@ export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMi
                     onClick={() => setChon(so)}
                   >
                     <span className="ngay__so" aria-hidden="true">{so}</span>
-                    <Lan hoa={d.kia} />
+                    {!khoangLang && <Lan hoa={d.kia} />}
                     <Lan hoa={d.minh} />
                   </button>
                 );
@@ -127,7 +131,7 @@ export function LichHoa({ thang, tuan, ngay, homNay, chonDau, now, tenKia, tenMi
             {chon === homNay && <span className="chip chip--key">Hôm nay</span>}
           </div>
           <ul>
-            <DongChiTiet ten={tenKia} hoa={dangChon.kia} />
+            {!khoangLang && <DongChiTiet ten={tenKia} hoa={dangChon.kia} />}
             <DongChiTiet ten={tenMinh} hoa={dangChon.minh} />
           </ul>
         </section>

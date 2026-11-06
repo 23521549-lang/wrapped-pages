@@ -57,12 +57,14 @@ function Nguoi({ ten, so }: { ten: string; so: TongKet["kia"] }) {
  * xuong so lieu cua hai nguoi (nguoi kia truoc), ngay cung mot troi va cho thu. Cung kieu dong thoi gian Sua sach (luoi
  * 0fr toi 1fr). Duong dan #thu-YYYY-MM (dong nhac o Ke sach, dong Hoat dong) mo dung thang va cuon muot toi cho thu.
  */
-export function TongKetThang({ thang, nay, tenKia, tenMinh }: {
+export function TongKetThang({ thang, nay, tenKia, tenMinh, khoangLang = false }: {
   thang: readonly ThangTongKetHien[];
   /** Thang dang chay: "Tháng Mười" va ngay mo tong ket "1.11". */
   nay: { ten: string; mo: string; noiBat: Weather | null };
   tenKia: string;
   tenMinh: string;
+  /** Khoang Lang: an muc cua doi phuong trong tong ket (tk.kia); phan thu do task 6 xu ly. */
+  khoangLang?: boolean;
 }) {
   const [mo, setMo] = useState<ReadonlySet<string>>(() => new Set());
   const goc = useRef<HTMLElement>(null);
@@ -126,7 +128,7 @@ export function TongKetThang({ thang, nay, tenKia, tenMinh }: {
                 <div className="thg__noi">
                   <p className="thg__phu">{t.tk.phu}</p>
                   <div className="thg__so">
-                    <Nguoi ten={tenKia} so={t.tk.kia} />
+                    {!khoangLang && <Nguoi ten={tenKia} so={t.tk.kia} />}
                     <Nguoi ten="Bạn" so={t.tk.minh} />
                   </div>
                   {t.tk.cungTroi.length > 0 && (

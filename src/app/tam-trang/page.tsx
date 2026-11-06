@@ -32,12 +32,12 @@ export default async function LichHoaPage({ searchParams }: {
   const nay = laThangNay(thang, now);
   const thangNay = thangCua(now);
   const [rows, rowsNay, cacLich, cacThu] = await Promise.all([
-    moodCalendar(db, thang),
-    nay ? null : moodCalendar(db, thangNay),
-    lichCacThang(db, now),
+    moodCalendar(db, thang, me.accountId, me.khoangLang),
+    nay ? null : moodCalendar(db, thangNay, me.accountId, me.khoangLang),
+    lichCacThang(db, now, me.accountId, me.khoangLang),
     thuCacThang(db, me.accountId),
   ]);
-  const tkNay = tongKetThang(gomLich(rowsNay ?? rows, me.accountId), me.partnerNickname);
+  const tkNay = tongKetThang(gomLich(rowsNay ?? rows, me.accountId), me.partnerNickname, me.khoangLang);
   const tongKet = thangCoTongKet([...cacLich.keys(), ...cacThu.map((t) => t.thang)], now).flatMap((khoa): ThangTongKetHien[] => {
     const t = phanThang(khoa);
     if (t === null) return [];
@@ -46,7 +46,7 @@ export default async function LichHoaPage({ searchParams }: {
       khoa,
       ten: `${hoaDau(tenThang(t))}, ${t.y}`,
       tenThangChu: tenThang(t),
-      tk: tongKetThang(gomLich(cacLich.get(khoa) ?? [], me.accountId), me.partnerNickname),
+      tk: tongKetThang(gomLich(cacLich.get(khoa) ?? [], me.accountId), me.partnerNickname, me.khoangLang),
       thu: {
         tt: { minhGui: thu?.minhGui ?? false, kiaGui: thu?.kiaGui ?? false },
         kia: thu?.kia ? { noiDung: thu.kia.noiDung, gio: momentLabel(thu.kia.guiLuc, now) } : null,
@@ -79,12 +79,14 @@ export default async function LichHoaPage({ searchParams }: {
           tenMinh={me.nickname}
           truocHref={`/tam-trang?thang=${thangKhoa(thangTruoc(thang))}`}
           sauHref={nay ? null : `/tam-trang?thang=${thangKhoa(thangSau(thang))}`}
+          khoangLang={me.khoangLang}
         />
         <TongKetThang
           thang={tongKet}
           nay={{ ten: hoaDau(tenThang(thangNay)), mo: `1.${thangSau(thangNay).m}`, noiBat: tkNay.noiBat.minh ?? tkNay.noiBat.kia }}
           tenKia={me.partnerNickname}
           tenMinh={me.nickname}
+          khoangLang={me.khoangLang}
         />
       </main>
     </>

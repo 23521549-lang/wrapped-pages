@@ -58,7 +58,9 @@ export default async function KeSach() {
   ]);
   // Dai troi: mac dinh troi cua nguoi kia, troi cua minh o o cua so (hoac la troi lon khi chi minh co); them cham mau
   // tren nut va hop chon o dong tieu de.
-  const { minh, kia } = chiaTamTrang(moods, me.accountId);
+  // Khoang Lang: troi cua doi phuong khong hien - dai troi ve dung trang thai "chi minh co tam trang" da co san.
+  const { minh, kia: kiaTho } = chiaTamTrang(moods, me.accountId);
+  const kia = me.khoangLang ? null : kiaTho;
   const when = (b: Sach) => timeAgo(b.lastPublishedAt ?? b.createdAt, now);
   // listShelf sap theo to dang gan nhat, nen cuon dau tien co to chinh la cuon co trang gan nhat.
   const recent = shelf.find((b) => b.pageCount > 0);
@@ -201,6 +203,7 @@ export default async function KeSach() {
               dangGiu={minh ? { weather: minh.weather, conLai: conLai(minh.endsAt, now) } : null}
               minh={minh ? troiHien(minh, now) : null}
               tenKia={me.partnerNickname}
+              khoangLang={me.khoangLang}
             />
 
             {shelf.length === 0 ? (

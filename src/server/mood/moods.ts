@@ -97,30 +97,37 @@ export async function currentMoods(db: AnyDb, now: Date = new Date()): Promise<M
  * Lich hoa cua mot thang: moi nguoi moi ngay (gio Viet Nam) mot dong, la dong CHUA THU LAI tha muon nhat trong ngay
  * (dong bi thay bang lan tha moi van tinh; dong da thu lai thi bo, ngay do lui ve dong truoc hoac de trong). Loc va
  * chon ngay trong SQL, nen so dong tra ve toi da hai lan so ngay cua thang.
+ * Khoang Lang: chi dong cua chinh nguoi xem (loc trong SQL, nhu thu.ts).
  */
-export async function moodCalendar(db: AnyDb, t: Thang): Promise<DongLich[]> {
+export async function moodCalendar(db: AnyDb, t: Thang, viewerId: string, khoangLang = false): Promise<DongLich[]> {
   const { from, to } = khoangThang(t);
-  return lichTrong(db, from, to);
+  return lichTrong(db, from, to, viewerId, khoangLang);
 }
 
 /** Cac dong lich (cung luat moodCalendar) co set_at trong [from, to); from null la tu dau. */
-function lichTrong(db: AnyDb, from: Date | null, to: Date): Promise<DongLich[]> {
+function lichTrong(db: AnyDb, from: Date | null, to: Date, viewerId: string, khoangLang = false): Promise<DongLich[]> {
   return db
     .selectDistinctOn([moods.accountId, NGAY_VN], {
       id: moods.id, accountId: moods.accountId, weather: moods.weather, note: moods.note, setAt: moods.setAt, ngay: NGAY_VN,
     })
     .from(moods)
-    .where(and(from === null ? undefined : gte(moods.setAt, from), lt(moods.setAt, to), eq(moods.withdrawn, false)))
+    .where(and(
+      from === null ? undefined : gte(moods.setAt, from),
+      lt(moods.setAt, to),
+      eq(moods.withdrawn, false),
+      khoangLang ? eq(moods.accountId, viewerId) : undefined,
+    ))
     .orderBy(moods.accountId, NGAY_VN, desc(moods.setAt), desc(moods.id));
 }
 
 /**
  * Lich hoa cua moi thang da khep (truoc thang cua now, gio Viet Nam), gom theo khoa thang YYYY-MM, cho tong ket cac thang
  * (5b). Mot truy van: hai nguoi, moi ngay toi da mot dong moi nguoi, nen mot nam chua toi 800 dong.
+ * Khoang Lang: chi dong cua chinh nguoi xem.
  */
-export async function lichCacThang(db: AnyDb, now: Date): Promise<Map<string, DongLich[]>> {
+export async function lichCacThang(db: AnyDb, now: Date, viewerId: string, khoangLang = false): Promise<Map<string, DongLich[]>> {
   const ra = new Map<string, DongLich[]>();
-  for (const r of await lichTrong(db, null, khoangThang(thangCua(now)).from)) {
+  for (const r of await lichTrong(db, null, khoangThang(thangCua(now)).from, viewerId, khoangLang)) {
     const k = r.ngay.slice(0, 7);
     const ds = ra.get(k);
     if (ds) ds.push(r);

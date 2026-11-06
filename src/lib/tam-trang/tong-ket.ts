@@ -90,7 +90,7 @@ function noiNgay(ds: readonly number[]): string {
 }
 
 /** Tong ket mot thang tu lich da gom (gomLich), nhin tu phia nguoi xem; tenKia la biet danh hien tai cua nguoi kia. */
-export function tongKetThang(lich: Readonly<Record<number, NgayLich>>, tenKia: string): TongKetThang {
+export function tongKetThang(lich: Readonly<Record<number, NgayLich>>, tenKia: string, khoangLang = false): TongKetThang {
   // oxlint-disable-next-line unicorn/no-array-sort -- mang vua tao; toSorted can lib ES2023, du an dang o ES2022.
   const ngay = Object.keys(lich).map(Number).sort((a, b) => a - b);
   const cua = (ai: "kia" | "minh") =>
@@ -107,6 +107,8 @@ export function tongKetThang(lich: Readonly<Record<number, NgayLich>>, tenKia: s
 
   let danhGia: string;
   if (kia.bong === 0 && minh.bong === 0) danhGia = "Tháng này chưa ai thả tâm trạng";
+  // Khoang Lang: cau danh gia chi noi ve minh, khong neu ten doi phuong (lich da loc nen kia luon 0 bong).
+  else if (khoangLang) danhGia = minh.bong === 0 ? "Tháng này chưa ai thả tâm trạng" : `Bạn ${minh.moTa}`;
   else if (kia.moTa === minh.moTa) danhGia = `Cả hai ${minh.moTa}`;
   else danhGia = `Bạn ${minh.moTa}, ${tenKia} ${kia.moTa}`;
 
