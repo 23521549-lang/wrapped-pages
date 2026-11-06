@@ -1,6 +1,5 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import { accounts, activity, books, deNghi } from "@/server/db/schema";
-import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
 import { recordActivity } from "@/server/feed/record";
 import { readableBy } from "@/server/library/quyen";
@@ -199,14 +198,14 @@ export async function deNghiToiToi(db: AnyDb, viewerId: string, khoangLang = fal
 /** De nghi dang cho cua mot cuon voi nguoi xem (man doc, Sua sach); cuon nguoi xem khong doc duoc thi null. Khoang Lang: de nghi do doi phuong gui thi null (de nghi cua minh giu de rut lai). */
 export async function deNghiCuaSach(db: AnyDb, viewerId: string, bookId: string, khoangLang = false): Promise<TrangThaiDeNghi> {
   if (!isUuid(bookId)) return null;
-  return readSnapshot(db, async (tx) => {
-    const [row] = await tx
-      .select({ loai: deNghi.loai, tuId: deNghi.tuId })
-      .from(deNghi)
-      .innerJoin(books, eq(books.id, deNghi.bookId))
-      .where(and(eq(deNghi.bookId, bookId), readableBy(viewerId)));
-    if (!row) return null;
-    if (khoangLang && row.tuId !== viewerId) return null;
-    return { loai: row.loai, cuaToi: row.tuId === viewerId };
-  });
+  // Mot SELECT don von da nguyen tu: khong can anh chup (anh chup ton 3 cau BEGIN/SET/COMMIT tren Postgres that
+  // cho mot cau doc). Chi cac ham doc gop nhieu bang moi can readSnapshot de giu nhat quan.
+  const [row] = await db
+    .select({ loai: deNghi.loai, tuId: deNghi.tuId })
+    .from(deNghi)
+    .innerJoin(books, eq(books.id, deNghi.bookId))
+    .where(and(eq(deNghi.bookId, bookId), readableBy(viewerId)));
+  if (!row) return null;
+  if (khoangLang && row.tuId !== viewerId) return null;
+  return { loai: row.loai, cuaToi: row.tuId === viewerId };
 }
