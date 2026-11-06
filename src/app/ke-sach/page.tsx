@@ -48,10 +48,10 @@ export default async function KeSach() {
   // Mot now cho ca ke va dong Hoat dong: hen gio vua toi gio thi the sach va dong "da toi gio mo" noi cung mot dieu.
   const now = new Date();
   const [shelf, feed, moods, chuaDoc, phienBan, nhac, deNghi] = await Promise.all([
-    listShelf(db, me.accountId, now),
+    listShelf(db, me.accountId, now, me.khoangLang),
     listActivity(db, me.accountId, now, me.khoangLang),
     currentMoods(db, now),
-    unreadRounds(db, me.accountId, now),
+    unreadRounds(db, me.accountId, now, me.khoangLang),
     phienBanKe(db, me.accountId, now, me.khoangLang),
     nhacThu(db, me.accountId, now),
     deNghiToiToi(db, me.accountId),
@@ -88,15 +88,19 @@ export default async function KeSach() {
     pageCount: b.pageCount, newCount: b.newCount, lockedCount: b.lockedCount,
     isPrivate: b.mode === "rieng-tu", when: when(b),
     // Sach viet cung (5c muc E2): hai chu cai dau, nguoi tao truoc; so luot thay so trang.
+    // Q6 (Khoang Lang): the chi hien phan cua minh - mot chu cai dau cua minh, so luot cua minh (roundCount da loc o
+    // listShelf), khong ten doi phuong, khong badge "Cho nhan loi".
     vietCung: b.vietCung
       ? {
-        doi: b.mine
-          ? [chuCaiDau(me.nickname), chuCaiDau(me.partnerNickname)]
-          : [chuCaiDau(me.partnerNickname), chuCaiDau(me.nickname)],
-        luot: b.roundCount, nguoiKia: me.partnerNickname,
+        doi: me.khoangLang
+          ? [chuCaiDau(me.nickname)]
+          : b.mine
+            ? [chuCaiDau(me.nickname), chuCaiDau(me.partnerNickname)]
+            : [chuCaiDau(me.partnerNickname), chuCaiDau(me.nickname)],
+        luot: b.roundCount, nguoiKia: me.khoangLang ? "" : me.partnerNickname,
       }
       : undefined,
-    choNhanLoi: b.moiCho === "toi-moi" ? me.partnerNickname : undefined,
+    choNhanLoi: b.moiCho === "toi-moi" && !me.khoangLang ? me.partnerNickname : undefined,
     // Trang dung san khoi tra loi roi truyen xuong, de the sach khong phai nhap mo-dun server action (xem ShelfBookProps).
     moiToi: b.moiCho === "moi-toi"
       ? <NhanLoiThe bookId={b.id} ten={me.partnerNickname} title={b.title} />
@@ -118,7 +122,7 @@ export default async function KeSach() {
     dauHref: `/dau-thoi-gian/${l.bookId}`, pageCount: l.pageCount, position: l.position,
     readHref: `/sach/${l.bookId}?trang=${l.position}`, when: timeAgo(l.publishedAt, now), excerpt: l.excerpt, locked: l.locked,
     isPrivate: false,
-    nhan: l.mine ? { chu: `${me.partnerNickname} chưa đọc`, dac: false } : { chu: "Bạn chưa đọc", dac: true },
+    nhan: l.mine ? { chu: me.khoangLang ? "Người đọc chưa đọc" : `${me.partnerNickname} chưa đọc`, dac: false } : { chu: "Bạn chưa đọc", dac: true },
     action: l.mine ? { label: "Viết tiếp", href: `/sach/${l.bookId}/viet-tiep` } : { label: "Đọc tiếp", href: `/sach/${l.bookId}` },
   });
   // Khong co luot chua doc: khung sach lon nhu cu (cuon co trang gan nhat). Mot luot: hien luot do, khong luan phien.
@@ -131,7 +135,7 @@ export default async function KeSach() {
   } else if (recent) {
     khungLon = (
       <OpenBook
-        who={recent.vietCung ? `${me.nickname} và ${me.partnerNickname}` : recent.mine ? "Bạn" : recent.ownerNickname}
+        who={recent.vietCung ? (me.khoangLang ? "Bạn" : `${me.nickname} và ${me.partnerNickname}`) : recent.mine ? "Bạn" : recent.ownerNickname}
         title={recent.title}
         covers={biaCua.get(recent.id) ?? []}
         tuDatNut={!coDaiTroi}
@@ -203,7 +207,7 @@ export default async function KeSach() {
               <div className="dau-ke">
                 <div className="ke-trong">
                   <h2 className="d">Kệ còn trống.</h2>
-                  <p>Cuốn đầu tiên bạn tạo sẽ đứng ở đây. Cuốn nào chia sẻ thì {me.partnerNickname} cũng đọc được.</p>
+                  <p>Cuốn đầu tiên bạn tạo sẽ đứng ở đây. {me.khoangLang ? "Cuốn nào chia sẻ thì người đọc cũng đọc được." : `Cuốn nào chia sẻ thì ${me.partnerNickname} cũng đọc được.`}</p>
                   <Link className="btn" href="/sach/moi">Tạo sách</Link>
                   <span className="ke-mep ke-trong__mep" aria-hidden="true" />
                 </div>
@@ -226,11 +230,14 @@ export default async function KeSach() {
                   />
                 )}
                 <Ngan ten="Kệ của bạn" books={cuaBan} trong="Bạn chưa có cuốn nào." />
-                <Ngan
-                  ten={`Kệ của ${me.partnerNickname}`}
-                  books={cuaKia}
-                  trong={`${me.partnerNickname} chưa chia sẻ cuốn nào.`}
-                />
+                {/* Khoang Lang: ngan cua doi phuong khong render (listShelf da bo cuon, nhung tieu de ngan van neu ten). */}
+                {!me.khoangLang && (
+                  <Ngan
+                    ten={`Kệ của ${me.partnerNickname}`}
+                    books={cuaKia}
+                    trong={`${me.partnerNickname} chưa chia sẻ cuốn nào.`}
+                  />
+                )}
 
                 <footer className="foot">
                   <ul className="legend" aria-label="Chú giải">

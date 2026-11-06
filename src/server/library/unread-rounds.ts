@@ -42,7 +42,7 @@ export type LuotChuaDoc = {
  * luot con khoa khong duoc doc ra khoi database: chi cac luot da mo moi di vao hai truy van lay chu. Moi cau lenh doc
  * chung mot anh chup.
  */
-export async function unreadRounds(db: AnyDb, viewerId: string, now: Date = new Date()): Promise<LuotChuaDoc[]> {
+export async function unreadRounds(db: AnyDb, viewerId: string, now: Date = new Date(), khoangLang = false): Promise<LuotChuaDoc[]> {
   return readSnapshot(db, async (tx) => {
     const [kia] = await tx.select({ id: accounts.id }).from(accounts).where(ne(accounts.id, viewerId)).limit(1);
     // Nguoi can doc to dang xet: nguoi xem voi luot nguoi kia viet, nguoi kia voi luot nguoi xem viet.
@@ -71,6 +71,8 @@ export async function unreadRounds(db: AnyDb, viewerId: string, now: Date = new 
         eq(books.mode, "chia-se"),
         // Chua co nguoi kia thi khong ai doc luot cua nguoi xem: chi con luot cua nguoi kia (khong co).
         kia === undefined ? ne(rounds.tacGiaId, viewerId) : undefined,
+        // Khoang Lang: chi luot cua chinh nguoi xem con hien (luot doi phuong bien mat).
+        khoangLang ? eq(rounds.tacGiaId, viewerId) : undefined,
         chuaDoc,
       ))
       .groupBy(pages.roundId, pages.bookId, books.title, books.ownerId, rounds.tacGiaId, rounds.publishedAt)

@@ -80,8 +80,9 @@ const CO_DAU_KE = sql`jsonb_path_exists(${pages.content}, '$.**.marks[*].type ? 
 /** Luot moi nhat cua moi cuon: luot chua to co vi tri lon nhat (cac luot noi tiep nhau nen do cung la luot dang sau cung). */
 function newestRounds(tx: AnyDb, ids: string[]) {
   return tx
-    .selectDistinctOn([pages.bookId], { bookId: pages.bookId, roundId: pages.roundId })
+    .selectDistinctOn([pages.bookId], { bookId: pages.bookId, roundId: pages.roundId, tacGiaId: rounds.tacGiaId })
     .from(pages)
+    .innerJoin(rounds, eq(rounds.id, pages.roundId))
     .where(inArray(pages.bookId, ids))
     .orderBy(pages.bookId, desc(pages.position));
 }
@@ -150,12 +151,14 @@ function lockedSealOf(tx: AnyDb, viewerId: string, now: Date) {
  * thay (co dong trong read_sheets): ke sach khong lo to chua doc cua cac luot cu, va bam vao khung khong bien cac to bi
  * nhay coc thanh da doc. Cuon khong co ung vien nao thi khong co dong (xem firstReadableSheets).
  */
-function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
+function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date, khoangLang = false) {
   return drawOfDay(tx, and(
     inArray(pages.bookId, ids),
     HAS_TEXT,
     notExists(lockedSealOf(tx, viewerId, now)),
     or(cuaMinhSql(viewerId), daXemSql(viewerId)),
+    // Khoang Lang: chi to cua chinh nguoi xem moi lam ung vien doan trich (sach viet cung chi con phan cua minh).
+    khoangLang ? cuaMinhSql(viewerId) : undefined,
   )!, viewerId, now);
 }
 
@@ -167,7 +170,6 @@ function pickedSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
 function pickedInRounds(tx: AnyDb, roundIds: string[], viewerId: string, now: Date) {
   return drawOfDay(tx, and(inArray(pages.roundId, roundIds), HAS_TEXT)!, viewerId, now);
 }
-
 /**
  * To doc duoc dau tien cua moi cuon (vi tri nho nhat khong nam trong niem phong con khoa voi nguoi xem): nhanh cuoi
  * cung cua doanCua, dung khi luot moi nhat khong cho doan nao va ca hai phep bat tham deu khong co ung vien; cung la
@@ -180,14 +182,19 @@ function pickedInRounds(tx: AnyDb, roundIds: string[], viewerId: string, now: Da
  *   nhat, khong phan biet co chu). listShelf chi dung noi dung to nay lam doan trich khi hasText dung; to khong chu thi
  *   khong co doan trich (giu nguyen luat dong he lo niem phong khi ap dung).
  */
-function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date) {
+function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Date, khoangLang = false) {
   return tx
     .selectDistinctOn([pages.bookId], {
       bookId: pages.bookId, position: pages.position, content: pages.content, hasText: sql<boolean>`${HAS_TEXT}`,
     })
     .from(pages)
     .innerJoin(books, eq(books.id, pages.bookId))
-    .where(and(inArray(pages.bookId, ids), notExists(lockedSealOf(tx, viewerId, now))))
+    .where(and(
+      inArray(pages.bookId, ids),
+      notExists(lockedSealOf(tx, viewerId, now)),
+      // Khoang Lang: chi to cua chinh nguoi xem moi mo duoc (sach viet cung chi con phan cua minh).
+      khoangLang ? cuaMinhSql(viewerId) : undefined,
+    ))
     .orderBy(
       pages.bookId,
       sql`case
@@ -206,7 +213,7 @@ function firstReadableSheets(tx: AnyDb, ids: string[], viewerId: string, now: Da
  * Moi cau lenh doc chung mot anh chup: to duoc chon, to cuoi, doan trich va niem phong phu chung luon den tu cung mot
  * trang thai, nen mot publishDraft hay mot lan mo khoa commit giua chung khong the dua chu that cua to khoa vao doan trich.
  */
-export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Date()): Promise<ShelfBook[]> {
+export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Date(), khoangLang = false): Promise<ShelfBook[]> {
   return readSnapshot(db, async (tx) => {
     const visible = await tx
       .select({
@@ -220,7 +227,10 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
       })
       .from(books)
       .innerJoin(accounts, eq(accounts.id, books.ownerId))
-      .where(or(eq(books.ownerId, viewerId), eq(books.mode, "chia-se")));
+      // Khoang Lang: cuon cua doi phuong ma khong viet cung thi bien mat; sach viet cung o lai (co luot cua minh).
+      .where(khoangLang
+        ? or(eq(books.ownerId, viewerId), and(eq(books.mode, "chia-se"), sql`${books.vietCungTu} is not null`))
+        : or(eq(books.ownerId, viewerId), eq(books.mode, "chia-se")));
     if (visible.length === 0) return [];
 
     const ids = visible.map((b) => b.id);
@@ -237,11 +247,12 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
         .leftJoin(readSheets, and(
           eq(readSheets.bookId, pages.bookId), eq(readSheets.position, pages.position), eq(readSheets.accountId, viewerId),
         ))
-        .where(inArray(pages.bookId, ids))
+        // Khoang Lang: moi so dem chi tinh tu luot cua chinh nguoi xem (sach viet cung chi con phan cua minh).
+        .where(and(inArray(pages.bookId, ids), khoangLang ? eq(rounds.tacGiaId, viewerId) : undefined))
         .groupBy(pages.bookId),
       sealsOfBooks(tx, ids),
-      pickedSheets(tx, ids, viewerId, now),
-      firstReadableSheets(tx, ids, viewerId, now),
+      pickedSheets(tx, ids, viewerId, now, khoangLang),
+      firstReadableSheets(tx, ids, viewerId, now, khoangLang),
       newestRounds(tx, ids),
       newestCovers(tx, ids),
     ]);
@@ -250,7 +261,7 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     const rangesOf = groupBy(ranges, (r) => r.bookId);
     const pickedOf = new Map(picked.map((p) => [p.bookId, p]));
     const firstOf = new Map(firsts.map((p) => [p.bookId, p]));
-    const roundOf = new Map(newest.map((r) => [r.bookId, r.roundId]));
+    const roundOf = new Map(newest.map((r) => [r.bookId, { roundId: r.roundId, tacGiaId: r.tacGiaId }]));
     // Bia cua tung cuon: dung MOT cau lenh cho ca ke, chay chung anh chup voi cac cau tren; khong mot vong lap nao
     // theo tung cuon (ngan sach cua spec).
     const coverOf = new Map(covers.map((c) => [c.bookId, c]));
@@ -258,21 +269,26 @@ export async function listShelf(db: AnyDb, viewerId: string, now: Date = new Dat
     // Cuon co luot moi nhat con niem phong voi nguoi xem. Tinh DUNG MOT LAN roi dung cho ca hai noi can no (chon luot
     // duoc phep doc noi dung o duoi, va chon doan cua tung khung): hai noi tu tinh lay theo hai duong thi chi can lech
     // nhau mot ly la khung lang le rot xuong duong lui.
+    // Khoang Lang: luot moi nhat cua doi phuong khong khoa doan cua minh - chi xet khoa khi luot moi nhat la cua minh.
     const khoaMoi = new Set(
       visible
         .filter((b) => {
-          const rid = roundOf.get(b.id);
-          return rid !== undefined
-            && (rangesOf.get(b.id) ?? []).some((r) => r.roundId === rid && isLockedFor(r, b.ownerId === viewerId, now));
+          const moi = roundOf.get(b.id);
+          return moi !== undefined
+            && (!khoangLang || moi.tacGiaId === viewerId)
+            && (rangesOf.get(b.id) ?? []).some((r) => r.roundId === moi.roundId && isLockedFor(r, b.ownerId === viewerId, now));
         })
         .map((b) => b.id),
     );
     // Chi doc noi dung cua luot moi nhat khi luot do da mo voi nguoi xem: luot con niem phong khong duoc lo mot chu nao,
     // ke ca vao bo nho may chu. Cung mot anh chup voi cac cau tren (readSnapshot), nen khong co khe nao de mot lan mo
     // khoa chen vao giua.
+    // Khoang Lang: luot moi nhat cua doi phuong khong duoc doc chu - chi luot cua minh moi vao danh sach mo.
     const luotMo = visible.flatMap((b) => {
-      const rid = roundOf.get(b.id);
-      return rid === undefined || khoaMoi.has(b.id) ? [] : [rid];
+      const moi = roundOf.get(b.id);
+      if (moi === undefined || khoaMoi.has(b.id)) return [];
+      if (khoangLang && moi.tacGiaId !== viewerId) return [];
+      return [moi.roundId];
     });
     const [marked, pickedNew] = await Promise.all([
       luotMo.length > 0 ? markedSheets(tx, luotMo) : [],

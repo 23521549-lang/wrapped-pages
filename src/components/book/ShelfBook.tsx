@@ -40,10 +40,10 @@ export type ShelfBookProps = {
   /** Sach rieng tu cua chinh nguoi xem (sach rieng tu cua nguoi kia khong bao gio toi day). */
   isPrivate: boolean;
   /**
-   * Sach viet cung (5c): hai chu cai dau cua hai nguoi viet (nguoi tao truoc) o goc bia, so luot thay cho so trang, va
-   * biet danh nguoi kia cho dau "Lượt mới của {tên}".
+   * Sach viet cung (5c): chu cai dau cua (cac) nguoi viet (nguoi tao truoc) o goc bia, so luot thay cho so trang, va
+   * biet danh nguoi kia cho dau "Lượt mới của {tên}". Khoang Lang (Q6): chi mot chu cai dau cua chinh nguoi xem.
    */
-  vietCung?: { doi: readonly [string, string]; luot: number; nguoiKia: string };
+  vietCung?: { doi: readonly string[]; luot: number; nguoiKia: string };
   /** Cuon cua minh dang cho nguoi kia nhan loi moi viet cung: biet danh nguoi kia, cho dau "Chờ {tên} nhận lời". */
   choNhanLoi?: string;
   /**
@@ -72,7 +72,7 @@ export function ShelfBook({
           <CoverArt cover={cover} />
           <CoverImage mediaId={coverMediaId} />
           {vietCung && (
-            <span className="cuon__doi" aria-hidden="true"><span>{vietCung.doi[0]}</span><span>{vietCung.doi[1]}</span></span>
+            <span className="cuon__doi" aria-hidden="true"><span>{vietCung.doi[0]}</span>{vietCung.doi[1] !== undefined && <span>{vietCung.doi[1]}</span>}</span>
           )}
         </span>
         <span className="cuon__chu">

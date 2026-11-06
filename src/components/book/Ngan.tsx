@@ -30,7 +30,7 @@ export type SachTrenKe = {
   isPrivate: boolean;
   when: string;
   /** Sach viet cung (5c): xem ShelfBookProps.vietCung. */
-  vietCung?: { doi: readonly [string, string]; luot: number; nguoiKia: string };
+  vietCung?: { doi: readonly string[]; luot: number; nguoiKia: string };
   /** Cuon cua minh dang cho nguoi kia nhan loi moi: biet danh nguoi kia. */
   choNhanLoi?: string;
   /** Khoi tra loi loi moi viet cung duoi cuon, trang dung san: xem ShelfBookProps.moiToi. */
