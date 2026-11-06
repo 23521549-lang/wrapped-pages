@@ -18,16 +18,16 @@ export async function actionThaCamXuc(loai: unknown): Promise<{ ok: true } | { e
   return { error: r === "som" ? CHO_THA_TIEP : CHON_CAM_XUC };
 }
 
-/** Hang cho cua nguoi dang nhap (linh vat hoi moi 15 giay); chua dang nhap thi rong. */
+/** Hang cho cua nguoi dang nhap (linh vat hoi moi 15 giay); chua dang nhap thi rong. Khoang Lang: rong. */
 export async function actionCamXucChoToi(): Promise<CamXucToi[]> {
   const me = await readMe();
   if (!me) return [];
-  return camXucChoToi(db, me.accountId);
+  return camXucChoToi(db, me.accountId, new Date(), me.khoangLang);
 }
 
-/** Linh vat bat dau dien mot cam xuc: danh da xem (va cac cam xuc cu hon chua xem). Id la thi thoi. */
+/** Linh vat bat dau dien mot cam xuc: danh da xem (va cac cam xuc cu hon chua xem). Id la thi thoi. Khoang Lang: khong danh. */
 export async function actionDaXemCamXuc(id: unknown): Promise<void> {
   const me = await readMe();
   if (!me || !isUuid(id)) return;
-  await daXemCamXuc(db, me.accountId, id);
+  await daXemCamXuc(db, me.accountId, id, new Date(), me.khoangLang);
 }

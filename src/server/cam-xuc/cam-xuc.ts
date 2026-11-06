@@ -41,7 +41,9 @@ export type CamXucToi = { id: string; loai: LoaiCamXuc; luc: Date };
  * theo thu tu cu toi moi (linh vat dien lan luot). Chi doc: cai cu hon ba cai do duoc danh da xem khi cai dau tien trong
  * hang duoc dien (daXemCamXuc).
  */
-export async function camXucChoToi(db: AnyDb, viewerId: string, now: Date = new Date()): Promise<CamXucToi[]> {
+export async function camXucChoToi(db: AnyDb, viewerId: string, now: Date = new Date(), khoangLang = false): Promise<CamXucToi[]> {
+  // Khoang Lang: hang cho rong - Chip khong dien cam xuc doi phuong.
+  if (khoangLang) return [];
   const rows = await db
     .select({ id: camXuc.id, loai: camXuc.loai, luc: camXuc.luc })
     .from(camXuc)
@@ -57,7 +59,9 @@ export async function camXucChoToi(db: AnyDb, viewerId: string, now: Date = new 
  * vang lau khong phai xem ca trang; dong Hoat dong van con du). Chi cam xuc nguoi kia gui nguoi xem, chi khi chua xem.
  * Tra true khi chinh cam xuc id vua duoc danh; goi lai, id cua chinh minh, id la: false.
  */
-export async function daXemCamXuc(db: AnyDb, viewerId: string, id: string, now: Date = new Date()): Promise<boolean> {
+export async function daXemCamXuc(db: AnyDb, viewerId: string, id: string, now: Date = new Date(), khoangLang = false): Promise<boolean> {
+  // Khoang Lang: cam xuc dang an khong duoc danh da xem - tat co di van con de dien.
+  if (khoangLang) return false;
   return db.transaction(async (tx) => {
     const [cx] = await tx
       .select({ luc: camXuc.luc })

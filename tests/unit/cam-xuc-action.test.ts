@@ -20,7 +20,7 @@ vi.mock("@/server/cam-xuc/cam-xuc", () => ({ thaCamXuc, camXucChoToi, daXemCamXu
 vi.mock("@/server/db", () => ({ db: { la: "db-gia" } }));
 vi.mock("next/cache", () => ({ refresh }));
 
-const ME = { accountId: "tai-khoan-2", seat: 2, nickname: "Mạnh", partnerNickname: "Linh" };
+const ME = { accountId: "tai-khoan-2", seat: 2, nickname: "Mạnh", partnerNickname: "Linh", khoangLang: false };
 const ID = "5b8f2a3e-1c4d-4e6f-8a9b-0c1d2e3f4a5b";
 
 afterEach(() => {
@@ -59,7 +59,7 @@ describe("actionCamXucChoToi", () => {
     readMe.mockResolvedValue(ME);
     camXucChoToi.mockResolvedValue(hang);
     expect(await actionCamXucChoToi()).toEqual(hang);
-    expect(camXucChoToi).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId);
+    expect(camXucChoToi).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, expect.any(Date), false);
   });
 });
 
@@ -73,6 +73,6 @@ describe("actionDaXemCamXuc", () => {
     await actionDaXemCamXuc(ID);
     expect(daXemCamXuc).not.toHaveBeenCalled();
     await actionDaXemCamXuc(ID);
-    expect(daXemCamXuc).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, ID);
+    expect(daXemCamXuc).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, ID, expect.any(Date), false);
   });
 });
