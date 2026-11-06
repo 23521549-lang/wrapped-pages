@@ -32,4 +32,15 @@ describe("Khoang Lang: kho cam xuc", () => {
     const [sau] = await db.select().from(camXuc).where(eq(camXuc.tuId, seat1.id));
     expect(sau.daXemLuc).toBeNull();
   });
+
+  // Task 13 (noi dung cua minh con nguyen): Khoang Lang chi loc HIEN THI cua nguoi bat co; viec cua minh gui di van
+  // toi doi phuong nhu cu (khi doi phuong khong bat co).
+  it("con nguyen: minh van tha duoc cam xuc khi bat co, doi phuong (tat co) van thay", async () => {
+    const { db, seat1, seat2 } = await seedHai();
+    expect(await thaCamXuc(db, seat2.id, "nho", NOW)).toBe("sent");
+    const hang = await camXucChoToi(db, seat1.id, NOW);
+    expect(hang).toHaveLength(1);
+    expect(hang[0].loai).toBe("nho");
+    expect(await daXemCamXuc(db, seat1.id, hang[0].id, NOW)).toBe(true);
+  });
 });
