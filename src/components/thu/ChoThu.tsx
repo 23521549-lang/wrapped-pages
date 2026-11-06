@@ -28,7 +28,7 @@ function PhongCho() {
  * gui), thu nguoi kia gui minh (ca hai da gui), hay dong cho (minh da gui, nguoi kia chua). Thu cua chinh minh khong bao
  * gio co o day (may chu khong tra ve). Thu nguoi kia chua mo ma o thang dang mo thi ghi da mo mot lan.
  */
-export function ChoThu({ thang, tenThangChu, tenKia, tenMinh, tt, kia, chuaMo, mo }: {
+export function ChoThu({ thang, tenThangChu, tenKia, tenMinh, tt, kia, chuaMo, mo, khoangLang = false }: {
   thang: string;
   tenThangChu: string;
   tenKia: string;
@@ -38,9 +38,13 @@ export function ChoThu({ thang, tenThangChu, tenKia, tenMinh, tt, kia, chuaMo, m
   chuaMo: boolean;
   /** O thang dang tha xuong. */
   mo: boolean;
+  /** Khoang Lang: thu doi phuong khong hien; chi con to giay viet thu cua minh va bao da gui. */
+  khoangLang?: boolean;
 }) {
   const router = useRouter();
-  const cai = choThu(tt);
+  // Khoang Lang: coi nhu doi phuong chua gui gi - chi con hai trang thai cua minh (viet / cho).
+  const ttHien = khoangLang ? { minhGui: tt.minhGui, kiaGui: false } : tt;
+  const cai = choThu(ttHien);
   const daGhi = useRef(false);
   useEffect(() => {
     if (cai !== "doc" || !chuaMo || !mo || daGhi.current) return;
@@ -53,13 +57,17 @@ export function ChoThu({ thang, tenThangChu, tenKia, tenMinh, tt, kia, chuaMo, m
   }, [cai, chuaMo, mo, thang]);
 
   if (cai === "viet") {
-    return <VietThu thang={thang} tenKia={tenKia} tenThangChu={tenThangChu} daGui={() => router.refresh()} />;
+    return <VietThu thang={thang} tenKia={tenKia} tenThangChu={tenThangChu} daGui={() => router.refresh()} khoangLang={khoangLang} />;
   }
   if (cai === "cho" || kia === null) {
     return (
       <div className="thu-la thu-la--dong">
         <PhongCho />
-        <p><b>{`Thư của bạn đã tới tay ${tenKia}.`}</b>{` Khi ${tenKia} viết, thư sẽ bay tới góc trên màn hình của bạn.`}</p>
+        {khoangLang ? (
+          <p><b>Thư của bạn đã gửi.</b></p>
+        ) : (
+          <p><b>{`Thư của bạn đã tới tay ${tenKia}.`}</b>{` Khi ${tenKia} viết, thư sẽ bay tới góc trên màn hình của bạn.`}</p>
+        )}
       </div>
     );
   }

@@ -109,7 +109,10 @@ export function TongKetThang({ thang, nay, tenKia, tenMinh, khoangLang = false }
       </p>
       {thang.map((t) => {
         const dangMo = mo.has(t.khoa);
-        const nhan = nhanThu(t.thu.tt, tenKia);
+        // Khoang Lang: nhan thu chi bao trang thai cua minh - khong "Da co thu cua {ten}" hay "{ten} da viet cho ban".
+        const nhan = khoangLang
+          ? (t.thu.tt.minhGui ? { chu: "Đã gửi", moi: false } : { chu: "Chưa ai viết thư", moi: false })
+          : nhanThu(t.thu.tt, tenKia);
         const hoa = [t.tk.noiBat.kia, t.tk.noiBat.minh].filter((w): w is Weather => w !== null);
         return (
           <section key={t.khoa} className={dangMo ? "thg thg--mo" : "thg"} aria-labelledby={`thg-${t.khoa}-t`}>
@@ -156,6 +159,7 @@ export function TongKetThang({ thang, nay, tenKia, tenMinh, khoangLang = false }
                         kia={t.thu.kia}
                         chuaMo={t.thu.chuaMo}
                         mo={dangMo}
+                        khoangLang={khoangLang}
                       />
                     </div>
                   </div>

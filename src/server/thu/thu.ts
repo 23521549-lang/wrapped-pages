@@ -51,14 +51,17 @@ export type ThuKia = { noiDung: string; guiLuc: Date; moLuc: Date | null };
  */
 export type ThuThang = TrangThaiThu & { thang: string; kia: ThuKia | null };
 
-/** Moi thang co thu (cua ai cung duoc), moi nhat truoc, doc tren mot anh chup. */
-export async function thuCacThang(db: AnyDb, viewerId: string): Promise<ThuThang[]> {
+/** Moi thang co thu (cua ai cung duoc), moi nhat truoc, doc tren mot anh chup. Khoang Lang: khong doc thu doi phuong. */
+export async function thuCacThang(db: AnyDb, viewerId: string, khoangLang = false): Promise<ThuThang[]> {
   const [cuaMinh, cuaKia] = await readSnapshot(db, (tx) => Promise.all([
     tx.select({ thang: thuThang.thang }).from(thuThang).where(eq(thuThang.accountId, viewerId)),
-    tx
-      .select({ thang: thuThang.thang, noiDung: thuThang.noiDung, guiLuc: thuThang.guiLuc, moLuc: thuThang.moLuc })
-      .from(thuThang)
-      .where(ne(thuThang.accountId, viewerId)),
+    // Khoang Lang: khong doc thu doi phuong vao bo nho may chu; kiaGui va kia deu ve false/null o duoi.
+    khoangLang
+      ? Promise.resolve([] as { thang: string; noiDung: string; guiLuc: Date; moLuc: Date | null }[])
+      : tx
+        .select({ thang: thuThang.thang, noiDung: thuThang.noiDung, guiLuc: thuThang.guiLuc, moLuc: thuThang.moLuc })
+        .from(thuThang)
+        .where(ne(thuThang.accountId, viewerId)),
   ]));
   const minh = new Set(cuaMinh.map((r) => r.thang));
   const kia = new Map(cuaKia.map((r) => [r.thang, r]));
@@ -74,8 +77,9 @@ export async function thuCacThang(db: AnyDb, viewerId: string): Promise<ThuThang
   });
 }
 
-/** La thu nguoi kia gui minh ma minh chua mo, cu nhat truoc (doc lan luot tung thang); khong co thi null. Khong mang noi dung. */
-export async function thuChuaMo(db: AnyDb, viewerId: string): Promise<{ id: string; thang: string } | null> {
+/** La thu nguoi kia gui minh ma minh chua mo, cu nhat truoc (doc lan luot tung thang); khong co thi null. Khong mang noi dung. Khoang Lang: khong co la nao. */
+export async function thuChuaMo(db: AnyDb, viewerId: string, khoangLang = false): Promise<{ id: string; thang: string } | null> {
+  if (khoangLang) return null;
   const [r] = await db
     .select({ id: thuThang.id, thang: thuThang.thang })
     .from(thuThang)
@@ -91,8 +95,10 @@ export type ThuMo = { thang: string; noiDung: string; guiLuc: Date; minhGui: boo
 /**
  * Nguoi xem mo thu nguoi kia gui minh cua mot thang: ghi mo_luc lan dau (khong som hon gui_luc, CHECK thu_thang_mo_luc,
  * ke ca khi dong ho may chu lui), tra noi dung. Thang sai dang, chua co thu nguoi kia gui thi null.
+ * Khoang Lang: chan o server - tra null truoc ca giao dich, khong ghi mo_luc, khong doc noi dung.
  */
-export async function moThu(db: AnyDb, viewerId: string, thang: unknown, now: Date = new Date()): Promise<ThuMo | null> {
+export async function moThu(db: AnyDb, viewerId: string, thang: unknown, now: Date = new Date(), khoangLang = false): Promise<ThuMo | null> {
+  if (khoangLang) return null;
   const t = phanThang(thang);
   if (t === null) return null;
   const khoa = thangKhoa(t);
@@ -111,8 +117,9 @@ export async function moThu(db: AnyDb, viewerId: string, thang: unknown, now: Da
   });
 }
 
-/** Dong nhac o Ke sach: thang vua khep va trang thai thu cua no, khi chinh nguoi xem chua gui; da gui thi null. */
-export async function nhacThu(db: AnyDb, viewerId: string, now: Date = new Date()): Promise<{ thang: Thang; tt: TrangThaiThu } | null> {
+/** Dong nhac o Ke sach: thang vua khep va trang thai thu cua no, khi chinh nguoi xem chua gui; da gui thi null. Khoang Lang: khong nhac. */
+export async function nhacThu(db: AnyDb, viewerId: string, now: Date = new Date(), khoangLang = false): Promise<{ thang: Thang; tt: TrangThaiThu } | null> {
+  if (khoangLang) return null;
   const thang = thangVuaKhep(now);
   const rows = await db
     .select({ accountId: thuThang.accountId })

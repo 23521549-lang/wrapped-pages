@@ -53,7 +53,7 @@ export default async function KeSach() {
     currentMoods(db, now),
     unreadRounds(db, me.accountId, now, me.khoangLang),
     phienBanKe(db, me.accountId, now, me.khoangLang),
-    nhacThu(db, me.accountId, now),
+    nhacThu(db, me.accountId, now, me.khoangLang),
     deNghiToiToi(db, me.accountId),
   ]);
   // Dai troi: mac dinh troi cua nguoi kia, troi cua minh o o cua so (hoac la troi lon khi chi minh co); them cham mau

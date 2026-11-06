@@ -25,11 +25,11 @@ export async function actionGuiThu(thang: unknown, noiDung: unknown): Promise<{ 
   return r === "sent" ? { ok: true } : { error: LOI_GUI[r] };
 }
 
-/** La thu nguoi kia gui ma nguoi dang nhap chua mo (la thu troi hoi moi 20 giay); khong co hay chua dang nhap thi null. */
+/** La thu nguoi kia gui ma nguoi dang nhap chua mo (la thu troi hoi moi 20 giay); khong co hay chua dang nhap thi null. Khoang Lang: khong co la nao. */
 export async function actionThuChuaMo(): Promise<{ id: string; thang: string } | null> {
   const me = await readMe();
   if (!me) return null;
-  return thuChuaMo(db, me.accountId);
+  return thuChuaMo(db, me.accountId, me.khoangLang);
 }
 
 /** Thu da mo, nhu cua so doc thu hien: gio gui da thanh chu theo gio Viet Nam. */
@@ -40,7 +40,7 @@ export async function actionMoThu(thang: unknown): Promise<{ thu: ThuDaMo } | { 
   const me = await readMe();
   if (!me) return { error: CAN_DANG_NHAP };
   const now = new Date();
-  const thu = await moThu(db, me.accountId, thang, now);
+  const thu = await moThu(db, me.accountId, thang, now, me.khoangLang);
   if (!thu) return { error: "Không tìm thấy thư này." };
   return { thu: { thang: thu.thang, noiDung: thu.noiDung, gio: momentLabel(thu.guiLuc, now), minhGui: thu.minhGui } };
 }

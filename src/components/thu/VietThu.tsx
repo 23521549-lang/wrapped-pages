@@ -14,13 +14,15 @@ const MAT_MANG = "Chưa gửi được thư, thử lại nhé.";
  * giay gap thanh phong bi, chim sa xuong ngam di, roi moi goi daGui (trang lam moi sau khi chim bay xong). Hop hoi lai mo
  * thi o chu chi doc: chu duoc hoi lai dung la chu se gui; Esc hay "Xem lại" la quay lai o chu.
  */
-export function VietThu({ thang, tenKia, tenThangChu, daGui }: {
+export function VietThu({ thang, tenKia, tenThangChu, daGui, khoangLang = false }: {
   /** YYYY-MM. */
   thang: string;
   tenKia: string;
   /** "tháng Chín". */
   tenThangChu: string;
   daGui: () => void;
+  /** Khoang Lang (Q2): loi chao va nhan chi noi "nguoi doc", khong neu ten doi phuong. */
+  khoangLang?: boolean;
 }) {
   const id = useId();
   const [chu, setChu] = useState("");
@@ -80,8 +82,8 @@ export function VietThu({ thang, tenKia, tenThangChu, daGui }: {
 
   return (
     <div className="thu-la thu-la--viet" ref={laRef} aria-busy={pending || undefined}>
-      <p className="thu-la__gui">{`Gửi ${tenKia},`}</p>
-      <label className="sr-only" htmlFor={`${id}-o`}>{`Thư của bạn gửi ${tenKia}`}</label>
+      <p className="thu-la__gui">{khoangLang ? "Gửi người đọc," : `Gửi ${tenKia},`}</p>
+      <label className="sr-only" htmlFor={`${id}-o`}>{khoangLang ? "Thư của bạn gửi người đọc" : `Thư của bạn gửi ${tenKia}`}</label>
       <textarea
         ref={oRef}
         id={`${id}-o`}

@@ -35,7 +35,7 @@ export default async function LichHoaPage({ searchParams }: {
     moodCalendar(db, thang, me.accountId, me.khoangLang),
     nay ? null : moodCalendar(db, thangNay, me.accountId, me.khoangLang),
     lichCacThang(db, now, me.accountId, me.khoangLang),
-    thuCacThang(db, me.accountId),
+    thuCacThang(db, me.accountId, me.khoangLang),
   ]);
   const tkNay = tongKetThang(gomLich(rowsNay ?? rows, me.accountId), me.partnerNickname, me.khoangLang);
   const tongKet = thangCoTongKet([...cacLich.keys(), ...cacThu.map((t) => t.thang)], now).flatMap((khoa): ThangTongKetHien[] => {

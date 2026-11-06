@@ -20,7 +20,7 @@ vi.mock("@/server/thu/thu", () => ({ guiThu, moThu, thuChuaMo }));
 vi.mock("@/server/db", () => ({ db: { la: "db-gia" } }));
 vi.mock("next/cache", () => ({ refresh }));
 
-const ME = { accountId: "tai-khoan-2", seat: 2, nickname: "Linh", partnerNickname: "Mạnh" };
+const ME = { accountId: "tai-khoan-2", seat: 2, nickname: "Linh", partnerNickname: "Mạnh", khoangLang: false };
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -65,7 +65,7 @@ describe("actionThuChuaMo, actionMoThu", () => {
     readMe.mockResolvedValue(ME);
     thuChuaMo.mockResolvedValue({ id: "thu-1", thang: "2026-09" });
     expect(await actionThuChuaMo()).toEqual({ id: "thu-1", thang: "2026-09" });
-    expect(thuChuaMo).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId);
+    expect(thuChuaMo).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, false);
   });
 
   it("mo thu: tra noi dung va gio gui da thanh chu; khong co thu thi bao loi", async () => {
@@ -73,7 +73,7 @@ describe("actionThuChuaMo, actionMoThu", () => {
     moThu.mockResolvedValue({ thang: "2026-09", noiDung: "Chào cậu", guiLuc: new Date("2026-10-01T02:05:00.000Z"), minhGui: false });
     const r = await actionMoThu("2026-09");
     expect(r).toEqual({ thu: { thang: "2026-09", noiDung: "Chào cậu", gio: expect.stringContaining("09:05"), minhGui: false } });
-    expect(moThu).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, "2026-09", expect.any(Date));
+    expect(moThu).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, "2026-09", expect.any(Date), false);
     moThu.mockResolvedValue(null);
     expect(await actionMoThu("2026-08")).toEqual({ error: "Không tìm thấy thư này." });
   });

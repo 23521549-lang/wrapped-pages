@@ -39,7 +39,13 @@ const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right &&
  * xem. Phong bi len xuong, lac, nghieng theo ba nhip lech nhau; re chuot hay focus thi dung. Khong bao gio de len khung
  * YouTube: dang de len mot khung phat thi tam an (cuon qua la hien lai). Bam la mo cua so doc thu.
  */
-export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: string; dau: { id: string; thang: string } | null }) {
+export function LaThuBay({ tenKia, tenMinh, dau, khoangLang = false }: {
+  tenKia: string;
+  tenMinh: string;
+  dau: { id: string; thang: string } | null;
+  /** Khoang Lang: khong ve la thu, khong poll la chua mo. */
+  khoangLang?: boolean;
+}) {
   const [thu, setThu] = useState(dau);
   /** La dang hien: la moi (chua toi tren trinh duyet nay) an cho toi khi chim tha xuong, ke ca o lan ve dau tu may chu. */
   const [daHien, setDaHien] = useState<string | null>(null);
@@ -57,6 +63,8 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
     }, () => {});
   });
   useEffect(() => {
+    // Khoang Lang: dung poll - actionThuChuaMo la duong doc noi dung gian tiep, khong goi khi bat co.
+    if (khoangLang) return undefined;
     const ms = msTuCss(getComputedStyle(document.documentElement).getPropertyValue("--dur-hoi-thu"));
     const hen = setInterval(hoi, Number.isFinite(ms) && ms > 0 ? ms : 20_000);
     const khiXem = () => {
@@ -67,7 +75,7 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
       clearInterval(hen);
       document.removeEventListener("visibilitychange", khiXem);
     };
-  }, []);
+  }, [khoangLang]);
 
   // Mot la vua mo o noi khac (Lich hoa, cua so doc thu): an ngay, khong cho lan hoi sau.
   useEffect(() => {
@@ -148,6 +156,8 @@ export function LaThuBay({ tenKia, tenMinh, dau }: { tenKia: string; tenMinh: st
 
   const t = thangThu === null ? null : phanThang(thangThu);
   const lop = ["thu-bay", daHien === id ? "" : "thu-bay--cho", tranh ? "thu-bay--tranh" : ""].filter(Boolean).join(" ");
+  // Khoang Lang: khong ve gi (sau moi hook, de thu tu hook khong doi).
+  if (khoangLang) return null;
   return (
     <>
       {/* Gradient giay cua moi phong bi (la thu troi, chim dua thu, cua so doc thu): khai mot lan o day. */}

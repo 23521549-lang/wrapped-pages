@@ -32,7 +32,7 @@ export async function AppNav({ me, current, subpage = false, sticky = true, linh
   linhVat?: boolean;
 }) {
   const [thu, hangCamXuc, chip] = await Promise.all([
-    thuChuaMo(db, me.accountId),
+    thuChuaMo(db, me.accountId, me.khoangLang),
     linhVat ? camXucChoToi(db, me.accountId) : [],
     linhVat ? trangThaiChip(db, me.accountId) : null,
   ]);
@@ -63,7 +63,7 @@ export async function AppNav({ me, current, subpage = false, sticky = true, linh
           </div>
         </div>
       </nav>
-      <LaThuBay tenKia={me.partnerNickname} tenMinh={me.nickname} dau={thu} />
+      <LaThuBay tenKia={me.partnerNickname} tenMinh={me.nickname} dau={thu} khoangLang={me.khoangLang} />
       {chip !== null && <LinhVat tenKia={me.partnerNickname} tenMinh={me.nickname} hangDau={hangCamXuc} trangThai={chip} />}
       <GhiViec />
     </>
