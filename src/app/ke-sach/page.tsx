@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { db } from "@/server/db";
@@ -19,6 +20,7 @@ import { OpenBook } from "@/components/book/OpenBook";
 import { Ngan, type SachTrenKe } from "@/components/book/Ngan";
 import { GlyphKhoa, GlyphRieng } from "@/components/book/ShelfBook";
 import { ActivityPanel } from "@/components/feed/ActivityPanel";
+import { HoatDongCoTenBai } from "@/components/feed/HoatDongCoTenBai";
 import { BauTroi } from "@/components/tam-trang/BauTroi";
 import { TroiTam } from "@/components/tam-trang/troi-tam";
 import { HoaDefs } from "@/components/tam-trang/HoaEp";
@@ -68,18 +70,11 @@ export default async function KeSach() {
   // listShelf sap theo to dang gan nhat, nen cuon dau tien co to chinh la cuon co trang gan nhat.
   const recent = shelf.find((b) => b.pageCount > 0);
   // Dong thoi gian bia doc cho cac cuon cua khung sach lon (cuon moi nhat, hay cac cuon cua luot chua doc, toi da sau):
-  // chi khung sach lon moi tu doi bia, the tren ke luon giu bia moi nhat. Ten bai cua cac dong doi nhac lay tu YouTube o
-  // may chu (tenCacBai), song song voi bia; lay khong duoc thi dong ghi "Bản nhạc trên YouTube".
+  // chi khung sach lon moi tu doi bia, the tren ke luon giu bia moi nhat.
   const sachKhung = [...new Set(chuaDoc.length > 0 ? chuaDoc.map((l) => l.bookId) : recent ? [recent.id] : [])];
   // Doc dong thoi gian bia cua CA NHOM cuon trong mot lan: doc tung cuon mot la N+1 (sau cuon thanh 24 cau lenh, gan
   // nua toan bo viec hoi database cua man nay). tests/unit/ngan-sach-ke-sach.test.ts khoa lai cho khoi tai dien.
-  const [oBia, baiHat] = await Promise.all([
-    coverSlotsNhieu(db, sachKhung),
-    tenCacBai(feed.flatMap((i) => {
-      const id = i.kind === "doi-nhac" ? docChiTietNhac(i.detail)?.sau?.youtubeId : null;
-      return id ? [id] : [];
-    })),
-  ]);
+  const oBia = await coverSlotsNhieu(db, sachKhung);
   const biaCua = new Map([...oBia].map(([id, o]) => [id, o.flatMap((s) => (s.o === null ? [] : [{ cover: s.o.cover, coverMediaId: s.o.coverMediaId }]))]));
   // Khong ai giu tam trang thi dai troi khong hien, tuc khong con nut tam dung nao tren trang: khung bia tu dat mot nut.
   const coDaiTroi = minh !== null || kia !== null;
@@ -119,7 +114,18 @@ export default async function KeSach() {
   const viet = shelf.filter(chungKe).sort((x, y) => Number(y.moiCho !== null) - Number(x.moiCho !== null)).map(theKe);
   const cuaBan = shelf.filter((b) => b.mine && !chungKe(b)).map(theKe);
   const cuaKia = shelf.filter((b) => !b.mine && !chungKe(b)).map(theKe);
-  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={tenKia} baiHat={baiHat} an={me.anHoatDong} khoangLang={me.khoangLang} />;
+  // Ten bai cua cac dong doi nhac lay tu YouTube o may chu (tenCacBai); lay khong duoc thi dong ghi "Bản nhạc trên
+  // YouTube". Ten bai KHONG duoc chan trang ve: tao promise o day (mot lan cho ca trang) roi de HoatDongCoTenBai
+  // await trong <Suspense> - khung ve truoc voi cau thay, ten that stream ve sau (toi da 1,5s).
+  const baiHat = tenCacBai(feed.flatMap((i) => {
+    const id = i.kind === "doi-nhac" ? docChiTietNhac(i.detail)?.sau?.youtubeId : null;
+    return id ? [id] : [];
+  }));
+  const hoatDong = (
+    <Suspense fallback={<ActivityPanel items={feed} now={now} partnerName={tenKia} an={me.anHoatDong} khoangLang={me.khoangLang} />}>
+      <HoatDongCoTenBai items={feed} now={now} partnerName={tenKia} baiHat={baiHat} an={me.anHoatDong} khoangLang={me.khoangLang} />
+    </Suspense>
+  );
   // Mot luot chua doc thanh prop cua khung sach lon (spec 5a muc E): luot cua nguoi kia "Đọc tiếp" mo cuon qua tam bia
   // toi trang dang doc do; luot cua minh "Viết tiếp". Ca khung mo dung trang cua doan dang hien.
   const theLuot = (l: LuotChuaDoc): LuotKhung => ({
