@@ -23,7 +23,7 @@ function su(sua: Partial<FeedItem> = {}): FeedItem {
   };
 }
 
-const ve = (items: FeedItem[], an = false) => render(<ActivityPanel items={items} now={NOW} partnerName="Linh" an={an} />);
+const ve = (items: FeedItem[], an = false) => render(<ActivityPanel items={items} now={NOW} partnerName="Linh" an={an} khoangLang={false} />);
 
 afterEach(() => {
   cleanup();

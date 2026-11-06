@@ -19,6 +19,11 @@ export type ActivityPanelProps = {
    * nguoi ta nhin khung trong va tuong web hong.
    */
   an: boolean;
+  /**
+   * Nguoi xem dang bat Khoang Lang (11/06). Khung chi hien dong cua chinh ho (listActivity da loc), nen cau trong
+   * khong duoc nhac ten doi phuong nua: doi thanh cau chung khong co ten.
+   */
+  khoangLang: boolean;
 };
 
 /**
@@ -86,7 +91,7 @@ function Dong({ item, names }: { item: FeedItem; names: FeedNames }) {
  * Co dong thi co vung cuon an thanh cuon (TheoDoiXem: nhan focus de cuon bang phim, va bao cac dong Moi da xem), moi
  * ngay mot nhom co tieu de dinh mep tren. Chua co dong nao thi chi co o trong, khong vung cuon, khong vet mo.
  */
-export function ActivityPanel({ items, now, partnerName, baiHat, an }: ActivityPanelProps) {
+export function ActivityPanel({ items, now, partnerName, baiHat, an, khoangLang }: ActivityPanelProps) {
   const names: FeedNames = { partner: partnerName, baiHat };
   return (
     <section className="hoat-dong">
@@ -96,7 +101,11 @@ export function ActivityPanel({ items, now, partnerName, baiHat, an }: ActivityP
       {items.length === 0 ? (
         <div className="hoat-dong__trong">
           <b>Chưa có gì mới</b>
-          <p className="meta">{partnerName} đăng trang hay mở một trang khóa thì tin hiện ở đây.</p>
+          <p className="meta">
+            {khoangLang
+              ? "Đăng trang hay mở một trang khóa thì tin hiện ở đây."
+              : `${partnerName} đăng trang hay mở một trang khóa thì tin hiện ở đây.`}
+          </p>
         </div>
       ) : (
         <TheoDoiXem moi={items.filter((i) => i.isNew).map((i) => i.id).join(" ")}>

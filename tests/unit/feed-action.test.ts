@@ -22,7 +22,7 @@ vi.mock("@/server/identity/prefs", () => ({ setAnHoatDong }));
 vi.mock("@/server/db", () => ({ db: { la: "db-gia" } }));
 vi.mock("next/cache", () => ({ refresh }));
 
-const ME = { accountId: "tai-khoan-1", seat: 1, nickname: "Mạnh", partnerNickname: "Linh" };
+const ME = { accountId: "tai-khoan-1", seat: 1, nickname: "Mạnh", partnerNickname: "Linh", khoangLang: false };
 const ID = "11111111-1111-4111-8111-111111111111";
 
 afterEach(() => {
@@ -42,7 +42,7 @@ describe("actionSeenActivity", () => {
   it("chi chuoi di xuong markSeen cho dung nguoi dang nhap; khong refresh", async () => {
     readMe.mockResolvedValue(ME);
     expect(await actionSeenActivity([ID, 7, null, { id: ID }, "x"])).toEqual({ ok: true });
-    expect(markSeen).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, [ID, "x"]);
+    expect(markSeen).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, [ID, "x"], expect.any(Date), false);
     expect(refresh).not.toHaveBeenCalled();
   });
 
@@ -60,7 +60,7 @@ describe("actionPhienBanKe", () => {
     expect(phienBanKe).not.toHaveBeenCalled();
     readMe.mockResolvedValue(ME);
     expect(await actionPhienBanKe()).toBe("3|1700000000000|0|");
-    expect(phienBanKe).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId);
+    expect(phienBanKe).toHaveBeenCalledWith({ la: "db-gia" }, ME.accountId, expect.any(Date), false);
     expect(refresh).not.toHaveBeenCalled();
   });
 });

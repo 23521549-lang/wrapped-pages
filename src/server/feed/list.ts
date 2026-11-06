@@ -28,12 +28,16 @@ const NGAY_VIET_NAM = sql`((${activity.at} at time zone 'UTC') + interval '7 hou
  * - tha-cam-xuc (5d): ca hai deu thay;
  * - at lon hon now thi chua hien: mo-hen-gio duoc ghi san voi at = opensAt.
  */
-export function thayDuoc(viewerId: string, now: Date) {
+export function thayDuoc(viewerId: string, now: Date, khoangLang = false) {
   return and(
     // An hoat dong (06/10): dong mang dau `an` khong hien voi AI CA, ke ca chinh nguoi lam. Dat o day vi thayDuoc la cua
     // chung cua ca ba duong doc (listActivity, markSeen, phienBanKe), nen mot dieu kien o day la bit kin ca ba. Dau dong
     // mot lan luc ghi (recordActivity), nen dong ghi truoc luc bat khong bi an theo.
     eq(activity.an, false),
+    // Khoang Lang (11/06): chi dong CUA CHINH nguoi xem hien. Dat o day cung vi ly do tren: markSeen tu khong danh
+    // dau dong da an (khong thi tat co di cam xuc vua an bien mat oan), phienBanKe tu khong doi khi doi phuong lam gi
+    // (khong thi TuCapNhat lam moi vo ich va lo tin co viec moi cua doi phuong qua phien ban doi).
+    khoangLang ? eq(activity.actorId, viewerId) : undefined,
     lte(activity.at, now),
     or(
       and(eq(books.ownerId, viewerId), or(ne(activity.kind, "da-doc"), ne(activity.actorId, viewerId))),
@@ -55,9 +59,9 @@ export function thayDuoc(viewerId: string, now: Date) {
  * loi nhan va tam trang join luc doc. isNew: viec cua nguoi kia ma nguoi xem chua xem, hay dong da doi (at lon hon
  * luc xem). Ket qua khong mang id tai khoan nao.
  */
-export async function listActivity(db: AnyDb, viewerId: string, now: Date): Promise<FeedItem[]> {
+export async function listActivity(db: AnyDb, viewerId: string, now: Date, khoangLang = false): Promise<FeedItem[]> {
   return readSnapshot(db, async (tx) => {
-    const thay = thayDuoc(viewerId, now);
+    const thay = thayDuoc(viewerId, now, khoangLang);
     const by = (actorId: string): FeedActor => (actorId === viewerId ? "me" : "partner");
 
     // Dong Hoat dong tron nhieu cuon trong mot lan doc, nen khoang to gom nhom tren ca bang pages (khong theo cuon).

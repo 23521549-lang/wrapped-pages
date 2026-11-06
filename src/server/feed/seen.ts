@@ -16,7 +16,7 @@ const ngayVietNam = (cot: SQL) => sql`((${cot} at time zone 'UTC') + interval '7
  * rieng dong gom thu sai (id cua lan dau) la gio lan thu moi nhat cua nhom da hien, dung gio listActivity cho dong do.
  * Khong bao gio lui moc da xem: greatest(cu, moi), nen hai the gui lech thu tu van dung.
  */
-export async function markSeen(db: AnyDb, viewerId: string, ids: readonly string[], now: Date = new Date()): Promise<void> {
+export async function markSeen(db: AnyDb, viewerId: string, ids: readonly string[], now: Date = new Date(), khoangLang = false): Promise<void> {
   const can = [...new Set(ids.filter(isUuid))].slice(0, SEEN_TOI_DA);
   if (can.length === 0) return;
   // Nhom cua dong gom thu sai: cung nguoi, niem phong, luot, ngay Viet Nam (dung khoa gom cua listActivity).
@@ -40,7 +40,7 @@ export async function markSeen(db: AnyDb, viewerId: string, ids: readonly string
         .from(activity)
         .leftJoin(books, eq(books.id, activity.bookId))
         .leftJoin(moods, eq(moods.id, activity.moodId))
-        .where(and(inArray(activity.id, can), ne(activity.actorId, viewerId), thayDuoc(viewerId, now))),
+        .where(and(inArray(activity.id, can), ne(activity.actorId, viewerId), thayDuoc(viewerId, now, khoangLang))),
     )
     .onConflictDoUpdate({
       target: [activitySeen.accountId, activitySeen.activityId],

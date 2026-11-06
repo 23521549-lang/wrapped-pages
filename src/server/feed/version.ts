@@ -13,7 +13,7 @@ import { thayDuoc } from "./list";
  * viet cung dang cho tren cuon nguoi xem doc duoc (5c: moi, xin, de nghi xoa vua gui, vua rut hay vua duoc tra loi). Khong doi
  * khi nguoi xem chi xem: activity_seen khong nam trong chuoi. Khong mang id tai khoan, khong mang noi dung nao.
  */
-export async function phienBanKe(db: AnyDb, viewerId: string, now: Date = new Date()): Promise<string> {
+export async function phienBanKe(db: AnyDb, viewerId: string, now: Date = new Date(), khoangLang = false): Promise<string> {
   return readSnapshot(db, async (tx) => {
     const [[hd], [doc], giu, cho] = await Promise.all([
       tx
@@ -21,7 +21,7 @@ export async function phienBanKe(db: AnyDb, viewerId: string, now: Date = new Da
         .from(activity)
         .leftJoin(books, eq(books.id, activity.bookId))
         .leftJoin(moods, eq(moods.id, activity.moodId))
-        .where(thayDuoc(viewerId, now)),
+        .where(thayDuoc(viewerId, now, khoangLang)),
       tx.select({ n: count() }).from(readSheets).where(eq(readSheets.accountId, viewerId)),
       tx
         .select({ id: moods.id })

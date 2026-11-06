@@ -17,7 +17,7 @@ export async function actionSeenActivity(ids: unknown): Promise<{ error: string 
   const me = await readMe();
   if (!me) return { error: CAN_DANG_NHAP };
   if (!Array.isArray(ids)) return { ok: true };
-  await markSeen(db, me.accountId, ids.filter((x): x is string => typeof x === "string"));
+  await markSeen(db, me.accountId, ids.filter((x): x is string => typeof x === "string"), new Date(), me.khoangLang);
   return { ok: true };
 }
 
@@ -28,7 +28,7 @@ export async function actionSeenActivity(ids: unknown): Promise<{ error: string 
 export async function actionPhienBanKe(): Promise<string> {
   const me = await readMe();
   if (!me) return "";
-  return phienBanKe(db, me.accountId);
+  return phienBanKe(db, me.accountId, new Date(), me.khoangLang);
 }
 
 /**

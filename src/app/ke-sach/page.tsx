@@ -49,10 +49,10 @@ export default async function KeSach() {
   const now = new Date();
   const [shelf, feed, moods, chuaDoc, phienBan, nhac, deNghi] = await Promise.all([
     listShelf(db, me.accountId, now),
-    listActivity(db, me.accountId, now),
+    listActivity(db, me.accountId, now, me.khoangLang),
     currentMoods(db, now),
     unreadRounds(db, me.accountId, now),
-    phienBanKe(db, me.accountId, now),
+    phienBanKe(db, me.accountId, now, me.khoangLang),
     nhacThu(db, me.accountId, now),
     deNghiToiToi(db, me.accountId),
   ]);
@@ -110,7 +110,7 @@ export default async function KeSach() {
   const viet = shelf.filter(chungKe).sort((x, y) => Number(y.moiCho !== null) - Number(x.moiCho !== null)).map(theKe);
   const cuaBan = shelf.filter((b) => b.mine && !chungKe(b)).map(theKe);
   const cuaKia = shelf.filter((b) => !b.mine && !chungKe(b)).map(theKe);
-  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} an={me.anHoatDong} />;
+  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} an={me.anHoatDong} khoangLang={me.khoangLang} />;
   // Mot luot chua doc thanh prop cua khung sach lon (spec 5a muc E): luot cua nguoi kia "Đọc tiếp" mo cuon qua tam bia
   // toi trang dang doc do; luot cua minh "Viết tiếp". Ca khung mo dung trang cua doan dang hien.
   const theLuot = (l: LuotChuaDoc): LuotKhung => ({
