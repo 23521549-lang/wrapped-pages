@@ -31,7 +31,7 @@ export default async function DauThoiGian() {
   const me = await requireMe();
   const now = new Date();
   const ke = await listShelf(db, me.accountId, now, me.khoangLang);
-  const [dem, cacSo] = await Promise.all([demNhac(db, ke.map((b) => b.id)), thangCoNhac(db, me.accountId, now)]);
+  const [dem, cacSo] = await Promise.all([demNhac(db, ke.map((b) => b.id)), thangCoNhac(db, me.accountId, now, me.khoangLang)]);
   const nay = thangCua(now);
   const mo = thangSau(nay);
   return (

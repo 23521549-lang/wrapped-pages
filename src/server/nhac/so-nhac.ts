@@ -79,7 +79,7 @@ async function baiTrong(tx: AnyDb, viewerId: string, from: Date | null, to: Date
  * ca nhom cuon trong MOT cau lenh, khong phai mot cau moi cuon.
  */
 export async function baiCuaThang(
-  db: AnyDb, viewerId: string, t: Thang,
+  db: AnyDb, viewerId: string, t: Thang, khoangLang = false,
 ): Promise<{ minh: BaiSo[]; kia: BaiSo[]; chung: BaiSo[] }> {
   const { from, to } = khoangThang(t);
   return readSnapshot(db, async (tx) => {
@@ -94,8 +94,9 @@ export async function baiCuaThang(
     const rieng = tho.filter((b) => !b.vietCung);
     return {
       minh: ra(rieng.filter((b) => b.ownerId === viewerId)),
-      kia: ra(rieng.filter((b) => b.ownerId !== viewerId)),
-      chung: ra(tho.filter((b) => b.vietCung)),
+      // Khoang Lang: danh sach kia rong; danh sach chung chi bai do minh dat.
+      kia: khoangLang ? [] : ra(rieng.filter((b) => b.ownerId !== viewerId)),
+      chung: ra(tho.filter((b) => b.vietCung && (!khoangLang || b.aiDat === viewerId))),
     };
   });
 }
@@ -106,11 +107,13 @@ export async function baiCuaThang(
  */
 export type SoThang = { thang: string; soBai: number; soDanhSach: number };
 
-/** Cac thang da khep (truoc thang cua now) co it nhat mot bai nguoi xem thay duoc, moi nhat truoc. */
-export async function thangCoNhac(db: AnyDb, viewerId: string, now: Date): Promise<SoThang[]> {
+/** Cac thang da khep (truoc thang cua now) co it nhat mot bai nguoi xem thay duoc, moi nhat truoc. Khoang Lang: dem lai sau loc - bai cua doi phuong khong tinh, danh sach trong thi mat. */
+export async function thangCoNhac(db: AnyDb, viewerId: string, now: Date, khoangLang = false): Promise<SoThang[]> {
   const tho = await readSnapshot(db, (tx) => baiTrong(tx, viewerId, null, khoangThang(thangCua(now)).from));
+  // Khoang Lang: chi bai cua minh (sach viet cung: chi bai do minh dat) moi vao so dem.
+  const thay = khoangLang ? tho.filter((b) => (b.vietCung ? b.aiDat === viewerId : b.ownerId === viewerId)) : tho;
   const nhom = new Map<string, Map<string, Tho[]>>();
-  for (const b of tho) {
+  for (const b of thay) {
     const k = thangKhoa(thangCua(b.at));
     const theoNguoi = nhom.get(k) ?? new Map<string, Tho[]>();
     nhom.set(k, theoNguoi);
