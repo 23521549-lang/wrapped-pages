@@ -34,7 +34,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
   const [bia, nhac] = await Promise.all([coverSlots(db, book.id), trackSlots(db, book.id)]);
   const ten = await tenCacBai(nhac.flatMap((s) => (s.o?.youtubeId ? [s.o.youtubeId] : [])));
   // Nhan dung san o may chu: trinh duyet khong dinh dang ngay, nen hai lan ve khong lech nhau.
-  const photos = kho.map((p) => ({ id: p.id, nhan: `Ảnh của ${p.cuaToi ? "bạn" : me.partnerNickname}, tải ${dateLabel(p.createdAt, now)}` }));
+  const photos = kho.map((p) => ({ id: p.id, nhan: `Ảnh của ${p.cuaToi ? "bạn" : me.khoangLang ? "người đọc" : me.partnerNickname}, tải ${dateLabel(p.createdAt, now)}` }));
   const coKho = getMediaStore() !== null;
   // Sach viet cung (5c muc F3): o ten la "Chủ đề", khong doi che do, cuoi trang co muc Xoa cuon (can ca hai dong y).
   const vietCung = book.vietCungTu !== null;

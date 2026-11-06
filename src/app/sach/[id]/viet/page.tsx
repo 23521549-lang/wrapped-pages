@@ -24,7 +24,8 @@ export default async function VietSach({ params }: { params: Promise<{ id: strin
       <Editor
         bookId={book.id}
         bookTitle={book.title}
-        partnerNickname={book.mode === "chia-se" ? me.partnerNickname : null}
+        // Khoang Lang (Q2a): cau xac nhan dang/niem phong dung ten chung thay biet danh doi phuong.
+        partnerNickname={book.mode === "chia-se" ? (me.khoangLang ? "người đọc" : me.partnerNickname) : null}
         initialDoc={draft?.content ?? TRANG_TRONG}
         initialSavedAt={draft ? draft.updatedAt.toISOString() : null}
         author={me.nickname}

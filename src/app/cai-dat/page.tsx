@@ -18,6 +18,8 @@ export default async function CaiDat() {
   await connection();
   const me = await requireMe();
   const [{ nickname, written, received }, chip] = await Promise.all([readSettingsView(me.accountId), trangThaiChip(db, me.accountId)]);
+  // Khoang Lang (Q2a/Q5a): muc "Họ gửi bạn" an han; cau chu cua cac muc cai dat khac dung ten chung.
+  const tenKia = me.khoangLang ? "người đọc" : me.partnerNickname;
 
   return (
     <>
@@ -42,9 +44,9 @@ export default async function CaiDat() {
               <RenameForm />
             </section>
 
-            <CaiDatChip an={chip.an} tuNoi={chip.tuNoi} tenKia={me.partnerNickname} />
+            <CaiDatChip an={chip.an} tuNoi={chip.tuNoi} tenKia={tenKia} />
 
-            <CaiDatHoatDong an={me.anHoatDong} tenKia={me.partnerNickname} />
+            <CaiDatHoatDong an={me.anHoatDong} tenKia={tenKia} />
 
             <CaiDatKhoangLang an={me.khoangLang} />
           </div>
@@ -75,22 +77,25 @@ export default async function CaiDat() {
               )}
             </section>
 
-            <section className="muc" aria-labelledby="cai-dat-nhan">
-              <h2 className="d muc__t" id="cai-dat-nhan">Họ gửi bạn</h2>
-              {received.length === 0 ? (
-                <p className="muc__x">Chưa có lời nhắn nào được gửi cho bạn.</p>
-              ) : (
-                <ul className="nhan-ds">
-                  {received.map((m, i) => (
-                    // oxlint-disable-next-line react/no-array-index-key -- man nay render server-side moi lan tai trang, khong sap xep/them/xoa muc phia client nen index on dinh.
-                    <li key={i} className="loi-nhan">
-                      <p className="loi-nhan__chu">{m.secret}</p>
-                      <p className="loi-nhan__ai">{ngay.format(m.createdAt)}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            {/* Khoang Lang (Q5a): muc "Họ gửi bạn" an han khi bat co. */}
+            {!me.khoangLang && (
+              <section className="muc" aria-labelledby="cai-dat-nhan">
+                <h2 className="d muc__t" id="cai-dat-nhan">Họ gửi bạn</h2>
+                {received.length === 0 ? (
+                  <p className="muc__x">Chưa có lời nhắn nào được gửi cho bạn.</p>
+                ) : (
+                  <ul className="nhan-ds">
+                    {received.map((m, i) => (
+                      // oxlint-disable-next-line react/no-array-index-key -- man nay render server-side moi lan tai trang, khong sap xep/them/xoa muc phia client nen index on dinh.
+                      <li key={i} className="loi-nhan">
+                        <p className="loi-nhan__chu">{m.secret}</p>
+                        <p className="loi-nhan__ai">{ngay.format(m.createdAt)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
           </div>
         </div>
       </main>

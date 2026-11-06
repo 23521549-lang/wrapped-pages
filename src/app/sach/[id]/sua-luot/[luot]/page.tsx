@@ -43,7 +43,8 @@ export default async function SuaLuot({ params, searchParams }: {
         author={me.nickname}
         mediaEnabled={getMediaStore() !== null}
         niemPhong={round.niemPhong}
-        partnerNickname={me.partnerNickname}
+        // Khoang Lang (Q2a): dong bao niem phong dung ten chung thay biet danh doi phuong.
+        partnerNickname={me.khoangLang ? "người đọc" : me.partnerNickname}
         tenLuot={
           // Khong dat key theo round.ten: doi ten xong action goi refresh(), ten moi ve lam key doi nen React thao o nay
           // di roi dung lai, cuon theo ca dong "Đã lưu tên." vua bat. Giu nguyen o: chu trong o chinh la ten vua luu.
