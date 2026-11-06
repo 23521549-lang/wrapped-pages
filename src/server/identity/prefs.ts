@@ -27,3 +27,11 @@ export async function setMusicMuted(db: AnyDb, accountId: string, muted: boolean
 export async function setAnHoatDong(db: AnyDb, accountId: string, an: boolean): Promise<void> {
   await db.update(accounts).set({ hoatDongAn: an }).where(eq(accounts.id, accountId));
 }
+
+/**
+ * Chi sua dong cua chinh accountId. Khong co ham doc di kem: co nay duoc doc o loadMe (src/server/identity/me.ts),
+ * giong nhu setAnHoatDong o tren.
+ */
+export async function setKhoangLang(db: AnyDb, accountId: string, an: boolean): Promise<void> {
+  await db.update(accounts).set({ khoangLang: an }).where(eq(accounts.id, accountId));
+}

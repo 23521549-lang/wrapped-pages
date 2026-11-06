@@ -13,6 +13,12 @@ export type Me = {
    * mang cho dung mot boolean, tren chinh man Ke sach ma tai lieu thiet ke (muc 17b) da ghi la co qua nhieu lan hoi.
    */
   anHoatDong: boolean;
+  /**
+   * Nguoi nay dang bat Khoang Lang (accounts.khoang_lang). Di kem o day chung voi anHoatDong: cung mot cau select,
+   * cung mot lan doc duoc cache() theo request. Bat thi giao dien cua RIENG nguoi nay an moi thong tin ve nguoi kia;
+   * tat la hien lai day du nhu moi nhat.
+   */
+  khoangLang: boolean;
 };
 
 /**
@@ -21,7 +27,7 @@ export type Me = {
  */
 export async function loadMe(db: AnyDb, accountId: string): Promise<Me | null> {
   const rows = await db
-    .select({ id: accounts.id, seat: accounts.seat, nickname: accounts.nickname, hoatDongAn: accounts.hoatDongAn })
+    .select({ id: accounts.id, seat: accounts.seat, nickname: accounts.nickname, hoatDongAn: accounts.hoatDongAn, khoangLang: accounts.khoangLang })
     .from(accounts);
   if (rows.length !== 2) return null;
   const self = rows.find((r) => r.id === accountId);
@@ -29,6 +35,6 @@ export async function loadMe(db: AnyDb, accountId: string): Promise<Me | null> {
   if (!self || !partner) return null;
   return {
     accountId: self.id, seat: self.seat as 1 | 2, nickname: self.nickname, partnerNickname: partner.nickname,
-    anHoatDong: self.hoatDongAn,
+    anHoatDong: self.hoatDongAn, khoangLang: self.khoangLang,
   };
 }

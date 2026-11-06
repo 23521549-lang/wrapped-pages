@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "khoang_lang" boolean DEFAULT false NOT NULL;

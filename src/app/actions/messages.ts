@@ -13,6 +13,9 @@ export const CHUA_LUU_NHAC = "Chưa lưu được lựa chọn nhạc.";
 /** An hoat dong (06/10): luu lua chon khong duoc, hay trinh duyet gui gia tri khong phai boolean. */
 export const CHUA_LUU_HOAT_DONG = "Chưa lưu được lựa chọn này. Thử lại nhé.";
 
+/** Khoang Lang (11/06): luu lua chon khong duoc, hay trinh duyet gui gia tri khong phai boolean. */
+export const CHUA_LUU_KHOANG_LANG = "Chưa lưu được lựa chọn này. Thử lại nhé.";
+
 /**
  * Kho media chua bat (chay tren Vercel ma thieu bien MEDIA_S3_): tai len tat em, web van chay. Cau nay chan ca
  * ba loai media (anh trong trang, ghi am, bia), nen phai noi dung ca ba - va trung voi cau man viet hien san.

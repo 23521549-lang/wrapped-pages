@@ -30,6 +30,14 @@ export const accounts = pgTable("accounts", {
    * actionAnHoatDong. Dong ghi TRUOC luc bat khong bi sua, nen bat tat khong doi lai qua khu.
    */
   hoatDongAn: boolean("hoat_dong_an").notNull().default(false),
+  /**
+   * Nguoi nay dang bat Khoang Lang (dot Khoang Lang, 11/06). Tu luc bat, giao dien cua RIENG nguoi nay an moi
+   * thong tin ve nguoi kia: ten, thu, luot viet, hoat dong, cam xuc, tam trang, dau moc. Chi loc HIEN THI luc doc,
+   * khong sua du lieu goc, nen tat la hien lai day du nhu moi nhat. Doc o Cai dat va trong loadMe; ghi bang
+   * actionKhoangLang. Khac voi hoatDongAn: co nay chi anh huong giao dien cua chinh nguoi bat, khong anh huong
+   * nguoi kia, va khong doi cach ghi dong moi.
+   */
+  khoangLang: boolean("khoang_lang").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({

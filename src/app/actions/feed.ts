@@ -4,9 +4,9 @@ import { refresh } from "next/cache";
 import { db } from "@/server/db";
 import { markSeen } from "@/server/feed/seen";
 import { phienBanKe } from "@/server/feed/version";
-import { setAnHoatDong } from "@/server/identity/prefs";
+import { setAnHoatDong, setKhoangLang } from "@/server/identity/prefs";
 import { readMe } from "@/server/web/guard";
-import { CAN_DANG_NHAP, CHUA_LUU_HOAT_DONG } from "./messages";
+import { CAN_DANG_NHAP, CHUA_LUU_HOAT_DONG, CHUA_LUU_KHOANG_LANG } from "./messages";
 
 /**
  * Trinh duyet bao nhung dong Hoat dong vua duoc xem (dau Moi tan tai cho). ids den tu trinh duyet nen chi giu chuoi;
@@ -44,6 +44,23 @@ export async function actionAnHoatDong(an: boolean): Promise<{ error: string } |
   if (!me) return { error: CAN_DANG_NHAP };
   if (typeof an !== "boolean") return { error: CHUA_LUU_HOAT_DONG };
   await setAnHoatDong(db, me.accountId, an);
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Luu lua chon Khoang Lang cua nguoi dang dang nhap (11/06). `an` den tu trinh duyet nen phai la boolean that, nhu
+ * actionAnHoatDong. Chi sua dong cua chinh ho. Luu xong thi refresh(): Next bo payload cu, nen moi trang ve lai voi
+ * noi dung da loc theo co moi.
+ *
+ * Khac voi actionAnHoatDong: co nay chi loc HIEN THI luc doc, khong dong dau vao dong du lieu nao, nen bat hay tat
+ * deu doi lai ngay ca nhung gi da co tu truoc, va tat la hien lai day du nhu moi nhat.
+ */
+export async function actionKhoangLang(an: boolean): Promise<{ error: string } | { ok: true }> {
+  const me = await readMe();
+  if (!me) return { error: CAN_DANG_NHAP };
+  if (typeof an !== "boolean") return { error: CHUA_LUU_KHOANG_LANG };
+  await setKhoangLang(db, me.accountId, an);
   refresh();
   return { ok: true };
 }
