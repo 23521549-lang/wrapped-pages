@@ -24,7 +24,7 @@
 //
 // Cach quet: bo dong import (duong dan module chua ten bang gay bao sai) va bo
 // comment (ten bang trong comment khong phai cau lenh) roi khop ten bang nguyen tu.
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -74,7 +74,7 @@ function fileTrongPhamVi(root) {
       if (f.endsWith("/page.tsx") || f.startsWith("src/app/actions/")) ra.push(f);
     }
   }
-  return ra.sort();
+  return ra.toSorted();
 }
 
 // Cat comment khoi va comment dong, tra ve tung dong da sach (giu nguyen so dong).
