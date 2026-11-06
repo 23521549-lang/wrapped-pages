@@ -247,6 +247,12 @@ test("khoang lang: liet ke route, tat co thay doi phuong, bat co khong thay gi, 
       },
     },
     {
+      url: `/sach/${idA}/viet-tiep`,
+      tat: async (p) => {
+        await expect(p.getByRole("button", { name: "Viết trang" })).toBeVisible();
+      },
+    },
+    {
       url: `/sach/${idA}/sua`,
       tat: async (p) => {
         await expect(p.getByLabel("Tên sách")).toBeVisible();

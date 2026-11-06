@@ -44,7 +44,7 @@ export function locTheoTuId<T extends { tuId: string }>(
 }
 
 /**
- * Ten doi phuong de hien (Q2, quyet dinh §0b): tat co thi tra dung ten; bat co thi tra chuoi rong — noi goi
+ * Ten doi phuong de hien (Q2, quyet dinh §0b): tat co thi tra dung ten; bat co thi tra chuoi rong - noi goi
  * tu bo khe ten (vd "Luot moi" thay vi "Luot moi cua Linh"). Khong co nhanh tra "nguoi kia": §0b cam cu the,
  * vi "nguoi kia" van chi thang doi phuong. Cho nao cau chu bat buoc can chu ngu thi dung cach dien dat chung
  * khong neu ten (vd "nguoi doc"), viet truc tiep o noi goi, khong qua ham nay.

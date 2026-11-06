@@ -8,8 +8,8 @@ import { setAnHoatDong } from "@/server/identity/prefs";
 describe("loadMe", () => {
   it("du hai cho ngoi: tra ban than kem biet danh nguoi kia, o ca hai phia", async () => {
     const { db, seat1, seat2 } = await seedHai();
-    expect(await loadMe(db, seat1.id)).toEqual({ accountId: seat1.id, seat: 1, nickname: "Linh", partnerNickname: "Manh", anHoatDong: false });
-    expect(await loadMe(db, seat2.id)).toEqual({ accountId: seat2.id, seat: 2, nickname: "Manh", partnerNickname: "Linh", anHoatDong: false });
+    expect(await loadMe(db, seat1.id)).toEqual({ accountId: seat1.id, seat: 1, nickname: "Linh", partnerNickname: "Manh", anHoatDong: false, khoangLang: false });
+    expect(await loadMe(db, seat2.id)).toEqual({ accountId: seat2.id, seat: 2, nickname: "Manh", partnerNickname: "Linh", anHoatDong: false, khoangLang: false });
   });
 
   it("moi co mot cho ngoi thi tra null", async () => {

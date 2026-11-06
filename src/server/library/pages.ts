@@ -85,7 +85,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const suaLuc = new Map(luot.map((r) => [r.id, r.editedAt]));
     // Khoang Lang (Q1a): to thuoc luot do doi phuong viet thi an - chi de lai dong bao, khong moc sua.
     const tacGia = new Map(luot.map((r) => [r.id, r.authorId]));
-    // Khoang Lang (Q1a): niem phong cua luot do doi phuong viet an cung to — cau hoi / loi nhan
+    // Khoang Lang (Q1a): niem phong cua luot do doi phuong viet an cung to - cau hoi / loi nhan
     // khong duoc xuong trang (ke ca trong payload RSC cua SealPanel). Trang thai khoa cua to an
     // giu nguyen (lockedIds tinh tu danh sach day du truoc khi loc).
     const tacGiaCuaSeal = new Map(sealRows.map((s) => [s.id, tacGia.get(s.roundId)]));

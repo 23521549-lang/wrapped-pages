@@ -456,6 +456,32 @@ LCP, TBT, CLS và số hoạt ảnh của ba màn nặng (Kệ sách, màn đọ
 cần bản production chạy ở máy với cửa sổ trình duyệt hiện thật, theo đúng cách mục 17b đã làm: 390px, CPU giả lập chậm
 4 lần, trung vị 3 lần.
 
+## 17j. Khoảng Lặng (06/11)
+
+Chủ dự án đặt việc: một công tắc ở Cài đặt để giao diện của RIÊNG người bật chỉ còn nội dung của chính mình; mọi thông
+tin về người kia tạm ẩn, không báo cho người kia, không xóa dữ liệu. Kế hoạch: `~/workspace/goals/wrapped-pages-hide-partner-feature/PLAN.md`.
+
+- **Mục "Khoảng Lặng" ở Cài đặt**, cột trái, dưới mục "Hoạt động". Một ô đánh dấu "Bật Khoảng Lặng", dùng lớp
+  `.o-chon` chung như mục "Ẩn hoạt động" ngay trên. Câu giải thích nói đúng những gì xảy ra: bật thì chỉ phần hiển
+  thị thay đổi, dữ liệu vẫn còn nguyên; tắt là hiện lại đầy đủ **như mới nhất** - kể cả những gì xảy ra trong lúc
+  bật - chứ không trở về lúc bật. Trong lúc bật, người dùng vẫn viết, gửi thư, thả cảm xúc như thường.
+- **Lưu thất bại thì hoàn nguyên ô đánh dấu và nói ra lỗi**, như mục "Hoạt động" ngay trên. Đây là công tắc riêng tư:
+  để người dùng tưởng mình đã bật trong khi chưa bật được là cái giá đắt nhất màn này có thể trả.
+- **Phạm vi đã chốt:** tờ của người kia trên màn đọc ẩn hẳn, chỉ còn dòng "Đã ẩn trong Khoảng Lặng"; câu chữ dùng tên
+  chung "người đọc", không nêu tên người kia ở bất cứ đâu - kể cả trong dữ liệu RSC nhúng theo trang; nút mời / xin
+  viết cùng bị vô hiệu hóa khi bật cờ; lịch sử trò chuyện cũ với Chíp được lọc khi hiển thị; mục "Họ gửi bạn" ở Cài
+  đặt ẩn hẳn; thẻ sách viết cùng chỉ hiện phần của mình (một chữ cái đầu của mình, số lượt của mình).
+- **Lọc ở tầng dữ liệu, tính theo từng lần đọc:** cột `accounts.khoang_lang` đi kèm `Me.khoangLang`; mỗi loader nhận
+  cờ và chỉ trả phần của người xem (tờ, lượt, tâm trạng, thư, cảm xúc, nhạc, hoạt động, đề nghị, niêm phong). Trợ giúp
+  chung `src/server/khoang-lang/loc.ts` gom các phép lọc theo tác giả / người làm / tài khoản. Vì lọc tính lại mỗi lần
+  đọc nên tắt cờ là thấy trạng thái mới nhất, không có ảnh chụp nào để lỗi thời.
+- **Hai cổng giữ:** script `scripts/kiem-khoang-lang.mjs` (chạy ở CI sau `npm run lint`) quét các loader chạm bảng của
+  người kia mà không nhắc tới cờ - chạm bảng mà không lọc thì rớt cổng, trừ các ngoại lệ ghi trong
+  `scripts/khoang-lang-ngoai-le.json` kèm lý do và người duyệt; và test liệt kê route
+  `tests/e2e/khoang-lang-liet-ke.spec.ts` đi hết 13 route (tắt cờ thấy nội dung người kia, bật cờ qua UI Cài đặt thật
+  thì không còn tên lẫn chuỗi độc nhất nào trong HTML - kể cả dữ liệu RSC - tắt lại thì hiện lại). Test đã được thử
+  ngược: bỏ tạm điều kiện lọc ở `thayDuoc` thì test đỏ ngay, khôi phục thì xanh lại.
+
 ## 18. Việc còn lại
 
 `BookCard` (`src/components/book/BookCard.tsx`) cùng các lớp `.book*` trong `app.css` hiện chỉ còn dùng ở ô xem trước của ba màn: tạo sách, sửa sách và Viết tiếp. Khi ba màn đó được vẽ lại, ô xem trước sẽ chuyển sang `ShelfBook` và `BookCard` được bỏ đi.
