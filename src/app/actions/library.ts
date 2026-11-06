@@ -86,7 +86,7 @@ export async function actionUpdateBook(bookId: string, formData: FormData) {
 export async function actionMarkRead(bookId: string, positions: number[]): Promise<number[]> {
   const me = await readMe();
   if (!me) return [];
-  return await markRead(db, me.accountId, bookId, positions);
+  return await markRead(db, me.accountId, bookId, positions, new Date(), me.khoangLang);
 }
 
 /**

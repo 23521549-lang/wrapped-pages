@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, max } from "drizzle-orm";
+import { and, asc, eq, inArray, max, ne } from "drizzle-orm";
 import { books, pages, readingPositions, readSheets, rounds as bangLuot } from "@/server/db/schema";
 import { readSnapshot } from "@/server/db/snapshot";
 import type { AnyDb } from "@/server/db/types";
@@ -146,6 +146,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
  */
 export async function markRead(
   db: AnyDb, viewerId: string, bookId: string, positions: readonly number[], now: Date = new Date(),
+  khoangLang = false,
 ): Promise<number[]> {
   if (!Array.isArray(positions) || !isUuid(bookId)) return [];
   // Bo trung roi xep tang dan: mang nay vua duoc dung ra nen khong co gi cua nguoi goi bi doi, va thu tu tang dan cho
@@ -162,7 +163,7 @@ export async function markRead(
       .for("share");
     // Sach mot nguoi viet cua chinh minh: moi to deu cua minh, khong co gi de ghi (tra som, khong doc them).
     if (!book || (book.ownerId === viewerId && book.vietCungTu === null)) return [];
-    const [[{ last }], sealRows, cuaMinhRows] = await Promise.all([
+    const [[{ last }], sealRows, cuaMinhRows, doiPhuongRows] = await Promise.all([
       tx.select({ last: max(pages.position) }).from(pages).where(eq(pages.bookId, book.id)),
       sealsOfBook(tx, book.id),
       // To trong cum gui len thuoc luot do chinh nguoi xem viet (sach viet cung): bo qua, khong bao gio ghi.
@@ -171,13 +172,23 @@ export async function markRead(
         .from(pages)
         .innerJoin(bangLuot, eq(bangLuot.id, pages.roundId))
         .where(and(eq(pages.bookId, book.id), eq(bangLuot.tacGiaId, viewerId), inArray(pages.position, muon))),
+      // Khoang Lang: to cua doi phuong dang an (chi hien dong "Đã ẩn trong Khoảng Lặng") thi lat qua cung khong
+      // duoc ghi da xem - tat co ve sau van la trang moi. Chi doc khi bat co.
+      khoangLang
+        ? tx
+          .select({ position: pages.position })
+          .from(pages)
+          .innerJoin(bangLuot, eq(bangLuot.id, pages.roundId))
+          .where(and(eq(pages.bookId, book.id), ne(bangLuot.tacGiaId, viewerId), inArray(pages.position, muon)))
+        : Promise.resolve([] as { position: number }[]),
     ]);
     if (last === null) return [];
     const cuaMinh = new Set(cuaMinhRows.map((r) => r.position));
+    const doiPhuong = new Set(doiPhuongRows.map((r) => r.position));
     // Niem phong: luat theo chu cuon (moi trang niem phong la cua chu cuon, sach viet cung khong co niem phong moi).
     const khoa = sealRows.filter((s) => isLockedFor(s, book.ownerId === viewerId, now));
     const rows = muon
-      .filter((p) => p <= last && !cuaMinh.has(p) && sealAt(khoa, p) === undefined)
+      .filter((p) => p <= last && !cuaMinh.has(p) && !doiPhuong.has(p) && sealAt(khoa, p) === undefined)
       .map((p) => ({ accountId: viewerId, bookId: book.id, position: p }));
     // Moi duong tra ve deu nam truoc lenh ghi dau tien o duoi, va truoc do chi co lenh doc.
     if (rows.length === 0) return [];

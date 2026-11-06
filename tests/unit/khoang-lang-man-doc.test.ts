@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { docText } from "@/lib/doc/text";
-import { readBook } from "@/server/library/pages";
+import { markRead, readBook } from "@/server/library/pages";
 import { submitRoundReply } from "@/server/library/round-replies";
 import { dangTen, haiCuon, vietCung } from "../helpers/library";
 import { luotCua } from "../helpers/round";
@@ -68,5 +68,15 @@ describe("Khoang Lang: man doc (Q1a)", () => {
     expect(bat.sheets.length).toBe(tat.sheets.length);
     expect(bat.firstUnread).toBe(tat.firstUnread);
     expect(bat.seals).toEqual(tat.seals);
+  });
+
+  it("bat co: to doi phuong lat qua khong bi ghi da xem, tat co thi ghi nhu cu", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    await dangTen(db, seat1.id, chung, "Lượt Linh", "chữ của Linh");
+    // To an chi hien dong "Đã ẩn trong Khoảng Lặng": lat qua cung khong ghi, tat co ve sau van la trang moi.
+    expect(await markRead(db, seat2.id, chung, [1], NOW, true)).toEqual([]);
+    expect((await readBook(db, seat2.id, chung, NOW, true))!.firstUnread).toBe(1);
+    expect(await markRead(db, seat2.id, chung, [1], NOW)).toEqual([1]);
+    expect((await readBook(db, seat2.id, chung, NOW))!.firstUnread).toBe(0);
   });
 });
