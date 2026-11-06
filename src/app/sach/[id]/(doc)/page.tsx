@@ -35,7 +35,7 @@ export default async function DocSach({ params, searchParams }: {
   // Lua chon tat nhac la cua chinh nguoi xem, khong phu thuoc cuon sach, nen doc song song; chi dung khi sach co nhac.
   // De nghi viet cung cua cuon (5c): nut Xin viet cung o cuon chia se cua nguoi kia doi theo no.
   const [view, tatNhac, deNghi] = await Promise.all([
-    readBook(db, me.accountId, id, now, me.khoangLang), readMusicMuted(db, me.accountId), deNghiCuaSach(db, me.accountId, id),
+    readBook(db, me.accountId, id, now, me.khoangLang), readMusicMuted(db, me.accountId), deNghiCuaSach(db, me.accountId, id, me.khoangLang),
   ]);
   if (!view) notFound();
   const { book, mine, sheets, seals, rounds, replies, seen, firstUnread, lastPosition, vietCung } = view;

@@ -185,8 +185,9 @@ export async function deNghiXoa(
   });
 }
 
-/** Moi de nghi GUI TOI nguoi xem (nguoi kia gui) tren cac cuon nguoi xem doc duoc, moi nhat truoc: cac dong o Ke sach. */
-export async function deNghiToiToi(db: AnyDb, viewerId: string): Promise<DeNghiCho[]> {
+/** Moi de nghi GUI TOI nguoi xem (nguoi kia gui) tren cac cuon nguoi xem doc duoc, moi nhat truoc: cac dong o Ke sach. Khoang Lang: khong con de nghi nao do doi phuong gui. */
+export async function deNghiToiToi(db: AnyDb, viewerId: string, khoangLang = false): Promise<DeNghiCho[]> {
+  if (khoangLang) return [];
   return db
     .select({ bookId: deNghi.bookId, title: books.title, loai: deNghi.loai, luc: deNghi.luc })
     .from(deNghi)
@@ -195,8 +196,8 @@ export async function deNghiToiToi(db: AnyDb, viewerId: string): Promise<DeNghiC
     .orderBy(desc(deNghi.luc), desc(deNghi.bookId));
 }
 
-/** De nghi dang cho cua mot cuon voi nguoi xem (man doc, Sua sach); cuon nguoi xem khong doc duoc thi null. */
-export async function deNghiCuaSach(db: AnyDb, viewerId: string, bookId: string): Promise<TrangThaiDeNghi> {
+/** De nghi dang cho cua mot cuon voi nguoi xem (man doc, Sua sach); cuon nguoi xem khong doc duoc thi null. Khoang Lang: de nghi do doi phuong gui thi null (de nghi cua minh giu de rut lai). */
+export async function deNghiCuaSach(db: AnyDb, viewerId: string, bookId: string, khoangLang = false): Promise<TrangThaiDeNghi> {
   if (!isUuid(bookId)) return null;
   return readSnapshot(db, async (tx) => {
     const [row] = await tx
@@ -204,6 +205,8 @@ export async function deNghiCuaSach(db: AnyDb, viewerId: string, bookId: string)
       .from(deNghi)
       .innerJoin(books, eq(books.id, deNghi.bookId))
       .where(and(eq(deNghi.bookId, bookId), readableBy(viewerId)));
-    return row ? { loai: row.loai, cuaToi: row.tuId === viewerId } : null;
+    if (!row) return null;
+    if (khoangLang && row.tuId !== viewerId) return null;
+    return { loai: row.loai, cuaToi: row.tuId === viewerId };
   });
 }

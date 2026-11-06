@@ -26,7 +26,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
   const now = new Date();
   // Dot mot: hai phep doc tu kiem nguoi viet, chay song song.
   const [book, kho, deNghi] = await Promise.all([
-    sachVietDuoc(me.accountId, id), khoBia(db, me.accountId, id), deNghiCuaSach(db, me.accountId, id),
+    sachVietDuoc(me.accountId, id), khoBia(db, me.accountId, id), deNghiCuaSach(db, me.accountId, id, me.khoangLang),
   ]);
   if (!book) notFound();
   // Dot hai: hai dong thoi gian chi doc theo ma cuon, khong tu kiem quyen, nen chi goi sau khi da biet day la cuon cua
@@ -63,6 +63,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
           }
           vietCung={vietCung}
           deNghi={deNghi?.loai === "xoa-sach" ? null : deNghi}
+          khoangLang={me.khoangLang}
         />
         {vietCung && <XoaCuon bookId={book.id} partnerNickname={me.partnerNickname} deNghi={deNghiXoa} headingId="xoa-cuon" />}
       </main>

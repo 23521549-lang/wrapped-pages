@@ -44,6 +44,8 @@ export type BookFormProps = {
   vietCung?: boolean;
   /** Chi form sua (5c): loi moi hay loi xin viet cung dang cho cua cuon (de nghi xoa khong lien quan form nay). */
   deNghi?: { loai: LoaiDeNghi; cuaToi: boolean } | null;
+  /** Khoang Lang (Q2a/Q3b): khoa lua chon moi viet cung, cau chu dung ten chung thay ten doi phuong. */
+  khoangLang?: boolean;
 };
 
 /**
@@ -53,9 +55,11 @@ export type BookFormProps = {
  * cap nhat defaultChecked), lech voi state. Thanh cong thi action tu chuyen trang (redirect).
  * Bang bia nam trong CoverPicker; dang cat hay dang tai bia tu tai len thi khoa nut gui.
  */
-export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos, giua, vietCung = false, deNghi = null }: BookFormProps) {
+export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos, giua, vietCung = false, deNghi = null, khoangLang = false }: BookFormProps) {
   const id = useId();
   const doi = useBookEdit(book);
+  // Khoang Lang (Q2a): ten doi phuong khong xuat hien o bat cu cau chu nao trong form.
+  const tenKia = khoangLang ? "người đọc" : partnerNickname;
   // Loi moi cua minh dang cho: "Viết cùng" chon san (bo chon roi Luu la rut loi moi, 5c muc C5).
   const dangMoi = deNghi?.loai === "moi-viet" && deNghi.cuaToi;
   const dangXin = deNghi?.loai === "xin-viet" && !deNghi.cuaToi;
@@ -106,7 +110,7 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
             <div className="khoa-chung">
               <NgoiBut />
               <p>
-                <b>Viết cùng {partnerNickname}.</b> Cả hai đọc, viết, đổi chủ đề, bìa và nhạc; mỗi người sửa lượt của mình.
+                <b>Viết cùng {tenKia}.</b> Cả hai đọc, viết, đổi chủ đề, bìa và nhạc; mỗi người sửa lượt của mình.
                 Sách viết cùng không đổi lại thành sách riêng.
               </p>
             </div>
@@ -123,28 +127,30 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
                     name="mode"
                     value={c.mode}
                     checked={mode === c.mode}
-                    disabled={pending}
+                    // Khoang Lang (Q3b): khong moi viet cung moi duoc nua. Radio dang chon san (loi moi cua minh) van
+                    // gui gia tri khi Luu, chi khong chon moi duoc; doi sang Chia se roi Luu la rut loi moi.
+                    disabled={pending || (khoangLang && c.mode === VIET_CUNG)}
                     onChange={() => setMode(c.mode)}
                     aria-labelledby={`${id}-${c.mode}`}
                     aria-describedby={c.mode === VIET_CUNG && book !== null ? `${id}-${c.mode}-x ${id}-ghi` : `${id}-${c.mode}-x`}
                   />
                   <span className="the-chon__t" id={`${id}-${c.mode}`}>
                     {c.mode === VIET_CUNG && <NgoiBut />}
-                    {c.ten(partnerNickname)}
+                    {c.ten(tenKia)}
                   </span>
-                  <span className="the-chon__x" id={`${id}-${c.mode}-x`}>{c.moTa(partnerNickname, book !== null)}</span>
+                  <span className="the-chon__x" id={`${id}-${c.mode}-x`}>{c.moTa(tenKia, book !== null)}</span>
                 </label>
               ))}
             </div>
-            {book !== null && (chonVietCung || dangXin) && (
+            {book !== null && (chonVietCung || (dangXin && !khoangLang)) && (
               <p className="ghi-chung" id={`${id}-ghi`}>
                 {dangMoi ? (
-                  <><b>Đã mời {partnerNickname}.</b> Chờ {partnerNickname} nhận lời; muốn rút lời mời thì chọn lại Chia sẻ rồi Lưu.</>
+                  <><b>Đã mời {tenKia}.</b> Chờ {tenKia} nhận lời; muốn rút lời mời thì chọn lại Chia sẻ rồi Lưu.</>
                 ) : dangXin ? (
-                  <><b>{partnerNickname} đang xin viết cùng cuốn này.</b> Chọn Viết cùng rồi Lưu là đồng ý, hay trả lời ở Kệ sách.</>
+                  <><b>{tenKia} đang xin viết cùng cuốn này.</b> Chọn Viết cùng rồi Lưu là đồng ý, hay trả lời ở Kệ sách.</>
                 ) : (
                   <>
-                    Bấm Lưu là gửi lời mời. <b>{partnerNickname} nhận lời</b> thì cuốn sang kệ Hai Ngòi Bút; các lượt đã đăng tự mang
+                    Bấm Lưu là gửi lời mời. <b>{tenKia} nhận lời</b> thì cuốn sang kệ Hai Ngòi Bút; các lượt đã đăng tự mang
                     tên &ldquo;Lượt 1&rdquo;, &ldquo;Lượt 2&rdquo;... (đổi lại được), trang niêm phong cũ giữ nguyên. Sách viết cùng không rời
                     được, chỉ xóa khi cả hai đồng ý.
                   </>
@@ -156,7 +162,7 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
 
         <div className="form__nut">
           <Button type="submit" disabled={pending || !sanSang || doi.busy} aria-busy={pending}>
-            {pending ? (book ? "Đang lưu" : "Đang tạo") : book ? "Lưu" : chonVietCung ? `Tạo và mời ${partnerNickname}` : "Tạo sách"}
+            {pending ? (book ? "Đang lưu" : "Đang tạo") : book ? "Lưu" : chonVietCung ? `Tạo và mời ${tenKia}` : "Tạo sách"}
           </Button>
           <Link className="btn btn--line" href={book ? `/sach/${book.id}` : "/ke-sach"}>Hủy</Link>
         </div>
@@ -171,7 +177,7 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
           cover={book ? book.cover : doi.bia.cover ?? COVERS[0]}
           coverMediaId={book ? book.coverMediaId : doi.bia.photoId}
           owner={nickname}
-          meta={`${laChuDe ? `${nickname} và ${partnerNickname}` : nickname} · ${book ? "đang sửa" : "vừa tạo"}`}
+          meta={`${laChuDe ? `${nickname} và ${tenKia}` : nickname} · ${book ? "đang sửa" : "vừa tạo"}`}
           excerpt={book ? undefined : "Chưa có trang nào."}
           pageCount={book ? undefined : 0}
           isPrivate={mode === "rieng-tu"}
@@ -180,10 +186,10 @@ export function BookForm({ book, nickname, partnerNickname, mediaEnabled, photos
           {vietCung
             ? "Cuốn nằm ở kệ Hai Ngòi Bút của cả hai."
             : chonVietCung
-              ? `${partnerNickname} sẽ thấy lời mời ở Kệ sách. Trước khi ${partnerNickname} nhận lời, cuốn nằm ở kệ của bạn như sách chia sẻ.`
+              ? `${tenKia} sẽ thấy lời mời ở Kệ sách. Trước khi ${tenKia} nhận lời, cuốn nằm ở kệ của bạn như sách chia sẻ.`
               : mode === "rieng-tu"
-                ? `${partnerNickname} không thấy cuốn này, kể cả tên.`
-                : `${partnerNickname} sẽ thấy cuốn này trên kệ.`}
+                ? `${tenKia} không thấy cuốn này, kể cả tên.`
+                : `${tenKia} sẽ thấy cuốn này trên kệ.`}
         </p>
       </aside>
     </div>

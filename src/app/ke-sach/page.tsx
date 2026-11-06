@@ -54,7 +54,7 @@ export default async function KeSach() {
     unreadRounds(db, me.accountId, now, me.khoangLang),
     phienBanKe(db, me.accountId, now, me.khoangLang),
     nhacThu(db, me.accountId, now, me.khoangLang),
-    deNghiToiToi(db, me.accountId),
+    deNghiToiToi(db, me.accountId, me.khoangLang),
   ]);
   // Dai troi: mac dinh troi cua nguoi kia, troi cua minh o o cua so (hoac la troi lon khi chi minh co); them cham mau
   // tren nut va hop chon o dong tieu de.
@@ -192,11 +192,14 @@ export default async function KeSach() {
                   )}
                   {/* De nghi viet cung gui toi minh (5c muc E4): cung cho, cung kieu dong nhac thu. Rieng loi MOI khong
                       co dong o day nua (chu du an 02/10): cuon dang cho dung ngay o ke Hai Ngòi Bút va mang hai nut tra
-                      loi, nen mot viec khong co hai nut o hai cho tren cung mot man. */}
-                  <LoiMoi
-                    dong={deNghi.flatMap((d) => (d.loai === "moi-viet" ? [] : [{ bookId: d.bookId, title: d.title, loai: d.loai }]))}
-                    partnerNickname={me.partnerNickname}
-                  />
+                      loi, nen mot viec khong co hai nut o hai cho tren cung mot man. Khoang Lang: khong hien de nghi
+                      nao do doi phuong gui. */}
+                  {!me.khoangLang && (
+                    <LoiMoi
+                      dong={deNghi.flatMap((d) => (d.loai === "moi-viet" ? [] : [{ bookId: d.bookId, title: d.title, loai: d.loai }]))}
+                      partnerNickname={me.partnerNickname}
+                    />
+                  )}
                 </div>
               )}
               nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}
