@@ -45,6 +45,9 @@ function chungKe(b: Sach): boolean {
 export default async function KeSach() {
   await connection();
   const me = await requireMe();
+  // Khoang Lang (Q2a): ten doi phuong khong xuat hien o bat cu cho nao, ke ca prop xuong component con
+  // (payload RSC van nhung ten do neu truyen tho, du UI khong ve ra).
+  const tenKia = me.khoangLang ? "người đọc" : me.partnerNickname;
   // Mot now cho ca ke va dong Hoat dong: hen gio vua toi gio thi the sach va dong "da toi gio mo" noi cung mot dieu.
   const now = new Date();
   const [shelf, feed, moods, chuaDoc, phienBan, nhac, deNghi] = await Promise.all([
@@ -105,7 +108,7 @@ export default async function KeSach() {
     choNhanLoi: b.moiCho === "toi-moi" && !me.khoangLang ? me.partnerNickname : undefined,
     // Trang dung san khoi tra loi roi truyen xuong, de the sach khong phai nhap mo-dun server action (xem ShelfBookProps).
     moiToi: b.moiCho === "moi-toi"
-      ? <NhanLoiThe bookId={b.id} ten={me.partnerNickname} title={b.title} />
+      ? <NhanLoiThe bookId={b.id} ten={tenKia} title={b.title} />
       : undefined,
   });
   // Ba ngan (5c muc E1): Hai Ngòi Bút o dau, roi ke cua minh va ke cua nguoi kia.
@@ -116,7 +119,7 @@ export default async function KeSach() {
   const viet = shelf.filter(chungKe).sort((x, y) => Number(y.moiCho !== null) - Number(x.moiCho !== null)).map(theKe);
   const cuaBan = shelf.filter((b) => b.mine && !chungKe(b)).map(theKe);
   const cuaKia = shelf.filter((b) => !b.mine && !chungKe(b)).map(theKe);
-  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={me.partnerNickname} baiHat={baiHat} an={me.anHoatDong} khoangLang={me.khoangLang} />;
+  const hoatDong = <ActivityPanel items={feed} now={now} partnerName={tenKia} baiHat={baiHat} an={me.anHoatDong} khoangLang={me.khoangLang} />;
   // Mot luot chua doc thanh prop cua khung sach lon (spec 5a muc E): luot cua nguoi kia "Đọc tiếp" mo cuon qua tam bia
   // toi trang dang doc do; luot cua minh "Viết tiếp". Ca khung mo dung trang cua doan dang hien.
   const theLuot = (l: LuotChuaDoc): LuotKhung => ({
@@ -168,7 +171,7 @@ export default async function KeSach() {
         {/* Troi tam cua lan tha (spec bo sung B5) di tu hop tha sang dai troi: mot ngu canh boc ca hai, khong ve the nao. */}
         <TroiTam>
           <BauTroi
-            tenKia={me.partnerNickname}
+            tenKia={tenKia}
             kia={kia ? troiHien(kia, now) : null}
             minh={minh ? troiHien(minh, now) : null}
           />
@@ -187,7 +190,7 @@ export default async function KeSach() {
                         <rect x="1.5" y="1.5" width="27" height="19" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
                         <path d="M2 3 15 13 28 3" fill="none" stroke="currentColor" strokeWidth="1.8" />
                       </svg>
-                      {loiNhacThu(nhac.tt, nhac.thang, me.partnerNickname)}
+                      {loiNhacThu(nhac.tt, nhac.thang, tenKia)}
                     </Link>
                   )}
                   {/* De nghi viet cung gui toi minh (5c muc E4): cung cho, cung kieu dong nhac thu. Rieng loi MOI khong
@@ -205,7 +208,7 @@ export default async function KeSach() {
               nutPhu={shelf.length > 0 ? <Link className="btn btn--quiet" href="/sach/moi">Sách mới</Link> : null}
               dangGiu={minh ? { weather: minh.weather, conLai: conLai(minh.endsAt, now) } : null}
               minh={minh ? troiHien(minh, now) : null}
-              tenKia={me.partnerNickname}
+              tenKia={tenKia}
               khoangLang={me.khoangLang}
             />
 

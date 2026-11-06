@@ -52,7 +52,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
         <BookForm
           book={{ id: book.id, title: book.title, mode: book.mode, cover: book.cover, youtubeId: book.youtubeId, coverMediaId: book.coverMediaId }}
           nickname={me.nickname}
-          partnerNickname={me.partnerNickname}
+          partnerNickname={me.khoangLang ? "người đọc" : me.partnerNickname}
           mediaEnabled={coKho}
           photos={photos}
           giua={
@@ -65,7 +65,7 @@ export default async function SuaSach({ params }: { params: Promise<{ id: string
           deNghi={deNghi?.loai === "xoa-sach" ? null : deNghi}
           khoangLang={me.khoangLang}
         />
-        {vietCung && <XoaCuon bookId={book.id} partnerNickname={me.partnerNickname} deNghi={deNghiXoa} headingId="xoa-cuon" />}
+        {vietCung && <XoaCuon bookId={book.id} partnerNickname={me.khoangLang ? "người đọc" : me.partnerNickname} deNghi={deNghiXoa} headingId="xoa-cuon" />}
       </main>
     </>
   );

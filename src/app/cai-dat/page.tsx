@@ -61,7 +61,7 @@ export default async function CaiDat() {
                   {written.map((h) => (
                     <li key={h.id} className="nhan-cu">
                       <p className="nhan-cu__chu">{h.secret}</p>
-                      <p className="meta">Biệt danh lúc đó: {h.nickname} · {ngay.format(h.createdAt)}</p>
+                      <p className="meta">Biệt danh lúc đó: {me.khoangLang ? "người đọc" : h.nickname} · {ngay.format(h.createdAt)}</p>
                       {h.revealed ? (
                         <span className="chip chip--key">Đã gửi cho họ</span>
                       ) : (

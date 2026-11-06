@@ -37,7 +37,7 @@ export default async function BanNhap() {
           <div className="trong">
             <div className="trong__hinh bia bia--khom-truc"><CoverArt cover="khom-truc" /></div>
             <h2 className="trong__t d">Chưa có bản nháp.</h2>
-            <p>Trang nào bạn viết dở mà chưa đăng sẽ nằm ở đây. {me.partnerNickname} không thấy bản nháp của bạn.</p>
+            <p>Trang nào bạn viết dở mà chưa đăng sẽ nằm ở đây. {me.khoangLang ? "người đọc" : me.partnerNickname} không thấy bản nháp của bạn.</p>
             <Link className="btn" href="/ke-sach">Mở kệ sách</Link>
           </div>
         ) : (

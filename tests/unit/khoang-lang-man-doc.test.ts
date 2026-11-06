@@ -4,6 +4,7 @@ import { readBook } from "@/server/library/pages";
 import { submitRoundReply } from "@/server/library/round-replies";
 import { dangTen, haiCuon, vietCung } from "../helpers/library";
 import { luotCua } from "../helpers/round";
+import { dangNiemPhong, TRAO_DOI } from "../helpers/seal";
 
 const NOW = new Date("2026-10-05T00:00:00.000Z");
 const AN = "Đã ẩn trong Khoảng Lặng";
@@ -36,6 +37,18 @@ describe("Khoang Lang: man doc (Q1a)", () => {
     expect(docText(v.sheets[0].content)).toBe(AN);
     expect(docText(v.sheets[0].content)).not.toContain("chữ của Linh");
     expect(v.replies).toEqual([]);
+  });
+
+  it("bat co, sach cua doi phuong co niem phong trao doi: niem phong an cung to, cau hoi khong lo", async () => {
+    const { db, seat1, seat2, chung } = await haiCuon();
+    await dangNiemPhong(db, seat1.id, chung, TRAO_DOI, "chữ của Linh");
+    const tat = (await readBook(db, seat2.id, chung, NOW))!;
+    expect(tat.seals).toHaveLength(1);
+    expect(tat.seals[0].question).toBe("Hôm đó em nghĩ gì?");
+    const bat = (await readBook(db, seat2.id, chung, NOW, true))!;
+    expect(bat.sheets).toHaveLength(1);
+    expect(bat.sheets[0].an).toBe(true);
+    expect(bat.seals).toEqual([]);
   });
 
   it("bat co, sach viet cung: to cua minh con nguyen, to doi phuong an; so to va vi tri giu nguyen", async () => {

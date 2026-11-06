@@ -36,6 +36,9 @@ export async function AppNav({ me, current, subpage = false, sticky = true, linh
     linhVat ? camXucChoToi(db, me.accountId, new Date(), me.khoangLang) : [],
     linhVat ? trangThaiChip(db, me.accountId) : null,
   ]);
+  // Khoang Lang (Q2a): ten doi phuong khong xuat hien o bat cu cho nao, ke ca prop xuong component con
+  // (payload RSC van nhung ten do neu truyen tho, du UI khong ve ra).
+  const tenKia = me.khoangLang ? "người đọc" : me.partnerNickname;
   return (
     <>
       <nav className={sticky ? "nav" : "nav nav--tinh"} aria-label="Điều hướng chính">
@@ -63,8 +66,8 @@ export async function AppNav({ me, current, subpage = false, sticky = true, linh
           </div>
         </div>
       </nav>
-      <LaThuBay tenKia={me.partnerNickname} tenMinh={me.nickname} dau={thu} khoangLang={me.khoangLang} />
-      {chip !== null && <LinhVat tenKia={me.partnerNickname} tenMinh={me.nickname} hangDau={hangCamXuc} trangThai={chip} />}
+      <LaThuBay tenKia={tenKia} tenMinh={me.nickname} dau={thu} khoangLang={me.khoangLang} />
+      {chip !== null && <LinhVat tenKia={tenKia} tenMinh={me.nickname} hangDau={hangCamXuc} trangThai={chip} />}
       <GhiViec />
     </>
   );

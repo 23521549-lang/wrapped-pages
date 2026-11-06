@@ -36,7 +36,7 @@ export default async function SoNhacThang({ params }: { params: Promise<{ thang:
     ten: ten[b.youtubeId]?.ten ?? THAY_TEN_BAI,
     kenh: ten[b.youtubeId]?.kenh ?? null,
     nguon: `${b.bookTitle}, ${b.ordinal === null ? "lúc tạo sách" : `lượt ${b.ordinal}`}${b.rieng ? ", riêng tư" : ""}`
-      + (ghiAi ? `, ${b.ai === "minh" ? me.nickname : me.partnerNickname} đặt` : ""),
+      + (ghiAi ? `, ${b.ai === "minh" ? me.nickname : me.khoangLang ? "người đọc" : me.partnerNickname} đặt` : ""),
   }));
 
   const k = thangKhoa(t);

@@ -85,6 +85,11 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const suaLuc = new Map(luot.map((r) => [r.id, r.editedAt]));
     // Khoang Lang (Q1a): to thuoc luot do doi phuong viet thi an - chi de lai dong bao, khong moc sua.
     const tacGia = new Map(luot.map((r) => [r.id, r.authorId]));
+    // Khoang Lang (Q1a): niem phong cua luot do doi phuong viet an cung to — cau hoi / loi nhan
+    // khong duoc xuong trang (ke ca trong payload RSC cua SealPanel). Trang thai khoa cua to an
+    // giu nguyen (lockedIds tinh tu danh sach day du truoc khi loc).
+    const tacGiaCuaSeal = new Map(sealRows.map((s) => [s.id, tacGia.get(s.roundId)]));
+    const sealsHien = khoangLang ? seals.filter((s) => tacGiaCuaSeal.get(s.id) === viewerId) : seals;
     const sheets = rows.map((r): ReaderSheet => {
       const s = niemCua.get(r.roundId);
       if (khoangLang && tacGia.get(r.roundId) !== viewerId) {
@@ -119,7 +124,7 @@ export async function readBook(db: AnyDb, viewerId: string, bookId: string, now:
     const cuaMinh = new Set(luot.filter((r) => r.authorId === viewerId).map((r) => r.id));
     const firstUnread = rows.find((r) => !coRoi.has(r.position) && !cuaMinh.has(r.roundId))?.position ?? 0;
     return {
-      book: view, mine, sheets, seals, rounds, replies, seen, firstUnread, lastPosition: dangDoc?.position ?? null,
+      book: view, mine, sheets, seals: sealsHien, rounds, replies, seen, firstUnread, lastPosition: dangDoc?.position ?? null,
       vietCung: book.vietCungTu !== null,
     };
   });

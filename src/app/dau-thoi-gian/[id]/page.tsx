@@ -53,8 +53,8 @@ export default async function DauThoiGianCuaSach({ params, searchParams }: {
     };
   });
 
-  // Sach viet cung (5c): cuon cua ca hai.
-  const chu = book.vietCungTu !== null ? "hai bạn" : book.ownerId === me.accountId ? "bạn" : me.partnerNickname;
+  // Sach viet cung (5c): cuon cua ca hai. Khoang Lang (Q2a): ten doi phuong thay bang ten chung.
+  const chu = book.vietCungTu !== null ? "hai bạn" : book.ownerId === me.accountId ? "bạn" : me.khoangLang ? "người đọc" : me.partnerNickname;
   return (
     <>
       {/* Khung phat nhac nam trong trang: nav khong dinh, de khong gi (ke ca nav) de len trinh phat YouTube. */}

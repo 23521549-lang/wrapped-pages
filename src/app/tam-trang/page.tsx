@@ -55,6 +55,9 @@ export default async function LichHoaPage({ searchParams }: {
     }];
   });
   const homNay = nay ? ngayTrongThang(now) : null;
+  // Khoang Lang (Q2a): ten doi phuong khong xuat hien o bat cu cho nao, ke ca prop xuong component con
+  // (payload RSC van nhung ten do neu truyen tho, du UI khong ve ra).
+  const tenKia = me.khoangLang ? "người đọc" : me.partnerNickname;
 
   return (
     <>
@@ -75,7 +78,7 @@ export default async function LichHoaPage({ searchParams }: {
           homNay={homNay}
           chonDau={homNay ?? soNgayCua(thang)}
           now={now}
-          tenKia={me.partnerNickname}
+          tenKia={tenKia}
           tenMinh={me.nickname}
           truocHref={`/tam-trang?thang=${thangKhoa(thangTruoc(thang))}`}
           sauHref={nay ? null : `/tam-trang?thang=${thangKhoa(thangSau(thang))}`}
@@ -84,7 +87,7 @@ export default async function LichHoaPage({ searchParams }: {
         <TongKetThang
           thang={tongKet}
           nay={{ ten: hoaDau(tenThang(thangNay)), mo: `1.${thangSau(thangNay).m}`, noiBat: tkNay.noiBat.minh ?? tkNay.noiBat.kia }}
-          tenKia={me.partnerNickname}
+          tenKia={tenKia}
           tenMinh={me.nickname}
           khoangLang={me.khoangLang}
         />
