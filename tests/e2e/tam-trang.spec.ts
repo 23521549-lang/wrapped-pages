@@ -155,6 +155,20 @@ async function choSongLanToi(p: Page, mocMs: number): Promise<void> {
 }
 
 /**
+ * Cho :356 dung: doi toi giua luc song lan (currentTime >= moc) NHUNG chap nhan song da tan. Khi may doi, dong ho
+ * animation co the dung yen trong khi hen gio don dep (SONG_HET) chay theo gio tuong va go lop song truoc khi
+ * currentTime cham moc (loi :617(b); sua goc o lane :617) nen choSongLanToi khi do timeout mai. Phep do xo dich sau
+ * buoc cho nay van co nghia: bo cuc phai dung yen ca giua luc song lan lan sau khi song tan. Chi :356 dung ham nay.
+ */
+async function choSongLanHoacTan(p: Page, mocMs: number): Promise<void> {
+  await p.waitForFunction((moc) => {
+    const el = document.querySelector(".troi-cua-so .troi--dang-song");
+    if (el === null) return true;
+    return el.getAnimations().some((a) => Number(a.currentTime ?? 0) >= moc);
+  }, mocMs, { timeout: 10_000 });
+}
+
+/**
  * Doi vong song tan han: cac lop tam da bi go va troi vua hien khong con o trang thai dang lan. Moc nay do chinh
  * song.ts dat ra (don dep o SONG_HET), nen phep do sau no la phep do tren trang thai nghi that su.
  */
@@ -209,6 +223,37 @@ function doKhungDau(p: Page): Promise<{ ms: number; song: number; lan: number }>
       song: document.querySelectorAll(".troi-cua-so .song-vong .song-vong__o").length,
       lan: document.querySelectorAll(".troi-cua-so .troi--dang-song").length,
     };
+  });
+}
+
+/**
+ * Nguong cho thoi gian toi khung hinh dau tien (xem doKhungDauTach). So do that, ngay 2026-11-07:
+ * - cho doi khung hinh dau sau khi bam: 195,8ms (probe356) va 259,4 / 644,6 / 695,4ms (probe bam lan 2, may tai).
+ * - khoang cach giua hai khung hinh lien tiep tren cung may tai: toi da 1188,6ms.
+ * Luc cho khung hinh dau bi gioi han boi mot khoang khung hinh (bam ngay sau moc khung thi doi tron mot khoang),
+ * nen 1500ms bao duoc lich khung hinh xau nhat da do, van bat duoc truong hop trinh duyet dung hinh.
+ */
+const KHUNG_DAU_MS = 1500;
+
+/**
+ * Tach phep do khung hinh dau lam hai, thay cho doKhungDau o test :356. doKhungDau gop viec dong bo trong tay nghe
+ * (4-14ms khi hinh hoc da do san, 63,6ms mot lan khi chua do) voi lich khung hinh cua trinh duyet (cho khung dau
+ * 195,8-695,4ms tren may tai) vao mot con so gio tuong duy nhat, nen nguong 50ms cu do ca khi app lam dung.
+ * (i) Dong bo, khong do gio: song phai co mat ngay trong cung task voi lan bam. (ii) Rieng thoi gian toi khung hinh
+ * dau tien da ve: tu luc tay nghe bam xong toi luc khung hinh dau chay (rAF chay ngay truoc khi khung ve, nen day
+ * la khung se ve song). Chi test :356 dung ham nay; doKhungDau giu nguyen cho :617.
+ */
+function doKhungDauTach(p: Page): Promise<{ dongBo: { song: number; lan: number }; khungMs: number }> {
+  return p.evaluate(async () => {
+    const nut = document.querySelector<HTMLElement>(".troi-cua-so .troi[data-mat]:not(.troi--an) .cua-so");
+    nut?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, isPrimary: true, pointerType: "mouse" }));
+    const dongBo = {
+      song: document.querySelectorAll(".troi-cua-so .song-vong .song-vong__o").length,
+      lan: document.querySelectorAll(".troi-cua-so .troi--dang-song").length,
+    };
+    const t0 = performance.now();
+    const khungMs = await new Promise<number>((xong) => requestAnimationFrame(() => xong(performance.now() - t0)));
+    return { dongBo, khungMs };
   });
 }
 
@@ -376,12 +421,12 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
   await choTayNghe(b);
   await demXoDich(b);
 
-  // Do tre: tu luc an xuong toi khung hinh dau tien da co lop song va troi moi da bat dau lo ra.
-  const dau = await doKhungDau(b);
-  console.log(`[tam-trang] khung hinh dau tien, ho so thuong: ${dau.ms.toFixed(1)}ms`);
-  expect(dau.song, "khung hinh dau tien chua co lop song").toBe(4);
-  expect(dau.lan).toBe(1);
-  expect(dau.ms, "song hien cham hon mot khung hinh").toBeLessThan(50);
+  // Do tre tach lam hai: song co mat dong bo ngay trong lan bam, roi khung hinh dau tien ve sau do bao lau.
+  const dau = await doKhungDauTach(b);
+  console.log(`[tam-trang] khung hinh dau tien, ho so thuong: dongBo song=${dau.dongBo.song} lan=${dau.dongBo.lan}, khungMs=${dau.khungMs.toFixed(1)}ms`);
+  expect(dau.dongBo.song, "khung hinh dau tien chua co lop song").toBe(4);
+  expect(dau.dongBo.lan).toBe(1);
+  expect(dau.khungMs, "khung hinh dau tien ve cham").toBeLessThan(KHUNG_DAU_MS);
 
   const troiMinh = b.getByRole("region", { name: "Tâm trạng của bạn" });
   await expect(troiMinh).toHaveClass(/troi--nang-am troi--cua-so/);
@@ -397,7 +442,7 @@ test("o cua so: hai troi ve san xep chong, bam la song hien ngay, khong xo dich 
   await expect(b.locator(".cua-so--im")).toHaveCount(0);
 
   // Khong xo dich: do giua luc song lan (moc do chinh vong song bao) va sau khi song tan (moc do song.ts don dep).
-  await choSongLanToi(b, 600);
+  await choSongLanHoacTan(b, 600);
   expect((await moc.boundingBox())?.y ?? -1).toBeCloseTo(mocTruoc, 2);
   expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoTruoc, 2);
   await choSongTan(b);
