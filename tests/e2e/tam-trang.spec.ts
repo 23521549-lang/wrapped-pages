@@ -495,11 +495,58 @@ test("thay tam trang: troi moi loang phu het troi cu; dai troi doi chieu cao mot
   // PerformanceObserver cua demXoDich (phan quyet M8, phat hien F13).
   await thaTaiCho(b, "giong", "Mưa cả buổi chiều, chẳng đi đâu được.");
 
-  // Dang loang: co lop vet nuoc, trai troi cu van con va tro nang. Loang bat dau ngay khi trang toi dinh.
-  await expect(b.locator(".loang .giot").first()).toBeAttached({ timeout: 10_000 });
+  /*
+   * Do lop loang trong CUNG MOT luot goi evaluate: doi lop xuat hien ngay trong trang (MutationObserver, khong qua
+   * CDP) roi dem vet + doc trang thai hop tha ngay trong cung luot do. Dang loang: co lop vet nuoc, trai troi cu
+   * van con va tro nang. Loang bat dau ngay khi trang toi dinh. Lop chi song ~3 giay, moi lan goi CDP roi rac
+   * duoi tai ton 100-500ms (rieng 2 khung rAF da 200-600ms) nen dem muon la lop da bi go, dem duoc 0 vet; hop tha
+   * cung thu truoc khi test kip nhin (de xuat tam-trang :487, phuong an A). Khong doi hang thiet ke nao.
+   */
+  const loang = await b.evaluate(async () => {
+    type TrangThaiLoang = {
+      soVet: number; thaMo: boolean; thaKhoa: boolean; hetHan: boolean;
+      troiCu: number; troiCuKhoa: boolean; dangLoang: number;
+    };
+    const demVet = () => document.querySelectorAll(".loang .giot").length;
+    const chup = (): TrangThaiLoang => {
+      const hop = document.querySelector(".tha");
+      const hcn = hop?.getBoundingClientRect();
+      const cu = document.querySelector(".troi--cu");
+      return {
+        soVet: demVet(),
+        thaMo: hop != null && !hop.hasAttribute("hidden") && (hcn?.width ?? 0) > 0 && (hcn?.height ?? 0) > 0 &&
+          getComputedStyle(hop).visibility !== "hidden",
+        thaKhoa: hop?.hasAttribute("inert") ?? false,
+        hetHan: false,
+        // Cung luc voi vet nuoc: trai troi cu (React ve kem inert ngay tu commit dau) va lop dang-loang (goi hieu
+        // ung bat truoc khi loangTroi chay) deu da co; buoc don go ca ba trong cung mot luot nen vet con thi hai
+        // thu nay con. Doc o day thay cho 3 lan goi CDP roi rac o duoi, von kip cham sau khi lop da don.
+        troiCu: document.querySelectorAll(".troi--cu").length,
+        troiCuKhoa: cu?.hasAttribute("inert") ?? false,
+        dangLoang: document.querySelectorAll(".troi--dang-loang").length,
+      };
+    };
+    if (demVet() > 0) return chup();
+    const hetHan = await new Promise<boolean>((xong) => {
+      let het: ReturnType<typeof setTimeout> | undefined;
+      const quanSat = new MutationObserver(() => {
+        if (demVet() > 0) {
+          if (het !== undefined) clearTimeout(het);
+          quanSat.disconnect();
+          xong(false);
+        }
+      });
+      het = setTimeout(() => { quanSat.disconnect(); xong(true); }, 10_000);
+      quanSat.observe(document.documentElement, { childList: true, subtree: true });
+    });
+    return hetHan
+      ? { soVet: 0, thaMo: false, thaKhoa: false, hetHan: true, troiCu: 0, troiCuKhoa: false, dangLoang: 0 }
+      : chup();
+  });
   // Hop tha van mo (va khoa) suot lan loang (chu du an 27/09).
-  await expect(b.locator(".tha")).toBeVisible();
-  await expect(b.locator(".tha")).toHaveAttribute("inert", "");
+  expect(loang.hetHan, "lop loang khong xuat hien trong 10 giay").toBe(false);
+  expect(loang.thaMo, "hop tha van mo suot lan loang").toBe(true);
+  expect(loang.thaKhoa, "hop tha khoa suot lan loang").toBe(true);
   /*
    * Bat dem xo dich o DAY chu khong truoc luc tha: bai nay dem MOI ban ghi layout-shift. Cua so o day om tu giua lan
    * loang qua het buoc don VA qua luc hop tha thu lai, tuc dung cho troi cu, lop vet nuoc bi go va hop cuon len: khuc de
@@ -512,12 +559,12 @@ test("thay tam trang: troi moi loang phu het troi cu; dai troi doi chieu cao mot
   const mocLoang = await dinhTaiLieu(moc);
   const caoLoang = (await dai.boundingBox())?.height ?? -1;
   expect(caoLoang, "dai troi di theo troi moi ngay khi bat dau loang").toBeGreaterThan(caoTruoc);
-  const soVet = await b.locator(".loang .giot").count();
-  console.log(`[tam-trang] so vet nuoc cua lan loang o ${b.viewportSize()?.width}px: ${soVet}`);
-  expect(soVet).toBeGreaterThan(0);
-  await expect(b.locator(".troi--cu")).toHaveCount(1);
-  await expect(b.locator(".troi--cu")).toHaveAttribute("inert", "");
-  await expect(b.locator(".troi--dang-loang")).toHaveCount(1);
+  console.log(`[tam-trang] so vet nuoc cua lan loang o ${b.viewportSize()?.width}px: ${loang.soVet}`);
+  expect(loang.soVet, "loang phu het troi cu: phai co vet nuoc").toBeGreaterThan(0);
+  // Trai troi cu va lop dang-loang doc cung luc voi vet nuoc o tren, khong doc lai bang CDP (da don xong).
+  expect(loang.troiCu, "troi cu van con suot lan loang").toBe(1);
+  expect(loang.troiCuKhoa, "troi cu khoa suot lan loang").toBe(true);
+  expect(loang.dangLoang, "dai troi dang loang").toBe(1);
   // Khong xo dich ngay giua lan loang.
   expect(await dinhTaiLieu(moc)).toBeCloseTo(mocLoang, 2);
   expect((await dai.boundingBox())?.height ?? -1).toBeCloseTo(caoLoang, 2);
