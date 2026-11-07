@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { actionAnHoatDong } from "@/app/actions/feed";
+import { CHUA_LUU_HOAT_DONG } from "@/app/actions/messages";
 
 /**
  * Muc "Hoat dong" o Cai dat (06/10): an hoat dong cua minh khoi khung Hoat dong cua CA HAI nguoi, tu luc bat tro di.
@@ -38,10 +39,17 @@ export function CaiDatHoatDong({ an, tenKia }: { an: boolean; tenKia: string }) 
             setDaAn(bat);
             setLoi(null);
             batDau(async () => {
-              const r = await actionAnHoatDong(bat);
-              if ("error" in r) {
+              try {
+                const r = await actionAnHoatDong(bat);
+                if ("error" in r) {
+                  setDaAn(!bat);
+                  setLoi(r.error);
+                }
+              } catch {
+                // Mat mang thi action nem loi thay vi tra {error}: cung hoan nguyen
+                // va noi ra loi, khong de loi vang len error boundary lam sap trang.
                 setDaAn(!bat);
-                setLoi(r.error);
+                setLoi(CHUA_LUU_HOAT_DONG);
               }
             });
           }}

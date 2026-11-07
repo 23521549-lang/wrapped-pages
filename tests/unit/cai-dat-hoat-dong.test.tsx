@@ -69,6 +69,14 @@ describe("muc Hoat dong o Cai dat", () => {
     expect(screen.getByText("Chưa lưu được lựa chọn này. Thử lại nhé.")).toBeDefined();
   });
 
+  it("action nem loi khi mat mang: hoan nguyen o danh dau va noi ra loi, khong vang trang loi", async () => {
+    actionAnHoatDong.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    render(<CaiDatHoatDong an={false} tenKia="Linh" />);
+    await bam();
+    expect(o().checked).toBe(false);
+    expect(screen.getByText("Chưa lưu được lựa chọn này. Thử lại nhé.")).toBeDefined();
+  });
+
   it("luu lai duoc sau mot lan that bai: loi cu bien di", async () => {
     actionAnHoatDong.mockResolvedValueOnce({ error: "Chưa lưu được lựa chọn này. Thử lại nhé." });
     render(<CaiDatHoatDong an={false} tenKia="Linh" />);
