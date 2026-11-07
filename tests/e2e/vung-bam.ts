@@ -20,6 +20,17 @@ const VAI_TRO_CO_BAN = 'a, button, input, select, textarea, [role="button"]';
 const VAI_TRO_BAM = `${VAI_TRO_CO_BAN}, [tabindex]`;
 
 /**
+ * Doi moi animation CSS chay xong (toi da 5 giay) roi moi do: do giua luc animation dang chay doc duoc
+ * so nhieu do sai so dau phay dong (vd 43,99998 thay vi 44). Co animation vo han thi het timeout van do
+ * nhu cu, khong bao gio fail vi cho.
+ */
+export async function doiHetHieuUng(page: Page): Promise<void> {
+  await page
+    .waitForFunction(() => document.getAnimations().every((h) => h.playState !== "running"), { timeout: 5_000 })
+    .catch(() => {});
+}
+
+/**
  * Do vung bam cua moi phan tu dang hien tren trang dang mo, tra danh sach mo ta nhung phan tu co
  * canh ngan (min(rong, cao)) duoi 44px. Rong nghia la dat.
  *
@@ -155,8 +166,14 @@ export async function vungBamNhoCoLich(page: Page, mienTru: MienTru[] = []): Pro
  * ke rong la mot cong luon xanh.
  */
 export async function doMoiManChinh(page: Page, phepDo: (p: Page) => Promise<string[]>): Promise<void> {
+  /** Do sau khi het hieu ung moi do: do giua luc animation dang chay doc duoc so nhieu. */
+  const doMotMan = async (ten: string) => {
+    await doiHetHieuUng(page);
+    expect(await phepDo(page), ten).toEqual([]);
+  };
+
   await page.goto("/ke-sach");
-  expect(await phepDo(page), "ke sach").toEqual([]);
+  await doMotMan("ke sach");
 
   // Lay het href TRUOC khi roi khoi /ke-sach: sau khi dieu huong di, ke sach khong con tren trang nua.
   const docHref = await page.locator(".cuon__lien").first().getAttribute("href");
@@ -175,27 +192,27 @@ export async function doMoiManChinh(page: Page, phepDo: (p: Page) => Promise<str
 
   // Cuon tren ke mo qua tam bia (chu du an chot 26/09): do ca tam bia lan man doc sau khi bam "Mở sách".
   await page.goto(docHref);
-  expect(await phepDo(page), "tam bia").toEqual([]);
+  await doMotMan("tam bia");
   await moSach(page);
-  expect(await phepDo(page), "man doc").toEqual([]);
+  await doMotMan("man doc");
 
   await page.goto(vietTiepHref);
-  expect(await phepDo(page), "trang viet tiep").toEqual([]);
+  await doMotMan("trang viet tiep");
 
   await page.goto(`/sach/${maSach}/viet`);
-  expect(await phepDo(page), "man viet").toEqual([]);
+  await doMotMan("man viet");
 
   await page.goto(dauHref);
-  expect(await phepDo(page), "dau thoi gian: trang chon cuon").toEqual([]);
+  await doMotMan("dau thoi gian: trang chon cuon");
   const cuonHref = await page.locator(".dtg-dong .nhap__ten").first().getAttribute("href");
   if (!cuonHref) {
     throw new Error("doMoiManChinh: trang chon cuon cua Dau thoi gian khong co cuon nao");
   }
   await page.goto(cuonHref);
-  expect(await phepDo(page), "dau thoi gian: trang mot cuon").toEqual([]);
+  await doMotMan("dau thoi gian: trang mot cuon");
 
   await page.goto("/cai-dat");
-  expect(await phepDo(page), "cai dat").toEqual([]);
+  await doMotMan("cai dat");
 }
 
 /** Mot man de doMan di qua: ten de doc trong thong diep, duong de mo, va dau hieu da ve xong. */
@@ -211,6 +228,7 @@ export async function doMan(page: Page, man: Man, mienTru: MienTru[] = []): Prom
     await page.setViewportSize({ width, height: 900 });
     await page.goto(man.duong);
     await man.daVe(page);
+    await doiHetHieuUng(page);
     if (width === BE_RONG_CHAM) expect(await vungBamNho(page, mienTru), `${man.ten}: vung bam`).toEqual([]);
     expect(await tranNgang(page), `${man.ten} o ${width}px: tran ngang`).toEqual([]);
   }
