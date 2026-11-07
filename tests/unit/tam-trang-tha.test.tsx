@@ -7,7 +7,7 @@ import { ThaTamTrang, type DangGiu } from "@/components/tam-trang/ThaTamTrang";
 import { thoiGianLuot } from "@/components/tam-trang/cuon-len";
 import type { TroiHien } from "@/lib/tam-trang/lich";
 import { LOANG_HET_MS } from "@/lib/tam-trang/loang-nhip";
-import { TroiTam, useTroiTam } from "@/components/tam-trang/troi-tam";
+import { SU_KIEN_LOANG_BAT_DAU, TroiTam, useTroiTam } from "@/components/tam-trang/troi-tam";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { CHON_TROI, NHAN_DAI, NOTE_MAX } from "@/lib/tam-trang/input";
 
@@ -394,6 +394,12 @@ const cuonGia = () => {
   return cuon;
 };
 
+/**
+ * Mo phong dai troi bat dau lan loang (su kien BauTroi phat khi lop loang xuat hien): hop bat dau hen thu lai theo
+ * dung moc nay. Trong bai kiem don le nay khong co BauTroi that nen phai phat su kien bang tay.
+ */
+const loangBatDau = () => act(() => { globalThis.dispatchEvent(new CustomEvent(SU_KIEN_LOANG_BAT_DAU)); });
+
 /*
  * Chu du an 27/09: bam "Thả" thi hop van mo (khoa lai), trang cuon len dai troi voi toc do mot cu cuon chuot, toi noi
  * thi dai troi nhan NGAY troi TAM cua lan tha (khong cho may chu), va chi khi troi doi xong - het lan loang, hay ngay khi
@@ -443,6 +449,7 @@ describe("ThaTamTrang: troi tam, cuon len dai troi, thu hop sau khi troi doi xon
     thaQuaHop("Giông");
     await act(async () => { await Promise.resolve(); });
     expect(tam()).toMatch(/^giong/);
+    loangBatDau();
     act(() => { vi.advanceTimersByTime(LOANG_HET_MS - 1); });
     expect(hop().hidden).toBe(false);
     expect(hop().hasAttribute("inert")).toBe(true);
@@ -466,6 +473,7 @@ describe("ThaTamTrang: troi tam, cuon len dai troi, thu hop sau khi troi doi xon
     const { rerender } = render(hopVoi({ weather: "nang-am", conLai: "còn 3 giờ" }, NANG_AM));
     thaQuaHop("Giông");
     await act(async () => { await Promise.resolve(); });
+    loangBatDau();
     rerender(hopVoi({ weather: "giong", conLai: "còn 24 giờ" }, { ...NANG_AM, weather: "giong" }));
     expect(hop().hidden).toBe(false);
     expect(hop().querySelector(".tha__giu")?.textContent).toContain("Nắng ấm");
@@ -512,6 +520,7 @@ describe("ThaTamTrang: troi tam, cuon len dai troi, thu hop sau khi troi doi xon
     actionSetMood.mockImplementationOnce(() => new Promise((r) => { traLoi = r; }));
     veTam({ weather: "nang-am", conLai: "còn 3 giờ" }, NANG_AM);
     thaQuaHop("Giông", "Nhớ cậu");
+    loangBatDau();
     act(() => { vi.advanceTimersByTime(LOANG_HET_MS); });
     expect(hop().hidden).toBe(true);
     await act(async () => traLoi({ error: "Bạn cần đăng nhập trước." }));

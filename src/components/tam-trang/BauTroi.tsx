@@ -11,7 +11,7 @@ import { Hoa } from "./HoaEp";
 import { huyLoang, loangTroi, type MatLoang } from "./loang";
 import { NetTroi } from "./NetTroi";
 import { ganSong } from "./song";
-import { coLoang, cungTamTrang, useTroiTam } from "./troi-tam";
+import { coLoang, cungTamTrang, SU_KIEN_LOANG_BAT_DAU, useTroiTam } from "./troi-tam";
 
 /** Mot mat cua dai: bau troi lon cua ai, o cua so mang troi cua nguoi con lai (null khi chi mot nguoi co tam trang). */
 type Mat = {
@@ -377,6 +377,13 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
       else flushSync(() => setCu(null));
     });
     dongBo = false;
+    /*
+     * Bao cho hop tha biet lan loang vua bat dau - SAU khi loangTroi dung xong vet nuoc va chay hoat hinh, tuc dung
+     * luc lan loang quan sat duoc (MutationObserver chi ghi nhan sau khi viec dong bo nay xong): hen thu hop theo
+     * dung moc nay thi hop thu dung luc loang xong. Phat truoc loangTroi thi hen chay som hon moc quan sat duoc ca
+     * thoi gian dung vet (luc tai cao hon 150ms), hop thu som hon loang xong.
+     */
+    globalThis.dispatchEvent(new CustomEvent(SU_KIEN_LOANG_BAT_DAU));
   }, [cu]);
 
   // Roi trang giua luc dang loang: huy sach hen gio va hoat hinh cua dai troi. ganSong chi gan khi ca hai cung giu tam
