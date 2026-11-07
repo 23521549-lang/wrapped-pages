@@ -32,8 +32,11 @@ export async function phienBanKe(db: AnyDb, viewerId: string, now: Date = new Da
     // nao chac chan co dong de lam FROM gia. Gia tri tho cua driver (count la chuoi hay so, max la Date hay
     // chuoi) duoc doi ve dang cu ngay duoi day, co bai ngan-sach-phien-ban-ke khoa lai.
     const dieuKienHd = thayDuoc(viewerId, now, khoangLang) ?? sql`true`;
-    // execute khong dan kieu dong ve duoc (rows la any): ep ve HangPhienBan o cho doc, hinh dang that
+    // execute khong dan kieu dong ve duoc: ep ve HangPhienBan o cho doc, hinh dang that
     // duoc bai ngan-sach-phien-ban-ke khoa lai bang chuoi phien ban day du.
+    // Hinh dang tra ve KHAC NHAU theo driver: postgres-js (production) tra mang dong
+    // truc tiep, PGlite (test) tra doi tuong {rows}. Doc thang `.rows[0]` thi chay
+    // tren test nhung chet tren Postgres that, nen chuan hoa ve mang truoc khi doc.
     const kq = await tx.execute(sql`
       select
         (select count(*) from ${activity} left join ${books} on ${eq(books.id, activity.bookId)} left join ${moods} on ${eq(moods.id, activity.moodId)} where ${dieuKienHd}) as "hdN",
@@ -42,7 +45,8 @@ export async function phienBanKe(db: AnyDb, viewerId: string, now: Date = new Da
         (select coalesce(array_agg(${moods.id} order by ${moods.id}), '{}') from ${moods} where ${gt(moods.endsAt, now)} and ${eq(moods.withdrawn, false)}) as "giu",
         (select coalesce(json_agg(json_build_object('bookId', ${deNghi.bookId}, 'loai', ${deNghi.loai}, 'luc', ${deNghi.luc}) order by ${deNghi.bookId}), '[]') from ${deNghi} inner join ${books} on ${eq(books.id, deNghi.bookId)} where ${readableBy(viewerId)}) as "cho"
     `);
-    const row = kq.rows[0] as HangPhienBan | undefined;
+    const hang: unknown[] = Array.isArray(kq) ? kq : ((kq as { rows?: unknown[] }).rows ?? []);
+    const row = hang[0] as HangPhienBan | undefined;
     if (!row) throw new Error("phienBanKe khong doc duoc phien ban");
     const moi = row.hdMoi === null ? null : row.hdMoi instanceof Date ? row.hdMoi : new Date(row.hdMoi);
     const deNghiCho = (row.cho ?? []).map((d) => `${d.bookId}:${d.loai}:${new Date(d.luc).getTime()}`).join(",");
