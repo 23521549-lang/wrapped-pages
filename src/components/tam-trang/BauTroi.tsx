@@ -200,10 +200,11 @@ function goDauLoang(w: HTMLElement): void {
  * Chi mot nguoi co tam trang thi khong co o cua so; neu la cua chinh nguoi xem thi troi lon mang nhan "Ban". Hai cau tho
  * khong co ten nguoi; ten nguoi va kieu troi chi doc cho trinh doc man hinh.
  *
- * THAY mot tam trang thi khac DOI CHO hai bau troi: sau refresh() cua ThaTamTrang, props tu may chu doi, mot layout
- * effect nhan ra chinh tam trang cua nguoi xem vua bi thay va giu troi cu lai trong state. Troi cu duoc ve them thanh
- * mot trai nam trong cung o luoi (`.troi--cu`, inert, aria-hidden), roi troi moi loang ra phu len no bang may chuc vet
- * nuoc (src/components/tam-trang/loang.ts, spec muc 3.4). Troi cu chi bi go o buoc don, trong dung mot luot voi lop
+ * THAY mot tam trang thi khac DOI CHO hai bau troi: sau refresh() cua ThaTamTrang, props tu may chu doi, mot lan ve
+ * (luc mot troi) hay mot layout effect (luc hai troi) nhan ra chinh tam trang cua nguoi xem vua bi thay va giu troi
+ * cu lai trong state (xem khoi "Nhan ra lan thay tam trang" trong ham). Troi cu duoc ve them thanh mot trai nam trong
+ * cung o luoi (`.troi--cu`, inert, aria-hidden), roi troi moi loang ra phu len no bang may chuc vet nuoc
+ * (src/components/tam-trang/loang.ts, spec muc 3.4). Troi cu chi bi go o buoc don, trong dung mot luot voi lop
  * loang, nen khong khung hinh nao lot vao giua. Giam chuyen dong thi trao thang, khong lop loang nao.
  *
  * "Mat nao dang lon" co dung MOT nguon su that, la ref `matLon` do song.ts bao nguoc len (phan quyet M2). Khong noi
@@ -254,9 +255,45 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
   const matLon = useRef("kia");
   const [bao, setBao] = useState("");
   const [cu, setCu] = useState<TroiCu | null>(null);
-  /** Hai bau troi cua lan ve gan nhat, de nhan ra CHINH tam trang cua nguoi xem vua bi thay. */
-  const daVe = useRef({ kia, minh });
   const caHai = kia !== null && minh !== null;
+  /*
+   * Nhan ra lan thay tam trang NGAY TRONG LUC VE o day (de xuat loang-toi :846): dat `cu`/`doiLoang` o day thi trai
+   * troi cu da co trong cay som hon mot commit so voi doi toi layout effect. Mau "adjusting state during rendering"
+   * cua React: luu cap troi da ve bang STATE, so sanh trong luc ve, dat state trong luc ve; React ve lai ngay truoc
+   * khi commit, chua cap nhat DOM. Luu bang state chu khong bang ref: neu mot lan ve bi bo, cap nhat state cung bi
+   * bo theo, lan ve sau nhan ra lai tu dau; ghi ref trong luc ve thi lan ve bi bo van de lai dau, lan loang mat han.
+   * Dieu kien so sanh dam bao chi dat mot lan cho moi lan thay (lan ve lai thay daVe da bang props moi) nen khong lap
+   * vo han.
+   *
+   * Hai duong tuy so troi tren dai, vi `lon` (troi cu o mat lon hay o cua so) can `matLon.current` ma chi doc duoc
+   * trong effect, khong doc duoc trong luc ve (lint `react(refs)`):
+   * - MOT troi (caHai sai): troi cu luon o mat lon, dat `cu` thang o day (`lon: true`); effect loang chay ngay sau
+   *   commit dau tien.
+   * - HAI troi: dat troi cu vao `doiLoang`, layout effect ben duoi doc `matLon.current` de dat `cu` roi xoa
+   *   `doiLoang` ngay; effect loang chay sau commit thu hai - nhu cu.
+   *
+   * Chi tam trang cua CHINH nguoi xem moi co lan loang, va chi khi no bi THAY: tha lan dau hay thu lai la dai troi
+   * hien ra hay bien mat han chu khong phai thay mot bau troi. So bau troi tren dai cung phai giu nguyen: khi no doi,
+   * ham go cua ganSong chay va huy moi hen gio dang cho, tuc lan loang bat dau o day se khong bao gio duoc don.
+   */
+  /** Hai bau troi cua lan ve truoc, de nhan ra CHINH tam trang cua nguoi xem vua bi thay. */
+  const [daVe, setDaVe] = useState({ kia, minh });
+  /**
+   * Troi cu cua mot lan thay LUC HAI TROI, cho layout effect ben duoi dung: `lon` can `matLon.current` (mat nao dang
+   * lon) ma chi doc duoc trong effect, khong doc duoc trong luc ve (lint `react(refs)`). Khoi trong luc ve dat no o
+   * day, effect doc xong thi xoa ngay. Luc mot troi thi khong dung toi no (`lon` luon dung).
+   */
+  const [doiLoang, setDoiLoang] = useState<TroiHien | null>(null);
+  if (khacTroi(daVe.kia, kia) || khacTroi(daVe.minh, minh)) {
+    const truoc = daVe;
+    setDaVe({ kia, minh });
+    // Chi loang khi kieu troi hay loi nhan doi. Chi gio tha doi (troi tam nhuong cho troi may chu, hay tha lai y nguyen
+    // tam trang dang giu) thi chu doi tai cho, troi khong loang.
+    if (truoc.minh !== null && coLoang(truoc.minh, minh) && (truoc.kia === null) === (kia === null)) {
+      if (!caHai) setCu({ troi: truoc.minh, lon: true });
+      else setDoiLoang(truoc.minh);
+    }
+  }
   const batDai = useCallback((el: HTMLElement | null) => {
     dai.current = el;
   }, []);
@@ -314,25 +351,19 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
   }, [apMatLon, caHai, kia, minh]);
 
   /*
-   * Nhan ra lan thay tam trang. Layout effect chu khong phai passive effect: no phai chay TRUOC khi trinh duyet ve, de
-   * troi moi khong kip hien ra voi nen day du roi mot nhip sau moi bat dau loang.
+   * Nhan ra lan thay tam trang KHI CO HAI TROI (layout effect). Khoi nhan ra trong luc ve o tren dat troi cu vao
+   * `doiLoang`; effect nay doc `matLon.current` (mat nao dang lon, chi doc duoc trong effect) de dat `cu`, roi xoa
+   * `doiLoang` ngay de lan thay sau khong dung nham troi cu. Luc mot troi thi `doiLoang` luon null nen effect nay
+   * bo qua.
    *
-   * Chi tam trang cua CHINH nguoi xem moi co lan loang, va chi khi no bi THAY: tha lan dau hay thu lai la dai troi
-   * hien ra hay bien mat han chu khong phai thay mot bau troi. So bau troi tren dai cung phai giu nguyen: khi no doi,
-   * ham go cua ganSong chay va huy moi hen gio dang cho, tuc lan loang bat dau o day se khong bao gio duoc don.
+   * Layout effect chu khong phai passive effect: no phai chay TRUOC khi trinh duyet ve, de troi moi khong kip hien ra
+   * voi nen day du roi mot nhip sau moi bat dau loang.
    */
   useLayoutEffect(() => {
-    const truoc = daVe.current;
-    if (!khacTroi(truoc.kia, kia) && !khacTroi(truoc.minh, minh)) return;
-    daVe.current = { kia, minh };
-    // Chi loang khi kieu troi hay loi nhan doi. Chi gio tha doi (troi tam nhuong cho troi may chu, hay tha lai y nguyen
-    // tam trang dang giu) thi chu doi tai cho, troi khong loang.
-    if (truoc.minh === null || !coLoang(truoc.minh, minh) || (truoc.kia === null) !== (kia === null)) return;
-    // Dat trang thai ngay trong effect la dung viec ma luat "khong setState trong effect" cho phep: dong bo voi mot he
-    // thong ngoai (props vua ve tu may chu). Trai troi cu phai co trong cay ngay o luot nay thi lan loang moi co cai
-    // de phu len.
-    setCu({ troi: truoc.minh, lon: !caHai || matLon.current === "minh" });
-  }, [caHai, kia, minh]);
+    if (doiLoang === null) return;
+    setCu({ troi: doiLoang, lon: !caHai || matLon.current === "minh" });
+    setDoiLoang(null);
+  }, [caHai, doiLoang]);
 
   /*
    * So bau troi tren dai vua doi GIUA lan loang: nguoi kia vua tha tam trang cua ho, hay vua thu no lai. Ham go cua
@@ -353,8 +384,9 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
   }, [caHai]);
 
   /*
-   * Chay lan loang. Effect nay chay o lan commit da co CA hai bau troi trong cay, va van truoc khi trinh duyet ve, nen
-   * khung hinh dau tien da la khung hinh co vet nuoc.
+   * Chay lan loang. Effect nay chay sau commit da co CA hai bau troi trong cay - commit dau tien neu trai troi cu
+   * duoc dat trong luc ve (luc mot troi), commit thu hai neu no duoc dat trong layout effect nhan ra (luc hai troi) -
+   * va van truoc khi trinh duyet ve, nen khung hinh dau tien da la khung hinh co vet nuoc.
    */
   useLayoutEffect(() => {
     const w = dai.current;

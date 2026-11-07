@@ -726,8 +726,9 @@ const MINH_MOI: TroiHien = { weather: "giong", note: null, tha: "Thả lúc 09:0
 
 /*
  * Spec muc 3.4: BauTroi giu bau troi dang hien trong state; khi props tu may chu doi (sau refresh() cua ThaTamTrang),
- * mot layout effect nhan ra tam trang cua chinh nguoi xem vua doi va chay lan loang tu troi cu sang troi moi. Troi cu
- * chi bi go o buoc don. Task nay lam nhanh DAI LON; nhanh o cua so tron trao thang cho toi khi co nhanh cua no.
+ * lan ve nhan ra tam trang cua chinh nguoi xem vua doi va giu troi cu lai ngay trong luc ve, roi mot layout effect
+ * chay lan loang tu troi cu sang troi moi. Troi cu chi bi go o buoc don. Task nay lam nhanh DAI LON; nhanh o cua so
+ * tron trao thang cho toi khi co nhanh cua no.
  */
 describe("BauTroi: thay tam trang bang hieu ung C", () => {
   it("troi cua minh doi: trai troi cu nam duoi, troi moi mang lop dang loang, co lop loang", () => {

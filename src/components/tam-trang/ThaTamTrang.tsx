@@ -226,10 +226,11 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = f
       }
       /*
        * Co lan loang: hen thu hop theo dung moc lop loang xuat hien (su kien tu dai troi), khong theo luc cuon toi
-       * dinh. Lop loang chi co mat sau hai lan React ve lai (datTam -> hieu ung nhan ra lan thay -> hieu ung loang),
-       * tre 66-255ms so voi moc nay trong khi dung sai chi cho 150ms, nen hen theo luc cuon lam hop thu som hon
-       * loang xong. Hen du phong phong truong hop su kien khong toi (matLoang tra null): luc do hop van thu lai,
-       * chi tre hon binh thuong.
+       * dinh. Lop loang chi co mat sau khi React ve lai (datTam -> nhan ra trong luc ve -> hieu ung loang, luc mot
+       * troi; them mot lan ve lai nua luc hai troi), van tre dang ke so voi moc nay (do duoc toi 189ms luc tai cao,
+       * ngay 2026-11-07) trong khi dung sai chi cho 150ms, nen hen theo luc cuon lam hop thu som hon loang xong.
+       * Hen du phong phong truong hop su kien khong toi (matLoang tra null): luc do hop van thu lai, chi tre hon
+       * binh thuong.
        */
       const khiLoang = () => {
         ngheLoang.current = null;
