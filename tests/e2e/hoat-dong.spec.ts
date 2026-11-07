@@ -76,6 +76,8 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await vietTranTrang(a);
   const soTo = await dangTrang(a);
   await b.reload();
+  // Cho khung Hoat dong chi con 1 ban (het trung fallback/stream) roi moi khang dinh.
+  await expect(khung(b)).toHaveCount(1);
   const dongCuaB = cuon(b).getByRole("link", { name: `${tenCuaA} đăng ${soTo} trang mới trong Chuyện chưa kể` });
   await expect(dongCuaB).toHaveAttribute("href", `/sach/${id}?trang=1`);
   await expect(dongCuaB.locator(".hoat-dong__chu b")).toHaveText("Chuyện chưa kể");
@@ -88,6 +90,8 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   expect(await chu.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe("none");
 
   await a.goto("/ke-sach");
+  // Cho khung Hoat dong chi con 1 ban (het trung fallback/stream) roi moi khang dinh.
+  await expect(khung(a)).toHaveCount(1);
   await expect(cuon(a).getByRole("link", { name: `Bạn đăng ${soTo} trang mới trong Chuyện chưa kể` }))
     .toHaveAttribute("href", `/sach/${id}?trang=1`);
 
@@ -103,6 +107,8 @@ test("ke moi: ca hai thay o trong; trang moi cua sach chia se hien cho ca hai va
   await a.keyboard.insertText(HOP_THOI_GIAN);
   expect(await dangTrang(a)).toBe(1);
   await a.goto("/ke-sach");
+  // Cho khung Hoat dong chi con 1 ban (het trung fallback/stream) roi moi khang dinh.
+  await expect(khung(a)).toHaveCount(1);
   await expect(cuon(a).getByRole("link", { name: "Bạn đăng 1 trang mới trong Thư gửi năm ba mươi" }))
     .toHaveAttribute("href", `/sach/${rieng}?trang=1`);
   // Dot nam: hai dong tao sach, hai dong dang trang, va dong B da doc (chi chu sach thay).
@@ -190,6 +196,8 @@ test("doi mat khau: nguoi bi doi van dang nhap va thay dong dam khong lien ket; 
   await khongLo(b, matKhau, LOI_NHAN_MOI);
 
   await a.goto("/ke-sach");
+  // Cho khung Hoat dong chi con 1 ban (het trung fallback/stream) roi moi khang dinh.
+  await expect(khung(a)).toHaveCount(1);
   const cuaA = dong(a, "đổi mật khẩu");
   await expect(cuaA.locator(".hoat-dong__chu")).toHaveText(`Bạn đổi mật khẩu của ${TEN_MOI}`);
   await expect(cuaA.locator("b")).toHaveCount(0);

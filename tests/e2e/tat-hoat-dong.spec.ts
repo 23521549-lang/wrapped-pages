@@ -83,6 +83,7 @@ test("an hoat dong: viec moi khong len khung, nhung trang moi van toi tay nguoi 
 
   // 3. Nguoi kia: KHONG co dong moi nao, nhung VAN thay trang moi tren ke va mo doc duoc.
   await b.goto("/ke-sach");
+  await expect(khung(b)).toHaveCount(1);
   await expect(cuon(b).getByRole("listitem")).toHaveCount(2);
   await expect(theSach(b, TEN_SACH).locator(".dh--moi")).toHaveText("2 trang mới");
   await theSach(b, TEN_SACH).getByRole("link", { name: TEN_SACH }).click();
@@ -93,6 +94,9 @@ test("an hoat dong: viec moi khong len khung, nhung trang moi van toi tay nguoi 
 
   // 4. Chinh nguoi bat cung khong thay dong do, va thay dong nhac o dau khung.
   await a.goto("/ke-sach");
+  // Khung Hoat dong hien hai ban trong choc lat sau goto (fallback cua Suspense + noi dung da stream xong cho
+  // React thay vao o khung hinh sau), nen cho chi con dung 1 khung roi moi khang dinh dong nhac.
+  await expect(khung(a)).toHaveCount(1);
   await expect(khung(a).getByText(NHAC)).toBeVisible();
   await expect(dong(a, `Bạn đăng 1 trang mới trong ${TEN_SACH}`)).toHaveCount(1);
   await expect(cuon(a).getByRole("listitem")).toHaveCount(2);
@@ -101,6 +105,7 @@ test("an hoat dong: viec moi khong len khung, nhung trang moi van toi tay nguoi 
   await dat(a, false);
   await viet(a, id, "Trang thứ ba, viết lúc đã bỏ ẩn.");
   await a.goto("/ke-sach");
+  await expect(khung(a)).toHaveCount(1);
   await expect(khung(a).getByText(NHAC)).toHaveCount(0);
   await expect(cuon(a).getByRole("listitem")).toHaveCount(3);
   await b.goto("/ke-sach");
