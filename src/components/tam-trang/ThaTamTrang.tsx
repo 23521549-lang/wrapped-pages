@@ -11,7 +11,7 @@ import { TROI, WEATHERS, type Weather } from "@/lib/tam-trang/troi";
 import { timeLabel } from "@/lib/when";
 import { cuonLenDinh } from "./cuon-len";
 import { Hoa } from "./HoaEp";
-import { coLoang, useTroiTam } from "./troi-tam";
+import { coLoang, SU_KIEN_LOANG_BAT_DAU, useTroiTam } from "./troi-tam";
 
 /** Id cua hop chon: nut mo tro toi no bang aria-controls. */
 const HOP = "tha-tam-trang";
@@ -70,6 +70,32 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = f
   const lanTha = useRef(0);
   const hopCuaLan = useRef(0);
   const henThu = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /**
+   * Hen thu hop du phong, phong truong hop su kien loang khong bao gio toi (matLoang tra null, khong co lan loang
+   * nao): neu khong co hen nay thi hop mo mai. Luc binh thuong hen theo su kien chay truoc va huy hen nay.
+   */
+  const henDuPhong = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** Ham nghe su kien loang bat dau cua lan tha dang chay (de go khi hop duoc nha som hay lan tha bi thay). */
+  const ngheLoang = useRef<(() => void) | null>(null);
+
+  /** Bo moi hen thu hop dang cho (hen theo su kien loang, hen du phong) va go ham nghe su kien loang. */
+  function huyHenThu() {
+    clearTimeout(henThu.current);
+    clearTimeout(henDuPhong.current);
+    if (ngheLoang.current !== null) {
+      globalThis.removeEventListener(SU_KIEN_LOANG_BAT_DAU, ngheLoang.current);
+      ngheLoang.current = null;
+    }
+  }
+
+  /** Thu hop sau khi loang xong: chi dong hop cua dung lan tha nay. */
+  function dongHopSauLoang(lanThu: number) {
+    if (hopCuaLan.current !== lanThu) return;
+    nhaHop();
+    daThuHop.current = lanThu;
+    setMo(false);
+    if (daLuu.current === lanThu) xoaChon();
+  }
   /** Lan tha da duoc may chu luu; lan tha da tu thu hop lai (va chua ai mo lai hop). */
   const daLuu = useRef(0);
   const daThuHop = useRef(0);
@@ -105,7 +131,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = f
 
   /** Hop thoi thuoc ve lan tha dang chay: bo hen thu hop, mo khoa. Lan tha van chay tiep (troi van doi), chi khong dong hop. */
   function nhaHop() {
-    clearTimeout(henThu.current);
+    huyHenThu();
     hopCuaLan.current = 0;
     setDangTha(false);
   }
@@ -141,7 +167,7 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = f
 
   useEffect(() => () => {
     huyCuon.current?.();
-    clearTimeout(henThu.current);
+    huyHenThu();
   }, []);
 
   // Focus toi nut Tha sau khi hop da mo lai tren man VA lan gui da xong han: luc goi setMo(true) hop van dang an, va
@@ -187,19 +213,33 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = f
       moLaiVoiLoi(cau);
     };
     huyCuon.current?.();
-    clearTimeout(henThu.current);
+    huyHenThu();
     datGiu(true);
     huyCuon.current = cuonLenDinh(() => {
       datGiu(false);
       datTam(moi);
       if (hopCuaLan.current !== lan) return;
-      henThu.current = setTimeout(() => {
-        if (hopCuaLan.current !== lan) return;
-        nhaHop();
-        daThuHop.current = lan;
-        setMo(false);
-        if (daLuu.current === lan) xoaChon();
-      }, coLoang(truoc, moi) ? LOANG_HET_MS : 0);
+      if (!coLoang(truoc, moi)) {
+        // Khong co lan loang: thu hop ngay khi toi dinh, nhu truoc.
+        henThu.current = setTimeout(() => dongHopSauLoang(lan), 0);
+        return;
+      }
+      /*
+       * Co lan loang: hen thu hop theo dung moc lop loang xuat hien (su kien tu dai troi), khong theo luc cuon toi
+       * dinh. Lop loang chi co mat sau khi React ve lai (datTam -> nhan ra trong luc ve -> hieu ung loang, luc mot
+       * troi; them mot lan ve lai nua luc hai troi), van tre dang ke so voi moc nay (do duoc toi 189ms luc tai cao,
+       * ngay 2026-11-07) trong khi dung sai chi cho 150ms, nen hen theo luc cuon lam hop thu som hon loang xong.
+       * Hen du phong phong truong hop su kien khong toi (matLoang tra null): luc do hop van thu lai, chi tre hon
+       * binh thuong.
+       */
+      const khiLoang = () => {
+        ngheLoang.current = null;
+        clearTimeout(henDuPhong.current);
+        henThu.current = setTimeout(() => dongHopSauLoang(lan), LOANG_HET_MS);
+      };
+      ngheLoang.current = khiLoang;
+      globalThis.addEventListener(SU_KIEN_LOANG_BAT_DAU, khiLoang, { once: true });
+      henDuPhong.current = setTimeout(() => dongHopSauLoang(lan), LOANG_HET_MS + 2000);
     });
     batDau(async () => {
       try {

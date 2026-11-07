@@ -901,7 +901,11 @@ test("dai troi gon nhu ban mau: tu dong chu cuoi cua dai troi toi tieu de Ke sac
   }
 });
 
-/** Cac moc do ngay trong trang (performance.now), de do tre cua Playwright khong lam lech so. */
+/**
+ * Cac moc do ngay trong trang, de do tre cua Playwright khong lam lech so. `bam` va tung mau trong `y` lay timestamp
+ * cua khung hinh rAF (cung dong ho voi cu cuon trong cuonLenDinh); `toi`, `bao`, `loang`, `thu` lay performance.now()
+ * luc quan sat thay - ca hai cung mot goc thoi gian nen tru nhau duoc.
+ */
 type MocTha = { y: [number, number][]; bam: number; toi: number; bao: number; loang: number; thu: number };
 
 /**
@@ -912,13 +916,24 @@ async function ghiMoc(p: Page, ten: string): Promise<void> {
   await p.getByRole("button", { name: "Thả", exact: true }).evaluate((nut, tenTroi) => {
     const g: MocTha = { y: [], bam: -1, toi: -1, bao: -1, loang: -1, thu: -1 };
     (globalThis as unknown as { mocTha: MocTha }).mocTha = g;
-    const khung = () => {
-      g.y.push([performance.now() - g.bam, globalThis.scrollY]);
-      if (globalThis.scrollY <= 1) g.toi = performance.now();
-      else requestAnimationFrame(khung);
+    /*
+     * Moc goc la timestamp cua khung hinh rAF DAU TIEN sau cu bam - cung moc voi khung dau cua cu cuon trong
+     * cuonLenDinh (ca hai dang ky rAF trong cung mot luot bam, khung nay chay truoc). Do vay `y` do THOI GIAN
+     * ANIMATION cua cu cuon, khong phai gio tuong: bo qua tre ket xuat truoc khung dau (React ve lai sau cu bam).
+     * Rieng `toi` van lay performance.now() luc quan sat thay dinh - cung dong ho voi moc `loang` (MutationObserver)
+     * - vi do la khoang tre giua hai lan quan sat, khong phai thoi gian animation: lay timestamp bat dau khung cho
+     * `toi` se lam khoang nay phinh them dung thoi gian tinh lai style/layout cua khung do.
+     */
+    const khung = (luc: number) => {
+      if (g.bam < 0) g.bam = luc;
+      if (globalThis.scrollY <= 1) {
+        g.toi = performance.now();
+        return;
+      }
+      g.y.push([luc - g.bam, globalThis.scrollY]);
+      requestAnimationFrame(khung);
     };
     nut.addEventListener("click", () => {
-      g.bam = performance.now();
       requestAnimationFrame(khung);
     }, { capture: true, once: true });
     new MutationObserver(() => {
@@ -965,7 +980,14 @@ test("tha tam trang tu giua trang: hop van mo, cuon len nhu cuon chuot, troi doi
   await expect(hop).toBeVisible();
   await expect(hop).toBeHidden({ timeout: 8_000 });
   const m = await docMoc(b);
-  const luot = m.toi - m.bam;
+  /*
+   * Thoi gian ANIMATION cua cu cuon: tu khung hinh dau tien sau cu bam toi khung hinh cuon xong (mau cuoi cua y -
+   * khung ma cuonLenDinh dat scrollY ve 0 ngay sau do), khong tinh khung quan sat thay dinh o sau (m.toi): khung do
+   * chi la tre quan sat them mot khoang khung hinh, gian ra vo co khi khung hinh thua.
+   */
+  const khungCuoi = m.y[m.y.length - 1];
+  if (khungCuoi === undefined) throw new Error("khong ghi duoc khung hinh cuon nao");
+  const luot = khungCuoi[0];
   console.log(`[tam-trang] cuon tu ${tu}px len dinh: ${Math.round(luot)}ms; toi dinh toi luc loang: ${Math.round(m.loang - m.toi)}ms; loang toi luc thu hop: ${Math.round(m.thu - m.loang)}ms`);
   expect(luot, "cuon len nhu mot cu cuon chuot: khong nhay, khong cham rai").toBeGreaterThan(150);
   expect(luot).toBeLessThan(800);

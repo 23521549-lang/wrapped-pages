@@ -37,6 +37,14 @@ export function useTroiTam(): TroiTamGiaTri {
 }
 
 /**
+ * Su kien noi bo: dai troi vua bat dau mot lan loang (lop `.troi--dang-loang` hay `.cua-so__kinh--loang` da co mat
+ * tren DOM va loangTroi da dung xong vet nuoc, tuc dung luc lan loang quan sat duoc). Hop ThaTamTrang nghe su kien
+ * nay de hen thu hop theo dung moc loang bat dau, thay vi theo luc cuon toi dinh (truoc do lech 66-255ms do hai lan
+ * React ve lai o giua).
+ */
+export const SU_KIEN_LOANG_BAT_DAU = "tam-trang-loang-bat-dau";
+
+/**
  * Hai bau troi la CUNG mot tam trang: cung kieu troi va cung loi nhan. Gio tha khong tinh: troi tam lay gio cua trinh
  * duyet, may chu lay gio luc luu, hai gio co the lech mot phut ma van la mot lan tha.
  */

@@ -60,6 +60,15 @@ const MINH: TroiHien = { weather: "nang-am", note: null, tha: "Thả lúc 08:15"
 
 const ve = (kia: TroiHien | null, minh: TroiHien | null) => render(<BauTroi tenKia="Linh" kia={kia} minh={minh} />);
 
+/*
+ * Cho lan loang chay xong phan viec cua no truoc khi khang dinh (de xuat loang-toi :846, phuong an (b)):
+ * loangTroi chay trong mot microtask sau layout effect, nen ngay sau rerender() vet nuoc chua duoc dung.
+ * Cam ket that cua app la khung hinh dau tien da co vet nuoc, tuc truoc lan ve dau (paint), ma microtask chay
+ * truoc paint nen cho mot tick microtask la dung diem quan sat, khong phai noi long. `queueMicrotask` khong bi
+ * vi.useFakeTimers() gia lap nen `await Promise.resolve()` la du.
+ */
+const choLoang = () => Promise.resolve();
+
 /**
  * Phai khop KHOA_TINH_MS cua src/components/tam-trang/song.ts: o nhanh giam chuyen dong khong co vong song nao giu
  * khoa, nen khoa tay dung khoang nay de mot lan cham khong doi cho hai lan. Doi so trong song.ts thi bai duoi bao ngay.
@@ -726,14 +735,17 @@ const MINH_MOI: TroiHien = { weather: "giong", note: null, tha: "Thả lúc 09:0
 
 /*
  * Spec muc 3.4: BauTroi giu bau troi dang hien trong state; khi props tu may chu doi (sau refresh() cua ThaTamTrang),
- * mot layout effect nhan ra tam trang cua chinh nguoi xem vua doi va chay lan loang tu troi cu sang troi moi. Troi cu
- * chi bi go o buoc don. Task nay lam nhanh DAI LON; nhanh o cua so tron trao thang cho toi khi co nhanh cua no.
+ * lan ve nhan ra tam trang cua chinh nguoi xem vua doi va giu troi cu lai ngay trong luc ve, roi mot layout effect
+ * chay lan loang tu troi cu sang troi moi. Troi cu chi bi go o buoc don. Task nay lam nhanh DAI LON; nhanh o cua so
+ * tron trao thang cho toi khi co nhanh cua no.
  */
 describe("BauTroi: thay tam trang bang hieu ung C", () => {
-  it("troi cua minh doi: trai troi cu nam duoi, troi moi mang lop dang loang, co lop loang", () => {
+  it("troi cua minh doi: trai troi cu nam duoi, troi moi mang lop dang loang, co lop loang", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(null, MINH);
     rerender(<BauTroi tenKia="Linh" kia={null} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
 
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     // Dem theo [data-k]: moi bau troi that mang no.
@@ -764,7 +776,7 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * suy "mat nao dang lon" thi o che do hai troi no luon tra ve "mat minh dang bi cat", va lan loang se chay nham vao
    * o cua so du nguoi xem dang nhin chinh troi cua ho to het dai.
    */
-  it("da doi cho nen troi cua minh la troi lon: loang chay tren dai lon", () => {
+  it("da doi cho nen troi cua minh la troi lon: loang chay tren dai lon", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(KIA, MINH);
     fireEvent.pointerDown(screen.getByRole("button", { name: "Xem trời của bạn" }), { button: 0, isPrimary: true });
@@ -772,6 +784,8 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     vi.advanceTimersByTime(SONG_HET);
 
     rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     expect(dai.querySelector(".troi--dang-loang")?.getAttribute("data-mat")).toBe("minh");
     const cu = dai.querySelector(".troi--cu") as HTMLElement;
@@ -801,10 +815,12 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * Yeu cau diem 20 cua chu du an va spec muc 3.4: "loang chay tren dung mat dang mang troi cua nguoi vua tha - dai
    * lon neu troi cua ho dang la troi lon, o cua so tron neu no dang o o". Truoc task nay nhanh o cua so trao thang.
    */
-  it("troi cua minh dang o o cua so: hai o kinh xep chong, loang chay trong o kinh moi", () => {
+  it("troi cua minh dang o o cua so: hai o kinh xep chong, loang chay trong o kinh moi", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(KIA, MINH);
     rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
 
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     // O cua so cua mat "kia" la noi troi cua nguoi xem dang thu nho lai.
@@ -836,10 +852,12 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * khoa dung chung. Khong co khoa thi mot cu cham giua lan loang bat mot vong song doc tren mot o kinh sap bi go, va
    * viec dau tien vong song lam la huy sach so hoat hinh - tuc dong bang may chuc vet nuoc dang loang do.
    */
-  it("cham o cua so giua lan loang: khong vong song nao, hai bau troi giu nguyen cho; tan roi thi cham lai duoc", () => {
+  it("cham o cua so giua lan loang: khong vong song nao, hai bau troi giu nguyen cho; tan roi thi cham lai duoc", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(KIA, MINH);
     rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     // Phan quyet M3: chung minh lan loang DANG chay that, neu khong ca bai chi la mot cu cham vao dai troi dung yen.
     expect(lopLoang(dai).querySelectorAll(".giot").length).toBeGreaterThan(0);
@@ -862,10 +880,12 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * dep cua lan loang, nen neu khong go tay thi hoat hinh dung het ma lop vet nuoc, dau "dang loang" va trai troi cu
    * con nam lai trong cay toi tan lan thay tam trang sau - mot bau troi khong nen, phu mot lop nuoc dong cung.
    */
-  it("nguoi kia tha tam trang giua lan loang tren dai lon: go sach lop loang, dau dang loang va trai troi cu", () => {
+  it("nguoi kia tha tam trang giua lan loang tren dai lon: go sach lop loang, dau dang loang va trai troi cu", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(null, MINH);
     rerender(<BauTroi tenKia="Linh" kia={null} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     // Phan quyet M3: chung minh lan loang DANG chay that truoc khi kiem viec don no.
     expect(lopLoang(dai).querySelectorAll(".giot").length).toBeGreaterThan(0);
@@ -887,10 +907,12 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * trang thai ben React: `cu` khong bao gio duoc tra ve null, va ngay khi nguoi kia tha lai, o cua so moc ra mot o
    * kinh cu ma khong lan loang nao con chay de phu len no.
    */
-  it("nguoi kia thu tam trang giua lan loang trong o cua so: khong de lai o kinh cu nao khi ho tha lai", () => {
+  it("nguoi kia thu tam trang giua lan loang trong o cua so: khong de lai o kinh cu nao khi ho tha lai", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(KIA, MINH);
     rerender(<BauTroi tenKia="Linh" kia={KIA} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     const oCu = dai.querySelector(".troi[data-mat=\"kia\"] .cua-so__o") as HTMLElement;
     expect(lopLoang(oCu).querySelectorAll(".giot").length).toBeGreaterThan(0);
@@ -923,19 +945,21 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
     vi.unstubAllGlobals();
   });
 
-  it("khung chua do duoc (be rong 0): trao thang ngay, khong ket lai trai troi cu, khong canh bao nao", () => {
+  it("khung chua do duoc (be rong 0): trao thang ngay, khong ket lai trai troi cu, khong canh bao nao", async () => {
     vi.useFakeTimers();
     Object.defineProperty(HTMLElement.prototype, "clientWidth", { value: 0, configurable: true });
     const loi = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { container, rerender } = ve(null, MINH);
     rerender(<BauTroi tenKia="Linh" kia={null} minh={MINH_MOI} />);
+    // Loang chay trong microtask (phuong an (b)): cho nhanh thoat som don xong roi moi khang dinh.
+    await choLoang();
 
     const dai = container.querySelector(".troi-dai") as HTMLElement;
     expect(dai.querySelector(".loang")).toBeNull();
     expect(dai.querySelectorAll(".troi[data-k]")).toHaveLength(1);
     expect(dai.querySelector(".troi--dang-loang")).toBeNull();
-    // O nhanh nay loangTroi goi `xong` DONG BO ngay trong layout effect: goi flushSync tu trong mot lifecycle thi React
-    // in canh bao, ma dau ra kiem thu phai sach (phat hien F10).
+    // O nhanh nay loangTroi goi `xong` ngay trong microtask cua no (phuong an (b)), khong con trong layout effect:
+    // goi flushSync tu trong mot lifecycle thi React in canh bao, ma dau ra kiem thu phai sach (phat hien F10).
     expect(loi).not.toHaveBeenCalled();
     loi.mockRestore();
   });
@@ -945,7 +969,7 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
    * phai moc dinh danh cua mot lan tha. Spec bo sung B5 them: gio tha cung khong phai - troi tam cua trinh duyet va troi
    * may chu co the lech mot phut ma van la mot lan tha. Chi kieu troi hay loi nhan doi moi la thay tam trang.
    */
-  it("chi chu gio tha doi (qua nua dem, hay tha lai y nguyen tam trang dang giu o phut khac): khong loang, chu doi tai cho", () => {
+  it("chi chu gio tha doi (qua nua dem, hay tha lai y nguyen tam trang dang giu o phut khac): khong loang, chu doi tai cho", async () => {
     vi.useFakeTimers();
     const { container, rerender } = ve(null, MINH);
     rerender(<BauTroi tenKia="Linh" kia={null} minh={{ ...MINH, tha: "Thả lúc 08:15 hôm qua" }} />);
@@ -959,6 +983,8 @@ describe("BauTroi: thay tam trang bang hieu ung C", () => {
 
     // Doi loi nhan (cung kieu troi) thi la thay tam trang: co loang.
     rerender(<BauTroi tenKia="Linh" kia={null} minh={{ ...MINH, note: "Trời đẹp.", tha: "Thả lúc 09:05", gio: "09:05" }} />);
+    // Loang chay trong microtask (phuong an (b)): cho vet nuoc duoc dung xong roi moi khang dinh.
+    await choLoang();
     expect(lopLoang(container).querySelectorAll(".giot").length).toBeGreaterThan(0);
     vi.advanceTimersByTime(LOANG_HET_MS + 10);
     expect(container.querySelector(".troi--cu")).toBeNull();
@@ -1042,9 +1068,12 @@ describe("BauTroi: troi tam cua lan tha", () => {
     vi.advanceTimersByTime(LOANG_HET_MS + 10);
   });
 
-  it("may chu ve lai dung tam trang do voi gio lech mot phut: khong loang lan hai, chu gio doi tai cho, troi tam duoc go", () => {
+  it("may chu ve lai dung tam trang do voi gio lech mot phut: khong loang lan hai, chu gio doi tai cho, troi tam duoc go", async () => {
     vi.useFakeTimers();
     const { container, rerender } = render(veTam(MINH, MINH_MOI));
+    // Loang o lan mount chay trong microtask (phuong an (b)): cho hen don dep duoc dat roi moi tua gio, neu khong
+    // hen chua tung ton tai va trai troi cu con nam lai.
+    await choLoang();
     vi.advanceTimersByTime(LOANG_HET_MS + 10);
     const mayChu: TroiHien = { ...MINH_MOI, tha: "Thả lúc 09:01", gio: "09:01" };
     rerender(veTam(mayChu, MINH_MOI));
