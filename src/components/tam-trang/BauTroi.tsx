@@ -398,24 +398,31 @@ export function BauTroi({ tenKia, kia, minh: minhMay }: { tenKia: string; kia: T
       setCu(null);
       return;
     }
-    // O nhung nhanh loangTroi bo qua lan loang (giam chuyen dong, khung chua do duoc), `xong` chay DONG BO ngay tai
-    // day: goi flushSync tu trong mot lifecycle thi React in canh bao, ma luc do cung khong co khung hinh nao de giu.
-    let dongBo = true;
-    loangTroi(w, mat, () => {
-      goDauLoang(w);
-      // flushSync de React go trai troi cu NGAY trong luot nay: de vong ve lai binh thuong thi giua luc go lop loang
-      // va luc go troi cu se lot mot khung hinh co ca hai.
-      if (dongBo) setCu(null);
-      else flushSync(() => setCu(null));
+    // Hoan loangTroi sang microtask (de xuat loang-toi :846, phuong an (b)): lop `.troi--dang-loang` da duoc
+    // matLoang them DONG BO o tren, nen callback cua MutationObserver (xep hang ngay luc them lop) chay TRUOC
+    // microtask nay (hang doi microtask chay theo FIFO, truoc cac buoc ve), con viec nang dung vet nuoc cua
+    // loangTroi chay SAU. Nhu vay moc loang quan sat duoc khong con doi viec nang nua. Microtask chay truoc lan
+    // ve dau tien nen khung hinh dau tien van la khung hinh co vet nuoc.
+    // `xong` gio luon chay ngoai layout effect (trong microtask, hoac tu hen don dep sau do) nen luon dung
+    // flushSync: goi flushSync tu trong mot lifecycle thi React in canh bao, ma luc do cung khong co khung hinh
+    // nao de giu.
+    queueMicrotask(() => {
+      loangTroi(w, mat, () => {
+        goDauLoang(w);
+        // flushSync de React go trai troi cu NGAY trong luot nay: de vong ve lai binh thuong thi giua luc go lop loang
+        // va luc go troi cu se lot mot khung hinh co ca hai.
+        flushSync(() => setCu(null));
+      });
+      /*
+       * Bao cho hop tha biet lan loang vua bat dau - SAU khi loangTroi dung xong vet nuoc va chay hoat hinh, tuc
+       * dung luc lan loang quan sat duoc (MutationObserver chi ghi nhan sau khi viec dong bo nay xong): hen thu
+       * hop theo dung moc nay thi hop thu dung luc loang xong. Phat truoc loangTroi thi hen chay som hon moc
+       * quan sat duoc ca thoi gian dung vet (luc tai cao hon 150ms), hop thu som hon loang xong. Dispatch phai
+       * o CHUNG microtask voi loangTroi, neu khong hen lai chay som hon moc quan sat duoc dung thoi gian dung
+       * vet.
+       */
+      globalThis.dispatchEvent(new CustomEvent(SU_KIEN_LOANG_BAT_DAU));
     });
-    dongBo = false;
-    /*
-     * Bao cho hop tha biet lan loang vua bat dau - SAU khi loangTroi dung xong vet nuoc va chay hoat hinh, tuc dung
-     * luc lan loang quan sat duoc (MutationObserver chi ghi nhan sau khi viec dong bo nay xong): hen thu hop theo
-     * dung moc nay thi hop thu dung luc loang xong. Phat truoc loangTroi thi hen chay som hon moc quan sat duoc ca
-     * thoi gian dung vet (luc tai cao hon 150ms), hop thu som hon loang xong.
-     */
-    globalThis.dispatchEvent(new CustomEvent(SU_KIEN_LOANG_BAT_DAU));
   }, [cu]);
 
   // Roi trang giua luc dang loang: huy sach hen gio va hoat hinh cua dai troi. ganSong chi gan khi ca hai cung giu tam
