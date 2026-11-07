@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { actionKhoangLang } from "@/app/actions/feed";
+import { CHUA_LUU_KHOANG_LANG } from "@/app/actions/messages";
 
 /**
  * Muc "Khoang Lang" o Cai dat (11/06): bat thi giao dien cua RIENG nguoi bat chi hien noi dung cua chinh minh,
@@ -37,10 +38,17 @@ export function CaiDatKhoangLang({ an }: { an: boolean }) {
             setDaBat(bat);
             setLoi(null);
             batDau(async () => {
-              const r = await actionKhoangLang(bat);
-              if ("error" in r) {
+              try {
+                const r = await actionKhoangLang(bat);
+                if ("error" in r) {
+                  setDaBat(!bat);
+                  setLoi(r.error);
+                }
+              } catch {
+                // Mat mang thi action nem loi thay vi tra {error}: cung hoan nguyen
+                // va noi ra loi, khong de loi vang len error boundary lam sap trang.
                 setDaBat(!bat);
-                setLoi(r.error);
+                setLoi(CHUA_LUU_KHOANG_LANG);
               }
             });
           }}
