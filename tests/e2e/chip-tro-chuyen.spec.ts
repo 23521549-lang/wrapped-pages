@@ -54,6 +54,11 @@ test.afterEach(async () => {
 
 test("hoi Chip: tra loi hien, tai lai van con, nguoi kia khong thay; ngu canh co ten minh va nguoi kia", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
+  // Chip di chuyen se lam nut khong on dinh, bai kiem tro chuyen khong do chuyen dong: dung yen bang giam chuyen dong.
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await b.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
+  await b.goto("/ke-sach");
   await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
   const to = a.getByRole("region", { name: "Chíp", exact: true });
   await expect(to).toContainText("Đang thức");
@@ -77,6 +82,10 @@ test("hoi Chip: tra loi hien, tai lai van con, nguoi kia khong thay; ngu canh co
 
 test("het han muc ngay: Chip di ngu cho ca hai, o nhap tat, kho van mo duoc", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await b.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
+  await b.goto("/ke-sach");
   await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
   const to = a.getByRole("region", { name: "Chíp", exact: true });
   await to.getByLabel("Nói với Chíp").fill("Chíp ngủ đi");
@@ -99,6 +108,7 @@ test("het han muc ngay: Chip di ngu cho ca hai, o nhap tat, kho van mo duoc", as
 
 test("vang ba ngay quay lai: Chip mung ve va tom tat viec nguoi kia lam, kem nut Xem ngay", async ({ browser }) => {
   const { b } = await haiNguoiDaVao(browser);
+  await b.emulateMedia({ reducedMotion: "reduce" });
   await choLanCuoiThay("Linh");
   await datLanCuoiThay("Linh", new Date(Date.now() - 3 * 86_400_000 - 60_000));
   await ghiThu("Mạnh", "2026-09", "Gửi Linh tháng Chín.");
@@ -117,6 +127,8 @@ test("vang ba ngay quay lai: Chip mung ve va tom tat viec nguoi kia lam, kem nut
 
 test("thu nho nho theo trinh duyet; tat Chip trong Cai dat thi khong ngoi goc o trang nao", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
   await a.getByRole("button", { name: "Chíp, mở trò chuyện" }).click();
   await a.getByRole("button", { name: "Thu nhỏ Chíp" }).click();
   await expect(a.locator(".linh-vat")).toHaveClass(/linh-vat--thu-nho/);
@@ -136,6 +148,8 @@ test("thu nho nho theo trinh duyet; tat Chip trong Cai dat thi khong ngoi goc o 
 
 test("to tro chuyen va kho mo: khong tran ngang, vung bam 44px o be rong cam ung", async ({ browser }) => {
   const { a } = await haiNguoiDaVao(browser);
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
   for (const w of BE_RONG) {
     await a.setViewportSize({ width: w, height: 800 });
     await a.goto("/ke-sach");
