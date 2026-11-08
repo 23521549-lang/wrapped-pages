@@ -420,6 +420,8 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .o-chon input:disabled{ cursor: progress; }
 .the-chon:has(input:disabled){ opacity: .55; cursor: not-allowed; }
 .the-chon__t{ font-weight: 600; line-height: 1.4; }
+/* Anh xem truoc hinh dang Chip trong muc Cai dat: 44px, can giua theo chu. */
+.the-chon__anh{ width: 44px; height: 44px; vertical-align: middle; margin-right: .5rem; }
 .the-chon:has(input:checked) .the-chon__t{ color: var(--blue-ink); }
 .the-chon__x{ grid-column: 2; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); }
 

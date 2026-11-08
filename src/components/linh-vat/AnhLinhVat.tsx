@@ -1,11 +1,12 @@
-import { CAM_XUC, CHIP, type LoaiCamXuc } from "@/lib/cam-xuc";
+import { CAM_XUC, DANG_CHIP_MAP, type DangChip, type LoaiCamXuc } from "@/lib/cam-xuc";
 
 /**
  * Anh mot linh vat (loai null la Chip): WebP dong o che do thuong, khung dau tinh khi nguoi dung xin giam chuyen dong,
- * chon bang the picture nen khong can JS. tinh = true thi luon la khung tinh (Chip dang ngu).
+ * chon bang the picture nen khong can JS. tinh = true thi luon la khung tinh (Chip dang ngu). Khi loai null thi hien
+ * dang Chip da chon (mac dinh ga con); khi mang cam xuc thi hien thu Fluent nhu cu.
  */
-export function AnhLinhVat({ loai, className, tinh = false }: { loai: LoaiCamXuc | null; className: string; tinh?: boolean }) {
-  const lv = loai === null ? CHIP : CAM_XUC[loai];
+export function AnhLinhVat({ loai, dang = "ga-con", className, tinh = false }: { loai: LoaiCamXuc | null; dang?: DangChip; className: string; tinh?: boolean }) {
+  const lv = loai === null ? DANG_CHIP_MAP[dang] : CAM_XUC[loai];
   return (
     <picture className={className}>
       <source srcSet={lv.anhTinh} media="(prefers-reduced-motion: reduce)" />
