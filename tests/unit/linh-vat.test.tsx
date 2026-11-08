@@ -25,7 +25,7 @@ const { actionThaCamXuc, actionCamXucChoToi, actionDaXemCamXuc, actionChaoChip, 
 vi.mock("@/app/actions/cam-xuc", () => ({ actionThaCamXuc, actionCamXucChoToi, actionDaXemCamXuc }));
 vi.mock("@/app/actions/chip", () => ({ actionChaoChip, actionDocChip, actionHoiChip }));
 
-const THUC: TrangThaiChip = { an: false, tuNoi: true, nguDen: null, coKhoa: true };
+const THUC: TrangThaiChip = { an: false, tuNoi: true, nguDen: null, coKhoa: true, dang: "ga-con" };
 
 const doi = () => act(async () => {});
 const ID1 = "11111111-1111-4111-8111-111111111111";

@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { db } from "@/server/db";
+import { laDangChip } from "@/lib/cam-xuc";
 import {
   chaoChip, datCaiDatChip, docTroChuyen, hoiChip, trangThaiChip, xoaTroChuyen, type LoiChao, type TinChip, type TrangThaiChip,
 } from "@/server/chip/tro-chuyen";
@@ -36,13 +37,14 @@ export async function actionChaoChip(): Promise<LoiChao | null> {
   return chaoChip(db, me.accountId, me.nickname, me.partnerNickname, new Date(), me.khoangLang);
 }
 
-/** Cai dat Chip cua nguoi dang nhap (hien Chip, tu noi); lam moi trang de moi cho thay ngay. */
-export async function actionCaiDatChip(dat: { an?: unknown; tuNoi?: unknown }): Promise<void> {
+/** Cai dat Chip cua nguoi dang nhap (hien Chip, tu noi, dang nao); lam moi trang de moi cho thay ngay. */
+export async function actionCaiDatChip(dat: { an?: unknown; tuNoi?: unknown; dang?: unknown }): Promise<void> {
   const me = await readMe();
   if (!me) return;
   await datCaiDatChip(db, me.accountId, {
     an: typeof dat.an === "boolean" ? dat.an : undefined,
     tuNoi: typeof dat.tuNoi === "boolean" ? dat.tuNoi : undefined,
+    dang: laDangChip(dat.dang) ? dat.dang : undefined,
   });
   refresh();
 }

@@ -10,6 +10,7 @@ import { docChiTietThu, docChiTietCamXuc } from "@/lib/feed/detail";
 import { feedLine } from "@/lib/feed/line";
 import type { FeedItem } from "@/lib/feed/types";
 import { CAM_XUC } from "@/lib/cam-xuc";
+import type { DangChip } from "@/lib/cam-xuc";
 import { phanThang, tenThang } from "@/lib/tam-trang/lich";
 import { TROI } from "@/lib/tam-trang/troi";
 import { dayKey } from "@/lib/when";
@@ -25,7 +26,7 @@ import { dungNguCanh, lamSachTrang, lamSachViec } from "./ngu-canh";
 export type TinChip = { id: string; vai: "nguoi" | "chip"; noiDung: string; luc: Date };
 
 /** Trang thai Chip cua mot nguoi luc ve trang. */
-export type TrangThaiChip = { an: boolean; tuNoi: boolean; nguDen: Date | null; coKhoa: boolean };
+export type TrangThaiChip = { an: boolean; tuNoi: boolean; nguDen: Date | null; coKhoa: boolean; dang: DangChip };
 
 const COT_TIN = { id: chipTin.id, vai: chipTin.vai, noiDung: chipTin.noiDung, luc: chipTin.luc };
 
@@ -156,17 +157,18 @@ async function ghiThayNgu(db: AnyDb, accountId: string, now: Date): Promise<void
 /** Trang thai Chip cua nguoi xem: tat, tu noi, dang ngu toi dau, da co chia khoa AI chua. */
 export async function trangThaiChip(db: AnyDb, viewerId: string, now: Date = new Date(), mt: Pick<MoiTruongGoi, "khoa"> = moiTruongThat()): Promise<TrangThaiChip> {
   const [[r], den] = await Promise.all([
-    db.select({ an: chipTrangThai.an, tuNoi: chipTrangThai.tuNoi }).from(chipTrangThai).where(eq(chipTrangThai.accountId, viewerId)),
+    db.select({ an: chipTrangThai.an, tuNoi: chipTrangThai.tuNoi, dang: chipTrangThai.dang }).from(chipTrangThai).where(eq(chipTrangThai.accountId, viewerId)),
     nguDen(db, now),
   ]);
-  return { an: r?.an ?? false, tuNoi: r?.tuNoi ?? true, nguDen: den, coKhoa: mt.khoa !== undefined };
+  return { an: r?.an ?? false, tuNoi: r?.tuNoi ?? true, nguDen: den, coKhoa: mt.khoa !== undefined, dang: r?.dang ?? "ga-con" };
 }
 
-/** Doi cai dat Chip cua nguoi xem (Cai dat): hien hay tat, tu noi hay khong. */
-export async function datCaiDatChip(db: AnyDb, viewerId: string, dat: { an?: boolean; tuNoi?: boolean }): Promise<void> {
-  const set: { an?: boolean; tuNoi?: boolean } = {};
+/** Doi cai dat Chip cua nguoi xem (Cai dat): hien hay tat, tu noi hay khong, dang nao. */
+export async function datCaiDatChip(db: AnyDb, viewerId: string, dat: { an?: boolean; tuNoi?: boolean; dang?: DangChip }): Promise<void> {
+  const set: { an?: boolean; tuNoi?: boolean; dang?: DangChip } = {};
   if (typeof dat.an === "boolean") set.an = dat.an;
   if (typeof dat.tuNoi === "boolean") set.tuNoi = dat.tuNoi;
+  if (dat.dang !== undefined) set.dang = dat.dang;
   if (Object.keys(set).length === 0) return;
   await db.insert(chipTrangThai).values({ accountId: viewerId, ...set }).onConflictDoUpdate({ target: chipTrangThai.accountId, set });
 }

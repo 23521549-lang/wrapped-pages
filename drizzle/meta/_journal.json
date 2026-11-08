@@ -162,6 +162,13 @@
       "when": 1793952075354,
       "tag": "0022_khoang-lang",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794146770145,
+      "tag": "0023_dang-chip",
+      "breakpoints": true
     }
   ]
 }

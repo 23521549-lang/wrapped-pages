@@ -37,6 +37,22 @@ const anh = (ten: string): Pick<LinhVat, "anh" | "anhTinh"> => ({ anh: `/linh-va
 /** Linh vat mac dinh: Chip, ga con. */
 export const CHIP: LinhVat = { ten: "Chíp", ...anh("chip") };
 
+/** Ba dang Chíp chon duoc o Cai dat (ga con la mac dinh, giu hanh vi dang chay). */
+export const DANG_CHIP = ["ga-con", "blob", "dai-bang"] as const;
+export type DangChip = (typeof DANG_CHIP)[number];
+
+/** Dien mao Chíp luc ranh theo dang da chon; muc ga con tai dung dung CHIP hien tai. */
+export const DANG_CHIP_MAP: Record<DangChip, LinhVat> = {
+  "ga-con": CHIP,
+  blob: { ten: "Blob xanh", ...anh("blob") },
+  "dai-bang": { ten: "Đại bàng", ...anh("daibang") },
+};
+
+/** Chuoi la mot trong ba dang khong. */
+export function laDangChip(x: unknown): x is DangChip {
+  return typeof x === "string" && (DANG_CHIP as readonly string[]).includes(x);
+}
+
 export const CAM_XUC: Record<LoaiCamXuc, CamXuc> = {
   yeu: { camXuc: "Yêu", ten: "Gấu bông", cau: "đang cảm thấy yêu bạn", ...anh("gau-bong") },
   nho: { camXuc: "Nhớ", ten: "Gấu túi", cau: "đang nhớ bạn", ...anh("gau-tui") },

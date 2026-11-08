@@ -6,7 +6,7 @@ import {
 // `import type` bi xoa hoan toan luc bien dich nen khong sao.
 import type { BookMode, CoverKey } from "@/lib/book";
 import type { DocJson } from "@/lib/doc/types";
-import type { LoaiCamXuc } from "@/lib/cam-xuc";
+import type { DangChip, LoaiCamXuc } from "@/lib/cam-xuc";
 import type { FeedKind } from "@/lib/feed/types";
 import type { MediaKind, MediaMime } from "@/lib/media/kinds";
 import type { SealKind } from "@/lib/seal/types";
@@ -568,7 +568,10 @@ export const chipTrangThai = pgTable("chip_trang_thai", {
   an: boolean("an").notNull().default(false),
   tuNoi: boolean("tu_noi").notNull().default(true),
   thayNguLuc: timestamp("thay_ngu_luc", { withTimezone: true }),
-});
+  dang: text("dang").$type<DangChip>().notNull().default("ga-con"),
+}, (t) => ({
+  dangValue: check("chip_trang_thai_dang", sql`${t.dang} in ('ga-con', 'blob', 'dai-bang')`),
+}));
 
 /**
  * Chip dang ngu toi luc nao (5e): het han muc mien phi cua dich vu AI trong ngay. Mot dong duy nhat (khoa "groq") vi hai

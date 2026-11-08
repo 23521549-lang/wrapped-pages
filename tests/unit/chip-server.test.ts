@@ -250,11 +250,20 @@ describe("chaoChip va cai dat", () => {
 
   it("tat tu noi hay tat Chip: im; trang thai doc lai dung", async () => {
     const s = await seedHai();
-    expect(await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: undefined })).toEqual({ an: false, tuNoi: true, nguDen: null, coKhoa: false });
+    expect(await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: undefined })).toEqual({ an: false, tuNoi: true, nguDen: null, coKhoa: false, dang: "ga-con" });
     await datCaiDatChip(s.db, s.seat2.id, { tuNoi: false });
     expect(await chaoChip(s.db, s.seat2.id, "Mạnh", "Linh", NOW)).toBeNull();
     await datCaiDatChip(s.db, s.seat2.id, { tuNoi: true, an: true });
-    expect(await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: "k" })).toEqual({ an: true, tuNoi: true, nguDen: null, coKhoa: true });
+    expect(await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: "k" })).toEqual({ an: true, tuNoi: true, nguDen: null, coKhoa: true, dang: "ga-con" });
     expect(await s.db.select({ an: chipTrangThai.an }).from(chipTrangThai)).toEqual([{ an: true }]);
+  });
+
+  it("doi dang Chip: mac dinh ga con, doi sang dai bang roi blob thi doc lai dung", async () => {
+    const s = await seedHai();
+    expect((await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: "k" })).dang).toBe("ga-con");
+    await datCaiDatChip(s.db, s.seat2.id, { dang: "dai-bang" });
+    expect((await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: "k" })).dang).toBe("dai-bang");
+    await datCaiDatChip(s.db, s.seat2.id, { dang: "blob" });
+    expect((await trangThaiChip(s.db, s.seat2.id, NOW, { khoa: "k" })).dang).toBe("blob");
   });
 });
