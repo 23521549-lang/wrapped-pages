@@ -206,8 +206,18 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     sau(8000, tuDong);
   });
 
+  // Luc mo trang: chao truoc (neu co), khong co loi chao thi hoi chu dong (quet viec moi / trang dang mo).
   useEffect(() => {
     let con = true;
+    // Quet chu dong chay doc lap voi loi chao: chi bo qua khi co loi chao that (de khoi ton mot cuoc goi Groq vo
+    // ich, vi bong bong chao thang va khoa noi 10 phut se chan bong bong chu dong). Chao reject (vd mang/server
+    // chap chon duoi tai) KHONG duoc chan quet: truoc day duong nay chi goi chao(null) roi dung, nen quet khong
+    // bao gio chay va khong co cuoc goi Groq nao.
+    const quet = () => {
+      void actionChuDongChip({ kieu: "quet", duongDan: globalThis.location.pathname }).then((chu) => {
+        if (con) chuDong(chu);
+      }, () => {});
+    };
     void actionChaoChip().then((loi) => {
       if (!con) return;
       if (loi !== null) {
@@ -215,11 +225,10 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
         return;
       }
       // Khong co loi chao thi hoi chu dong (quet viec moi / trang dang mo); loi chao thang khi ca hai cung toi.
-      void actionChuDongChip({ kieu: "quet", duongDan: globalThis.location.pathname }).then((chu) => {
-        if (con) chuDong(chu);
-      }, () => {});
+      quet();
     }, () => {
       if (con) chao(null);
+      if (con) quet();
     });
     return () => {
       con = false;
