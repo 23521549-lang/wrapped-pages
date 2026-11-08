@@ -41,9 +41,9 @@ export const CHIP: LinhVat = { ten: "Chíp", ...anh("chip") };
 export const DANG_CHIP = ["ga-con", "blob", "dai-bang"] as const;
 export type DangChip = (typeof DANG_CHIP)[number];
 
-/** Dien mao Chíp luc ranh theo dang da chon; muc ga con tai dung dung CHIP hien tai. */
+/** Dien mao Chíp luc ranh theo dang da chon; muc ga con tai dung anh cua CHIP hien tai, chi doi ten hien thi thanh "Gà con". */
 export const DANG_CHIP_MAP: Record<DangChip, LinhVat> = {
-  "ga-con": CHIP,
+  "ga-con": { ...CHIP, ten: "Gà con" },
   blob: { ten: "Blob xanh", ...anh("blob") },
   "dai-bang": { ten: "Đại bàng", ...anh("daibang") },
 };
