@@ -635,3 +635,17 @@ export async function datLanCuoiThay(ai: string, luc: Date): Promise<void> {
     await sql.end();
   }
 }
+
+/** Cho lan chaoChip dau (sau hydrat) ghi xong lan_cuoi_thay cua nguoi co biet danh ai. Chi doc. */
+export async function choLanCuoiThay(ai: string): Promise<void> {
+  await expect.poll(async () => {
+    const sql = postgres(e2eUrls().e2eUrl, { max: 1 });
+    try {
+      const rows = await sql<{ lan_cuoi_thay: Date | null }[]>`
+        select c.lan_cuoi_thay from chip_trang_thai c join accounts a on a.id = c.account_id where a.nickname = ${ai}`;
+      return rows[0]?.lan_cuoi_thay ?? null;
+    } finally {
+      await sql.end();
+    }
+  }, { timeout: 15_000 }).not.toBeNull();
+}
