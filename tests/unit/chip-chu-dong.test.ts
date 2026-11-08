@@ -172,6 +172,9 @@ const traLoi = (chu: string) => () => new Response(JSON.stringify({ choices: [{ 
 const het = (giay: number | null) => () => new Response("{}", { status: 429, headers: giay === null ? {} : { "retry-after": String(giay) } });
 
 describe("chuDongChip (may chu)", () => {
+  // Timeout rieng 60 giay cho test dau tien: no ganh chi phi khoi tao PGlite + chay toan bo migration (them 0023)
+  // mot lan duy nhat cho ca file; duoi tai may cao chi phi nay tung do toi 31 giay, vuot 15 giay mac dinh.
+  // Cac test sau chi TRUNCATE nen chay nhanh (<2 giay); day la timeout setup, khong phai assertion.
   it("truc tiep sau tha tam trang: tra loi, luu tin chip, cap nhat moc + ma", async () => {
     const s = await seedHai();
     await setMood(s.db, s.seat2.id, "mua-phun", "Nhớ cậu một chút thôi.", NOW);
@@ -187,7 +190,7 @@ describe("chuDongChip (may chu)", () => {
     const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
     expect(hang.chuDongLuc?.getTime()).toBe(NOW.getTime());
     expect(hang.chuDongMa).not.toBeNull();
-  });
+  }, 60_000);
 
   it("429 ca hai mo hinh: im lang, khong ghi ngu, khong luu tin, khong doi moc", async () => {
     const s = await seedHai();
