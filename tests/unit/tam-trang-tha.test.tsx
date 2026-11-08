@@ -11,16 +11,19 @@ import { SU_KIEN_LOANG_BAT_DAU, TroiTam, useTroiTam } from "@/components/tam-tra
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { CHON_TROI, NHAN_DAI, NOTE_MAX } from "@/lib/tam-trang/input";
 
-const { actionSetMood, actionWithdrawMood } = vi.hoisted(() => ({
+const { actionSetMood, actionWithdrawMood, actionChuDongChip } = vi.hoisted(() => ({
   actionSetMood: vi.fn(async (): Promise<{ error: string } | { ok: true }> => ({ ok: true })),
   actionWithdrawMood: vi.fn(async (): Promise<{ error: string } | { ok: true }> => ({ ok: true })),
+  actionChuDongChip: vi.fn(async (): Promise<null> => null),
 }));
 vi.mock("@/app/actions/mood", () => ({ actionSetMood, actionWithdrawMood }));
+vi.mock("@/app/actions/chip", () => ({ actionChuDongChip }));
 
 afterEach(() => {
   cleanup();
   actionSetMood.mockClear();
   actionWithdrawMood.mockClear();
+  actionChuDongChip.mockClear();
 });
 
 const ve = (dangGiu: DangGiu | null = null) =>

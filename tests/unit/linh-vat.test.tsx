@@ -14,16 +14,17 @@ import type { TrangThaiChip } from "@/server/chip/tro-chuyen";
  * dien, giam chuyen dong thi khong co lop hieu ung; Chip tu chao, thu nho, tat.
  */
 
-const { actionThaCamXuc, actionCamXucChoToi, actionDaXemCamXuc, actionChaoChip, actionDocChip, actionHoiChip } = vi.hoisted(() => ({
+const { actionThaCamXuc, actionCamXucChoToi, actionDaXemCamXuc, actionChaoChip, actionDocChip, actionHoiChip, actionChuDongChip } = vi.hoisted(() => ({
   actionThaCamXuc: vi.fn(),
   actionCamXucChoToi: vi.fn(),
   actionDaXemCamXuc: vi.fn(),
   actionChaoChip: vi.fn(),
   actionDocChip: vi.fn(),
   actionHoiChip: vi.fn(),
+  actionChuDongChip: vi.fn(async (): Promise<null> => null),
 }));
 vi.mock("@/app/actions/cam-xuc", () => ({ actionThaCamXuc, actionCamXucChoToi, actionDaXemCamXuc }));
-vi.mock("@/app/actions/chip", () => ({ actionChaoChip, actionDocChip, actionHoiChip }));
+vi.mock("@/app/actions/chip", () => ({ actionChaoChip, actionDocChip, actionHoiChip, actionChuDongChip }));
 
 const THUC: TrangThaiChip = { an: false, tuNoi: true, nguDen: null, coKhoa: true };
 
