@@ -50,6 +50,12 @@ const ghiDaDien = (id: string) => ghiLuu(KHOA_DA_DIEN, [...cacDaDien().filter((x
 
 const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const giamChuyenDong = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+
+/** Tieu diem dang trong o nhap (input / textarea / o soan noi dung): luc nay khong nen hien bong bong chu dong. */
+const dangGo = () => {
+  const el = document.activeElement;
+  return el instanceof HTMLElement && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+};
 const msToken = (ten: string, macDinh: number) => {
   const ms = msTuCss(getComputedStyle(document.documentElement).getPropertyValue(ten));
   return Number.isFinite(ms) && ms > 0 ? ms : macDinh;
@@ -185,12 +191,13 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     sau(8000, tuDong);
   });
   // Hien mot loi chu dong trong bong bong nhu loi chao: cung cooldown 10 phut, cung tat khi thu nho / tat Chip /
-  // dang dien cam xuc. Loi da luu vao lich su o may chu roi nen chi viec hien hay khong.
+  // dang dien cam xuc. Loi da luu vao lich su o may chu roi nen chi viec hien hay khong. Dang go trong o nhap thi
+  // khong hien bong bong luc nay (de khoi cat ngang luc dang viet); mo to se thay loi da luu.
   const chuDong = useEffectEvent((loi: LoiChuDong | null) => {
     if (loi === null) return;
     const nho = docLuu(KHOA_THU_NHO) === true;
     setThuNho(nho);
-    if (nho || trangThai.an || dang !== null) return;
+    if (nho || trangThai.an || dang !== null || dangGo()) return;
     const luc = docLuu(KHOA_NOI_LUC);
     if (typeof luc === "number" && Date.now() - luc < CACH_TU_NOI_MS) return;
     ghiLuu(KHOA_NOI_LUC, Date.now());
