@@ -69,24 +69,53 @@ export function TongKetThang({ thang, nay, tenKia, tenMinh, khoangLang = false }
   const [mo, setMo] = useState<ReadonlySet<string>>(() => new Set());
   const goc = useRef<HTMLElement>(null);
 
-  // Neo #thu-YYYY-MM: dong bo voi he thong ngoai (duong dan), chi biet sau hydrate. Mo o thang do, cho luoi tha xuong xong
-  // roi moi cuon (cuon luc o con gap thi toi sai cho).
+  // Neo #thu-YYYY-MM: dong bo voi he thong ngoai (duong dan), chi biet sau hydrate. Mo o thang do, roi cuon toi
+  // cho thu KHI luoi da mo xong that su (khong phai sau mot hen gio co dinh).
   useEffect(() => {
     let hen: ReturnType<typeof setTimeout> | undefined;
+    let boNghe: (() => void) | undefined;
+    const cuon = (khoa: string) => {
+      const dich = goc.current?.querySelector(`[data-cho-thu="${khoa}"]`);
+      if (dich === null || dich === undefined) return;
+      // Chi cuon khi o thang van mo (nguoi dung co the dong o truoc khi hen gio/transition xong).
+      if (dich.closest(".thg--mo") === null) return;
+      dich.scrollIntoView({ behavior: giamChuyenDong() ? "auto" : "smooth", block: "center" });
+    };
     const theoNeo = () => {
       const khoa = MAU_NEO.exec(globalThis.location.hash)?.[1];
       if (khoa === undefined || !thang.some((t) => t.khoa === khoa)) return;
       setMo((cu) => new Set(cu).add(khoa));
-      const cho = msTuCss(getComputedStyle(document.documentElement).getPropertyValue("--dur-tha-mo"));
       clearTimeout(hen);
+      boNghe?.();
+      boNghe = undefined;
+      // Luoi .thg__mo mo bang transition grid-template-rows (320ms). Hen gio co dinh 380ms truoc day khong du
+      // duoi tai (commit React + bat dau transition tre hon dong ho hen gio), nen cuon khi o con gap roi luoi
+      // mo day textarea xuong duoi nep gap ma khong cuon lai. Gio cuon khi transition that su ket thuc
+      // (transitionend tren luoi), kem hen gio du phong neu su kien khong ban (vd giam chuyen dong tat transition).
+      const luoi = goc.current?.querySelector<HTMLElement>(`#thg-${khoa}`);
+      if (luoi !== null && luoi !== undefined) {
+        const khiXong = (e: TransitionEvent) => {
+          if (e.propertyName !== "grid-template-rows") return;
+          clearTimeout(hen);
+          luoi.removeEventListener("transitionend", khiXong);
+          boNghe = undefined;
+          cuon(khoa);
+        };
+        luoi.addEventListener("transitionend", khiXong);
+        boNghe = () => luoi.removeEventListener("transitionend", khiXong);
+      }
+      const cho = msTuCss(getComputedStyle(document.documentElement).getPropertyValue("--dur-tha-mo"));
       hen = setTimeout(() => {
-        goc.current?.querySelector(`[data-cho-thu="${khoa}"]`)?.scrollIntoView({ behavior: giamChuyenDong() ? "auto" : "smooth", block: "center" });
-      }, (Number.isFinite(cho) ? cho : 320) + 60);
+        boNghe?.();
+        boNghe = undefined;
+        cuon(khoa);
+      }, (Number.isFinite(cho) ? cho : 320) + 1000);
     };
     theoNeo();
     addEventListener("hashchange", theoNeo);
     return () => {
       clearTimeout(hen);
+      boNghe?.();
       removeEventListener("hashchange", theoNeo);
     };
   }, [thang]);

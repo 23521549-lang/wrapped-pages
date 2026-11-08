@@ -29,6 +29,20 @@ async function guiThu(noi: ReturnType<Page["locator"]>, chu: string): Promise<vo
   await noi.getByRole("group", { name: "Xác nhận gửi thư" }).getByRole("button", { name: "Gửi", exact: true }).click();
 }
 
+/** Doi cho o thu dung yen (bounding box khong doi sau 2 lan doc cach nhau 200ms), toi da 5 giay: dam bao luoi mo
+ * + cuon muot da xong han truoc khi khang dinh, thay vi khang dinh giua luc animation (luc do o co the thoang
+ * vao viewport roi lai troi ra). Khong dung scrollIntoViewIfNeeded de che race o app. */
+async function choOThuDungYen(o: ReturnType<Page["locator"]>): Promise<void> {
+  let truoc: { x: number; y: number; width: number; height: number } | null = null;
+  const den = Date.now() + 5_000;
+  while (Date.now() < den) {
+    const h = await o.boundingBox();
+    if (h !== null && truoc !== null && h.x === truoc.x && h.y === truoc.y && h.width === truoc.width && h.height === truoc.height) return;
+    truoc = h;
+    await o.page().waitForTimeout(200);
+  }
+}
+
 test("thu thang: nhac o Ke sach, viet o Lich hoa, nguoi kia mo la thu troi va tra loi; khong ai xem lai thu cua minh", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
 
@@ -46,6 +60,7 @@ test("thu thang: nhac o Ke sach, viet o Lich hoa, nguoi kia mo la thu troi va tr
   const tomA = a.getByRole("button", { name: new RegExp(`^${TEN_HOA}, ${THANG.y}`) });
   await expect(tomA).toHaveAttribute("aria-expanded", "true");
   const choA = a.locator(`[data-cho-thu="${KHOA}"]`);
+  await choOThuDungYen(choA.getByRole("textbox", { name: "Thư của bạn gửi Linh" }));
   await expect(choA.getByRole("textbox", { name: "Thư của bạn gửi Linh" })).toBeInViewport();
 
   // Viet va gui: hoi lai truoc khi gui; gui xong cho thu thanh dong cho, khong con chu nao cua thu minh.
