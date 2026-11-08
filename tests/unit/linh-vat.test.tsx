@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LinhVat } from "@/components/linh-vat/LinhVat";
 import { dienHieuUng } from "@/components/linh-vat/hieu-ung";
-import { CAM_XUC, CHIP, dongMangToi, LOAI_CAM_XUC } from "@/lib/cam-xuc";
+import { CAM_XUC, CHIP, DANG_CHIP, DANG_CHIP_MAP, dongMangToi, LOAI_CAM_XUC } from "@/lib/cam-xuc";
 import { CHO_CHIP_TRA_LOI, CHO_THA_TIEP, CHUA_THA_CAM_XUC } from "@/app/actions/messages";
 import type { TrangThaiChip } from "@/server/chip/tro-chuyen";
 
@@ -283,6 +283,29 @@ describe("Ben nhan", () => {
   });
 });
 
+describe("Dang Chip", () => {
+  for (const d of DANG_CHIP) {
+    it(`nut goc hien dung anh cua dang ${DANG_CHIP_MAP[d].ten}`, () => {
+      render(<LinhVat tenMinh="Mạnh" tenKia="Linh" hangDau={[]} trangThai={{ ...THUC, dang: d }} />);
+      expect(document.querySelector(".linh-vat__hinh img")?.getAttribute("src")).toBe(DANG_CHIP_MAP[d].anh);
+    });
+  }
+
+  it("dau to tro chuyen hien dung dang da chon", async () => {
+    render(<LinhVat tenMinh="Mạnh" tenKia="Linh" hangDau={[]} trangThai={{ ...THUC, dang: "dai-bang" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Chíp, mở trò chuyện" }));
+    await doi();
+    expect(document.querySelector(".tc__chip img")?.getAttribute("src")).toBe(DANG_CHIP_MAP["dai-bang"].anh);
+  });
+
+  it("luc mang cam xuc thi nut van hien thu Fluent, khong hien dang da chon", async () => {
+    vi.useFakeTimers();
+    render(<LinhVat tenMinh="Linh" tenKia="Mạnh" hangDau={[{ id: ID1, loai: "vui", luc: new Date() }]} trangThai={{ ...THUC, dang: "dai-bang" }} />);
+    await act(async () => vi.advanceTimersByTime(700));
+    expect(document.querySelector(".linh-vat__hinh img")?.getAttribute("src")).toBe(CAM_XUC.vui.anh);
+  });
+});
+
 describe("hieu ung va chu", () => {
   it("moi cam xuc tao hat trong lop; ham don go het va huy hen gio", () => {
     vi.useFakeTimers();
@@ -305,8 +328,8 @@ describe("hieu ung va chu", () => {
     expect(dongMangToi("Cú mèo", luc, new Date("2026-10-01T05:00:00.000Z"))).toBe("Cú mèo mang tới lúc hôm nay, 09:00");
   });
 
-  it("anh linh vat co that trong public/, du chin con va tam hat", () => {
-    for (const lv of [CHIP, ...LOAI_CAM_XUC.map((l) => CAM_XUC[l])]) {
+  it("anh linh vat co that trong public/, du muoi mot con va tam hat", () => {
+    for (const lv of [...DANG_CHIP.map((d) => DANG_CHIP_MAP[d]), ...LOAI_CAM_XUC.map((l) => CAM_XUC[l])]) {
       expect(readFileSync(`public${lv.anh}`).length, lv.anh).toBeGreaterThan(1000);
       expect(readFileSync(`public${lv.anhTinh}`).length, lv.anhTinh).toBeGreaterThan(500);
     }
