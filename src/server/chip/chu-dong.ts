@@ -120,7 +120,8 @@ export type KichHoatChuDong =
  * Chip bat chuyen truoc theo viec vua xay ra. Tra null (im lang) khi: tat Chip / tat tu noi / dang ngu / chua co khoa
  * Groq / chua het cooldown 30 phut / khong co su kien nao / xac suat 60% khong trung / Groq loi. Groq loi (het han
  * muc, loi mang, chua co khoa) KHONG ghi Chip ngu va KHONG doi moc: loi chu dong la them, khong duoc khoa ca tro
- * chuyen tra loi. Khi co loi: luu tin vai chip (de tra loi tiep duoc), cap nhat moc + ma su kien, tra cau + nut.
+ * chuyen tra loi. Khi co loi: luu tin vai chip (de tra loi tiep duoc), cap nhat ma su kien de dedup; moc cooldown
+ * 30 phut chi cap nhat khi su kien co viec that, loi T1-only (chi mo trang) thi khong dot cooldown.
  */
 export async function chuDongChip(
   db: AnyDb,
@@ -169,9 +170,13 @@ export async function chuDongChip(
   if (cau === "") return null;
   await db.insert(chipTin).values({ accountId: viewerId, vai: "chip", noiDung: cau, luc: now });
   await tiaTinChuDong(db, viewerId);
+  // T1-only (chi mo trang, khong co viec that): ghi dedup chuDongMa de khong lap lai cung T1 trong ngay, nhung
+  // KHONG cap nhat chuDongLuc, de lan quet sau khi co viec that (vd tao sach xong) van no duoc trong 30 phut.
+  const laT1 = suKien.kieu === "mo-trang";
+  const moc = laT1 ? { chuDongMa: suKien.ma } : { chuDongLuc: now, chuDongMa: suKien.ma };
   await db
     .insert(chipTrangThai)
-    .values({ accountId: viewerId, chuDongLuc: now, chuDongMa: suKien.ma })
-    .onConflictDoUpdate({ target: chipTrangThai.accountId, set: { chuDongLuc: now, chuDongMa: suKien.ma } });
+    .values({ accountId: viewerId, ...moc })
+    .onConflictDoUpdate({ target: chipTrangThai.accountId, set: moc });
   return { cau, nut: suKien.href === null ? null : { nhan: "Xem ngay", href: suKien.href } };
 }

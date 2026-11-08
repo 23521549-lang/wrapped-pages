@@ -279,6 +279,39 @@ describe("chuDongChip (may chu)", () => {
     expect(goi2[0].body.messages[0].content).toContain("đang mở trang tạo sách mới");
   });
 
+  it("quet T1-only: noi xong thi ghi ma dedup nhung khong dot cooldown 30 phut", async () => {
+    const s = await seedHai();
+    const { mt } = fetchGia(traLoi("Viết gì đó hay hay nha."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/sach/moi" }, NOW, mt, false, () => 0.1)).not.toBeNull();
+    const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
+    expect(hang.chuDongLuc).toBeNull();
+    const maT1 = chonSuKien([], { chuDongLuc: null, chuDongMa: null, khoangLang: false, duongDan: "/sach/moi", tenMinh: "Mạnh", tenKia: "Linh", now: NOW })?.ma;
+    expect(hang.chuDongMa).toBe(maT1);
+  });
+
+  it("sau loi T1, viec that trong 30 phut van no duoc (khong bi cooldown chan)", async () => {
+    const s = await seedHai();
+    const { mt } = fetchGia(traLoi("Viết gì đó hay hay nha."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/sach/moi" }, NOW, mt, false, () => 0.1)).not.toBeNull();
+    const sau10p = new Date(NOW.getTime() + 10 * 60_000);
+    await setMood(s.db, s.seat2.id, "mua-phun", null, sau10p);
+    const { mt: mt2, goi } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/ke-sach" }, sau10p, mt2, false, () => 0.1)).not.toBeNull();
+    expect(goi[0].body.messages[0].content).toContain("Mưa phùn");
+    const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
+    expect(hang.chuDongLuc?.getTime()).toBe(sau10p.getTime());
+  });
+
+  it("quet viec that: van ghi ca moc cooldown va ma dedup nhu cu", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/ke-sach" }, NOW, mt, false, () => 0.1)).not.toBeNull();
+    const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
+    expect(hang.chuDongLuc?.getTime()).toBe(NOW.getTime());
+    expect(hang.chuDongMa).not.toBeNull();
+  });
+
   it("goiGroq timeout tuy chon: fetch treo thi tra loi nhanh", async () => {
     const fetchTreo = vi.fn(((_url: string | URL | Request, init?: RequestInit) =>
       new Promise<Response>((_resolve, reject) => {
