@@ -21,6 +21,12 @@ export const CACH_HOI_MS = 3000;
 export const VANG_LAU_MS = 6 * 3600_000;
 /** Het han muc ngan hon chung nay (han muc phut) thi khong ngu, chi xin cho vai giay. */
 export const NGU_TU_MS = 10 * 60_000;
+/** Xac suat Chip bat chuyen moi khi co co hoi moi (loi chu dong "co the noi hoac khong" thanh luat may). */
+export const XAC_SUAT_CHU_DONG = 0.6;
+/** Hai loi chu dong cach nhau it nhat chung nay (may chu). */
+export const CHU_DONG_NGHI_MS = 30 * 60_000;
+/** Tran cho mot lan goi Groq de bat chuyen (ngan hon tran hoi dap 25 giay). */
+export const CHU_DONG_TIMEOUT_MS = 8000;
 
 export type KiemTin = { ok: true; noiDung: string } | { ok: false };
 
@@ -67,6 +73,20 @@ export function loiDanChip(tenMinh: string, tenKia: string, nguCanh: string, kho
     "",
     "NGỮ CẢNH (chỉ những gì người đang nói chuyện vốn thấy trên web):",
     nguCanh,
+  ].join("\n");
+}
+
+/**
+ * Loi dan he thong cho mot loi chu dong: ke thua toan bo luat cua loiDanChip (giong, do dai, bi mat, khong bia) roi
+ * them su kien vua xay ra. moTa la cau ngan mo ta su kien (vd "Manh vua tha tam trang Giong, nhan ...").
+ */
+export function loiDanChuDong(moTa: string, tenMinh: string, tenKia: string, nguCanh: string, khoangLang = false): string {
+  return [
+    loiDanChip(tenMinh, tenKia, nguCanh, khoangLang),
+    "",
+    `Sự kiện vừa xảy ra: ${moTa}.`,
+    "Hãy bắt chuyện tự nhiên bằng MỘT câu hỏi về sự kiện này; đừng kể lại sự việc như đọc tin (người dùng vừa làm nên đã biết);",
+    "1-2 câu, tối đa khoảng 60 từ; cũng có thể chỉ nói một câu quan tâm rồi thôi, không nhất thiết phải hỏi.",
   ].join("\n");
 }
 
