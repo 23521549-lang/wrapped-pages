@@ -33,6 +33,12 @@
 .linh-vat--vang-gian .linh-vat__hinh{ animation: lv-vang 560ms steps(1, end); }
 @keyframes lv-vang{ 0%{ opacity: 0; } 100%{ opacity: 1; } }
 
+/* Dang di doc canh: vo canh (xoay nhe + nhap nho) tren hinh; ap dung cho moi form vi chi dong vao hinh chung.
+   Khi mang cam xuc thi uu tien hieu ung hoa hinh, khong vo canh. */
+.linh-vat--dang-di{ will-change: transform; }
+.linh-vat--dang-di:not(.linh-vat--mang) .linh-vat__hinh{ animation: lv-vo-canh 300ms ease-in-out infinite alternate; }
+@keyframes lv-vo-canh{ from{ transform: rotate(-7deg) translateY(0); } to{ transform: rotate(7deg) translateY(-3px); } }
+
 /* ---------- Kho cam xuc: trong to tro chuyen, mo bang nut "Thả cảm xúc cho {tên}" ---------- */
 .kho-cx{ padding-top: var(--space-2xs); }
 .kho-cx__ds{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -198,6 +204,7 @@
   .linh-vat__ngu, .go span{ animation: none; }
   .linh-vat--thu-nho .linh-vat__nut{ transition: none; }
   .linh-vat--vang-treu .linh-vat__hinh, .linh-vat--vang-gian .linh-vat__hinh{ animation: none; }
+  .linh-vat--dang-di .linh-vat__hinh{ animation: none; }
 }
 @keyframes lv-mo{ from{ opacity: 0; } }
 

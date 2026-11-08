@@ -6,6 +6,7 @@ import {
   chonDiemDen,
   diemGoc,
   duongDi,
+  duongVeNha,
   ease,
   heSoTho,
   oGiuaManHinh,
@@ -154,6 +155,27 @@ describe("bezier, ease, thoiGianDi", () => {
     expect(thoiGianDi(20)).toBe(900);
     expect(thoiGianDi(160)).toBe(1000);
     expect(thoiGianDi(1600)).toBe(10000);
+  });
+});
+
+describe("duongVeNha", () => {
+  it("da o goc thi khong co doan nao", () => {
+    expect(duongVeNha({ x: 16, y: 720 }, { x: 16, y: 720 })).toEqual([]);
+  });
+
+  it("mot doan thang tu vi tri ve goc, toc do gap 8 lan (1280px/s)", () => {
+    const doan = duongVeNha({ x: 1216, y: 16 }, { x: 16, y: 720 });
+    expect(doan).toHaveLength(1);
+    expect(doan[0]).toMatchObject({ x0: 1216, y0: 16, x1: 16, y1: 720 });
+    // Dai ~1390px: 1390 / 1.28 ~ 1086ms (lon hon toi thieu 300ms).
+    expect(doan[0]?.thoiGian).toBeGreaterThan(900);
+    expect(doan[0]?.thoiGian).toBeLessThan(1200);
+  });
+
+  it("doan ngan van mat toi thieu 300ms", () => {
+    const doan = duongVeNha({ x: 100, y: 700 }, { x: 16, y: 720 });
+    expect(doan).toHaveLength(1);
+    expect(doan[0]?.thoiGian).toBe(300);
   });
 });
 

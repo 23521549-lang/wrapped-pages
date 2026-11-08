@@ -34,6 +34,9 @@ export type DoanDuong = {
 
 /** Toc do di chuyen (bible §5, demo v4). */
 export const TOC_DO_PX_S = 160;
+/** Co khung Chip luc di (token --lv-co) va le mep (token --lv-le): dung chung cho component va engine. */
+export const CO_CHIP_PX = 64;
+export const LE_CHIP_PX = 16;
 /** Thoi gian di toi thieu cho ca chuyen di (demo v4: max(900, len/0.16)). */
 export const THOI_GIAN_DI_TOI_THIEU_MS = 900;
 /** Nghi sau moi lan dau: 1400 + ngau nhien * 2800 ms (demo v4). */
@@ -247,6 +250,18 @@ export function ease(t: number): number {
 /** Thoi gian di mot doan thang dai `daiPx` (demo v4: max(900, len/0.16)). */
 export function thoiGianDi(daiPx: number): number {
   return Math.max(THOI_GIAN_DI_TOI_THIEU_MS, daiPx / (TOC_DO_PX_S / 1000));
+}
+
+/**
+ * Duong ve goc nhanh khi neo dau (E1: mo to tro chuyen, dien cam xuc, modal mo, bat tam dung): mot doan thang tu vi
+ * tri hien tai ve goc, toc do gap 8 lan toc do dao choi (1280px/s), toi thieu 300ms. Duong ve khong can om canh
+ * (chi duong dao choi moi om canh theo A1); ve thang cho kip truoc khi to tro chuyen mo han.
+ */
+export function duongVeNha(tu: Diem, den: Diem): DoanDuong[] {
+  const dai = Math.hypot(den.x - tu.x, den.y - tu.y);
+  if (dai < 1) return [];
+  const giua = { x: (tu.x + den.x) / 2, y: (tu.y + den.y) / 2 };
+  return [{ x0: tu.x, y0: tu.y, cx: giua.x, cy: giua.y, x1: den.x, y1: den.y, dai, thoiGian: Math.max(300, dai / 1.28) }];
 }
 
 /** Thoi gian nghi sau mot lan dau: 1400 + ngau nhien * 2800 ms (demo v4). */

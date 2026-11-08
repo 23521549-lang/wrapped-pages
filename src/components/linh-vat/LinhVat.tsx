@@ -1,15 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useEffectEvent, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { actionCamXucChoToi, actionDaXemCamXuc } from "@/app/actions/cam-xuc";
 import { actionChaoChip } from "@/app/actions/chip";
+import { useTamDung } from "@/components/hieu-ung/tam-dung";
 import { msTuCss } from "@/components/reader/Flipbook";
 import { CAM_XUC, CHIP, dongMangToi, type LoaiCamXuc } from "@/lib/cam-xuc";
 import { tachDam } from "@/lib/chip";
 import type { CamXucToi } from "@/server/cam-xuc/cam-xuc";
 import type { LoiChao, TrangThaiChip } from "@/server/chip/tro-chuyen";
 import { AnhLinhVat } from "./AnhLinhVat";
+import {
+  bezier,
+  CAU_DAO_CHOI,
+  chonDiemDen,
+  CO_CHIP_PX,
+  diemGoc,
+  duongDi,
+  duongVeNha,
+  ease,
+  heSoTho,
+  LE_CHIP_PX,
+  NGUONG_MAN_HEP_PX,
+  NHAY_CAO_PX,
+  NHAY_CHU_KY_DEN_MS,
+  NHAY_CHU_KY_TU_MS,
+  NHAY_MS,
+  thoiGianNghi,
+  tinhBanking,
+  XAC_SUAT_NOI,
+  type Diem,
+  type DoanDuong,
+  type HinhChuNhat,
+} from "./di-chuyen";
 import { dienHieuUng, VANG_MAT } from "./hieu-ung";
 import { TroChuyen } from "./TroChuyen";
 
@@ -48,6 +72,16 @@ const ghiDaDien = (id: string) => ghiLuu(KHOA_DA_DIEN, [...cacDaDien().filter((x
 
 const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const giamChuyenDong = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+
+/** Vung cam luc chon diem den (C1, manh 2): khung nhac, la thu, nav, chi tinh phan dang hien. Manh 3 mo rong them form, nut chinh. */
+function vungCamHienTai(): HinhChuNhat[] {
+  const vung: HinhChuNhat[] = [];
+  for (const el of document.querySelectorAll("aside.mph:not([hidden]), .thu-bay:not(.thu-bay--cho):not(.thu-bay--tranh), nav.nav")) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) vung.push({ x: r.left, y: r.top, rong: r.width, cao: r.height });
+  }
+  return vung;
+}
 const msToken = (ten: string, macDinh: number) => {
   const ms = msTuCss(getComputedStyle(document.documentElement).getPropertyValue(ten));
   return Number.isFinite(ms) && ms > 0 ? ms : macDinh;
@@ -79,12 +113,24 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   const [nguDen, setNguDen] = useState(trangThai.nguDen);
   const [thuNho, setThuNho] = useState(false);
   const [loiChao, setLoiChao] = useState<LoiChao | null>(null);
+  const [dangDi, setDangDi] = useState(false);
+  const [cauDao, setCauDao] = useState<string | null>(null);
+  const [reduce, setReduce] = useState(() => giamChuyenDong());
+  const [hep, setHep] = useState(() => (typeof window === "undefined" ? false : window.innerWidth < NGUONG_MAN_HEP_PX));
   const gocRef = useRef<HTMLDivElement>(null);
   const nutRef = useRef<HTMLButtonElement>(null);
   const lopRef = useRef<HTMLDivElement>(null);
   const henRef = useRef(new Set<ReturnType<typeof setTimeout>>());
   /** Chuot dang tren bong bong hay focus dang trong no: chua tu dong, doc cho xong. */
   const giuRef = useRef(false);
+  /** Trang thai dong co di chuyen (chi trong ref de vong rAF khong gay ve lai moi khung). */
+  const viTriRef = useRef<Diem | null>(null);
+  const cheDoRef = useRef<"nghi" | "di">("nghi");
+  const duongRef = useRef<{ doan: DoanDuong[]; chiSo: number; daDi: number } | null>(null);
+  const veNhaRef = useRef(false);
+  const nghiDenRef = useRef(0);
+  const hopRef = useRef<{ batDau: number | null; denKe: number }>({ batDau: null, denKe: 0 });
+  const neoRef = useRef(false);
 
   const sau = (ms: number, f: () => void) => {
     const t = setTimeout(() => {
@@ -107,6 +153,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     setDien(null);
     setDang(null);
     setLoiChao(null);
+    setCauDao(null);
   }
 
   /** Bong bong tu dong sau 8 giay, tru khi nguoi dung dang re chuot hay focus trong no (thi hen lai 2 giay nua). */
@@ -223,6 +270,42 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     };
   }, []);
 
+  // --- Di chuyen doc 4 canh (them sau, de xuat chip-di-chuyen): Chip dao choi doc mep man hinh, ve goc khi neo dau. ---
+  const apDungTamDung = useCallback((v: boolean) => {
+    if (!v) return;
+    // Bat tam dung thi ve goc ngay (E1), truoc ca khi React ve lai.
+    const goc = gocRef.current;
+    if (goc) goc.style.removeProperty("transform");
+    if (typeof window !== "undefined") viTriRef.current = diemGoc(window.innerWidth, window.innerHeight, CO_CHIP_PX, LE_CHIP_PX);
+    cheDoRef.current = "nghi";
+    duongRef.current = null;
+    veNhaRef.current = false;
+    setDangDi(false);
+    setCauDao(null);
+  }, []);
+  const [tamDung] = useTamDung(apDungTamDung);
+
+  useEffect(() => {
+    const mq = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!mq) return;
+    const doi = () => setReduce(mq.matches);
+    mq.addEventListener("change", doi);
+    return () => mq.removeEventListener("change", doi);
+  }, []);
+
+  useEffect(() => {
+    const doi = () => setHep(window.innerWidth < NGUONG_MAN_HEP_PX);
+    doi();
+    addEventListener("resize", doi);
+    return () => removeEventListener("resize", doi);
+  }, []);
+
+  // Neo dau (C1): to tro chuyen mo, bong bong hien, hoac dang dien cam xuc thi Chip dung di chuyen, ve goc.
+  useEffect(() => {
+    neoRef.current = moTc || dang !== null || loiChao !== null || dien !== null;
+    if (neoRef.current) setCauDao(null);
+  }, [moTc, dang, loiChao, dien]);
+
   function daTha(loai: LoaiCamXuc) {
     const lv = CAM_XUC[loai];
     setMoTc(false);
@@ -254,7 +337,166 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     dien !== null && VANG_MAT[dien] !== undefined ? `linh-vat--vang-${dien}` : "",
     nho ? "linh-vat--thu-nho" : "",
     tranh && dien === null ? "linh-vat--tranh" : "",
+    dangDi ? "linh-vat--dang-di" : "",
   ].filter(Boolean).join(" ");
+  const choPhepDi = !reduce && !tamDung && !hep && !thuNho && coNut;
+
+  // Vong di chuyen: rAF sua truc tiep transform cua .linh-vat (vi tri tuyet doi + banking + tho/nhay); React chi giu
+  // trang thai dangDi (lop vo canh) va cauDao (bong bong dao choi). Tat khi reduce, tam dung, man hep, thu nho, an nut.
+  // Luu y: thuNho chi co sau khi actionChaoChip tra ve, nhung lan di dau tien luon sau 1,4 giay nghi nen khong kip di
+  // truoc khi biet minh dang thu nho.
+  useEffect(() => {
+    const goc = gocRef.current;
+    if (!choPhepDi || !goc) {
+      if (goc) goc.style.removeProperty("transform");
+      // oxlint-disable-next-line react/set-state-in-effect -- dong bo trang thai React voi vong dong co ngoai React (rAF + DOM): tat engine thi tat vo canh va bong bong dao choi.
+      setDangDi(false);
+      setCauDao(null);
+      return;
+    }
+    if (viTriRef.current === null) viTriRef.current = diemGoc(window.innerWidth, window.innerHeight, CO_CHIP_PX, LE_CHIP_PX);
+    nghiDenRef.current = performance.now() + thoiGianNghi();
+    if (hopRef.current.denKe === 0) hopRef.current.denKe = performance.now() + NHAY_CHU_KY_TU_MS + Math.random() * (NHAY_CHU_KY_DEN_MS - NHAY_CHU_KY_TU_MS);
+    let raf = 0;
+    let cuoi = performance.now();
+    const apDung = (pos: Diem, gocNha: Diem, bank: { goc: number; tiLeX: number; tiLeY: number }, nhay: number) => {
+      const dx = pos.x - gocNha.x;
+      const dy = pos.y - gocNha.y;
+      goc.style.transform = `translate(${dx}px, ${dy + nhay}px) rotate(${bank.goc}deg) scale(${bank.tiLeX}, ${bank.tiLeY})`;
+    };
+    const tick = (bayGio: number) => {
+      const dt = Math.min(50, bayGio - cuoi);
+      cuoi = bayGio;
+      const rong = window.innerWidth;
+      const cao = window.innerHeight;
+      const gocNha = diemGoc(rong, cao, CO_CHIP_PX, LE_CHIP_PX);
+      if (viTriRef.current === null) viTriRef.current = { ...gocNha };
+      let pos = viTriRef.current;
+      // Resize: kep vi tri vao man hinh, ngoai thi ve goc.
+      if (pos.x < LE_CHIP_PX || pos.x > rong - LE_CHIP_PX - CO_CHIP_PX || pos.y < LE_CHIP_PX || pos.y > cao - LE_CHIP_PX - CO_CHIP_PX) {
+        pos = { ...gocNha };
+        viTriRef.current = pos;
+        cheDoRef.current = "nghi";
+        duongRef.current = null;
+        veNhaRef.current = false;
+        setDangDi(false);
+      }
+      const neo = neoRef.current || document.querySelector("dialog[open]") !== null;
+      if (cheDoRef.current === "di") {
+        const tien = duongRef.current;
+        if (tien === null) {
+          cheDoRef.current = "nghi";
+          veNhaRef.current = false;
+        } else {
+          if (neo && !veNhaRef.current) {
+            // Dang di ma bi neo: doi sang duong ve nha nhanh.
+            const ve = duongVeNha(pos, gocNha);
+            if (ve.length === 0) {
+              duongRef.current = null;
+              cheDoRef.current = "nghi";
+              setDangDi(false);
+            } else {
+              duongRef.current = { doan: ve, chiSo: 0, daDi: 0 };
+              veNhaRef.current = true;
+            }
+          }
+          const hien = duongRef.current;
+          if (hien !== null) {
+            let het = false;
+            let conLai = dt;
+            while (conLai > 0 && !het) {
+              const doan = hien.doan[hien.chiSo];
+              if (doan === undefined) {
+                het = true;
+                break;
+              }
+              const buoc = Math.min(conLai, doan.thoiGian - hien.daDi);
+              hien.daDi += buoc;
+              conLai -= buoc;
+              const t = Math.min(1, hien.daDi / doan.thoiGian);
+              const e = ease(t);
+              const nx = bezier(doan.x0, doan.cx, doan.x1, e);
+              const ny = bezier(doan.y0, doan.cy, doan.y1, e);
+              const vx = ((nx - pos.x) / Math.max(1, buoc)) * 1000;
+              const vy = ((ny - pos.y) / Math.max(1, buoc)) * 1000;
+              pos = { x: nx, y: ny };
+              viTriRef.current = pos;
+              apDung(pos, gocNha, tinhBanking(vx, vy), 0);
+              if (t >= 1) {
+                hien.chiSo += 1;
+                hien.daDi = 0;
+                if (hien.chiSo >= hien.doan.length) het = true;
+              }
+            }
+            if (het) {
+              const veNha = veNhaRef.current;
+              cheDoRef.current = "nghi";
+              duongRef.current = null;
+              veNhaRef.current = false;
+              setDangDi(false);
+              nghiDenRef.current = bayGio + (veNha ? 1000 : thoiGianNghi());
+              if (!veNha && !neoRef.current && Math.random() < XAC_SUAT_NOI) {
+                const cau = CAU_DAO_CHOI[Math.floor(Math.random() * CAU_DAO_CHOI.length)] ?? "";
+                if (cau !== "") {
+                  setCauDao(cau);
+                  setBao(cau);
+                  sau(8000, () => setCauDao((cu) => (cu === cau ? null : cu)));
+                }
+              }
+            }
+          }
+        }
+      } else if (neo) {
+        // Dang nghi ma bi neo: ve goc nhanh, toi goc thi dung yen (khong tho, khong nhay, khong noi).
+        if (pos.x !== gocNha.x || pos.y !== gocNha.y) {
+          const ve = duongVeNha(pos, gocNha);
+          if (ve.length === 0) {
+            viTriRef.current = { ...gocNha };
+            goc.style.removeProperty("transform");
+          } else {
+            duongRef.current = { doan: ve, chiSo: 0, daDi: 0 };
+            cheDoRef.current = "di";
+            veNhaRef.current = true;
+            setDangDi(true);
+          }
+        } else {
+          goc.style.removeProperty("transform");
+        }
+      } else {
+        // Nghi tai cho: tho nhe, nhay chan sao, het gio nghi thi bat dau di (tab dang xem moi di).
+        const tho = heSoTho(bayGio);
+        let nhay = 0;
+        if (bayGio > hopRef.current.denKe) {
+          hopRef.current = { batDau: bayGio, denKe: bayGio + NHAY_CHU_KY_TU_MS + Math.random() * (NHAY_CHU_KY_DEN_MS - NHAY_CHU_KY_TU_MS) };
+        }
+        const batDauNhay = hopRef.current.batDau;
+        if (batDauNhay !== null) {
+          const ht = (bayGio - batDauNhay) / NHAY_MS;
+          if (ht >= 1) hopRef.current.batDau = null;
+          else nhay = -Math.sin(ht * Math.PI) * NHAY_CAO_PX;
+        }
+        apDung(pos, gocNha, { goc: 0, tiLeX: tho, tiLeY: tho }, nhay);
+        if (bayGio > nghiDenRef.current && document.visibilityState === "visible") {
+          const den = chonDiemDen(rong, cao, CO_CHIP_PX, LE_CHIP_PX, vungCamHienTai());
+          const doan = duongDi(pos, den, rong, cao, CO_CHIP_PX, LE_CHIP_PX);
+          if (doan.length === 0) {
+            nghiDenRef.current = bayGio + 1500;
+          } else {
+            duongRef.current = { doan, chiSo: 0, daDi: 0 };
+            cheDoRef.current = "di";
+            veNhaRef.current = false;
+            setDangDi(true);
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      goc.style.removeProperty("transform");
+    };
+  }, [choPhepDi]);
   const giu = {
     onPointerEnter: () => { giuRef.current = true; },
     onPointerLeave: () => { giuRef.current = false; },
@@ -332,6 +574,13 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
                 </button>
               </div>
             </div>
+            {nutDong(CHIP.ten)}
+          </div>
+        )}
+        {dang === null && loiChao === null && cauDao !== null && !moTc && (
+          // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- chi giu bong bong lai khi re chuot hay focus, khong phai mot dieu khien.
+          <div className="loi-lv loi-lv--dao" {...giu}>
+            <p className="loi-lv__chu">{cauDao}</p>
             {nutDong(CHIP.ten)}
           </div>
         )}
