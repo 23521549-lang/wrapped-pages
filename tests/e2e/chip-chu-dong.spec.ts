@@ -132,10 +132,10 @@ async function chuBongBong(p: Page): Promise<string | null> {
 }
 
 /**
- * Tai lai trang cho toi khi bong bong chu dong hien (toi da 5 lan). Lan dau kiem ngay tren trang vua mo
- * (quet chay luc mount, khong can tai lai); cac lan sau tai lai truoc. Moi lan doi toi da 10 giay, kiem chu
- * moi 300ms; neu may chu goi Groq giua chung (loi da sinh, ma da tieu thu) thi doi them 8 giay thay vi tai
- * lai vo ich.
+ * Tai lai trang cho toi khi bong bong chu dong hien (toi da 4 lan). Lan dau kiem ngay tren trang vua mo
+ * (quet chay luc mount, khong can tai lai); cac lan sau tai lai truoc. Moi lan doi toi da 15 giay, kiem chu
+ * moi 300ms; neu may chu goi Groq giua chung (loi da sinh, ma da tieu thu) thi doi them 15 giay thay vi tai
+ * lai vo ich. Cua so 15 giay (khong phai 10): luc may tai, lan quet co the ve muon hon 10 giay sau khi tai.
  */
 /** Chan doan luc quet goi Groq xong ma bong bong khong hien: ghi lai trang thai client de biet cong nao chan. */
 let chanDoanQuet = "";
@@ -151,7 +151,7 @@ async function ghiChanDoan(p: Page): Promise<void> {
 }
 
 async function taiLaiChoLoi(p: Page): Promise<boolean> {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     if (i > 0) {
       await p.reload();
     }
@@ -159,7 +159,7 @@ async function taiLaiChoLoi(p: Page): Promise<boolean> {
     // truoc do; sau khi tai lai thi mount cu da chet (con=false) nen khong ai dat lai key nua.
     await xoaNoiLuc(p);
     const truoc = soChuDong();
-    const den = Date.now() + 10_000;
+    const den = Date.now() + 15_000;
     let thayGoi = false;
     while (Date.now() < den) {
       if ((await chuBongBong(p)) === CAU_CO_DINH) return true;
@@ -195,6 +195,23 @@ async function datKhoangLang(ai: string, bat: boolean): Promise<void> {
     if (r.count !== 1) throw new Error("datKhoangLang: khong tim thay nguoi");
   } catch (e) {
     if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("datKhoangLang:"))) throw e;
+    rethrowSafely(e);
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Dat lai moc chu dong (chu_dong_luc, chu_dong_ma) cho nguoi co biet danh ai, thang vao database e2e. */
+async function datLaiChuDong(ai: string): Promise<void> {
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const r = await sql`update chip_trang_thai set chu_dong_luc = null, chu_dong_ma = null
+      where account_id = (select id from accounts where nickname = ${ai})`;
+    if (r.count !== 1) throw new Error("datLaiChuDong: khong tim thay nguoi");
+  } catch (e) {
+    if (e instanceof Error && (e.message.startsWith("resetDb tu choi") || e.message.startsWith("datLaiChuDong:"))) throw e;
     rethrowSafely(e);
   } finally {
     await sql.end();
@@ -264,10 +281,13 @@ test("tao sach xong: mo Ke sach thi Chip hoi ve cuon moi", async ({ browser }) =
   await taoSach(a, "Sổ tay thử", "chia-se");
   // Trang viet an LinhVat (AppNav linhVat={false}) nen quet khong chay o do: mo Ke sach (co LinhVat, khong
   // phai trang bat chuyen T1) de quet thay viec tao sach con tuoi trong 6 gio. Xoa key sau goto (xem test 2).
+  // taoSach mo /sach/moi truoc (la trang T1): quet o do co the no truoc va tieu thu cooldown 30 phut, nen
+  // dat lai moc may chu truoc khi mo Ke sach; cuoc goi T1 do (neu co) khong anh huong bong bong o Ke sach.
+  await datLaiChuDong("Mạnh");
   await a.goto("/ke-sach");
   await xoaNoiLuc(a);
   expect(await taiLaiChoLoi(a), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}; chan doan: ${chanDoanQuet}`).toBe(true);
-  const goi = daGoi.find((g) => g.chuDong);
+  const goi = daGoi.find((g) => g.chuDong && g.heThong.includes("Sổ tay thử"));
   expect(goi).toBeDefined();
   expect(goi?.heThong).toContain("Sổ tay thử");
 });
