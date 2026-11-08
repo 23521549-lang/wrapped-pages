@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import { expect, test } from "@playwright/test";
 import { resetDb } from "./db";
 import { GROQ_GIA_CONG } from "./env";
-import { datLanCuoiThay, dongContextCu, ghiThu, haiNguoiDaVao, tranNgang } from "./kho-sach";
+import { choLanCuoiThay, datLanCuoiThay, dongContextCu, ghiThu, haiNguoiDaVao, tranNgang } from "./kho-sach";
 import { BE_RONG, vungBamNho } from "./vung-bam";
 
 /*
@@ -99,6 +99,7 @@ test("het han muc ngay: Chip di ngu cho ca hai, o nhap tat, kho van mo duoc", as
 
 test("vang ba ngay quay lai: Chip mung ve va tom tat viec nguoi kia lam, kem nut Xem ngay", async ({ browser }) => {
   const { b } = await haiNguoiDaVao(browser);
+  await choLanCuoiThay("Linh");
   await datLanCuoiThay("Linh", new Date(Date.now() - 3 * 86_400_000 - 60_000));
   await ghiThu("Mạnh", "2026-09", "Gửi Linh tháng Chín.");
   await b.evaluate(() => localStorage.removeItem("mqce-chip-noi-luc"));
