@@ -13,7 +13,7 @@ const CAO = 800;
 /** Goc nha cua Chip: duoi trai, le 16px, khung 64px. */
 const NHA = { x: 16, y: CAO - 16 - 64 };
 
-type Mau = { x: number; y: number; deNav: boolean; deNhac: boolean; deThu: boolean; dangDi: boolean };
+type Mau = { x: number; y: number; w: number; h: number; deNav: boolean; deNhac: boolean; deThu: boolean; dangDi: boolean };
 
 async function layMau(page: Page, lan: number, cachMs = 1000): Promise<Mau[]> {
   const mau: Mau[] = [];
@@ -27,6 +27,8 @@ async function layMau(page: Page, lan: number, cachMs = 1000): Promise<Mau[]> {
       return {
         x: Math.round(r.left),
         y: Math.round(r.top),
+        w: Math.round(r.width),
+        h: Math.round(r.height),
         deNav: giao(r, document.querySelector("nav.nav")?.getBoundingClientRect()),
         deNhac: giao(r, document.querySelector("aside.mph:not([hidden])")?.getBoundingClientRect()),
         deThu: giao(r, document.querySelector(".thu-bay:not(.thu-bay--cho):not(.thu-bay--tranh)")?.getBoundingClientRect()),
@@ -39,9 +41,14 @@ async function layMau(page: Page, lan: number, cachMs = 1000): Promise<Mau[]> {
   return mau;
 }
 
-/** Co nam trong dai mep khong (le chuan 16px + do luon Bezier toi da ~12px + xoay banking: cho phep lech 20px). */
+/*
+ * Co nam trong dai mep khong. Khong xet goc trai-tren cua khung cho ca bon canh: banking xoay khung lam khung to ra
+ * (~8px moi ben) nen goc trai-tren dich vao trong khi dang di; nhay chan sao luc nghi nang khung len 18px. Vi vay
+ * canh phai xet theo mep phai cua khung (x + w) va canh duoi xet theo mep duoi cua khung (y + h): hai mep nay chi
+ * dich ra ngoai khi xoay, va day duoi toi thieu khi nhay het co van la 766 (720 + 64 - 18), tren nguong 760.
+ */
 function oDaiMep(m: Mau): boolean {
-  return m.x <= 36 || m.y <= 36 || m.x >= RONG - 64 - 20 || m.y >= CAO - 64 - 20;
+  return m.x <= 36 || m.y <= 36 || m.x + m.w >= RONG - 16 - 8 || m.y + m.h >= CAO - 16 - 24;
 }
 
 async function tamNut(page: Page): Promise<{ x: number; y: number } | null> {

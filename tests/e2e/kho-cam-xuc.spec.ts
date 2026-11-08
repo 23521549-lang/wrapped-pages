@@ -31,6 +31,9 @@ async function moKho(p: Page) {
 
 test("Manh tha Yeu: Linh thay Gau bong noi cau cua Manh, hieu ung xuyen chuot, tai lai khong dien lai", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
+  // Chip dung yen cho a (moKho bam nut Chip): giam chuyen dong chi anh huong a; b giu nguyen de lop hieu ung van dien.
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
   const kho = await moKho(a);
   await kho.getByRole("button", { name: "Yêu" }).click();
   await expect(kho.getByText(/sẽ nói với Linh/)).toHaveText("Gấu bông sẽ nói với Linh: Mạnh đang cảm thấy yêu bạn");
@@ -53,7 +56,8 @@ test("Manh tha Yeu: Linh thay Gau bong noi cau cua Manh, hieu ung xuyen chuot, t
   // Tai lai: khong dien lai; dong Hoat dong o ca hai phia.
   await b.goto("/ke-sach");
   await b.waitForTimeout(1500);
-  await expect(b.locator(".loi-lv")).toHaveCount(0);
+  // Bong bong dao choi (.loi-lv--dao) khong phai bong bong cam xuc: loai ra khoi dem.
+  await expect(b.locator(".loi-lv:not(.loi-lv--dao)")).toHaveCount(0);
   await expect(b.locator(".hoat-dong__chu").first()).toHaveText("Mạnh thả cảm xúc Yêu");
   await a.goto("/ke-sach");
   await expect(a.locator(".hoat-dong__chu").first()).toHaveText("Bạn thả cảm xúc Yêu");
@@ -61,6 +65,10 @@ test("Manh tha Yeu: Linh thay Gau bong noi cau cua Manh, hieu ung xuyen chuot, t
 
 test("vang lau quay lai: chi ba cam xuc moi nhat, cu toi moi; tha hai lan lien nhau thi bao cho", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
+  // Chip dung yen cho ca hai: bam nut Chip on dinh, bong bong dao choi khong lam lenh dem bong bong cam xuc.
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
+  await b.emulateMedia({ reducedMotion: "reduce" });
   await ghiCamXuc("Mạnh", { loai: "vui", giayTruoc: 400 }, { loai: "buon", giayTruoc: 300 }, { loai: "nho", giayTruoc: 200 }, { loai: "treu", giayTruoc: 100 });
   await b.goto("/ke-sach");
   for (const [cau, ten] of [["Mạnh đang buồn", "Chim cánh cụt"], ["Mạnh đang nhớ bạn", "Gấu túi"], ["Mạnh đang muốn trêu bạn", "Khỉ con"]]) {
@@ -93,6 +101,8 @@ test("giam chuyen dong: bong bong va hinh moi van hien, khong co lop hieu ung", 
 
 test("kho mo va bong bong khong tran ngang; vung bam 44px o be rong cam ung", async ({ browser }) => {
   const { a, b } = await haiNguoiDaVao(browser);
+  await a.emulateMedia({ reducedMotion: "reduce" });
+  await a.goto("/ke-sach");
   await b.emulateMedia({ reducedMotion: "reduce" });
   await ghiCamXuc("Mạnh", { loai: "bat-ngo", giayTruoc: 5 });
   for (const w of BE_RONG) {
