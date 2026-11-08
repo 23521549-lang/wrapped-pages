@@ -73,10 +73,15 @@ const ghiDaDien = (id: string) => ghiLuu(KHOA_DA_DIEN, [...cacDaDien().filter((x
 const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const giamChuyenDong = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 
-/** Vung cam luc chon diem den (C1, manh 2): khung nhac, la thu, nav, chi tinh phan dang hien. Manh 3 mo rong them form, nut chinh. */
+/** Vung cam luc chon diem den (C1): khung nhac, la thu, nav, form, o nhap, nut chinh, chi tinh phan dang hien.
+ * Nut chinh la .btn dac (khong tinh .btn--quiet/--line/--chu). O nhap an (type=hidden) co khung rong nen tu loai. */
 function vungCamHienTai(): HinhChuNhat[] {
   const vung: HinhChuNhat[] = [];
-  for (const el of document.querySelectorAll("aside.mph:not([hidden]), .thu-bay:not(.thu-bay--cho):not(.thu-bay--tranh), nav.nav")) {
+  for (const el of document.querySelectorAll(
+    "aside.mph:not([hidden]), .thu-bay:not(.thu-bay--cho):not(.thu-bay--tranh), nav.nav, " +
+      "form, input:not([type='hidden']), textarea, select, " +
+      ".btn:not(.btn--quiet):not(.btn--line):not(.btn--chu)",
+  )) {
     const r = el.getBoundingClientRect();
     if (r.width > 0 && r.height > 0) vung.push({ x: r.left, y: r.top, rong: r.width, cao: r.height });
   }
@@ -131,6 +136,10 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   const nghiDenRef = useRef(0);
   const hopRef = useRef<{ batDau: number | null; denKe: number }>({ batDau: null, denKe: 0 });
   const neoRef = useRef(false);
+  /** Anh xa cua `tranh` de vong rAF xet giao nhau ma khong goi setState moi khung. */
+  const tranhRef = useRef(false);
+  /** Luc xet giao nhau ke tiep luc Chip dang di (moi 250ms, tranh goi querySelectorAll moi khung). */
+  const kiemTranhSauRef = useRef(0);
 
   const sau = (ms: number, f: () => void) => {
     const t = setTimeout(() => {
@@ -242,18 +251,27 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   }, []);
 
   // Khong de len khung YouTube khi ngoi yen: dang giao voi mot iframe hay khung phat chung thi tam an. Luc dang dien
-  // hieu ung thi duoc de (ngoai le cung lop hieu ung), het hieu ung thi xet lai ngay.
+  // hieu ung thi duoc de (ngoai le cung lop hieu ung), het hieu ung thi xet lai ngay. Vong di chuyen goi lai ham nay
+  // moi 250ms luc dang di (manh 3) vi vi tri Chip doi moi khung, khong cho khoang 1 giay nhu luc ngoi yen.
+  const xetTranh = useEffectEvent(() => {
+    const goc = gocRef.current;
+    if (!goc) return;
+    const r = goc.getBoundingClientRect();
+    const moi = [...document.querySelectorAll("iframe, aside.mph:not([hidden])")].some((el) => giao(r, el.getBoundingClientRect()));
+    if (moi !== tranhRef.current) {
+      tranhRef.current = moi;
+      setTranh(moi);
+    }
+  });
   useEffect(() => {
     let khungHinh = 0;
-    const xet = () => {
-      khungHinh = 0;
-      const goc = gocRef.current;
-      if (!goc) return;
-      const r = goc.getBoundingClientRect();
-      setTranh([...document.querySelectorAll("iframe, aside.mph:not([hidden])")].some((el) => giao(r, el.getBoundingClientRect())));
-    };
     const hen = () => {
-      if (khungHinh === 0) khungHinh = requestAnimationFrame(xet);
+      if (khungHinh === 0) {
+        khungHinh = requestAnimationFrame(() => {
+          khungHinh = 0;
+          xetTranh();
+        });
+      }
     };
     hen();
     addEventListener("scroll", hen, { passive: true });
@@ -477,8 +495,9 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
         }
         apDung(pos, gocNha, { goc: 0, tiLeX: tho, tiLeY: tho }, nhay);
         if (bayGio > nghiDenRef.current && document.visibilityState === "visible") {
-          const den = chonDiemDen(rong, cao, CO_CHIP_PX, LE_CHIP_PX, vungCamHienTai());
-          const doan = duongDi(pos, den, rong, cao, CO_CHIP_PX, LE_CHIP_PX);
+          const cam = vungCamHienTai();
+          const den = chonDiemDen(rong, cao, CO_CHIP_PX, LE_CHIP_PX, cam);
+          const doan = duongDi(pos, den, rong, cao, CO_CHIP_PX, LE_CHIP_PX, Math.random, cam);
           if (doan.length === 0) {
             nghiDenRef.current = bayGio + 1500;
           } else {
@@ -488,6 +507,11 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
             setDangDi(true);
           }
         }
+      }
+      // Luc dang di, vi tri doi moi khung nen xet giao nhau thuong xuyen hon khoang 1 giay luc ngoi yen.
+      if (cheDoRef.current === "di" && bayGio > kiemTranhSauRef.current) {
+        xetTranh();
+        kiemTranhSauRef.current = bayGio + 250;
       }
       raf = requestAnimationFrame(tick);
     };

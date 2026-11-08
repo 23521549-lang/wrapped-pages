@@ -156,12 +156,10 @@ function keNhau(a: Canh, b: Canh): boolean {
 }
 
 /**
- * Diem dieu khien cho mot doan tu p toi q (hai dau tren cung canh hoac hai canh ke nhau):
- * - Cung duong mep (cung x hoac cung y): trung diem cong lech vuong goc nho (duong di hoi luon trong dai mep).
- * - Hai canh ke: goc chung cua hai canh cong lech nho (duong cong om goc). Neu mot dau chinh la goc chung thi
- *   duong cong suy bien thanh duong thang men theo mep, dung nhu mong muon.
- * Diem dieu khien luon kep trong khung man hinh. Kiem tra cung duong bang hinh hoc truoc (khong dung
- * canhCuaDiem), vi diem goc thuoc hai canh nen phan loai canh cua no mo ho.
+ * Diem dieu khien cho mot doan tren cung mot duong mep: trung diem cong lech vuong goc nho (duong di hoi luon
+ * trong dai mep). Hai dau luon cung x hoac cung y vi moi cap moc ke nhau chia se mot canh (goc la moc trung
+ * gian, khong phai diem dieu khien). Cap cheo (phong thu) thi lech theo x nhu doan doc.
+ * Diem dieu khien luon kep trong khung man hinh.
  */
 function diemDieuKhienDoan(
   p: Diem,
@@ -178,14 +176,9 @@ function diemDieuKhienDoan(
   if (p.y === q.y) {
     // Cung duong ngang (mep tren hoac duoi): lech len/xuong.
     dieu = { x: giua.x, y: giua.y + lech };
-  } else if (p.x === q.x) {
+  } else {
     // Cung duong doc (mep trai hoac phai): lech trai/phai.
     dieu = { x: giua.x + lech, y: giua.y };
-  } else {
-    const canhP = canhCuaDiem(p, rong, cao, co);
-    const canhQ = canhCuaDiem(q, rong, cao, co);
-    dieu = gocChung(canhP, canhQ, rong, cao, co, le);
-    dieu = { x: dieu.x + lech, y: dieu.y + lech };
   }
   return { x: kep(dieu.x, le, rong - le - co), y: kep(dieu.y, le, cao - le - co) };
 }
@@ -193,10 +186,34 @@ function diemDieuKhienDoan(
 /** Do dai doan thang (dung uoc luong thoi gian di). */
 const daiDoan = (p: Diem, q: Diem) => Math.hypot(q.x - p.x, q.y - p.y);
 
+/** Dai mep cua mot canh (vung di chuyen cua Chip doc canh do). */
+function daiMepCanh(canh: Canh, rong: number, cao: number, co: number, le: number): HinhChuNhat {
+  if (canh === "tren") return { x: le, y: le, rong: rong - 2 * le - co, cao: co };
+  if (canh === "duoi") return { x: le, y: cao - le - co, rong: rong - 2 * le - co, cao: co };
+  if (canh === "trai") return { x: le, y: le, rong: co, cao: cao - 2 * le - co };
+  return { x: rong - le - co, y: le, rong: co, cao: cao - 2 * le - co };
+}
+
+/** Mot canh co bi vung cam chan het khong (dai mep cua no giao voi mot vung cam da cong dem). */
+function canhBiChan(canh: Canh, rong: number, cao: number, co: number, le: number, vungCam: readonly HinhChuNhat[]): boolean {
+  const dai = daiMepCanh(canh, rong, cao, co, le);
+  return vungCam.some((v) =>
+    giaoNhau(dai, {
+      x: v.x - DEM_VUNG_CAM_PX,
+      y: v.y - DEM_VUNG_CAM_PX,
+      rong: v.rong + 2 * DEM_VUNG_CAM_PX,
+      cao: v.cao + 2 * DEM_VUNG_CAM_PX,
+    }),
+  );
+}
+
 /**
- * Duong di tu `tu` toi `den` om sat chu vi: cung canh thi mot doan thang (hoi luon), hai canh ke thi mot doan
- * cong qua goc chung, hai canh doi nhau thi ba doan di men theo mot ben (qua hai goc cua ben do) de khong cat
- * ngang vung giua man hinh. Thoi gian toan chuyen = max(900, tong dai / 0.16), chia theo do dai tung doan.
+ * Duong di tu `tu` toi `den` om sat chu vi: cung canh thi mot doan thang (hoi luon), hai canh ke thi hai doan qua
+ * goc chung (moi doan om mot canh), hai canh doi nhau thi ba doan di men theo mot ben (qua hai goc cua ben do) de
+ * khong cat ngang vung giua man hinh. Ben men theo duoc chon tranh vung cam (`vungCam`): vd mep tren luon bi nav
+ * (nav chan het mep tren, khung nhac chi chan mot goc mep duoi), chuyen doc giu ngau nhien. Goc chung cua hai canh
+ * ke khong xet o day (doan qua goc ngan, luoi an khi giao nhau luc dang di se tam an Chip neu can).
+ * Thoi gian toan chuyen = max(900, tong dai / 0.16), chia theo do dai tung doan.
  */
 export function duongDi(
   tu: Diem,
@@ -206,16 +223,31 @@ export function duongDi(
   co: number,
   le: number,
   ngauNhien: () => number = Math.random,
+  vungCam: readonly HinhChuNhat[] = [],
 ): DoanDuong[] {
   const canhTu = canhCuaDiem(tu, rong, cao, co);
   const canhDen = canhCuaDiem(den, rong, cao, co);
   let moc: Diem[];
-  if (canhTu === canhDen || keNhau(canhTu, canhDen)) {
+  if (canhTu === canhDen) {
     moc = [tu, den];
+  } else if (keNhau(canhTu, canhDen)) {
+    // Hai canh ke: qua goc chung nhu mot moc trung gian (2 doan, moi doan om mot canh). Dung mot doan cong voi
+    // diem dieu khien la goc chung thi duong vong vao giua man hinh khi hai dau xa nhau (vd tu (1200,283) toi
+    // (346,720) se di qua (986,610) thay vi men theo mep).
+    moc = [tu, gocChung(canhTu, canhDen, rong, cao, co, le), den];
   } else {
     // Hai canh doi nhau: chon mot ben (trai/phai neu di tren-duoi, tren/duoi neu di trai-phai) roi di men theo ben do.
     const doc = canhTu === "tren" || canhTu === "duoi";
-    const ben: Canh = doc ? (ngauNhien() < 0.5 ? "trai" : "phai") : ngauNhien() < 0.5 ? "tren" : "duoi";
+    const benUngVien: Canh[] = doc ? ["trai", "phai"] : ["tren", "duoi"];
+    const benTrong = benUngVien.filter((b) => !canhBiChan(b, rong, cao, co, le, vungCam));
+    let ben: Canh;
+    if (benTrong.length === 0) {
+      ben = doc ? (ngauNhien() < 0.5 ? "trai" : "phai") : "duoi";
+    } else if (benTrong.length === 1) {
+      ben = benTrong[0] as Canh;
+    } else {
+      ben = benTrong[Math.floor(ngauNhien() * benTrong.length)] as Canh;
+    }
     const goc1 = gocChung(canhTu, ben, rong, cao, co, le);
     const goc2 = gocChung(canhDen, ben, rong, cao, co, le);
     moc = [tu, goc1, goc2, den];

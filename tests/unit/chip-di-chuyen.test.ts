@@ -100,10 +100,20 @@ describe("duongDi", () => {
     expect(doan[0]).toMatchObject({ x0: 100, y0: LE, x1: 500, y1: LE, cx: 300, cy: LE });
   });
 
-  it("hai canh ke: 1 doan, diem dieu khien la goc chung", () => {
+  it("hai canh ke: 2 doan qua goc chung, moi doan om mot canh (khong cat goc vao giua)", () => {
     const doan = duongDi({ x: 100, y: LE }, { x: RONG - LE - CO, y: 300 }, RONG, CAO, CO, LE, NUA);
-    expect(doan).toHaveLength(1);
-    expect(doan[0]).toMatchObject({ x0: 100, y0: LE, x1: RONG - LE - CO, y1: 300, cx: RONG - LE - CO, cy: LE });
+    expect(doan).toHaveLength(2);
+    expect(doan[0]).toMatchObject({ x0: 100, y0: LE, x1: RONG - LE - CO, y1: LE });
+    expect(doan[1]).toMatchObject({ x0: RONG - LE - CO, y0: LE, x1: RONG - LE - CO, y1: 300 });
+    // Moi doan nam tren cung mot duong mep; lay mau: khong diem nao roi vao vung giua man hinh.
+    for (const d of doan) {
+      expect(d.x0 === d.x1 || d.y0 === d.y1).toBe(true);
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        const x = bezier(d.x0, d.cx, d.x1, t);
+        const y = bezier(d.y0, d.cy, d.y1, t);
+        expect(oGiuaManHinh(x, y, RONG, CAO)).toBe(false);
+      }
+    }
   });
 
   it("hai canh doi nhau: 3 doan men theo mot ben, dau noi dau", () => {
@@ -122,6 +132,47 @@ describe("duongDi", () => {
       expect(d.cx).toBeLessThanOrEqual(RONG - LE - CO);
       expect(d.cy).toBeGreaterThanOrEqual(LE);
       expect(d.cy).toBeLessThanOrEqual(CAO - LE - CO);
+    }
+  });
+
+  it("chuyen ngang (trai-phai) tranh mep tren khi nav chan: di men theo mep duoi", () => {
+    const nav = { x: 0, y: 0, rong: RONG, cao: 61 };
+    const tu = { x: RONG - LE - CO, y: 300 };
+    const den = { x: LE, y: 400 };
+    const doan = duongDi(tu, den, RONG, CAO, CO, LE, NUA, [nav]);
+    expect(doan).toHaveLength(3);
+    // Lay mau moi doan: khong diem nao o nua tren man hinh (men theo mep duoi, khong de len nav).
+    for (const d of doan) {
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        expect(bezier(d.y0, d.cy, d.y1, t)).toBeGreaterThan(200);
+      }
+    }
+  });
+
+  it("chuyen ngang tranh mep duoi khi khung nhac chan: di men theo mep tren", () => {
+    const nhac = { x: 1000, y: 700, rong: 264, cao: 100 };
+    const tu = { x: RONG - LE - CO, y: 300 };
+    const den = { x: LE, y: 400 };
+    const doan = duongDi(tu, den, RONG, CAO, CO, LE, NUA, [nhac]);
+    expect(doan).toHaveLength(3);
+    for (const d of doan) {
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        expect(bezier(d.y0, d.cy, d.y1, t)).toBeLessThan(500);
+      }
+    }
+  });
+
+  it("ca hai mep deu bi chan: chuyen ngang uu tien mep duoi", () => {
+    const nav = { x: 0, y: 0, rong: RONG, cao: 61 };
+    const nhac = { x: 1000, y: 700, rong: 264, cao: 100 };
+    const tu = { x: RONG - LE - CO, y: 300 };
+    const den = { x: LE, y: 400 };
+    const doan = duongDi(tu, den, RONG, CAO, CO, LE, NUA, [nav, nhac]);
+    expect(doan).toHaveLength(3);
+    for (const d of doan) {
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        expect(bezier(d.y0, d.cy, d.y1, t)).toBeGreaterThan(200);
+      }
     }
   });
 
