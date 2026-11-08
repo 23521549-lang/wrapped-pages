@@ -194,9 +194,9 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   // dang dien cam xuc. Loi da luu vao lich su o may chu roi nen chi viec hien hay khong. Dang go trong o nhap thi
   // khong hien bong bong luc nay (de khoi cat ngang luc dang viet); mo to se thay loi da luu.
   const chuDong = useEffectEvent((loi: LoiChuDong | null) => {
-    if (loi === null) return;
     const nho = docLuu(KHOA_THU_NHO) === true;
     setThuNho(nho);
+    if (loi === null) return;
     if (nho || trangThai.an || dang !== null || dangGo()) return;
     const luc = docLuu(KHOA_NOI_LUC);
     if (typeof luc === "number" && Date.now() - luc < CACH_TU_NOI_MS) return;
