@@ -1,7 +1,14 @@
-import { CHU_DONG_NGHI_MS, VANG_LAU_MS, XAC_SUAT_CHU_DONG } from "@/lib/chip";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { CHU_DONG_NGHI_MS, CHU_DONG_TIMEOUT_MS, GIU_TIN, lamSachTraLoi, loiDanChuDong, NGU_CANH_TIN, VANG_LAU_MS, XAC_SUAT_CHU_DONG } from "@/lib/chip";
 import { feedLine } from "@/lib/feed/line";
 import type { FeedItem, FeedKind } from "@/lib/feed/types";
 import { dayKey } from "@/lib/when";
+import { chipTin, chipTrangThai } from "@/server/db/schema";
+import type { AnyDb } from "@/server/db/types";
+import { listActivity } from "@/server/feed/list";
+import { goiGroq, moiTruongThat, type MoiTruongGoi } from "./groq";
+import { dungNguCanh } from "./ngu-canh";
+import { docTroChuyen, trangThaiChip } from "./tro-chuyen";
 
 /*
  * Chip chu dong bat chuyen (dot nam 5e mo rong): chon su kien vua xay ra de hoi tham, mo ta no cho loi dan, va cac
@@ -93,4 +100,78 @@ export function coTheNoi(ngauNhien: () => number = Math.random): boolean {
 /** Da het cooldown 30 phut tu lan bat chuyen truoc chua (chua tung bat chuyen thi het). */
 export function hetNghi(chuDongLuc: Date | null, now: Date): boolean {
   return chuDongLuc === null || now.getTime() - chuDongLuc.getTime() >= CHU_DONG_NGHI_MS;
+}
+
+/** Xoa tin cu hon GIU_TIN tin gan nhat cua mot nguoi (ban sao cua tiaTin o tro-chuyen.ts; file do khong duoc sua). */
+async function tiaTinChuDong(db: AnyDb, accountId: string): Promise<void> {
+  const giu = db.select({ id: chipTin.id }).from(chipTin).where(eq(chipTin.accountId, accountId)).orderBy(desc(chipTin.luc), desc(chipTin.id)).limit(GIU_TIN);
+  await db.delete(chipTin).where(and(eq(chipTin.accountId, accountId), sql`${chipTin.id} not in (${giu})`));
+}
+
+/** Ket qua mot loi chu dong: cau de hien bong bong + nut tuy chon toi cho lien quan. */
+export type LoiChuDong = { cau: string; nut: { nhan: string; href: string } | null };
+
+/** Dau vao kich hoat: goi truc tiep sau mot hanh dong, hay quet luc mo trang. */
+export type KichHoatChuDong =
+  | { kieu: "truc-tiep"; kind: FeedKind }
+  | { kieu: "quet"; duongDan: string };
+
+/**
+ * Chip bat chuyen truoc theo viec vua xay ra. Tra null (im lang) khi: tat Chip / tat tu noi / dang ngu / chua co khoa
+ * Groq / chua het cooldown 30 phut / khong co su kien nao / xac suat 60% khong trung / Groq loi. Groq loi (het han
+ * muc, loi mang, chua co khoa) KHONG ghi Chip ngu va KHONG doi moc: loi chu dong la them, khong duoc khoa ca tro
+ * chuyen tra loi. Khi co loi: luu tin vai chip (de tra loi tiep duoc), cap nhat moc + ma su kien, tra cau + nut.
+ */
+export async function chuDongChip(
+  db: AnyDb,
+  viewerId: string,
+  tenMinh: string,
+  tenKia: string,
+  kichHoat: KichHoatChuDong,
+  now: Date = new Date(),
+  mt: MoiTruongGoi = moiTruongThat(),
+  khoangLang = false,
+  ngauNhien: () => number = Math.random,
+): Promise<LoiChuDong | null> {
+  const [tt, [hang]] = await Promise.all([
+    trangThaiChip(db, viewerId, now, mt),
+    db.select({ chuDongLuc: chipTrangThai.chuDongLuc, chuDongMa: chipTrangThai.chuDongMa }).from(chipTrangThai).where(eq(chipTrangThai.accountId, viewerId)),
+  ]);
+  if (tt.an || !tt.tuNoi || tt.nguDen !== null || !tt.coKhoa) return null;
+  const chuDongLuc = hang?.chuDongLuc ?? null;
+  const chuDongMa = hang?.chuDongMa ?? null;
+  if (!hetNghi(chuDongLuc, now)) return null;
+
+  const items = await listActivity(db, viewerId, now, khoangLang);
+  let suKien: SuKienChuDong | null = null;
+  if (kichHoat.kieu === "truc-tiep") {
+    if (!laKindCuaMinh(kichHoat.kind)) return null;
+    // listActivity tra moi nhat truoc nen phan tu dau tien sau loc la viec moi nhat loai do. Chi noi ve viec trong
+    // 6 tieng vua qua: goi truc tiep muon thi su kien da cu, de lan quet sau tu lo (no cung qua moc).
+    const dau = items.find((i) => i.by === "me" && i.kind === kichHoat.kind);
+    if (dau === undefined || dau.id === chuDongMa || !laKindCuaMinh(dau.kind) || dau.at.getTime() <= now.getTime() - VANG_LAU_MS) return null;
+    suKien = { kieu: dau.kind, ma: dau.id, moTa: moTaSuKien(dau, tenMinh, tenKia), href: feedLine(dau, { partner: tenKia }).href };
+  } else {
+    suKien = chonSuKien(items, { chuDongLuc, chuDongMa, khoangLang, duongDan: kichHoat.duongDan, tenMinh, tenKia, now });
+  }
+  if (suKien === null || !coTheNoi(ngauNhien)) return null;
+
+  const [nguCanh, lichSu] = await Promise.all([
+    dungNguCanh(db, viewerId, tenMinh, tenKia, "", [], now, khoangLang),
+    docTroChuyen(db, viewerId, NGU_CANH_TIN, khoangLang, tenKia),
+  ]);
+  const kq = await goiGroq([
+    { role: "system", content: loiDanChuDong(suKien.moTa, tenMinh, tenKia, nguCanh, khoangLang) },
+    ...lichSu.map((t) => ({ role: t.vai === "nguoi" ? ("user" as const) : ("assistant" as const), content: t.noiDung })),
+  ], mt, CHU_DONG_TIMEOUT_MS);
+  if (kq.kieu !== "ok") return null;
+  const cau = lamSachTraLoi(kq.noiDung);
+  if (cau === "") return null;
+  await db.insert(chipTin).values({ accountId: viewerId, vai: "chip", noiDung: cau, luc: now });
+  await tiaTinChuDong(db, viewerId);
+  await db
+    .insert(chipTrangThai)
+    .values({ accountId: viewerId, chuDongLuc: now, chuDongMa: suKien.ma })
+    .onConflictDoUpdate({ target: chipTrangThai.accountId, set: { chuDongLuc: now, chuDongMa: suKien.ma } });
+  return { cau, nut: suKien.href === null ? null : { nhan: "Xem ngay", href: suKien.href } };
 }

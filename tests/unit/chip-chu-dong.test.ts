@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { CHU_DONG_NGHI_MS, CHU_DONG_TIMEOUT_MS, loiDanChuDong, XAC_SUAT_CHU_DONG } from "@/lib/chip";
 import type { FeedItem } from "@/lib/feed/types";
+import { chipNghi, chipTin, chipTrangThai } from "@/server/db/schema";
+import { goiGroq, type MoiTruongGoi } from "@/server/chip/groq";
+import { setMood } from "@/server/mood/moods";
+import { datCaiDatChip } from "@/server/chip/tro-chuyen";
 import {
-  chonSuKien, coTheNoi, hetNghi, laTrangBatChuyen, moTaSuKien,
+  chonSuKien, chuDongChip, coTheNoi, hetNghi, laTrangBatChuyen, moTaSuKien,
 } from "@/server/chip/chu-dong";
+import { seedHai } from "../helpers/seed";
 
 /*
  * Engine chu dong cua Chip (ham thuan): chon su kien de bat chuyen, mo ta su kien, loi dan chu dong, cong xac
@@ -145,5 +151,140 @@ describe("cong xac suat va cooldown", () => {
     expect(XAC_SUAT_CHU_DONG).toBe(0.6);
     expect(CHU_DONG_NGHI_MS).toBe(30 * 60_000);
     expect(CHU_DONG_TIMEOUT_MS).toBe(8000);
+  });
+});
+
+type Goi = { url: string; body: { model: string; messages: { role: string; content: string }[] } };
+
+/** fetch gia: moi lan goi tra lan luot cac phan hoi cho truoc; ghi lai request. */
+function fetchGia(...phanHoi: (() => Response)[]): { mt: MoiTruongGoi; goi: Goi[] } {
+  const goi: Goi[] = [];
+  let i = 0;
+  const fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    goi.push({ url: String(url), body: JSON.parse(String(init?.body)) as Goi["body"] });
+    const f = phanHoi[Math.min(i, phanHoi.length - 1)];
+    i += 1;
+    return f();
+  }) as unknown as typeof globalThis.fetch;
+  return { mt: { khoa: "khoa-gia", goc: "https://groq.gia/openai/v1", fetch }, goi };
+}
+const traLoi = (chu: string) => () => new Response(JSON.stringify({ choices: [{ message: { content: chu } }] }), { status: 200 });
+const het = (giay: number | null) => () => new Response("{}", { status: 429, headers: giay === null ? {} : { "retry-after": String(giay) } });
+
+describe("chuDongChip (may chu)", () => {
+  it("truc tiep sau tha tam trang: tra loi, luu tin chip, cap nhat moc + ma", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", "Nhớ cậu một chút thôi.", NOW);
+    const { mt, goi } = fetchGia(traLoi("Trời mưa thế, cậu có lạnh không?"));
+    const loi = await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, false, () => 0.1);
+    expect(loi?.cau).toBe("Trời mưa thế, cậu có lạnh không?");
+    expect(loi?.nut).toEqual({ nhan: "Xem ngay", href: "/tam-trang" });
+    expect(goi[0].body.messages[0].content).toContain("Mưa phùn");
+    expect(goi[0].body.messages[0].content).toContain("Nhớ cậu một chút thôi.");
+    const tin = await s.db.select().from(chipTin).where(eq(chipTin.accountId, s.seat2.id));
+    expect(tin).toHaveLength(1);
+    expect(tin[0].vai).toBe("chip");
+    const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
+    expect(hang.chuDongLuc?.getTime()).toBe(NOW.getTime());
+    expect(hang.chuDongMa).not.toBeNull();
+  });
+
+  it("429 ca hai mo hinh: im lang, khong ghi ngu, khong luu tin, khong doi moc", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt } = fetchGia(het(null), het(null));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, false, () => 0.1)).toBeNull();
+    expect(await s.db.select().from(chipNghi)).toHaveLength(0);
+    expect(await s.db.select().from(chipTin)).toHaveLength(0);
+    const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
+    expect(hang?.chuDongMa ?? null).toBeNull();
+  });
+
+  it("Khoang Lang bat: prompt khong chua ten doi phuong; viec doi phuong khong kich hoat", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt, goi } = fetchGia(traLoi("Mưa rồi nè."));
+    const loi = await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, true, () => 0.1);
+    expect(loi).not.toBeNull();
+    expect(goi[0].body.messages[0].content).not.toContain("Linh");
+
+    const s2 = await seedHai();
+    await setMood(s2.db, s2.seat1.id, "nang-am", null, NOW);
+    const { mt: mt2 } = fetchGia(traLoi("Nắng đẹp quá."));
+    expect(await chuDongChip(s2.db, s2.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/ke-sach" }, NOW, mt2, true, () => 0.1)).toBeNull();
+  });
+
+  it("tuNoi tat thi im; dang ngu thi im", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    await datCaiDatChip(s.db, s.seat2.id, { tuNoi: false });
+    const { mt } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, false, () => 0.1)).toBeNull();
+
+    const s2 = await seedHai();
+    await setMood(s2.db, s2.seat2.id, "mua-phun", null, NOW);
+    await s2.db.insert(chipNghi).values({ khoa: "groq", den: new Date(NOW.getTime() + 3600_000) });
+    const { mt: mt2 } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s2.db, s2.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt2, false, () => 0.1)).toBeNull();
+  });
+
+  it("cooldown 30 phut chan lan hai; qua 30 phut cung viec thi dedup chan", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, false, () => 0.1)).not.toBeNull();
+    const sau60s = new Date(NOW.getTime() + 60_000);
+    await setMood(s.db, s.seat2.id, "giong", null, sau60s);
+    const { mt: mt2 } = fetchGia(traLoi("Giông rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, sau60s, mt2, false, () => 0.1)).toBeNull();
+    const sau31p = new Date(NOW.getTime() + 31 * 60_000);
+    const { mt: mt3, goi } = fetchGia(traLoi("Giông rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, sau31p, mt3, false, () => 0.1)).not.toBeNull();
+    expect(goi[0].body.messages[0].content).toContain("Giông");
+  });
+
+  it("qua 30 phut cung viec thi dedup chan (ma da noi roi)", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, false, () => 0.1)).not.toBeNull();
+    const sau31p = new Date(NOW.getTime() + 31 * 60_000);
+    const { mt: mt2 } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, sau31p, mt2, false, () => 0.1)).toBeNull();
+  });
+
+  it("xac suat khong trung: im, khong luu tin, khong doi moc", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "truc-tiep", kind: "tha-tam-trang" }, NOW, mt, false, () => 0.99)).toBeNull();
+    expect(await s.db.select().from(chipTin)).toHaveLength(0);
+    const [hang] = await s.db.select().from(chipTrangThai).where(eq(chipTrangThai.accountId, s.seat2.id));
+    expect(hang?.chuDongMa ?? null).toBeNull();
+  });
+
+  it("quet luc mo trang: thay viec moi cua minh; mo trang tao sach thi mo ta dung trang", async () => {
+    const s = await seedHai();
+    await setMood(s.db, s.seat2.id, "mua-phun", null, NOW);
+    const { mt, goi } = fetchGia(traLoi("Mưa rồi nè."));
+    expect(await chuDongChip(s.db, s.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/ke-sach" }, NOW, mt, false, () => 0.1)).not.toBeNull();
+    expect(goi[0].body.messages[0].content).toContain("Mưa phùn");
+
+    const s2 = await seedHai();
+    const { mt: mt2, goi: goi2 } = fetchGia(traLoi("Viết gì đó hay hay nha."));
+    expect(await chuDongChip(s2.db, s2.seat2.id, "Mạnh", "Linh", { kieu: "quet", duongDan: "/sach/moi" }, NOW, mt2, false, () => 0.1)).not.toBeNull();
+    expect(goi2[0].body.messages[0].content).toContain("đang mở trang tạo sách mới");
+  });
+
+  it("goiGroq timeout tuy chon: fetch treo thi tra loi nhanh", async () => {
+    const fetchTreo = vi.fn(((_url: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      })) as unknown as typeof globalThis.fetch);
+    const mt: MoiTruongGoi = { khoa: "khoa-gia", goc: "https://groq.gia/openai/v1", fetch: fetchTreo };
+    const batDau = Date.now();
+    expect(await goiGroq([{ role: "user", content: "chào" }], mt, 50)).toEqual({ kieu: "loi" });
+    expect(Date.now() - batDau).toBeLessThan(5000);
+    expect(fetchTreo).toHaveBeenCalledTimes(1);
   });
 });

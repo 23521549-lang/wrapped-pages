@@ -40,10 +40,10 @@ function docRetryAfter(h: Headers): number | null {
   return Number.isNaN(luc) ? null : Math.max(0, (luc - Date.now()) / 1000);
 }
 
-/** Goi mot mo hinh; 429 tra "het" kem retry-after, loi khac tra "loi". */
-async function goiMot(mt: MoiTruongGoi & { khoa: string }, moHinh: string, tin: TinGoi[]): Promise<KetQuaGoi> {
+/** Goi mot mo hinh; 429 tra "het" kem retry-after, loi khac tra "loi". timeoutMs mac dinh 25 giay (hoi dap). */
+async function goiMot(mt: MoiTruongGoi & { khoa: string }, moHinh: string, tin: TinGoi[], timeoutMs: number = HET_GIO_MS): Promise<KetQuaGoi> {
   const hen = new AbortController();
-  const t = setTimeout(() => hen.abort(), HET_GIO_MS);
+  const t = setTimeout(() => hen.abort(), timeoutMs);
   try {
     const r = await mt.fetch(`${mt.goc ?? GOC_MAC_DINH}/chat/completions`, {
       method: "POST",
@@ -73,14 +73,15 @@ async function goiMot(mt: MoiTruongGoi & { khoa: string }, moHinh: string, tin: 
 /**
  * Hoi Chip: thu mo hinh chinh, het han muc thi mo hinh phu. Ca hai het thi "het" voi retry-after som hon cua hai (luc it
  * nhat mot mo hinh hoi lai); khong mo hinh nao bao thi null. Loi khac o mo hinh chinh thi khong thu tiep.
+ * timeoutMs chi tran cho moi lan goi mot mo hinh (mac dinh 25 giay nhu cu).
  */
-export async function goiGroq(tin: TinGoi[], mt: MoiTruongGoi = moiTruongThat()): Promise<KetQuaGoi> {
+export async function goiGroq(tin: TinGoi[], mt: MoiTruongGoi = moiTruongThat(), timeoutMs: number = HET_GIO_MS): Promise<KetQuaGoi> {
   const khoa = mt.khoa;
   if (khoa === undefined) return { kieu: "chua-co-khoa" };
   const cho: (number | null)[] = [];
   for (const moHinh of MO_HINH) {
     // oxlint-disable-next-line no-await-in-loop -- co y goi lan luot: chi thu mo hinh phu khi mo hinh chinh het han muc.
-    const kq = await goiMot({ ...mt, khoa }, moHinh, tin);
+    const kq = await goiMot({ ...mt, khoa }, moHinh, tin, timeoutMs);
     if (kq.kieu !== "het") return kq;
     cho.push(kq.retryAfterGiay);
   }
