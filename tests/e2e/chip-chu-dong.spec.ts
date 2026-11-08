@@ -137,9 +137,11 @@ async function chuBongBong(p: Page): Promise<string | null> {
  * moi 300ms; neu may chu goi Groq giua chung (loi da sinh, ma da tieu thu) thi doi them 15 giay thay vi tai
  * lai vo ich. Cua so 15 giay (khong phai 10): luc may tai, lan quet co the ve muon hon 10 giay sau khi tai.
  */
-/** Chan doan luc quet goi Groq xong ma bong bong khong hien: ghi lai trang thai client de biet cong nao chan. */
+/** Chan doan luc quet: ghi lai trang thai client + moc may chu (lanCuoiThay tuoi = chaoChip da chay, ke ca tra
+ * null; chuDongMa co gia tri = quet da toi duoc Groq). Goi CUOI MOI lan thu trong taiLaiChoLoi, ke ca khi 0
+ * cuoc goi Groq, de khong bao gio mu nhu truoc. */
 let chanDoanQuet = "";
-async function ghiChanDoan(p: Page): Promise<void> {
+async function ghiChanDoan(p: Page, ai: string): Promise<void> {
   const t = await p.evaluate(() => {
     const khoa = localStorage.getItem("mqce-chip-noi-luc");
     const el = document.activeElement;
@@ -147,10 +149,31 @@ async function ghiChanDoan(p: Page): Promise<void> {
     const chu = bb?.querySelector(".loi-lv__chu")?.textContent ?? null;
     return { khoa: khoa === null ? null : Date.now() - Number(khoa), focus: el?.tagName ?? null, bb: bb !== null, chu };
   });
-  chanDoanQuet = JSON.stringify(t);
+  // Moc may chu: doc thang chip_trang_thai cua nguoi nay (theo mau datLaiChuDong).
+  let mayChu: unknown = null;
+  const sql = postgres(e2eUrls().e2eUrl, { max: 1, onnotice: () => {} });
+  try {
+    const [{ ten }] = await sql<{ ten: string }[]>`select current_database() as ten`;
+    assertE2eDatabase(ten);
+    const [hang] = await sql<{ lan_cuoi_thay: Date | null; chu_dong_luc: Date | null; chu_dong_ma: string | null; so_tin: number }[]>`
+      select ct.lan_cuoi_thay, ct.chu_dong_luc, ct.chu_dong_ma,
+        (select count(*)::int from chip_tin where account_id = ct.account_id) as so_tin
+      from chip_trang_thai ct where ct.account_id = (select id from accounts where nickname = ${ai})`;
+    mayChu = hang === undefined ? "khong-co-hang" : {
+      lanCuoiThay: hang.lan_cuoi_thay === null ? null : Date.now() - hang.lan_cuoi_thay.getTime(),
+      chuDongLuc: hang.chu_dong_luc === null ? null : Date.now() - hang.chu_dong_luc.getTime(),
+      chuDongMa: hang.chu_dong_ma,
+      soTin: hang.so_tin,
+    };
+  } catch (e) {
+    mayChu = `loi-doc-db:${e instanceof Error ? e.message : String(e)}`;
+  } finally {
+    await sql.end();
+  }
+  chanDoanQuet = JSON.stringify({ ...t, mayChu });
 }
 
-async function taiLaiChoLoi(p: Page): Promise<boolean> {
+async function taiLaiChoLoi(p: Page, ai: string): Promise<boolean> {
   for (let i = 0; i < 4; i++) {
     if (i > 0) {
       await p.reload();
@@ -169,8 +192,9 @@ async function taiLaiChoLoi(p: Page): Promise<boolean> {
       }
       await p.waitForTimeout(300);
     }
+    // Ghi chan doan cuoi MOI lan thu, ke ca khi 0 cuoc goi (truoc day chi ghi khi thay goi nen mu hoan toan).
+    await ghiChanDoan(p, ai);
     if (thayGoi) {
-      await ghiChanDoan(p);
       // Cho them 15 giay (khong phai 8): bong bong chi bat dau song 8 giay tu luc hien, ma loi tra ve co the
       // cham hon luc goi Groq vai giay khi may tai (lan 9: loi ve sau ~8 giay vi load 3,44).
       const den2 = Date.now() + 15_000;
@@ -178,7 +202,7 @@ async function taiLaiChoLoi(p: Page): Promise<boolean> {
         if ((await chuBongBong(p)) === CAU_CO_DINH) return true;
         await p.waitForTimeout(300);
       }
-      await ghiChanDoan(p);
+      await ghiChanDoan(p, ai);
       return false;
     }
   }
@@ -269,7 +293,7 @@ test("mo trang tam trang: quet luc mo trang thay viec moi, bong bong hien cau ch
   // dat lai key sau lan xoa truoc goto; sau goto thi mount cu da chet nen khong ai dat lai key nua.
   await b.goto("/tam-trang");
   await xoaNoiLuc(b);
-  expect(await taiLaiChoLoi(b), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}; chan doan: ${chanDoanQuet}`).toBe(true);
+  expect(await taiLaiChoLoi(b, "Linh"), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}; chan doan: ${chanDoanQuet}`).toBe(true);
   const goi = daGoi.find((g) => g.chuDong);
   expect(goi).toBeDefined();
   expect(goi?.heThong).toContain("đang mở trang Thả tâm trạng");
@@ -286,7 +310,7 @@ test("tao sach xong: mo Ke sach thi Chip hoi ve cuon moi", async ({ browser }) =
   await datLaiChuDong("Mạnh");
   await a.goto("/ke-sach");
   await xoaNoiLuc(a);
-  expect(await taiLaiChoLoi(a), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}; chan doan: ${chanDoanQuet}`).toBe(true);
+  expect(await taiLaiChoLoi(a, "Mạnh"), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}; chan doan: ${chanDoanQuet}`).toBe(true);
   const goi = daGoi.find((g) => g.chuDong && g.heThong.includes("Sổ tay thử"));
   expect(goi).toBeDefined();
   expect(goi?.heThong).toContain("Sổ tay thử");
@@ -312,7 +336,7 @@ test("Khoang Lang bat: viec moi cua doi phuong khong khien Chip bat chuyen", asy
   await xoaNoiLuc(b);
   await b.goto("/tam-trang");
   // An het T1 cua trang nay truoc (moi trang mot lan mot ngay), de lan quet sau chi con T8 de xet.
-  expect(await taiLaiChoLoi(b), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}`).toBe(true);
+  expect(await taiLaiChoLoi(b, "Linh"), `khong thay bong bong; so cuoc goi chu dong toi Groq: ${soChuDong()}; chan doan: ${chanDoanQuet}`).toBe(true);
   const daGoiTruoc = soChuDong();
   await ghiThu("Mạnh", "2026-09", "Gửi Linh tháng Chín.");
   await datKhoangLang("Linh", true);
