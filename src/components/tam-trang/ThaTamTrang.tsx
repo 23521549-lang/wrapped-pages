@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { actionSetMood, actionWithdrawMood } from "@/app/actions/mood";
+import { actionChuDongChip } from "@/app/actions/chip";
+import { baoChuDong } from "@/components/linh-vat/chu-dong-su-kien";
 import { CHUA_THA_DUOC } from "@/app/actions/messages";
 import { NHAN_DAI, NOTE_MAX, parseMoodInput } from "@/lib/tam-trang/input";
 import { thaLabel, type TroiHien } from "@/lib/tam-trang/lich";
@@ -252,6 +254,10 @@ export function ThaTamTrang({ dau, nutPhu, dangGiu, minh, tenKia, khoangLang = f
         // Hop da tu thu lai (va chua ai mo lai) thi xoa lua chon ngay; con dang mo cho loang thi xoa luc thu hop.
         if (daThuHop.current === lan) xoaChon();
         setBao(`Đã thả ${TROI[vao.weather].ten}. Giữ trong 24 giờ.`);
+        // Tha xong thi bao Chip hoi tham ngay (fire-and-forget): loi ve thi LinhVat hien bong bong, loi thi thoi.
+        void actionChuDongChip({ kieu: "truc-tiep", kind: "tha-tam-trang" }).then((chu) => {
+          if (chu !== null) baoChuDong(chu);
+        }, () => {});
       } catch {
         boTam(CHUA_THA_DUOC);
       }

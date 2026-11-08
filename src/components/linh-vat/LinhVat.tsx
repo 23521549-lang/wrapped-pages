@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { Fragment, useEffect, useEffectEvent, useRef, useState } from "react";
 import { actionCamXucChoToi, actionDaXemCamXuc } from "@/app/actions/cam-xuc";
-import { actionChaoChip } from "@/app/actions/chip";
+import { actionChaoChip, actionChuDongChip } from "@/app/actions/chip";
 import { msTuCss } from "@/components/reader/Flipbook";
 import { CAM_XUC, CHIP, dongMangToi, type LoaiCamXuc } from "@/lib/cam-xuc";
 import { tachDam } from "@/lib/chip";
 import type { CamXucToi } from "@/server/cam-xuc/cam-xuc";
+import type { LoiChuDong } from "@/server/chip/chu-dong";
 import type { LoiChao, TrangThaiChip } from "@/server/chip/tro-chuyen";
 import { AnhLinhVat } from "./AnhLinhVat";
+import { SU_KIEN_CHU_DONG } from "./chu-dong-su-kien";
 import { dienHieuUng, VANG_MAT } from "./hieu-ung";
 import { TroChuyen } from "./TroChuyen";
 
@@ -78,7 +80,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   const [bao, setBao] = useState("");
   const [nguDen, setNguDen] = useState(trangThai.nguDen);
   const [thuNho, setThuNho] = useState(false);
-  const [loiChao, setLoiChao] = useState<LoiChao | null>(null);
+  const [loiChao, setLoiChao] = useState<LoiChao | LoiChuDong | null>(null);
   const gocRef = useRef<HTMLDivElement>(null);
   const nutRef = useRef<HTMLButtonElement>(null);
   const lopRef = useRef<HTMLDivElement>(null);
@@ -182,16 +184,46 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     setBao(tachDam(loi.cau).map((d) => d.chu).join(""));
     sau(8000, tuDong);
   });
+  // Hien mot loi chu dong trong bong bong nhu loi chao: cung cooldown 10 phut, cung tat khi thu nho / tat Chip /
+  // dang dien cam xuc. Loi da luu vao lich su o may chu roi nen chi viec hien hay khong.
+  const chuDong = useEffectEvent((loi: LoiChuDong | null) => {
+    if (loi === null) return;
+    const nho = docLuu(KHOA_THU_NHO) === true;
+    setThuNho(nho);
+    if (nho || trangThai.an || dang !== null) return;
+    const luc = docLuu(KHOA_NOI_LUC);
+    if (typeof luc === "number" && Date.now() - luc < CACH_TU_NOI_MS) return;
+    ghiLuu(KHOA_NOI_LUC, Date.now());
+    setLoiChao(loi);
+    setBao(tachDam(loi.cau).map((d) => d.chu).join(""));
+    sau(8000, tuDong);
+  });
+
   useEffect(() => {
     let con = true;
     void actionChaoChip().then((loi) => {
-      if (con) chao(loi);
+      if (!con) return;
+      if (loi !== null) {
+        chao(loi);
+        return;
+      }
+      // Khong co loi chao thi hoi chu dong (quet viec moi / trang dang mo); loi chao thang khi ca hai cung toi.
+      void actionChuDongChip({ kieu: "quet", duongDan: globalThis.location.pathname }).then((chu) => {
+        if (con) chuDong(chu);
+      }, () => {});
     }, () => {
       if (con) chao(null);
     });
     return () => {
       con = false;
     };
+  }, []);
+
+  // Loi chu dong ve tu diem goi truc tiep (vd tha tam trang xong): hien bong bong nhu loi chao.
+  useEffect(() => {
+    const khiCo = (e: Event) => chuDong((e as CustomEvent<LoiChuDong>).detail);
+    globalThis.addEventListener(SU_KIEN_CHU_DONG, khiCo);
+    return () => globalThis.removeEventListener(SU_KIEN_CHU_DONG, khiCo);
   }, []);
 
   // Khong de len khung YouTube khi ngoi yen: dang giao voi mot iframe hay khung phat chung thi tam an. Luc dang dien

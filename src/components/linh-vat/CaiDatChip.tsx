@@ -45,7 +45,7 @@ export function CaiDatChip({ an, tuNoi, tenKia }: { an: boolean; tuNoi: boolean;
             batDau(() => actionCaiDatChip({ tuNoi: bat }));
           }}
         />
-        Chíp tự chào và báo chuyện mới
+        Chíp tự bắt chuyện, tự chào và báo chuyện mới
       </label>
       <div className="chip-xoa">
         {daXoa ? (
