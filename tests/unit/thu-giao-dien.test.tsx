@@ -91,7 +91,10 @@ describe("TongKetThang", () => {
       />,
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(600);
+      // jsdom khong chay transition CSS nen transitionend khong bao gio ban: test nay di duong hen gio du phong
+      // (320ms mac dinh + 1000ms, vi --dur-tha-mo khong co trong jsdom). Duong transitionend that chay o
+      // trinh duyet that, da co E2E thu-thang bao phu.
+      await vi.advanceTimersByTimeAsync(1500);
     });
     expect(screen.getByRole("button", { name: /Tháng Tám, 2026/ }).getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByRole("button", { name: /Tháng Chín, 2026/ }).getAttribute("aria-expanded")).toBe("false");

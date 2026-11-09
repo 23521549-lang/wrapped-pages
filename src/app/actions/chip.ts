@@ -2,9 +2,12 @@
 
 import { refresh } from "next/cache";
 import { db } from "@/server/db";
+import { KIND_CUA_MINH, chuDongChip, type KichHoatChuDong, type LoiChuDong } from "@/server/chip/chu-dong";
+import { lamSachTrang } from "@/server/chip/ngu-canh";
 import {
   chaoChip, datCaiDatChip, docTroChuyen, hoiChip, trangThaiChip, xoaTroChuyen, type LoiChao, type TinChip, type TrangThaiChip,
 } from "@/server/chip/tro-chuyen";
+import type { FeedKind } from "@/lib/feed/types";
 import { readMe } from "@/server/web/guard";
 import { CAN_DANG_NHAP, CHO_CHIP_TRA_LOI, TIN_CHIP_HONG } from "./messages";
 
@@ -34,6 +37,28 @@ export async function actionChaoChip(): Promise<LoiChao | null> {
   const me = await readMe();
   if (!me) return null;
   return chaoChip(db, me.accountId, me.nickname, me.partnerNickname, new Date(), me.khoangLang);
+}
+
+/**
+ * Chip bat chuyen truoc theo viec vua xay ra (goi truc tiep sau mot hanh dong, hay quet luc mo trang). Dau vao tu
+ * trinh duyet chi la goi y: loai truc tiep phai nam trong danh sach trigger, duong dan duoc lam sach nhu ten trang.
+ * Tra null khi khong co loi (tat, dang ngu, cooldown, xac suat khong trung, Groq loi) - trinh duyet khong lam gi them.
+ */
+export async function actionChuDongChip(kichHoat: unknown): Promise<LoiChuDong | null> {
+  const me = await readMe();
+  if (!me) return null;
+  if (typeof kichHoat !== "object" || kichHoat === null) return null;
+  const kieu = (kichHoat as { kieu?: unknown }).kieu;
+  let kich: KichHoatChuDong | null = null;
+  if (kieu === "truc-tiep") {
+    const kind = (kichHoat as { kind?: unknown }).kind;
+    if (typeof kind !== "string" || !(KIND_CUA_MINH as readonly string[]).includes(kind)) return null;
+    kich = { kieu: "truc-tiep", kind: kind as FeedKind };
+  } else if (kieu === "quet") {
+    kich = { kieu: "quet", duongDan: lamSachTrang((kichHoat as { duongDan?: unknown }).duongDan) };
+  }
+  if (kich === null) return null;
+  return chuDongChip(db, me.accountId, me.nickname, me.partnerNickname, kich, new Date(), undefined, me.khoangLang);
 }
 
 /** Cai dat Chip cua nguoi dang nhap (hien Chip, tu noi); lam moi trang de moi cho thay ngay. */

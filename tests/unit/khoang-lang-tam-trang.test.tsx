@@ -7,14 +7,16 @@ import { LichHoa } from "@/components/tam-trang/LichHoa";
 import { ThaTamTrang } from "@/components/tam-trang/ThaTamTrang";
 import { TongKetThang, type ThangTongKetHien } from "@/components/tam-trang/TongKetThang";
 
-const { actionSetMood, actionWithdrawMood, actionMoThu, refresh } = vi.hoisted(() => ({
+const { actionSetMood, actionWithdrawMood, actionMoThu, actionChuDongChip, refresh } = vi.hoisted(() => ({
   actionSetMood: vi.fn(async () => ({ ok: true })),
   actionWithdrawMood: vi.fn(async () => ({ ok: true })),
   actionMoThu: vi.fn(),
+  actionChuDongChip: vi.fn(async (): Promise<null> => null),
   refresh: vi.fn(),
 }));
 vi.mock("@/app/actions/mood", () => ({ actionSetMood, actionWithdrawMood }));
 vi.mock("@/app/actions/thu", () => ({ actionMoThu }));
+vi.mock("@/app/actions/chip", () => ({ actionChuDongChip }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 afterEach(() => {
@@ -22,6 +24,7 @@ afterEach(() => {
   actionSetMood.mockClear();
   actionWithdrawMood.mockClear();
   actionMoThu.mockClear();
+  actionChuDongChip.mockClear();
 });
 
 /*

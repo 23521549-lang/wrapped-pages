@@ -560,7 +560,8 @@ export const chipTin = pgTable("chip_tin", {
 
 /**
  * Trang thai Chip cua moi nguoi (5e): lan cuoi thay web (de chao khi quay lai), tat Chip, tat tu noi, va lan cuoi nguoi
- * nay thay Chip dang ngu (de biet noi cau "Chip day roi"). Chua co dong la mac dinh: hien, tu noi, chua tung thay.
+ * nay thay Chip dang ngu (de biet noi cau "Chip day roi"). Chu dong bat chuyen (mo rong): luc bat chuyen gan nhat va
+ * ma su kien da noi (de mot viec chi bat chuyen mot lan). Chua co dong la mac dinh: hien, tu noi, chua tung thay.
  */
 export const chipTrangThai = pgTable("chip_trang_thai", {
   accountId: uuid("account_id").primaryKey().references(() => accounts.id, { onDelete: "cascade" }),
@@ -568,6 +569,8 @@ export const chipTrangThai = pgTable("chip_trang_thai", {
   an: boolean("an").notNull().default(false),
   tuNoi: boolean("tu_noi").notNull().default(true),
   thayNguLuc: timestamp("thay_ngu_luc", { withTimezone: true }),
+  chuDongLuc: timestamp("chu_dong_luc", { withTimezone: true }),
+  chuDongMa: text("chu_dong_ma"),
 });
 
 /**
