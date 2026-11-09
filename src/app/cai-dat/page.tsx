@@ -44,7 +44,7 @@ export default async function CaiDat() {
               <RenameForm />
             </section>
 
-            <CaiDatChip an={chip.an} tuNoi={chip.tuNoi} tenKia={tenKia} />
+            <CaiDatChip an={chip.an} tuNoi={chip.tuNoi} dang={chip.dang} tenKia={tenKia} />
 
             <CaiDatHoatDong an={me.anHoatDong} tenKia={tenKia} />
 

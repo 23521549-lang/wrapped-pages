@@ -169,6 +169,13 @@
       "when": 1794122800781,
       "tag": "0023_chip-chu-dong",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794191907127,
+      "tag": "0024_dang-chip",
+      "breakpoints": true
     }
   ]
 }

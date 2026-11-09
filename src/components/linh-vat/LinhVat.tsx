@@ -597,6 +597,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
           <TroChuyen
             tenMinh={tenMinh}
             tenKia={tenKia}
+            dang={trangThai.dang}
             nguDen={nguDen}
             coKhoa={trangThai.coKhoa}
             doiNgu={setNguDen}
@@ -668,7 +669,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
               else setMoTc((x) => !x);
             }}
           >
-            <AnhLinhVat key={hinh ?? "chip"} loai={hinh} className="linh-vat__hinh" tinh={ngu} />
+            <AnhLinhVat key={hinh ?? trangThai.dang} loai={hinh} dang={trangThai.dang} className="linh-vat__hinh" tinh={ngu} />
             {ngu && (
               // oxlint-disable-next-line nextjs/no-img-element -- anh tinh tu public/, da thu nho san.
               <img className="linh-vat__ngu" src="/linh-vat/ngu.webp" alt="" width={96} height={96} decoding="async" />

@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { actionDocChip, actionHoiChip } from "@/app/actions/chip";
 import { CHUA_GUI_CHIP } from "@/app/actions/messages";
-import type { LoaiCamXuc } from "@/lib/cam-xuc";
+import type { DangChip, LoaiCamXuc } from "@/lib/cam-xuc";
 import { CAU_CHUA_DANH_THUC, lucDay, NHAP_TOI_DA, tachDam } from "@/lib/chip";
 import { dayKey, dayLabel } from "@/lib/when";
 import type { TinChip } from "@/server/chip/tro-chuyen";
@@ -23,6 +23,8 @@ function ChuTin({ noiDung }: { noiDung: string }) {
 export type TroChuyenProps = {
   tenMinh: string;
   tenKia: string;
+  /** Dang Chip da chon, chi doi anh dau to luc ranh (loai null). */
+  dang: DangChip;
   nguDen: Date | null;
   coKhoa: boolean;
   /** Chip vua di ngu (hay thuc) theo tra loi cua may chu. */
@@ -37,7 +39,7 @@ export type TroChuyenProps = {
  * cam xuc va o "Nói với Chíp" (Enter gui, Shift+Enter xuong dong). Mo ra thi doc cuoc tro chuyen cua chinh nguoi dung;
  * dang cho tra loi thi ba cham "Chíp đang gõ". Chip ngu hay chua duoc danh thuc thi o nhap tat, kho van dung duoc. Esc dong.
  */
-export function TroChuyen({ tenMinh, tenKia, nguDen, coKhoa, doiNgu, dong, thuNho, daTha }: TroChuyenProps) {
+export function TroChuyen({ tenMinh, tenKia, dang, nguDen, coKhoa, doiNgu, dong, thuNho, daTha }: TroChuyenProps) {
   const id = useId();
   const [tin, setTin] = useState<TinChip[] | null>(null);
   const [nhap, setNhap] = useState("");
@@ -120,7 +122,7 @@ export function TroChuyen({ tenMinh, tenKia, nguDen, coKhoa, doiNgu, dong, thuNh
   return (
     <section className="tc" ref={toRef} aria-labelledby={`${id}-t`}>
       <div className="tc__dau">
-        <AnhLinhVat loai={null} className="tc__chip" tinh={nguDen !== null} />
+        <AnhLinhVat loai={null} dang={dang} className="tc__chip" tinh={nguDen !== null} />
         <p className="tc__ten"><b id={`${id}-t`}>Chíp</b><span>{trangThai}</span></p>
         <button type="button" className="tc__nut" aria-label="Thu nhỏ Chíp" onClick={thuNho}>
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" /></svg>
