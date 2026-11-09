@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   bezier,
   canhCuaDiem,
-  CAU_DAO_CHOI,
   chonDiemDen,
   diemGoc,
   duongDi,
@@ -257,21 +256,12 @@ describe("tinhBanking", () => {
   });
 });
 
-describe("heSoTho va cau dao choi", () => {
+describe("heSoTho", () => {
   it("tho trong khoang +-1,5%", () => {
     for (let t = 0; t < 10000; t += 137) {
       const s = heSoTho(t);
       expect(s).toBeGreaterThanOrEqual(0.985);
       expect(s).toBeLessThanOrEqual(1.015);
-    }
-  });
-
-  it("co dung 3 cau dao choi cua demo v4, khong nhac ten ai", () => {
-    expect(CAU_DAO_CHOI).toHaveLength(3);
-    expect(CAU_DAO_CHOI).toContain("Chíp đang dạo chơi đây~");
-    for (const cau of CAU_DAO_CHOI) {
-      expect(cau).not.toContain("Linh");
-      expect(cau).not.toContain("Mạnh");
     }
   });
 });

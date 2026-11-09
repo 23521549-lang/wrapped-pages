@@ -48,10 +48,6 @@ export const SO_LAN_THU_TOI_DA = 14;
 export const DEM_VUNG_CAM_PX = 24;
 /** Do lech ngau nhien cua diem dieu khien khoi duong thang (giu duong di trong dai mep). */
 export const LECH_DIEU_KHIEN_PX = 12;
-/** Cau dao choi khi dau (demo v4, dung lai nguyen van, khong nhac ten ai). */
-export const CAU_DAO_CHOI = ["Chíp đang dạo chơi đây~", "Hôm nay bạn thế nào?", "Đi lòng vòng cho vui!"];
-/** Xac suat noi mot cau dao choi sau moi lan dau (demo v4: 0.25). */
-export const XAC_SUAT_NOI = 0.25;
 /** Man hep hon muc nay thi tat di chuyen (D1). */
 export const NGUONG_MAN_HEP_PX = 600;
 /** Goc nghieng toi da khi di (demo v4: ±13 do). */

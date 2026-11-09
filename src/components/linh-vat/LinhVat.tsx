@@ -14,7 +14,6 @@ import type { LoiChao, TrangThaiChip } from "@/server/chip/tro-chuyen";
 import { AnhLinhVat } from "./AnhLinhVat";
 import {
   bezier,
-  CAU_DAO_CHOI,
   chonDiemDen,
   CO_CHIP_PX,
   diemGoc,
@@ -30,7 +29,6 @@ import {
   NHAY_MS,
   thoiGianNghi,
   tinhBanking,
-  XAC_SUAT_NOI,
   type Diem,
   type DoanDuong,
   type HinhChuNhat,
@@ -127,7 +125,6 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   const [thuNho, setThuNho] = useState(false);
   const [loiChao, setLoiChao] = useState<LoiChao | LoiChuDong | null>(null);
   const [dangDi, setDangDi] = useState(false);
-  const [cauDao, setCauDao] = useState<string | null>(null);
   const [reduce, setReduce] = useState(() => giamChuyenDong());
   const [hep, setHep] = useState(() => (typeof window === "undefined" ? false : window.innerWidth < NGUONG_MAN_HEP_PX));
   const gocRef = useRef<HTMLDivElement>(null);
@@ -170,7 +167,6 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     setDien(null);
     setDang(null);
     setLoiChao(null);
-    setCauDao(null);
   }
 
   /** Bong bong tu dong sau 8 giay, tru khi nguoi dung dang re chuot hay focus trong no (thi hen lai 2 giay nua). */
@@ -347,7 +343,6 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     duongRef.current = null;
     veNhaRef.current = false;
     setDangDi(false);
-    setCauDao(null);
   }, []);
   const [tamDung] = useTamDung(apDungTamDung);
 
@@ -369,7 +364,6 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   // Neo dau (C1): to tro chuyen mo, bong bong hien, hoac dang dien cam xuc thi Chip dung di chuyen, ve goc.
   useEffect(() => {
     neoRef.current = moTc || dang !== null || loiChao !== null || dien !== null;
-    if (neoRef.current) setCauDao(null);
   }, [moTc, dang, loiChao, dien]);
 
   function daTha(loai: LoaiCamXuc) {
@@ -408,16 +402,15 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   const choPhepDi = !reduce && !tamDung && !hep && !thuNho && coNut;
 
   // Vong di chuyen: rAF sua truc tiep transform cua .linh-vat (vi tri tuyet doi + banking + tho/nhay); React chi giu
-  // trang thai dangDi (lop vo canh) va cauDao (bong bong dao choi). Tat khi reduce, tam dung, man hep, thu nho, an nut.
+  // trang thai dangDi (lop vo canh). Tat khi reduce, tam dung, man hep, thu nho, an nut.
   // Luu y: thuNho chi co sau khi actionChaoChip tra ve, nhung lan di dau tien luon sau 1,4 giay nghi nen khong kip di
   // truoc khi biet minh dang thu nho.
   useEffect(() => {
     const goc = gocRef.current;
     if (!choPhepDi || !goc) {
       if (goc) goc.style.removeProperty("transform");
-      // oxlint-disable-next-line react/set-state-in-effect -- dong bo trang thai React voi vong dong co ngoai React (rAF + DOM): tat engine thi tat vo canh va bong bong dao choi.
+      // oxlint-disable-next-line react/set-state-in-effect -- dong bo trang thai React voi vong dong co ngoai React (rAF + DOM): tat engine thi tat vo canh.
       setDangDi(false);
-      setCauDao(null);
       return;
     }
     if (viTriRef.current === null) viTriRef.current = diemGoc(window.innerWidth, window.innerHeight, CO_CHIP_PX, LE_CHIP_PX);
@@ -501,14 +494,6 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
               veNhaRef.current = false;
               setDangDi(false);
               nghiDenRef.current = bayGio + (veNha ? 1000 : thoiGianNghi());
-              if (!veNha && !neoRef.current && Math.random() < XAC_SUAT_NOI) {
-                const cau = CAU_DAO_CHOI[Math.floor(Math.random() * CAU_DAO_CHOI.length)] ?? "";
-                if (cau !== "") {
-                  setCauDao(cau);
-                  setBao(cau);
-                  sau(8000, () => setCauDao((cu) => (cu === cau ? null : cu)));
-                }
-              }
             }
           }
         }
@@ -647,13 +632,6 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
                 </button>
               </div>
             </div>
-            {nutDong(CHIP.ten)}
-          </div>
-        )}
-        {dang === null && loiChao === null && cauDao !== null && !moTc && (
-          // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- chi giu bong bong lai khi re chuot hay focus, khong phai mot dieu khien.
-          <div className="loi-lv loi-lv--dao" {...giu}>
-            <p className="loi-lv__chu">{cauDao}</p>
             {nutDong(CHIP.ten)}
           </div>
         )}
