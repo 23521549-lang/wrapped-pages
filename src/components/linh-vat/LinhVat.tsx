@@ -70,6 +70,23 @@ function cacDaDien(): string[] {
 const daDien = (id: string) => cacDaDien().includes(id);
 const ghiDaDien = (id: string) => ghiLuu(KHOA_DA_DIEN, [...cacDaDien().filter((x) => x !== id), id].slice(-24));
 
+/** Anh Chip (.linh-vat__hinh, con cua nut): tho + nhay chuyen sang day de hop nut tuyet doi tinh luc nghi.
+ * Lay lai moi lan vi AnhLinhVat co the remount khi doi cam xuc/form (key thay doi). Ham muc module de ca
+ * useCallback (tam dung) lan effect (vong rAF) deu goi duoc. */
+function apDungHinh(goc: HTMLElement | null, tho: number | null, nhay: number): void {
+  const hinh = goc?.querySelector<HTMLElement>(".linh-vat__hinh") ?? null;
+  if (hinh === null) return;
+  if (tho === null) {
+    hinh.style.removeProperty("transform");
+    hinh.style.removeProperty("transition");
+  } else {
+    // Tat transition cua anh luc engine dieu khien: khong thi moi khung dat transform moi deu bi lam muot theo
+    // --dur-short, tho bi dap va tre pha.
+    hinh.style.transition = "none";
+    hinh.style.transform = `translateY(${nhay}px) scale(${tho})`;
+  }
+}
+
 const giao = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const giamChuyenDong = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 
@@ -338,6 +355,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     // Bat tam dung thi ve goc ngay (E1), truoc ca khi React ve lai.
     const goc = gocRef.current;
     if (goc) goc.style.removeProperty("transform");
+    apDungHinh(goc, null, 0);
     if (typeof window !== "undefined") viTriRef.current = diemGoc(window.innerWidth, window.innerHeight, CO_CHIP_PX, LE_CHIP_PX);
     cheDoRef.current = "nghi";
     duongRef.current = null;
@@ -401,14 +419,16 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
   ].filter(Boolean).join(" ");
   const choPhepDi = !reduce && !tamDung && !hep && !thuNho && coNut;
 
-  // Vong di chuyen: rAF sua truc tiep transform cua .linh-vat (vi tri tuyet doi + banking + tho/nhay); React chi giu
-  // trang thai dangDi (lop vo canh). Tat khi reduce, tam dung, man hep, thu nho, an nut.
+  // Vong di chuyen: rAF sua truc tiep transform cua .linh-vat (vi tri + banking luc di; chi translate co dinh luc
+  // nghi) va cua anh .linh-vat__hinh (tho + nhay luc nghi, de hop nut tuyet doi tinh cho Playwright bam); React chi
+  // giu trang thai dangDi (lop vo canh). Tat khi reduce, tam dung, man hep, thu nho, an nut.
   // Luu y: thuNho chi co sau khi actionChaoChip tra ve, nhung lan di dau tien luon sau 1,4 giay nghi nen khong kip di
   // truoc khi biet minh dang thu nho.
   useEffect(() => {
     const goc = gocRef.current;
     if (!choPhepDi || !goc) {
       if (goc) goc.style.removeProperty("transform");
+      apDungHinh(goc, null, 0);
       // oxlint-disable-next-line react/set-state-in-effect -- dong bo trang thai React voi vong dong co ngoai React (rAF + DOM): tat engine thi tat vo canh.
       setDangDi(false);
       return;
@@ -422,6 +442,13 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
       const dx = pos.x - gocNha.x;
       const dy = pos.y - gocNha.y;
       goc.style.transform = `translate(${dx}px, ${dy + nhay}px) rotate(${bank.goc}deg) scale(${bank.tiLeX}, ${bank.tiLeY})`;
+    };
+    // Luc nghi: container chi giu translate co dinh (hop nut khong doi); tho + nhay chuyen sang anh con.
+    const apDungNghi = (pos: Diem, gocNha: Diem, tho: number, nhay: number) => {
+      const dx = pos.x - gocNha.x;
+      const dy = pos.y - gocNha.y;
+      goc.style.transform = `translate(${dx}px, ${dy}px)`;
+      apDungHinh(goc, tho, nhay);
     };
     const tick = (bayGio: number) => {
       const dt = Math.min(50, bayGio - cuoi);
@@ -442,6 +469,8 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
       }
       const neo = neoRef.current || document.querySelector("dialog[open]") !== null;
       if (cheDoRef.current === "di") {
+        // Luc di, anh do animation vo canh dieu khien: go transform inline con sot tu luc nghi truoc.
+        apDungHinh(goc, null, 0);
         const tien = duongRef.current;
         if (tien === null) {
           cheDoRef.current = "nghi";
@@ -499,6 +528,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
         }
       } else if (neo) {
         // Dang nghi ma bi neo: ve goc nhanh, toi goc thi dung yen (khong tho, khong nhay, khong noi).
+        apDungHinh(goc, null, 0);
         if (pos.x !== gocNha.x || pos.y !== gocNha.y) {
           const ve = duongVeNha(pos, gocNha);
           if (ve.length === 0) {
@@ -526,7 +556,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
           if (ht >= 1) hopRef.current.batDau = null;
           else nhay = -Math.sin(ht * Math.PI) * NHAY_CAO_PX;
         }
-        apDung(pos, gocNha, { goc: 0, tiLeX: tho, tiLeY: tho }, nhay);
+        apDungNghi(pos, gocNha, tho, nhay);
         if (bayGio > nghiDenRef.current && document.visibilityState === "visible") {
           const cam = vungCamHienTai();
           const den = chonDiemDen(rong, cao, CO_CHIP_PX, LE_CHIP_PX, cam);
@@ -552,6 +582,7 @@ export function LinhVat({ tenMinh, tenKia, hangDau, trangThai }: LinhVatProps) {
     return () => {
       cancelAnimationFrame(raf);
       goc.style.removeProperty("transform");
+      apDungHinh(goc, null, 0);
     };
   }, [choPhepDi]);
   const giu = {
