@@ -398,9 +398,13 @@ a.hoat-dong__dong:hover .hoat-dong__chu, a.hoat-dong__dong:focus-visible .hoat-d
 .chon__ds{ display: grid; gap: var(--space-sm); grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
 .the-chon{ display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .15rem .75rem; padding: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-rule-ui); background: var(--color-paper); cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out); }
 .the-chon:hover{ background: var(--color-paper-2); }
-.the-chon input{ appearance: none; -webkit-appearance: none; grid-row: span 2; width: 20px; height: 20px; margin: .2rem 0 0; border-radius: var(--radius-pill); border: 1.5px solid var(--color-rule-ui); background: var(--color-paper); display: grid; place-items: center; cursor: pointer; }
-.the-chon input::after{ content: ''; width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--blue-ink); transform: scale(0); transition: transform var(--dur-micro) var(--ease-out); }
-.the-chon input:checked{ border-color: var(--blue-ink); }
+/* Radio chon form tu ve (nhu o danh dau cua .o-chon): chinh o cao 44px de vung bam dat ca khi do rieng; ::before la vong
+   tron 20px vien manh, ::after la cham dac mau muc hien khi da chon. Vong hien thi giu nguyen 20px nhu truoc. */
+.the-chon input{ appearance: none; -webkit-appearance: none; grid-row: span 2; width: 44px; height: 44px; margin: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.the-chon input::before, .the-chon input::after{ content: ''; grid-area: 1 / 1; }
+.the-chon input::before{ width: 20px; height: 20px; border-radius: var(--radius-pill); border: 1.5px solid var(--color-rule-ui); background: var(--color-paper); }
+.the-chon input::after{ width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--blue-ink); transform: scale(0); transition: transform var(--dur-micro) var(--ease-out); }
+.the-chon input:checked::before{ border-color: var(--blue-ink); }
 .the-chon input:checked::after{ transform: scale(1); }
 .the-chon input:focus-visible{ outline: 2.5px solid var(--color-focus); outline-offset: 3px; }
 .the-chon:has(input:checked){ background: var(--blue-1); border-color: var(--blue-line); }
